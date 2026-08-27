@@ -296,11 +296,11 @@ export class ControlWatcher {
     if (this.timer !== null) {
       return;
     }
+    // Every caller starts the watcher inside a try and stops it in the matching
+    // `finally`, so the interval never outlives the work it is guarding.
     this.timer = setInterval(() => {
       void this.poll();
     }, this.intervalMs);
-    // Never hold the Node event loop open on account of the watcher.
-    this.timer.unref?.();
   }
 
   /** Check once, immediately. Returns the verdict it saw. */

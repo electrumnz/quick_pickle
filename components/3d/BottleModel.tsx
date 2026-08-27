@@ -104,6 +104,7 @@ export function BottleModel({
   pointerParallax = 0.09,
   parallaxMode = "auto",
   progressSmoothing = 0.14,
+  keyDirection,
   glass: glassIn,
   liquid: liquidIn,
   particulate: particulateIn,
@@ -317,6 +318,14 @@ export function BottleModel({
   const streamRef = useRef<THREE.Mesh>(null);
   const poolRef = useRef<THREE.Mesh>(null);
   const labelRef = useRef<THREE.Mesh>(null);
+
+  useEffect(() => {
+    if (keyDirection) {
+      (liquidU.uKeyDir!.value as THREE.Vector3)
+        .set(...keyDirection)
+        .normalize();
+    }
+  }, [liquidU, keyDirection]);
 
   const smoothed = useRef(pourProgress);
   const sampleParallax = useParallax(parallaxMode, pointerParallax > 0);

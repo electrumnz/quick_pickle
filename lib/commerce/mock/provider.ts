@@ -876,3 +876,836 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
       return warnings;
     });
   }
+
+  // -- Cart internals ------------------------------------------------------
+
+  private isExpired(cart: CartRow): boolean {
+    return new Date(cart.expiresAt).getTime() <= this.now().getTime();
+  }
+
+  private async markExpired(tx: SqlExecutor, id: string): Promise<void> {
+    await tx.query(
+      `update public.carts set status = 'expired' where id = $1 and status = 'active'`,
+      [id],
+    );
+  }
+
+  private async mutateCart(
+    cartId: string,
+    apply: (tx: SqlExecutor, loaded: LoadedCart) => Promise<CartWarning[]>,
+  ): Promise<CartMutationResult> {
+    const parsed = parseCartId(cartId);
+    if (parsed === null) throw commerceErrors.cartNotFound(cartId);
+    return this.sql.transaction(async (tx) => {
+      const loaded = await this.requireLiveCart(tx, parsed.id, parsed.token, cartId);
+      const warnings = await apply(tx, loaded);
+      const cart = await this.refreshAndBuild(tx, cartId, parsed.id);
+      return { cart, warnings };
+    });
+  }
+
+  private async requireLiveCart(
+    tx: SqlExecutor,
+    id: string,
+    token: string,
+    cartId: string,
+  ): Promise<LoadedCart> {
+    const loaded = await this.loadCart(tx, id, token, true);
+    if (loaded === null) throw commerceErrors.cartNotFound(cartId);
+    if (loaded.cart.status === "converted") {
+      throw commerceErrors.cartAlreadyCompleted(
+        cartId,
+        loaded.cart.convertedOrderId ?? "unknown",
+      );
+    }
+    if (loaded.cart.status === "expired" || this.isExpired(loaded.cart)) {
+      await this.markExpired(tx, id);
+      throw commerceErrors.cartExpired(cartId, loaded.cart.expiresAt);
+    }
+    return loaded;
+  }
+
+  private async loadCart(
+    tx: SqlExecutor,
+    id: string,
+    token: string,
+    forUpdate: boolean,
+  ): Promise<LoadedCart | null> {
+    const row = await queryOne<SqlRow>(
+      tx,
+      `select * from public.carts where id = $1 and token = $2${forUpdate ? " for update" : ""}`,
+      [id, token],
+    );
+    if (row === null) return null;
+    return { cart: mapCartRow(row), lines: await this.loadCartLines(tx, id) };
+  }
+
+  private async loadCartLines(
+    tx: SqlExecutor,
+    cartId: string,
+  ): Promise<CartLineRow[]> {
+    const result = await tx.query<SqlRow>(CART_LINES_SQL, [cartId]);
+    return result.rows.map(mapCartLineRow);
+  }
+
+  /**
+   * Re-derive everything about the cart from the database and write the cached
+   * totals back.
+   *
+   * This is the server-side recomputation the whole design turns on. It runs on
+   * every read and after every mutation, so `carts.total_cents` can only ever
+   * be stale for the duration of a single statement, and a row edited outside
+   * the application is corrected the next time anyone looks at the cart.
+   */
+  private async refreshAndBuild(
+    tx: SqlExecutor,
+    cartId: string,
+    id: string,
+  ): Promise<Cart> {
+    // 1. Drop lines whose merchandise no longer exists at all.
+    await tx.query(
+      `delete from public.cart_items ci
+        using public.product_variants v, public.products p
+        where v.id = ci.variant_id and p.id = v.product_id
+          and ci.cart_id = $1
+          and (v.deleted_at is not null or p.deleted_at is not null
+               or p.status = 'archived')`,
+      [id],
+    );
+
+    // 2. Re-sync every line's price from the catalogue. Any value that got in
+    //    by another route — a tampered request, a stale row, a price change
+    //    since the item was added — is overwritten here, before it can reach a
+    //    total.
+    await tx.query(
+      `update public.cart_items ci
+          set unit_price_cents = v.price_cents
+         from public.product_variants v
+        where v.id = ci.variant_id
+          and ci.cart_id = $1
+          and ci.unit_price_cents is distinct from v.price_cents`,
+      [id],
+    );
+
+    const row = await queryOne<SqlRow>(
+      tx,
+      `select * from public.carts where id = $1`,
+      [id],
+    );
+    if (row === null) throw commerceErrors.cartNotFound(cartId);
+    const cart = mapCartRow(row);
+    const lines = await this.loadCartLines(tx, id);
+    const priced = toPricedLines(lines);
+
+    const discount = await this.evaluateCartDiscount(tx, cart, priced);
+    const totals = computeCartTotals(priced, discount?.outcome ?? null);
+
+    await tx.query(
+      `update public.carts
+          set subtotal_cents = $2, discount_cents = $3, shipping_cents = 0,
+              tax_cents = 0, total_cents = $4,
+              discount_id = $5, checkout_url = $6
+        where id = $1`,
+      [
+        id,
+        totals.subtotalCents,
+        totals.discountCents,
+        totals.totalCents,
+        discount !== null && discount.outcome.applicable ? discount.rule.id : null,
+        this.checkoutUrlFor(id, cart.token),
+      ],
+    );
+
+    return buildDomainCart({
+      cartId,
+      cart,
+      lines,
+      totals,
+      discount,
+      checkoutUrl: this.checkoutUrlFor(id, cart.token),
+    });
+  }
+
+  private async evaluateCartDiscount(
+    tx: SqlExecutor,
+    cart: CartRow,
+    lines: readonly PricedLineInput[],
+  ): Promise<{ rule: DiscountRule; outcome: DiscountOutcome } | null> {
+    if (cart.discountCode === null) return null;
+    const rule = await this.loadDiscountRule(tx, cart.discountCode);
+    if (rule === null) return null;
+    return {
+      rule,
+      outcome: await this.evaluateRule(tx, rule, cart, lines),
+    };
+  }
+
+  private async evaluateRule(
+    tx: SqlExecutor,
+    rule: DiscountRule,
+    cart: CartRow,
+    lines: readonly PricedLineInput[],
+  ): Promise<DiscountOutcome> {
+    let customerType: CustomerType | null = null;
+    let redemptions = 0;
+    if (cart.customerId !== null) {
+      const customerRow = await queryOne<SqlRow>(
+        tx,
+        `select customer_type from public.customers where id = $1`,
+        [cart.customerId],
+      );
+      if (customerRow !== null) {
+        customerType = oneOf(
+          customerRow.customer_type,
+          ["retail", "trade", "wholesale", "staff", "press"] as const,
+          "customers.customer_type",
+        );
+      }
+      redemptions = await this.count(
+        tx,
+        `select count(*)::int as total from public.discount_redemptions
+          where discount_id = $1 and customer_id = $2`,
+        [rule.id, cart.customerId],
+      );
+    }
+    return evaluateDiscount(rule, lines, {
+      now: this.now(),
+      customerType,
+      customerRedemptions: redemptions,
+    });
+  }
+
+  private async loadDiscountRule(
+    tx: SqlExecutor,
+    code: string,
+  ): Promise<DiscountRule | null> {
+    const row = await queryOne<SqlRow>(
+      tx,
+      `select * from public.discounts where upper(code) = upper($1)`,
+      [code],
+    );
+    return row === null ? null : mapDiscountRule(row);
+  }
+
+  private capToStock(
+    line: Pick<
+      CartLineRow,
+      "trackInventory" | "inventoryPolicy" | "stockAvailable" | "sku" | "variantId"
+    >,
+    desired: number,
+    warnings: CartWarning[],
+  ): number {
+    if (!line.trackInventory || line.inventoryPolicy === "continue") return desired;
+    if (line.stockAvailable <= 0) {
+      throw commerceErrors.outOfStock(line.variantId, line.sku);
+    }
+    if (desired > line.stockAvailable) {
+      warnings.push({
+        code: "INSUFFICIENT_STOCK",
+        message: `Only ${String(line.stockAvailable)} of ${line.sku} left, so the line was set to that`,
+        target: line.variantId,
+      });
+      return line.stockAvailable;
+    }
+    return desired;
+  }
+
+  private async applyLineAdditions(
+    tx: SqlExecutor,
+    id: string,
+    lines: readonly CartLineInput[],
+  ): Promise<CartWarning[]> {
+    const warnings: CartWarning[] = [];
+    if (lines.length === 0) return warnings;
+
+    for (const line of lines) {
+      if (!Number.isSafeInteger(line.quantity) || line.quantity <= 0) {
+        throw commerceErrors.invalidQuantity(line.quantity);
+      }
+      if (!isUuid(line.variantId)) {
+        throw commerceErrors.variantNotFound(line.variantId);
+      }
+    }
+
+    const variantIds = [...new Set(lines.map((line) => line.variantId))];
+    const variants = await this.loadPurchasableVariants(tx, variantIds);
+    const existing = new Map(
+      (await this.loadCartLines(tx, id)).map((line) => [line.variantId, line]),
+    );
+
+    for (const line of lines) {
+      const variant = variants.get(line.variantId);
+      if (variant === undefined) throw commerceErrors.variantNotFound(line.variantId);
+      if (!variant.productSellable) {
+        throw commerceErrors.variantUnavailable(
+          line.variantId,
+          "the product is not published",
+        );
+      }
+      if (variant.currencyCode !== this.currencyCode) {
+        throw commerceErrors.currencyMismatch(
+          this.currencyCode,
+          variant.currencyCode,
+        );
+      }
+
+      const current = existing.get(line.variantId);
+      const desired = (current?.quantity ?? 0) + line.quantity;
+      const quantity = this.capToStock(variant, desired, warnings);
+      const properties = JSON.stringify(attributesToJson(line.attributes ?? []));
+
+      if (current === undefined) {
+        const lineCount = await this.count(
+          tx,
+          `select count(*)::int as total from public.cart_items where cart_id = $1`,
+          [id],
+        );
+        if (lineCount >= MAX_CART_LINES) {
+          throw commerceErrors.cartTooLarge(id, MAX_CART_LINES);
+        }
+      }
+
+      await tx.query(
+        `insert into public.cart_items
+           (cart_id, currency, product_id, variant_id, quantity, unit_price_cents, properties)
+         values ($1, $2, $3, $4, $5, $6, $7::jsonb)
+         on conflict (cart_id, variant_id) do update
+            set quantity = excluded.quantity,
+                unit_price_cents = excluded.unit_price_cents,
+                properties = excluded.properties`,
+        [
+          id,
+          this.currencyCode,
+          variant.productId,
+          variant.variantId,
+          quantity,
+          // The catalogue price, read in this same transaction. Never an input.
+          variant.priceCents,
+          properties,
+        ],
+      );
+      existing.set(line.variantId, { ...variant, quantity, lineId: "" });
+    }
+    return warnings;
+  }
+
+  private async loadPurchasableVariants(
+    tx: SqlExecutor,
+    variantIds: readonly string[],
+  ): Promise<Map<string, CartLineRow>> {
+    const result = await tx.query<SqlRow>(VARIANT_FOR_CART_SQL, [[...variantIds]]);
+    return new Map(
+      result.rows.map((row) => {
+        const line = mapCartLineRow(row);
+        return [line.variantId, line];
+      }),
+    );
+  }
+
+  private async applyDiscountCodes(
+    tx: SqlExecutor,
+    id: string,
+    codes: readonly string[],
+  ): Promise<CartWarning[]> {
+    if (codes.length > 1) {
+      throw commerceErrors.invalidInput(
+        "This store applies one discount code at a time",
+        ["discountCodes"],
+      );
+    }
+    const code = codes[0]?.trim();
+    if (code === undefined || code === "") {
+      await tx.query(
+        `update public.carts set discount_id = null, discount_code = null where id = $1`,
+        [id],
+      );
+      return [];
+    }
+
+    await tx.query(
+      `update public.carts set discount_code = $2, discount_id = null where id = $1`,
+      [id, code],
+    );
+
+    const rule = await this.loadDiscountRule(tx, code);
+    if (rule === null) {
+      return [
+        {
+          code: "DISCOUNT_NOT_FOUND",
+          message: `${code} is not a valid code`,
+          target: "discountCodes",
+        },
+      ];
+    }
+
+    const row = await queryOne<SqlRow>(
+      tx,
+      `select * from public.carts where id = $1`,
+      [id],
+    );
+    if (row === null) throw commerceErrors.cartNotFound(id);
+    const cart = mapCartRow(row);
+    const priced = toPricedLines(await this.loadCartLines(tx, id));
+    const outcome = await this.evaluateRule(tx, rule, cart, priced);
+
+    if (!outcome.applicable) {
+      return [
+        {
+          code: outcome.rejectionCode ?? "DISCOUNT_NOT_APPLICABLE",
+          message: outcome.rejectionMessage ?? `${code} does not apply`,
+          target: "discountCodes",
+        },
+      ];
+    }
+    return [];
+  }
+
+  private async resolveCustomer(
+    tx: SqlExecutor,
+    buyerIdentity: BuyerIdentityInput,
+  ): Promise<{ id: string; email: string } | null> {
+    if (buyerIdentity.customerId != null) {
+      if (!isUuid(buyerIdentity.customerId)) {
+        throw commerceErrors.customerNotFound(buyerIdentity.customerId);
+      }
+      const row = await queryOne<SqlRow>(
+        tx,
+        `select id, email from public.customers where id = $1 and deleted_at is null`,
+        [buyerIdentity.customerId],
+      );
+      if (row === null) {
+        throw commerceErrors.customerNotFound(buyerIdentity.customerId);
+      }
+      return { id: str(row.id, "customers.id"), email: str(row.email, "customers.email") };
+    }
+    if (buyerIdentity.email != null && buyerIdentity.email !== "") {
+      const row = await queryOne<SqlRow>(
+        tx,
+        `select id, email from public.customers
+          where lower(email) = lower($1) and deleted_at is null`,
+        [buyerIdentity.email],
+      );
+      if (row === null) return null;
+      return { id: str(row.id, "customers.id"), email: str(row.email, "customers.email") };
+    }
+    return null;
+  }
+
+  private async mergeOtherCarts(
+    tx: SqlExecutor,
+    loaded: LoadedCart,
+    customerId: string,
+  ): Promise<CartWarning[]> {
+    const others = await tx.query<SqlRow>(
+      `select id from public.carts
+        where customer_id = $1 and id <> $2 and status = 'active'
+          and expires_at > now()
+        order by updated_at desc
+        for update`,
+      [customerId, loaded.cart.id],
+    );
+    if (others.rows.length === 0) return [];
+
+    const warnings: CartWarning[] = [];
+    for (const row of others.rows) {
+      const otherId = str(row.id, "carts.id");
+      const otherLines = await this.loadCartLines(tx, otherId);
+      if (otherLines.length > 0) {
+        warnings.push(
+          ...(await this.applyLineAdditions(
+            tx,
+            loaded.cart.id,
+            otherLines.map((line) => ({
+              variantId: line.variantId,
+              quantity: line.quantity,
+            })),
+          )),
+        );
+      }
+      await tx.query(
+        `update public.carts
+            set status = 'abandoned',
+                abandoned_at = now(),
+                attributes = attributes || jsonb_build_object($2::text, $3::text)
+          where id = $1`,
+        [otherId, MERGED_INTO_KEY, loaded.cart.id],
+      );
+    }
+    return warnings;
+  }
+
+  // -- Checkout ------------------------------------------------------------
+
+  async beginCheckout(cartId: string): Promise<CheckoutHandoff> {
+    const parsed = parseCartId(cartId);
+    if (parsed === null) throw commerceErrors.cartNotFound(cartId);
+    return this.sql.transaction(async (tx) => {
+      await this.requireLiveCart(tx, parsed.id, parsed.token, cartId);
+      const cart = await this.refreshAndBuild(tx, cartId, parsed.id);
+      if (cart.lines.length === 0) throw commerceErrors.cartEmpty(cartId);
+      assertPurchasable(await this.loadCartLines(tx, parsed.id));
+      return {
+        cartId,
+        checkoutUrl: cart.checkoutUrl,
+        totalQuantity: cart.totalQuantity,
+        estimatedTotal: cart.cost.totalAmount,
+        currencyCode: this.currencyCode,
+      };
+    });
+  }
+
+  /**
+   * Stand in for the buyer completing Shopify's hosted checkout.
+   *
+   * Everything this does is what the `orders/create` webhook handler will do in
+   * production: one transaction that reprices the cart from the catalogue,
+   * takes the stock with a ledger entry per movement, writes the order and its
+   * lines, redeems the discount, moves the customer's rollups and converts the
+   * cart. The storefront's flow either side is identical on both providers —
+   * redirect to `checkoutUrl`, then read the order back.
+   */
+  async completeCheckout(
+    cartId: string,
+    input: SimulatedCheckoutInput,
+  ): Promise<Order> {
+    const parsed = parseCartId(cartId);
+    if (parsed === null) throw commerceErrors.cartNotFound(cartId);
+
+    return this.sql.transaction(async (tx) => {
+      const loaded = await this.requireLiveCart(tx, parsed.id, parsed.token, cartId);
+      // Reprice and prune before anything is committed to.
+      await this.refreshAndBuild(tx, cartId, parsed.id);
+
+      const cartRow = await queryOne<SqlRow>(
+        tx,
+        `select * from public.carts where id = $1`,
+        [parsed.id],
+      );
+      if (cartRow === null) throw commerceErrors.cartNotFound(cartId);
+      const cart = mapCartRow(cartRow);
+      const lines = await this.loadCartLines(tx, parsed.id);
+      if (lines.length === 0) throw commerceErrors.cartEmpty(cartId);
+
+      // Lock every inventory row this order will touch before deciding whether
+      // there is enough, so two checkouts cannot both pass the same check.
+      await tx.query(
+        `select il.id from public.inventory_levels il
+          where il.variant_id = any($1::uuid[])
+          order by il.id
+          for update`,
+        [lines.map((line) => line.variantId)],
+      );
+      const fresh = await this.loadCartLines(tx, parsed.id);
+      assertPurchasable(fresh);
+
+      const priced = toPricedLines(fresh);
+      const discount = await this.evaluateCartDiscount(tx, cart, priced);
+      const outcome = discount?.outcome ?? null;
+      const totals = computeOrderTotals(
+        priced,
+        outcome,
+        input.shippingAmount ?? null,
+      );
+
+      const now = this.now().toISOString();
+      const customerId = await this.upsertCustomer(tx, input, cart.customerId);
+      const shippingAddressId = await this.insertAddress(
+        tx,
+        customerId,
+        input.shippingAddress,
+        "shipping",
+      );
+      const billingAddressId =
+        input.billingAddress === undefined
+          ? shippingAddressId
+          : await this.insertAddress(
+              tx,
+              customerId,
+              input.billingAddress,
+              "billing",
+            );
+
+      const orderRow = await queryOne<{ id: unknown }>(
+        tx,
+        `insert into public.orders
+           (provider, sync_status, customer_id, email, phone, status,
+            financial_status, fulfillment_status, channel, currency,
+            subtotal_cents, discount_cents, shipping_cents, tax_cents,
+            total_cents, tax_rate_bp, tax_inclusive,
+            shipping_address_id, billing_address_id, shipping_method,
+            discount_id, discount_code, cart_id, payment_gateway,
+            customer_note, placed_at, paid_at)
+         values ('local', 'local', $1, $2, $3, 'open',
+                 'paid', 'unfulfilled', 'online', $4,
+                 $5, $6, $7, $8, $9, $10, true,
+                 $11, $12, $13, $14, $15, $16, 'mock',
+                 $17, $18, $18)
+         returning id`,
+        [
+          customerId,
+          input.email,
+          input.phone ?? null,
+          this.currencyCode,
+          totals.subtotalCents,
+          totals.discountCents,
+          totals.shippingCents,
+          totals.taxCents,
+          totals.totalCents,
+          NZ_GST_BASIS_POINTS,
+          shippingAddressId,
+          billingAddressId,
+          input.shippingMethod ?? "NZ Post Standard",
+          outcome !== null && outcome.applicable ? discount?.rule.id : null,
+          cart.discountCode,
+          cart.id,
+          input.customerNote ?? null,
+          now,
+        ],
+      );
+      if (orderRow === null) {
+        throw commerceErrors.providerUnavailable("mock", "order insert returned no row");
+      }
+      const orderId = str(orderRow.id, "orders.id");
+
+      for (const [index, line] of fresh.entries()) {
+        const lineDiscount = totals.lineDiscounts[index] ?? 0;
+        const lineTotal = totals.lineTotals[index] ?? 0;
+        const lineTax = totals.lineTaxes[index] ?? 0;
+        const itemRow = await queryOne<{ id: unknown }>(
+          tx,
+          `insert into public.order_items
+             (order_id, currency, product_id, variant_id, sku, title,
+              variant_title, quantity, unit_price_cents, discount_cents,
+              tax_cents, line_total_cents, position)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+           returning id`,
+          [
+            orderId,
+            this.currencyCode,
+            line.productId,
+            line.variantId,
+            line.sku,
+            line.productTitle,
+            line.variantTitle,
+            line.quantity,
+            line.priceCents,
+            lineDiscount,
+            lineTax,
+            lineTotal,
+            index,
+          ],
+        );
+        if (itemRow === null) {
+          throw commerceErrors.providerUnavailable("mock", "order line insert failed");
+        }
+        await this.takeStock(tx, line, str(itemRow.id, "order_items.id"));
+      }
+
+      if (discount !== null && discount.outcome.applicable) {
+        await tx.query(
+          `insert into public.discount_redemptions
+             (discount_id, order_id, customer_id, amount_cents)
+           values ($1, $2, $3, $4)`,
+          [discount.rule.id, orderId, customerId, totals.discountCents],
+        );
+        await tx.query(
+          `update public.discounts set used_count = used_count + 1 where id = $1`,
+          [discount.rule.id],
+        );
+      }
+
+      await tx.query(
+        `update public.customers
+            set orders_count = orders_count + 1,
+                total_spent_cents = total_spent_cents + $2,
+                first_ordered_at = coalesce(first_ordered_at, $3),
+                last_ordered_at = $3
+          where id = $1`,
+        [customerId, totals.totalCents, now],
+      );
+
+      await tx.query(
+        `update public.carts
+            set status = 'converted', converted_order_id = $2
+          where id = $1`,
+        [loaded.cart.id, orderId],
+      );
+
+      const order = await this.readOrder(tx, "o.id = $1", [orderId]);
+      if (order === null) {
+        throw commerceErrors.providerUnavailable("mock", "order vanished after insert");
+      }
+      return order;
+    });
+  }
+
+  /**
+   * Take `line.quantity` off the shelf, default location first, writing one
+   * ledger row per location touched. A variant that does not track inventory is
+   * skipped entirely; one on backorder is allowed to go negative at the default
+   * location, which is exactly what `inventory_policy = 'continue'` means.
+   */
+  private async takeStock(
+    tx: SqlExecutor,
+    line: CartLineRow,
+    orderItemId: string,
+  ): Promise<void> {
+    if (!line.trackInventory) return;
+
+    const levels = await tx.query<SqlRow>(
+      `select il.id, il.location_id, il.available, l.is_default
+         from public.inventory_levels il
+         join public.inventory_locations l on l.id = il.location_id
+        where il.variant_id = $1 and l.is_active and l.ships_orders
+        order by l.is_default desc, il.available desc, l.code asc`,
+      [line.variantId],
+    );
+
+    let remaining = line.quantity;
+    for (const row of levels.rows) {
+      if (remaining === 0) break;
+      const available = int(row.available, "inventory_levels.available");
+      if (available <= 0) continue;
+      const take = Math.min(available, remaining);
+      await this.recordStockMovement(
+        tx,
+        str(row.id, "inventory_levels.id"),
+        line.variantId,
+        str(row.location_id, "inventory_levels.location_id"),
+        -take,
+        orderItemId,
+      );
+      remaining -= take;
+    }
+
+    if (remaining === 0) return;
+
+    const fallback = levels.rows[0];
+    if (fallback === undefined || line.inventoryPolicy === "deny") {
+      throw commerceErrors.insufficientStock(
+        line.variantId,
+        line.sku,
+        line.quantity,
+        line.quantity - remaining,
+      );
+    }
+    await this.recordStockMovement(
+      tx,
+      str(fallback.id, "inventory_levels.id"),
+      line.variantId,
+      str(fallback.location_id, "inventory_levels.location_id"),
+      -remaining,
+      orderItemId,
+    );
+  }
+
+  private async recordStockMovement(
+    tx: SqlExecutor,
+    levelId: string,
+    variantId: string,
+    locationId: string,
+    delta: number,
+    orderItemId: string,
+  ): Promise<void> {
+    await tx.query(
+      `update public.inventory_levels set on_hand = on_hand + $2 where id = $1`,
+      [levelId, delta],
+    );
+    await tx.query(
+      `insert into public.inventory_adjustments
+         (variant_id, location_id, delta, reason, order_item_id, actor_type, note)
+       values ($1, $2, $3, 'sale', $4, 'system', 'Checkout')`,
+      [variantId, locationId, delta, orderItemId],
+    );
+  }
+
+  private async upsertCustomer(
+    tx: SqlExecutor,
+    input: SimulatedCheckoutInput,
+    existingCustomerId: string | null,
+  ): Promise<string> {
+    if (existingCustomerId !== null) return existingCustomerId;
+    const found = await queryOne<SqlRow>(
+      tx,
+      `select id from public.customers
+        where lower(email) = lower($1) and deleted_at is null`,
+      [input.email],
+    );
+    if (found !== null) return str(found.id, "customers.id");
+
+    const acceptsMarketing = input.acceptsMarketing ?? false;
+    const created = await queryOne<SqlRow>(
+      tx,
+      `insert into public.customers
+         (provider, sync_status, email, first_name, last_name, phone,
+          customer_type, accepts_marketing, marketing_opt_in_at, currency)
+       values ('local', 'local', $1, $2, $3, $4, 'retail', $5, $6, $7)
+       returning id`,
+      [
+        input.email,
+        input.shippingAddress.firstName,
+        input.shippingAddress.lastName,
+        input.phone ?? input.shippingAddress.phone ?? null,
+        acceptsMarketing,
+        acceptsMarketing ? this.now().toISOString() : null,
+        this.currencyCode,
+      ],
+    );
+    if (created === null) {
+      throw commerceErrors.providerUnavailable("mock", "customer insert failed");
+    }
+    return str(created.id, "customers.id");
+  }
+
+  private async insertAddress(
+    tx: SqlExecutor,
+    customerId: string,
+    address: SimulatedCheckoutAddress,
+    addressType: "shipping" | "billing",
+  ): Promise<string> {
+    const hasDefault = await this.count(
+      tx,
+      `select count(*)::int as total from public.addresses
+        where customer_id = $1 and address_type = $2 and is_default`,
+      [customerId, addressType],
+    );
+    const row = await queryOne<SqlRow>(
+      tx,
+      `insert into public.addresses
+         (customer_id, provider, sync_status, address_type, first_name, last_name,
+          company, line1, line2, suburb, city, region, postcode, country_code,
+          phone, delivery_instructions, is_default)
+       values ($1, 'local', 'local', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+               $12, $13, $14, $15)
+       returning id`,
+      [
+        customerId,
+        addressType,
+        address.firstName,
+        address.lastName,
+        address.company ?? null,
+        address.line1,
+        address.line2 ?? null,
+        address.suburb ?? null,
+        address.city,
+        address.region ?? null,
+        address.postcode ?? null,
+        address.countryCode ?? "NZ",
+        address.phone ?? null,
+        address.deliveryInstructions ?? null,
+        hasDefault === 0,
+      ],
+    );
+    if (row === null) {
+      throw commerceErrors.providerUnavailable("mock", "address insert failed");
+    }
+    const id = str(row.id, "addresses.id");
+    if (hasDefault === 0 && addressType === "shipping") {
+      await tx.query(
+        `update public.customers set default_address_id = $2
+          where id = $1 and default_address_id is null`,
+        [customerId, id],
+      );
+    }
+    return id;
+  }

@@ -76,22 +76,10 @@ export interface ReferencePorts {
 
 /** The four reference tools, wired to the supplied ports. */
 export interface ReferenceTools {
-  readonly readCatalogue: ToolDefinition<
-    z.infer<typeof catalogueSnapshotSchema>,
-    unknown
-  >;
-  readonly saveDraft: ToolDefinition<
-    z.infer<typeof internalDraftSchema>,
-    unknown
-  >;
-  readonly publishStorefrontChange: ToolDefinition<
-    z.infer<typeof storefrontChangeSchema>,
-    unknown
-  >;
-  readonly sendExternalMessage: ToolDefinition<
-    z.infer<typeof externalMessageSchema>,
-    unknown
-  >;
+  readonly readCatalogue: ToolDefinition;
+  readonly saveDraft: ToolDefinition;
+  readonly publishStorefrontChange: ToolDefinition;
+  readonly sendExternalMessage: ToolDefinition;
 }
 
 export function createReferenceTools(ports: ReferencePorts): ReferenceTools {

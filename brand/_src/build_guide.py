@@ -194,6 +194,8 @@ AD_NEVER = [
     ("Over-propped", "If you can count more than five objects in the frame, remove two."),
 ]
 
+FONTS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts_inline.css")).read()
+
 CSS = """
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -563,13 +565,10 @@ def build():
     o.append('<!doctype html><html lang="en-NZ"><head><meta charset="utf-8">'
              '<meta name="viewport" content="width=device-width,initial-scale=1">'
              '<title>HALF SOUR — Brand Guide</title>'
-             '<link rel="preconnect" href="https://fonts.googleapis.com">'
-             '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
-             '<link href="https://fonts.googleapis.com/css2?'
-             'family=Archivo:wght@400;500;600;700&'
-             'family=Instrument+Serif:ital@0;1&'
-             'family=Martian+Mono:wght@400;500;600&display=swap" rel="stylesheet">'
-             '<style>' + CSS + '</style></head><body>')
+             '<meta name="description" content="HALF SOUR — brand guide v1.0. Pickle brine for bars '
+             'and kitchens, Aotearoa New Zealand.">'
+             '<link rel="icon" href="assets/favicon.svg">'
+             '<style>' + FONTS + CSS + '</style></head><body>')
 
     # rail
     o.append('<nav class="rail" aria-label="Sections">')

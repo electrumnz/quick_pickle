@@ -98,7 +98,6 @@ export {
   ToolRegistry,
   defineTool,
   invokeTool,
-  parseToolInput,
   type ApprovalPresentation,
   type ToolDefinition,
   type ToolExecutionContext,

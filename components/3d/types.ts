@@ -244,16 +244,30 @@ export interface BottleModelProps extends Partial<BottleMaterialProps> {
    * elastic overscroll, where progress arrives in coarse, bursty steps.
    */
   progressSmoothing?: number;
+  /**
+   * World-space direction of the backlight. The brine's forward-scattering
+   * term aims at this, so it stays consistent with whatever the studio rig
+   * is doing rather than guessing.
+   */
+  keyDirection?: [number, number, number];
 }
 
 export interface BottleSceneProps extends BottleModelProps {
   studio?: Partial<StudioParams>;
   backdrop?: Partial<BackdropParams>;
-  /** Camera distance in bottle heights. */
+  /**
+   * Multiplier on the auto-fit camera distance. 1 frames the bottle to the
+   * viewport at any aspect ratio; push above 1 to sit further back.
+   */
   cameraDistance?: number;
-  /** Camera height in bottle heights, relative to the bottle's mid-point. */
+  /** Camera height above the bottle's mid-point, in bottle heights. */
   cameraHeight?: number;
+  /** Lateral offset in bottle heights. A few degrees off-axis reads better. */
+  cameraOffset?: number;
+  /** Vertical field of view. Long lenses flatter products; 24-30 is the range. */
   cameraFov?: number;
+  /** Renderer tone-mapping exposure. */
+  exposure?: number;
   /** Force a tier instead of measuring the device. */
   forceTier?: QualityTier;
   /** Cap on device pixel ratio before adaptive scaling. */

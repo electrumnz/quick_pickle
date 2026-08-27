@@ -27,7 +27,7 @@ export interface ApprovalRequestInput {
   readonly definition: AgentDefinition;
   readonly agentId: string;
   readonly runId: string;
-  readonly tool: ToolDefinition<never, never>;
+  readonly tool: ToolDefinition;
   readonly input: unknown;
   readonly presentation: ApprovalPresentation;
   /** The model's own stated reason for wanting this. Stored verbatim. */
@@ -50,7 +50,7 @@ export class ApprovalService {
    */
   async request(input: ApprovalRequestInput): Promise<ApprovalRecord> {
     const spec = input.tool.approval;
-    if (spec === undefined) {
+    if (spec === null) {
       throw new ApprovalGateError(
         "approval_mismatch",
         `Tool "${input.tool.name}" has no approval subject and cannot be escalated.`,

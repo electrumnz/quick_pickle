@@ -37,7 +37,6 @@ import type { AgentStore } from "../store/types";
 import { approvalRequirement, checkToolAccess } from "../tools/authorization";
 import {
   invokeTool,
-  parseToolInput,
   type ToolDefinition,
   type ToolRegistry,
 } from "../tools/registry";
@@ -439,7 +438,7 @@ export class AgentRuntime {
     const definition = this.definition(run.agentSlug);
     const call = await this.requireToolCall(runId, toolCallId);
 
-    let toolDefinition: ToolDefinition<never, never>;
+    let toolDefinition: ToolDefinition;
     try {
       toolDefinition = this.deps.registry.get(call.toolName);
     } catch (error) {
@@ -468,7 +467,7 @@ export class AgentRuntime {
 
     let parsed: unknown;
     try {
-      parsed = parseToolInput(toolDefinition, call.arguments);
+      parsed = toolDefinition.parse(call.arguments);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       await this.refuseToolCall(runId, call, reason, "failed");
@@ -476,9 +475,9 @@ export class AgentRuntime {
     }
 
     const presentation =
-      toolDefinition.approval === undefined
+      toolDefinition.present === null
         ? null
-        : toolDefinition.approval.present(parsed as never);
+        : toolDefinition.present(call.arguments);
     const requirement = approvalRequirement({
       definition,
       tool: toolDefinition,
@@ -529,7 +528,7 @@ export class AgentRuntime {
     const definition = this.definition(run.agentSlug);
     const call = await this.requireToolCall(runId, toolCallId);
     const toolDefinition = this.deps.registry.get(call.toolName);
-    const parsed = parseToolInput(toolDefinition, call.arguments);
+    const parsed = toolDefinition.parse(call.arguments);
 
     const startedAt = this.deps.clock.now().toISOString();
     await this.deps.store.updateToolCall(call.id, {
@@ -557,7 +556,7 @@ export class AgentRuntime {
 
       const output = await invokeTool(
         toolDefinition,
-        parsed as never,
+        parsed,
         {
           runId,
           agentSlug: definition.slug,

@@ -3,15 +3,21 @@
  *
  * A tool declares what it does to the world (`effect`) and, when that effect
  * leaves the building, which approval subject covers it. The registry holds the
- * declaration; the executor function itself is stored in a module-private
- * `WeakMap` and is not reachable from the returned object.
+ * declaration; the executor function itself lives in a module-private `WeakMap`
+ * and is not reachable from the returned object.
  *
  * That means there is exactly one way to run a tool — {@link invokeTool} — and
- * it is the place the grant is checked. Calling code cannot reach past it,
- * because there is no property to reach for.
+ * it is where the grant is checked. Calling code cannot reach past it, because
+ * there is no property to reach for.
+ *
+ * Declarations are type-erased on the way out: `defineTool` is generic in the
+ * tool's input type and closes over it, so parsing, presentation and execution
+ * are all type-checked at the point of declaration, while the registry and the
+ * runtime handle a single uniform {@link ToolDefinition} with no casts.
  */
 
-import { z } from "zod";
+import type { FlexibleSchema } from "@ai-sdk/provider-utils";
+import type { z } from "zod";
 
 import {
   AgentRuntimeError,
@@ -43,7 +49,7 @@ export interface ApprovalPresentation {
   readonly preview?: JsonObject;
 }
 
-/** Approval metadata a non-read tool must declare. */
+/** Approval metadata a non-read tool must declare, in its typed form. */
 export interface ToolApprovalSpec<TInput> {
   readonly subjectType: ApprovalSubject;
   /** The table the subject lives in, for `approvals.subject_table`. */
@@ -51,6 +57,13 @@ export interface ToolApprovalSpec<TInput> {
   readonly risk: ApprovalRisk;
   /** Build the human-facing description of this specific call. */
   readonly present: (input: TInput) => ApprovalPresentation;
+}
+
+/** The same metadata after type erasure, as the runtime sees it. */
+export interface ToolApprovalMeta {
+  readonly subjectType: ApprovalSubject;
+  readonly subjectTable: string;
+  readonly risk: ApprovalRisk;
 }
 
 /** Everything a tool executor is handed. Deliberately narrow. */
@@ -63,16 +76,24 @@ export interface ToolExecutionContext {
   readonly abortSignal: AbortSignal;
 }
 
-/** The declaration half of a tool: everything except the code. */
-export interface ToolDefinition<TInput = unknown, TOutput = unknown> {
+/**
+ * A registered tool, with its input type erased.
+ *
+ * `parse` and `present` close over the declared schema, so the runtime never
+ * needs to know a tool's input type and never needs a cast to call it.
+ */
+export interface ToolDefinition {
   readonly name: string;
   readonly title: string;
   readonly description: string;
   readonly effect: ToolEffect;
-  readonly inputSchema: z.ZodType<TInput>;
-  readonly approval?: ToolApprovalSpec<TInput>;
-  /** Present only so the type parameter is used; never populated at runtime. */
-  readonly __output?: TOutput;
+  /** Handed to the model as the tool's parameter schema. */
+  readonly inputSchema: FlexibleSchema<unknown>;
+  readonly approval: ToolApprovalMeta | null;
+  /** Validate raw model-supplied arguments. Throws `invalid_tool_input`. */
+  readonly parse: (raw: unknown) => unknown;
+  /** Describe a specific call for the approvals queue. Null for read-only tools. */
+  readonly present: ((raw: unknown) => ApprovalPresentation) | null;
 }
 
 /** The full spec a caller passes to {@link defineTool}. */
@@ -96,15 +117,10 @@ type ErasedExecutor = (
 
 /**
  * Private executor table. The only reference to a tool's code lives here, keyed
- * by the definition object. Nothing outside this module can read it.
+ * by the definition object. Nothing outside this module can read it, and the
+ * definition carries no property that exposes it.
  */
-const EXECUTORS = new WeakMap<ToolDefinition<never, never>, ErasedExecutor>();
-
-function executorKey<TInput, TOutput>(
-  definition: ToolDefinition<TInput, TOutput>,
-): ToolDefinition<never, never> {
-  return definition as unknown as ToolDefinition<never, never>;
-}
+const EXECUTORS = new WeakMap<ToolDefinition, ErasedExecutor>();
 
 /**
  * Declare a tool.
@@ -115,7 +131,7 @@ function executorKey<TInput, TOutput>(
  */
 export function defineTool<TInput, TOutput>(
   spec: ToolSpec<TInput, TOutput>,
-): ToolDefinition<TInput, TOutput> {
+): ToolDefinition {
   if (!TOOL_NAME_PATTERN.test(spec.name)) {
     throw new AgentRuntimeError(
       "invalid_agent_definition",
@@ -141,39 +157,51 @@ export function defineTool<TInput, TOutput>(
     );
   }
 
-  const definition: ToolDefinition<TInput, TOutput> = Object.freeze({
+  const parse = (raw: unknown): TInput => {
+    const parsed = spec.inputSchema.safeParse(raw);
+    if (!parsed.success) {
+      const issues = parsed.error.issues
+        .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
+        .join("; ");
+      throw new ToolAuthorisationError(
+        "invalid_tool_input",
+        `Tool "${spec.name}" rejected its arguments: ${issues}`,
+        { tool: spec.name },
+      );
+    }
+    return parsed.data;
+  };
+
+  const approvalSpec = spec.approval;
+  const definition: ToolDefinition = Object.freeze({
     name: spec.name,
     title: spec.title,
     description: spec.description,
     effect: spec.effect,
     inputSchema: spec.inputSchema,
-    ...(spec.approval === undefined ? {} : { approval: spec.approval }),
+    approval:
+      approvalSpec === undefined
+        ? null
+        : Object.freeze({
+            subjectType: approvalSpec.subjectType,
+            subjectTable: approvalSpec.subjectTable,
+            risk: approvalSpec.risk,
+          }),
+    parse,
+    present:
+      approvalSpec === undefined
+        ? null
+        : (raw: unknown) => approvalSpec.present(parse(raw)),
   });
 
-  EXECUTORS.set(executorKey(definition), async (input, context) =>
-    spec.execute(input as TInput, context),
+  // Re-parsing inside the executor is deliberate: the value that reaches the
+  // tool has been validated by the tool's own schema on this exact code path,
+  // whatever the caller did or did not do beforehand.
+  EXECUTORS.set(definition, async (input, context) =>
+    spec.execute(parse(input), context),
   );
 
   return definition;
-}
-
-/** Parse and validate raw model-supplied arguments against the tool's schema. */
-export function parseToolInput<TInput, TOutput>(
-  definition: ToolDefinition<TInput, TOutput>,
-  raw: unknown,
-): TInput {
-  const parsed = definition.inputSchema.safeParse(raw);
-  if (!parsed.success) {
-    const issues = parsed.error.issues
-      .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
-      .join("; ");
-    throw new ToolAuthorisationError(
-      "invalid_tool_input",
-      `Tool "${definition.name}" rejected its arguments: ${issues}`,
-      { tool: definition.name },
-    );
-  }
-  return parsed.data;
 }
 
 /**
@@ -183,12 +211,12 @@ export function parseToolInput<TInput, TOutput>(
  * runtime-minted {@link EffectGrant} is mandatory and is spent here. There is no
  * path that reaches the executor without passing this check.
  */
-export async function invokeTool<TInput, TOutput>(
-  definition: ToolDefinition<TInput, TOutput>,
-  input: TInput,
+export async function invokeTool(
+  definition: ToolDefinition,
+  input: unknown,
   context: ToolExecutionContext,
   grant?: EffectGrant,
-): Promise<TOutput> {
+): Promise<unknown> {
   if (definition.effect !== "read") {
     if (grant === undefined) {
       throw new ApprovalGateError(
@@ -209,7 +237,7 @@ export async function invokeTool<TInput, TOutput>(
     });
   }
 
-  const executor = EXECUTORS.get(executorKey(definition));
+  const executor = EXECUTORS.get(definition);
   if (executor === undefined) {
     throw new AgentRuntimeError(
       "unknown_tool",
@@ -218,8 +246,7 @@ export async function invokeTool<TInput, TOutput>(
     );
   }
 
-  const output = await executor(input, context);
-  return output as TOutput;
+  return executor(input, context);
 }
 
 /** Normalise a tool result for `agent_tool_calls.result`. */
@@ -229,15 +256,15 @@ export function toolResultToJson(value: unknown): JsonValue {
 
 /** An immutable, name-keyed set of tool declarations. */
 export class ToolRegistry {
-  private readonly tools = new Map<string, ToolDefinition<never, never>>();
+  private readonly tools = new Map<string, ToolDefinition>();
 
-  constructor(definitions: readonly ToolDefinition<never, never>[] = []) {
+  constructor(definitions: readonly ToolDefinition[] = []) {
     for (const definition of definitions) {
       this.register(definition);
     }
   }
 
-  register<TInput, TOutput>(definition: ToolDefinition<TInput, TOutput>): this {
+  register(definition: ToolDefinition): this {
     if (this.tools.has(definition.name)) {
       throw new AgentRuntimeError(
         "duplicate_tool",
@@ -245,7 +272,7 @@ export class ToolRegistry {
         { tool: definition.name },
       );
     }
-    this.tools.set(definition.name, executorKey(definition));
+    this.tools.set(definition.name, definition);
     return this;
   }
 
@@ -254,7 +281,7 @@ export class ToolRegistry {
   }
 
   /** Look a tool up, or throw `unknown_tool`. */
-  get(name: string): ToolDefinition<never, never> {
+  get(name: string): ToolDefinition {
     const definition = this.tools.get(name);
     if (definition === undefined) {
       throw new ToolAuthorisationError(
@@ -269,14 +296,14 @@ export class ToolRegistry {
   }
 
   /** Every registered tool, name-ordered. */
-  list(): ToolDefinition<never, never>[] {
+  list(): ToolDefinition[] {
     return [...this.tools.values()].sort((left, right) =>
       left.name.localeCompare(right.name),
     );
   }
 
   /** Only the tools this agent was granted, in the order the grant lists them. */
-  forAgent(granted: readonly string[]): ToolDefinition<never, never>[] {
+  forAgent(granted: readonly string[]): ToolDefinition[] {
     return granted.map((name) => this.get(name));
   }
 }

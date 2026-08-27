@@ -33,7 +33,7 @@ export type AccessVerdict =
 /** Can this agent call this tool at all? */
 export function checkToolAccess(
   definition: AgentDefinition,
-  tool: ToolDefinition<never, never>,
+  tool: ToolDefinition,
 ): AccessVerdict {
   if (!definition.tools.includes(tool.name)) {
     return {
@@ -55,7 +55,7 @@ export function checkToolAccess(
 /** Throwing form of {@link checkToolAccess}. */
 export function assertToolAccess(
   definition: AgentDefinition,
-  tool: ToolDefinition<never, never>,
+  tool: ToolDefinition,
 ): void {
   const verdict = checkToolAccess(definition, tool);
   if (!verdict.allowed) {
@@ -92,7 +92,7 @@ export type ApprovalRequirement =
  */
 export function approvalRequirement(params: {
   readonly definition: AgentDefinition;
-  readonly tool: ToolDefinition<never, never>;
+  readonly tool: ToolDefinition;
   readonly presentation: ApprovalPresentation | null;
 }): ApprovalRequirement {
   const { definition, tool, presentation } = params;

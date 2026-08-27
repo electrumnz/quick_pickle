@@ -103,15 +103,28 @@ export async function verifyPassword(
     return false;
   }
 
-  const recomputed = await argon2id({
-    password,
-    salt: parsed.salt,
-    parallelism: parsed.parallelism,
-    iterations: parsed.iterations,
-    memorySize: parsed.memoryKib,
-    hashLength: parsed.digest.length,
-    outputType: "binary",
-  });
+  // An empty submission cannot match any hash, and the underlying primitive
+  // refuses a zero-length password rather than hashing one. Returning early is
+  // safe here specifically because the sign-in path pads every outcome to a
+  // fixed wall-clock floor, so the shortcut is not observable from outside.
+  if (password.length === 0) return false;
+
+  let recomputed: Uint8Array;
+  try {
+    recomputed = await argon2id({
+      password,
+      salt: parsed.salt,
+      parallelism: parsed.parallelism,
+      iterations: parsed.iterations,
+      memorySize: parsed.memoryKib,
+      hashLength: parsed.digest.length,
+      outputType: "binary",
+    });
+  } catch {
+    // Parameters the primitive will not accept are a configuration fault. Fail
+    // closed, and never let the exception carry the password up the stack.
+    return false;
+  }
 
   return timingSafeEqualBytes(recomputed, parsed.digest);
 }
