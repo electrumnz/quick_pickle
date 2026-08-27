@@ -27,6 +27,20 @@ Updated 2026-08-27. Honest status, not a summary.
       Trading Act s 13(j). Make it true or change the copy before launch.
 - [ ] **Domain.** `halfsour.co.nz` and `halfsour.nz` are available; `halfsour.com` is
       registered but parked. Not purchased — deliberately.
+- [ ] **No. 04 WILD has no artwork.** `brand/assets/` holds `label-01-house.svg`,
+      `label-02-dirty.svg` and `label-03-smoke.svg` and stops there — WILD's label was
+      never drawn, and `lib/brand/assets.ts` does not list one. That is why the hero
+      line-up is three bottles: `brand/assets/bottles.svg` is titled "HALF SOUR launch
+      line — three 500ml bottles" and predates WILD.
+      Noted by the founder and deliberately deferred. WILD is NOT hidden meanwhile — the
+      range section carries it in full (name, Coastal Brine, $26, tasting notes, "Limited
+      by leaf supply") and it heads the oysters serve. Only the picture is short, and the
+      hero's alt text names just the three it actually shows, so nothing on the page
+      claims otherwise.
+      Two things to do together when it is picked up: draw the WILD label to match the
+      other three, then re-cut the line-up illustration as four bottles. Do not add WILD
+      to the existing SVG by copying another label — its seal colour is the secondary
+      accent, not a recolour of SMOKE.
 - [ ] **Real product photography.** Every AI image service was unreachable during the
       build (connector blocks invoke, ZeroGPU needs a token, FLUX spaces returned 503).
       The bottle line-up and labels are authored vector art instead, which is better than
