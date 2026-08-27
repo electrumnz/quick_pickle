@@ -130,3 +130,45 @@ Suggest the answer-key template carry three columns: **id | check | how to evide
   it needs to be machine-comparable, otherwise nothing can actually detect the stop.
 - Worth stating that the orchestrator should commit *between* waves as well as on unit PASS. A
   wave that dies mid-flight otherwise loses everything the builders wrote.
+
+---
+
+## 8. Concurrent builders make CI meaningless mid-wave, and the skill never says so
+
+Observed repeatedly on this run. With 9 builders writing to one working tree, every checkpoint
+commit captures several half-written units, so the shared gate fails on transient errors that
+belong to nobody:
+
+- `prettier --check` failed on files two builders were still writing.
+- `tsc` failed on `lib/auth/store/types.ts` importing `../audit`, a module its own builder had
+  not written yet.
+- `lib/commerce/money.ts` failed mid-edit on an unrelated overload.
+
+None of these are defects. All of them burn a CI run, a deploy, and orchestrator attention, and
+on a watched PR they generate failure notifications that look like regressions.
+
+The skill says to commit each unit as it passes, which is right, but says nothing about what to
+do when an external gate (CI, a watched PR, a deploy pipeline) observes the tree *between*
+passes. Worth stating explicitly:
+
+> **A shared CI gate is only meaningful at wave boundaries.** Mid-wave the tree contains
+> partial units by construction. Either keep checkpoint commits off the branch CI watches, or
+> say once, publicly, that red is expected until the wave closes — and then actually hold
+> yourself to green at the boundary.
+
+Two concrete mitigations that worked:
+1. Run the formatter across the tree as part of the checkpoint routine, not as a fix after the
+   gate fails. Formatting is never a real failure and should never consume a cycle.
+2. Scan for credential material on every checkpoint, since builders handling secrets are exactly
+   the ones writing fastest.
+
+## 9. `typecheck` passing is not `build` passing
+
+`npm run typecheck` (`tsc --noEmit`) went green while `next build` failed on the same tree, on a
+genuine error. Any builder that verified with typecheck alone had a false green and would have
+declared done on broken code.
+
+The answer key asked for both, which saved it. But the general lesson belongs in the skill's
+guidance on evidence: **name the exact command whose output counts, and prefer the one that runs
+the real production path.** A builder told to "make sure it typechecks" will do exactly that and
+no more.

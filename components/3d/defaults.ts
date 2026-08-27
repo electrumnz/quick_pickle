@@ -52,7 +52,7 @@ export const DEFAULT_LIQUID: LiquidParams = {
   viscosity: 0.55,
   roughness: 0.075,
   envMapIntensity: 1.25,
-  opacity: 0.97,
+  opacity: 1,
 };
 
 export const DEFAULT_PARTICULATE: ParticulateParams = {
