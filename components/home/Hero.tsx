@@ -105,13 +105,24 @@ export function Hero() {
           The wordmark is drawn geometry loaded as a CSS mask, so it takes its
           colour from the type around it and never has to be recut for a second
           ground. brand/assets/wordmark.svg stays byte-identical.
+
+          It is the page's <h1>, not a decorative div: this is the top-level
+          heading, and a storefront homepage with no h1 at all is a real defect
+          in both the accessibility tree and the outline a crawler builds. The
+          mask sits on an inner <span> so the heading role survives — role="img"
+          on the h1 itself would REPLACE the heading role rather than describe
+          it, and e2e/smoke.spec.ts asserts the level-1 heading. The h1 takes
+          its accessible name from that span's aria-label, so it reads
+          "HALF SOUR".
         */}
-        <div
-          className={cx(styles.wordmark, "text-primary shrink-0")}
-          style={{ width: "min(68vw, 34rem)" }}
-          role="img"
-          aria-label="HALF SOUR"
-        />
+        <h1 className="shrink-0">
+          <span
+            className={cx(styles.wordmark, "text-primary")}
+            style={{ width: "min(68vw, 34rem)" }}
+            role="img"
+            aria-label="HALF SOUR"
+          />
+        </h1>
 
         <div className="my-block w-full min-h-0 flex-1" aria-hidden="true">
           <BottleHero
