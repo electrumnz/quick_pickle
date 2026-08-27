@@ -242,3 +242,168 @@ export type MockProviderOptions = {
   readonly now?: () => Date;
   readonly cartTtlDays?: number;
 };
+
+// ---------------------------------------------------------------------------
+// Catalogue SQL
+//
+// One set of CTEs shared by every catalogue read, so "what is available" is
+// defined exactly once: stock is summed over the locations that actually ship
+// orders, a variant is sellable when it is untracked, on backorder, or has
+// stock, and a product is sellable when any of its variants is.
+// ---------------------------------------------------------------------------
+
+const CATALOGUE_CTES = `
+with shipping_location as (
+  select id from public.inventory_locations where is_active and ships_orders
+),
+variant_stock as (
+  select il.variant_id, sum(il.available)::int as available
+    from public.inventory_levels il
+    join shipping_location sl on sl.id = il.location_id
+   group by il.variant_id
+),
+live_variant as (
+  select v.*, coalesce(vs.available, 0)::int as stock_available
+    from public.product_variants v
+    left join variant_stock vs on vs.variant_id = v.id
+   where v.deleted_at is null
+),
+product_agg as (
+  select lv.product_id,
+         min(lv.price_cents)::int as min_price_cents,
+         max(lv.price_cents)::int as max_price_cents,
+         bool_or(case
+                   when not lv.track_inventory then true
+                   when lv.inventory_policy = 'continue' then true
+                   else lv.stock_available > 0
+                 end) as available_for_sale
+    from live_variant lv
+   group by lv.product_id
+),
+best_selling as (
+  select oi.product_id, sum(oi.quantity)::int as units_sold
+    from public.order_items oi
+    join public.orders o on o.id = oi.order_id and o.status <> 'cancelled'
+   group by oi.product_id
+)`;
+
+const VARIANT_JSON = `json_build_object(
+  'id', lv.id, 'sku', lv.sku, 'barcode', lv.barcode, 'title', lv.title,
+  'price_cents', lv.price_cents,
+  'compare_at_price_cents', lv.compare_at_price_cents,
+  'currency', lv.currency, 'size_ml', lv.size_ml, 'pack_count', lv.pack_count,
+  'weight_grams', lv.weight_grams, 'track_inventory', lv.track_inventory,
+  'inventory_policy', lv.inventory_policy, 'is_trade_only', lv.is_trade_only,
+  'position', lv.position, 'stock_available', lv.stock_available
+)`;
+
+const IMAGE_JSON = `json_build_object(
+  'id', pi.id, 'url', pi.url, 'alt_text', pi.alt_text, 'position', pi.position,
+  'width_px', pi.width_px, 'height_px', pi.height_px, 'variant_id', pi.variant_id
+)`;
+
+const PRODUCT_COLUMNS = `
+  p.id, p.handle, p.title, p.subtitle, p.description, p.product_type, p.vendor,
+  p.status, p.published_at, p.tags, p.seo_title, p.seo_description,
+  p.requires_shipping, p.hero_image_url, p.position, p.created_at, p.updated_at,
+  pa.min_price_cents, pa.max_price_cents, pa.available_for_sale,
+  coalesce(bs.units_sold, 0) as units_sold,
+  (select coalesce(json_agg(${VARIANT_JSON} order by lv.position, lv.sku), '[]'::json)
+     from live_variant lv where lv.product_id = p.id) as variants,
+  (select coalesce(json_agg(${IMAGE_JSON} order by pi.position, pi.id), '[]'::json)
+     from public.product_images pi where pi.product_id = p.id) as images`;
+
+const PRODUCT_FROM = `
+  from public.products p
+  join product_agg pa on pa.product_id = p.id
+  left join best_selling bs on bs.product_id = p.id`;
+
+type ProductFilterArg = NonNullable<ProductListQuery["filter"]>;
+
+function productConditions(
+  filter: ProductFilterArg | undefined,
+  params: Params,
+): string[] {
+  const conditions = ["p.deleted_at is null"];
+  const status = filter?.status ?? "active";
+  conditions.push(`p.status = ${params.add(status)}`);
+  if (status === "active") conditions.push("p.published_at is not null");
+
+  if (filter === undefined) return conditions;
+
+  if (filter.availableForSale !== undefined) {
+    conditions.push(
+      filter.availableForSale
+        ? "pa.available_for_sale"
+        : "not pa.available_for_sale",
+    );
+  }
+  if (filter.productType !== undefined) {
+    conditions.push(`p.product_type = ${params.add(filter.productType)}`);
+  }
+  if (filter.vendor !== undefined) {
+    conditions.push(`p.vendor = ${params.add(filter.vendor)}`);
+  }
+  if (filter.tags !== undefined && filter.tags.length > 0) {
+    conditions.push(`p.tags @> ${params.add([...filter.tags])}::text[]`);
+  }
+  if (filter.excludeTags !== undefined && filter.excludeTags.length > 0) {
+    conditions.push(
+      `not (p.tags && ${params.add([...filter.excludeTags])}::text[])`,
+    );
+  }
+  if (filter.search !== undefined && filter.search.trim() !== "") {
+    conditions.push(
+      `p.search_vector @@ websearch_to_tsquery('english', ${params.add(filter.search)})`,
+    );
+  }
+  if (filter.minPrice !== undefined) {
+    conditions.push(
+      `exists (select 1 from live_variant lv where lv.product_id = p.id and lv.price_cents >= ${params.add(filter.minPrice)})`,
+    );
+  }
+  if (filter.maxPrice !== undefined) {
+    conditions.push(
+      `exists (select 1 from live_variant lv where lv.product_id = p.id and lv.price_cents <= ${params.add(filter.maxPrice)})`,
+    );
+  }
+  if (filter.createdAfter !== undefined) {
+    conditions.push(`p.created_at > ${params.add(filter.createdAfter)}`);
+  }
+  if (filter.updatedAfter !== undefined) {
+    conditions.push(`p.updated_at > ${params.add(filter.updatedAfter)}`);
+  }
+  return conditions;
+}
+
+function productOrderBy(
+  sortKey: ProductListQuery["sortKey"] | "MANUAL" | undefined,
+  reverse: boolean,
+  search: string | undefined,
+  params: Params,
+): string {
+  const direction = reverse ? "desc" : "asc";
+  const inverse = reverse ? "asc" : "desc";
+  switch (sortKey ?? "TITLE") {
+    case "PRICE":
+      return `pa.min_price_cents ${direction}, p.title asc, p.id asc`;
+    case "CREATED_AT":
+      return `p.created_at ${direction}, p.id asc`;
+    case "UPDATED_AT":
+      return `p.updated_at ${direction}, p.id asc`;
+    case "BEST_SELLING":
+      // "Best selling" counts down by default, so reverse flips it up.
+      return `coalesce(bs.units_sold, 0) ${inverse}, p.title asc, p.id asc`;
+    case "PRODUCT_TYPE":
+      return `p.product_type ${direction} nulls last, p.title asc, p.id asc`;
+    case "MANUAL":
+      return `cp.position ${direction}, p.title asc, p.id asc`;
+    case "RELEVANCE":
+      if (search !== undefined && search.trim() !== "") {
+        return `ts_rank(p.search_vector, websearch_to_tsquery('english', ${params.add(search)})) ${inverse}, p.title asc, p.id asc`;
+      }
+      return `p.position ${direction}, p.title asc, p.id asc`;
+    case "TITLE":
+      return `p.title ${direction}, p.id asc`;
+  }
+}

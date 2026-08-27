@@ -13,7 +13,11 @@ export type Row = Record<string, unknown>;
 
 export function expectRow(value: unknown, context: string): Row {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new AgentRuntimeError("store_conflict", `Expected a row for ${context}.`, { context });
+    throw new AgentRuntimeError(
+      "store_conflict",
+      `Expected a row for ${context}.`,
+      { context },
+    );
   }
   return value as Row;
 }
@@ -41,7 +45,11 @@ export function num(row: Row, column: string, fallback = 0): number {
     return value;
   }
   // bigint columns (cost_micros) come back as strings from PostgREST.
-  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
+  if (
+    typeof value === "string" &&
+    value.trim() !== "" &&
+    Number.isFinite(Number(value))
+  ) {
     return Number(value);
   }
   return fallback;
@@ -52,7 +60,11 @@ export function numOrNull(row: Row, column: string): number | null {
   if (typeof value === "number") {
     return value;
   }
-  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
+  if (
+    typeof value === "string" &&
+    value.trim() !== "" &&
+    Number.isFinite(Number(value))
+  ) {
     return Number(value);
   }
   return null;
