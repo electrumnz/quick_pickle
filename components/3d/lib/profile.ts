@@ -104,7 +104,10 @@ export type BottleProfile = {
 
 const LUT_SIZE = 512;
 
-export function buildBottleProfile(height = 1, radiusRatio = BODY_RADIUS_RATIO): BottleProfile {
+export function buildBottleProfile(
+  height = 1,
+  radiusRatio = BODY_RADIUS_RATIO,
+): BottleProfile {
   const radius = height * radiusRatio;
   const scale = (pts: THREE.Vector2[]) =>
     pts.map((v) => new THREE.Vector2(v.x * radius, v.y * height));
@@ -146,7 +149,13 @@ export function buildBottleProfile(height = 1, radiusRatio = BODY_RADIUS_RATIO):
     data[i * 2] = wall[i]!;
     data[i * 2 + 1] = punt[i]!;
   }
-  const cavityLut = new THREE.DataTexture(data, LUT_SIZE, 1, THREE.RGFormat, THREE.FloatType);
+  const cavityLut = new THREE.DataTexture(
+    data,
+    LUT_SIZE,
+    1,
+    THREE.RGFormat,
+    THREE.FloatType,
+  );
   cavityLut.minFilter = THREE.LinearFilter;
   cavityLut.magFilter = THREE.LinearFilter;
   cavityLut.wrapS = THREE.ClampToEdgeWrapping;
@@ -172,7 +181,9 @@ export function buildBottleProfile(height = 1, radiusRatio = BODY_RADIUS_RATIO):
   const cavitySilhouette: THREE.Vector2[] = [];
   for (let i = 0; i <= 48; i++) {
     const y = (i / 48) * height * NECK_BASE_Y;
-    cavitySilhouette.push(new THREE.Vector2(lookup(wall, y), Math.max(y, interiorFloorY)));
+    cavitySilhouette.push(
+      new THREE.Vector2(lookup(wall, y), Math.max(y, interiorFloorY)),
+    );
   }
 
   return {

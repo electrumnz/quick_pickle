@@ -26,7 +26,7 @@ for f in "$ROOT"/migrations/*.sql; do
 done
 
 echo "==> loading seed"
-"${PSQL[@]}" -d "$DB" --single-transaction -f "$ROOT/seed.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$ROOT/seed.sql" >/dev/null   # seed.sql carries its own BEGIN/COMMIT
 echo "    seed.sql ... ok"
 
 echo "==> verifying"

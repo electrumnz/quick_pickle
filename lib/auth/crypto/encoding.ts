@@ -6,6 +6,15 @@
  * under vitest. No dependency, no runtime branch.
  */
 
+/**
+ * A byte buffer backed by a plain `ArrayBuffer`.
+ *
+ * Web Crypto's `BufferSource` excludes `SharedArrayBuffer`-backed views, so the
+ * whole package is explicit about which it is passing around rather than
+ * casting at each call site.
+ */
+export type Bytes = Uint8Array<ArrayBuffer>;
+
 const BASE64URL_TO_BASE64 = /[-_]/g;
 const BASE64_TO_BASE64URL = /[+/]/g;
 
@@ -23,7 +32,7 @@ export function toBase64Url(bytes: Uint8Array): string {
 }
 
 /** Decode unpadded base64url back to bytes. Throws on malformed input. */
-export function fromBase64Url(value: string): Uint8Array {
+export function fromBase64Url(value: string): Bytes {
   const normalised = value.replace(BASE64URL_TO_BASE64, (character) =>
     character === "-" ? "+" : "/",
   );
@@ -52,13 +61,32 @@ export function toHex(bytes: Uint8Array): string {
 }
 
 /** Decode lowercase or uppercase hex. Throws on malformed input. */
-export function fromHex(value: string): Uint8Array {
+export function fromHex(value: string): Bytes {
   if (value.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(value)) {
     throw new Error("Malformed hex input");
   }
   const bytes = new Uint8Array(value.length / 2);
   for (let index = 0; index < bytes.length; index += 1) {
     bytes[index] = Number.parseInt(value.slice(index * 2, index * 2 + 2), 16);
+  }
+  return bytes;
+}
+
+/**
+ * Decode standard (`+/`) base64, with or without padding.
+ *
+ * Argon2 PHC strings use the standard alphabet without padding, which is not
+ * the same alphabet as {@link fromBase64Url}.
+ */
+export function fromStandardBase64(value: string): Bytes {
+  const padded = value.padEnd(
+    value.length + ((4 - (value.length % 4)) % 4),
+    "=",
+  );
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
   }
   return bytes;
 }

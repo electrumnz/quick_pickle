@@ -26,7 +26,12 @@ export type AgentStatus = (typeof AGENT_STATUSES)[number];
  * No dial position removes the approval requirement for a storefront write or an
  * external effect — that is the property `M27` pins down.
  */
-export const AGENT_AUTONOMIES = ["observe", "propose", "act_with_limits", "autonomous"] as const;
+export const AGENT_AUTONOMIES = [
+  "observe",
+  "propose",
+  "act_with_limits",
+  "autonomous",
+] as const;
 export type AgentAutonomy = (typeof AGENT_AUTONOMIES)[number];
 
 /** `public.agent_run_trigger` */
@@ -52,7 +57,12 @@ export const AGENT_RUN_STATUSES = [
 export type AgentRunStatus = (typeof AGENT_RUN_STATUSES)[number];
 
 /** `public.agent_message_role` */
-export const AGENT_MESSAGE_ROLES = ["system", "user", "assistant", "tool"] as const;
+export const AGENT_MESSAGE_ROLES = [
+  "system",
+  "user",
+  "assistant",
+  "tool",
+] as const;
 export type AgentMessageRole = (typeof AGENT_MESSAGE_ROLES)[number];
 
 /** `public.tool_call_status` */
@@ -114,11 +124,19 @@ export type ApprovalRisk = (typeof APPROVAL_RISKS)[number];
  * `storefront_write` and `external` are the two classes that can never run
  * without an approved `approvals` row, at any autonomy level.
  */
-export const TOOL_EFFECTS = ["read", "business_write", "storefront_write", "external"] as const;
+export const TOOL_EFFECTS = [
+  "read",
+  "business_write",
+  "storefront_write",
+  "external",
+] as const;
 export type ToolEffect = (typeof TOOL_EFFECTS)[number];
 
 /** Effect classes that always require an approved approvals row. */
-export const ALWAYS_APPROVED_EFFECTS: readonly ToolEffect[] = ["storefront_write", "external"];
+export const ALWAYS_APPROVED_EFFECTS: readonly ToolEffect[] = [
+  "storefront_write",
+  "external",
+];
 
 /** True when the effect class can never execute without human approval. */
 export function alwaysRequiresApproval(effect: ToolEffect): boolean {
@@ -288,7 +306,8 @@ export interface CostRecord {
   readonly incurredAt: string;
   readonly provider: string;
   readonly model: string;
-  readonly kind: "inference" | "embedding" | "image" | "search" | "storage" | "third_party";
+  readonly kind:
+    "inference" | "embedding" | "image" | "search" | "storage" | "third_party";
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly cacheReadTokens: number;

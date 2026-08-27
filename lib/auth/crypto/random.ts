@@ -1,4 +1,4 @@
-import { toBase64Url, toHex } from "./encoding";
+import { type Bytes, toBase64Url, toHex } from "./encoding";
 
 /**
  * Cryptographically secure randomness.
@@ -7,7 +7,7 @@ import { toBase64Url, toHex } from "./encoding";
  * runtime, the Edge runtime and the browser. `Math.random` appears nowhere in
  * this package.
  */
-export function randomBytes(length: number): Uint8Array {
+export function randomBytes(length: number): Bytes {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
   return bytes;

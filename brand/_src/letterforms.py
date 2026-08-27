@@ -253,3 +253,175 @@ def render_tracked(text, track):
         inner = "".join('<path d="%s"/>' % p for p in ps)
         frags.append('<g transform="translate(%s 0)" data-g="%s">%s</g>' % (_f(x), ch, inner))
     return total, "".join(frags)
+
+# ---------------------------------------------------------------- the rest of the alphabet
+def g_D():
+    w  = 88.0; R = 40.0; r = R - STEM/2.0
+    tc, bc = R, CAP - R
+    return w, [
+        rect(0, 0, STEM, CAP),
+        rect(STEM, 0, w-R-STEM, STEM),
+        rect(STEM, CAP-STEM, w-R-STEM, STEM),
+        rect(w-STEM, tc, STEM, bc-tc),
+        band(w-R, tc, r, STEM, 270, 360),
+        band(w-R, bc, r, STEM, 0, 90),
+    ]
+
+def g_G():
+    w, ro, r, tc, bc = _O_geom()
+    cx = w/2.0
+    return w, [
+        rect(0, tc, STEM, bc-tc),
+        band(cx, tc, r, STEM, 180, 333),
+        band(cx, bc, r, STEM, 27, 180),
+        rect(w-STEM, 56, STEM, bc-56+1),
+        rect(cx+4, 56, w-cx-4, STEM),
+    ]
+
+def g_J():
+    w = 62.0; R = 31.0; r = R - STEM/2.0
+    bc = CAP + OS - R
+    return w, [rect(w-STEM, 0, STEM, bc), band(w-R, bc, r, STEM, 0, 180)]
+
+def g_M():
+    w = 118.0; v = w/2.0
+    return w, [
+        rect(0, 0, STEM, CAP),
+        rect(w-STEM, 0, STEM, CAP),
+        poly([(0,0), (STEM,0), (v+STEM/2,CAP), (v-STEM/2,CAP)]),
+        poly([(w-STEM,0), (w,0), (v+STEM/2,CAP), (v-STEM/2,CAP)]),
+    ]
+
+def g_Q():
+    w, ps = g_O()
+    return w, ps + [poly([(44,84), (60,73), (94,121), (78,132)])]
+
+def g_T():
+    w = 86.0
+    return w, [rect(0, 0, w, STEM), rect((w-STEM)/2.0, 0, STEM, CAP)]
+
+def g_V():
+    w = 100.0; v = w/2.0
+    return w, [
+        poly([(0,0), (STEM,0), (v+STEM/2,CAP), (v-STEM/2,CAP)]),
+        poly([(w-STEM,0), (w,0), (v+STEM/2,CAP), (v-STEM/2,CAP)]),
+    ]
+
+def g_W():
+    w = 154.0; v1, pk, v2 = 40.0, w/2.0, w-40.0
+    return w, [
+        poly([(0,0), (STEM,0), (v1+STEM/2,CAP), (v1-STEM/2,CAP)]),
+        poly([(pk-STEM/2,0), (pk+STEM/2,0), (v1+STEM/2,CAP), (v1-STEM/2,CAP)]),
+        poly([(pk-STEM/2,0), (pk+STEM/2,0), (v2+STEM/2,CAP), (v2-STEM/2,CAP)]),
+        poly([(w-STEM,0), (w,0), (v2+STEM/2,CAP), (v2-STEM/2,CAP)]),
+    ]
+
+def g_X():
+    w = 100.0
+    return w, [
+        poly([(0,0), (STEM,0), (w,CAP), (w-STEM,CAP)]),
+        poly([(w-STEM,0), (w,0), (STEM,CAP), (0,CAP)]),
+    ]
+
+def g_Y():
+    w = 100.0; v = w/2.0; jy = 64.0
+    return w, [
+        poly([(0,0), (STEM,0), (v+STEM/2,jy), (v-STEM/2,jy)]),
+        poly([(w-STEM,0), (w,0), (v+STEM/2,jy), (v-STEM/2,jy)]),
+        rect(v-STEM/2, jy-STEM, STEM, CAP-jy+STEM),
+    ]
+
+def g_Z():
+    w = 92.0
+    return w, [
+        rect(0, 0, w, STEM),
+        rect(0, CAP-STEM, w, STEM),
+        poly([(w-STEM-8,STEM), (w,STEM), (STEM+8,CAP-STEM), (0,CAP-STEM)]),
+    ]
+
+# ---------------------------------------------------------------- figures
+NW  = 76.0                                    # tabular figure width
+NR  = 38.0                                    # outer radius of a figure bowl
+NCR = NR - STEM/2.0
+NTC = -OS + NR
+NBC = CAP + OS - NR
+
+def g_0():
+    return NW, [
+        band(NW/2, NTC, NCR, STEM, 180, 360),
+        band(NW/2, NBC, NCR, STEM, 0, 180),
+        rect(0, NTC, STEM, NBC-NTC),
+        rect(NW-STEM, NTC, STEM, NBC-NTC),
+    ]
+
+def g_1():
+    return NW, [rect(34, 0, STEM, CAP), poly([(6,28), (34,4), (34,28), (20,40)])]
+
+def g_2():
+    return NW, [
+        band(NW/2, NTC, NCR, STEM, 188, 384),
+        poly([(50,44), (71,53), (26,CAP-STEM), (0,CAP-STEM)]),
+        rect(0, CAP-STEM, NW, STEM),
+    ]
+
+def g_3():
+    return NW, [
+        band(NW/2, NTC, NCR, STEM, 195, 90),
+        band(NW/2, NBC, NCR, STEM, -90, 165),
+    ]
+
+def g_4():
+    return NW, [
+        poly([(44,0), (65,0), (27,74), (6,74)]),
+        rect(0, 74, NW, STEM),
+        rect(44, 0, STEM, CAP),
+    ]
+
+def g_5():
+    return NW, [
+        rect(0, 0, NW-6, STEM),
+        rect(0, 0, STEM, 50),
+        rect(STEM-1, 40, 30, STEM),
+        band(NW/2, NBC, NCR, STEM, -78, 168),
+    ]
+
+def g_6():
+    return NW, [
+        rect(0, NTC+8, STEM, NBC-NTC-8),
+        band(NW/2, NTC+8, NCR, STEM, 180, 330),
+        band(NW/2, NBC, NCR, STEM, 0, 180),
+        band(NW/2, NBC, NCR, STEM, 180, 360),
+    ]
+
+def g_7():
+    return NW, [rect(0, 0, NW, STEM), poly([(NW-STEM-10,STEM), (NW,STEM), (36,CAP), (15,CAP)])]
+
+def g_8():
+    r1 = 31.0 - STEM/2.0
+    r2 = 36.0 - STEM/2.0
+    return NW, [
+        band(NW/2, 31.0, r1, STEM, 0, 180), band(NW/2, 31.0, r1, STEM, 180, 360),
+        band(NW/2, CAP-36.0, r2, STEM, 0, 180), band(NW/2, CAP-36.0, r2, STEM, 180, 360),
+    ]
+
+def g_9():
+    return NW, [
+        rect(NW-STEM, NTC, STEM, NBC-NTC-8),
+        band(NW/2, NBC-8, NCR, STEM, 0, 150),
+        band(NW/2, NTC, NCR, STEM, 0, 180),
+        band(NW/2, NTC, NCR, STEM, 180, 360),
+    ]
+
+def g_slash():
+    return 56.0, [poly([(35,-2), (56,-2), (21,CAP+2), (0,CAP+2)])]
+
+def g_dash():
+    return 60.0, [rect(0, 55, 60, STEM)]
+
+GLYPHS.update({
+    'D':g_D, 'G':g_G, 'J':g_J, 'M':g_M, 'Q':g_Q, 'T':g_T, 'V':g_V, 'W':g_W,
+    'X':g_X, 'Y':g_Y, 'Z':g_Z,
+    '0':g_0, '1':g_1, '2':g_2, '3':g_3, '4':g_4,
+    '5':g_5, '6':g_6, '7':g_7, '8':g_8, '9':g_9,
+    '/':g_slash, '-':g_dash,
+})

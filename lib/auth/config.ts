@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { Bytes } from "./crypto/encoding";
 import { AuthConfigError } from "./errors";
 
 /**
@@ -208,7 +209,7 @@ export function isAdminPasswordConfigured(): boolean {
  * Rotating it invalidates every outstanding session, which is the intended
  * emergency lever alongside per-row revocation.
  */
-export function getSessionSecret(): Uint8Array {
+export function getSessionSecret(): Bytes {
   const value = readEnv("ADMIN_SESSION_SECRET");
   if (value === undefined) {
     throw new AuthConfigError(
@@ -224,7 +225,7 @@ export function getSessionSecret(): Uint8Array {
   return bytes;
 }
 
-function decodeSecret(value: string): Uint8Array {
+function decodeSecret(value: string): Bytes {
   if (/^[0-9a-fA-F]+$/.test(value) && value.length % 2 === 0) {
     return Uint8Array.from(Buffer.from(value, "hex"));
   }

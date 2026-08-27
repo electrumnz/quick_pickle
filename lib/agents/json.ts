@@ -1,7 +1,8 @@
 /** JSON value model shared by transcript persistence and tool payloads. */
 
 export type JsonPrimitive = string | number | boolean | null;
-export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue =
+  JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 export type JsonObject = { [key: string]: JsonValue };
 
 /** True when the value round-trips through `JSON.stringify` unchanged in shape. */

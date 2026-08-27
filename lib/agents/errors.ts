@@ -58,7 +58,10 @@ export class ToolAuthorisationError extends AgentRuntimeError {
   constructor(
     code: Extract<
       RuntimeErrorCode,
-      "unknown_tool" | "tool_not_granted" | "autonomy_forbids_effect" | "invalid_tool_input"
+      | "unknown_tool"
+      | "tool_not_granted"
+      | "autonomy_forbids_effect"
+      | "invalid_tool_input"
     >,
     message: string,
     detail: Readonly<Record<string, string | number | boolean | null>> = {},
@@ -100,7 +103,10 @@ export class ApprovalGateError extends AgentRuntimeError {
 
 /** Raised when a run would push spend past a configured cap. */
 export class CostCapError extends AgentRuntimeError {
-  constructor(message: string, detail: Readonly<Record<string, string | number | boolean | null>>) {
+  constructor(
+    message: string,
+    detail: Readonly<Record<string, string | number | boolean | null>>,
+  ) {
     super("cost_cap_exceeded", message, detail);
     this.name = "CostCapError";
   }
@@ -119,6 +125,8 @@ export class HaltedError extends AgentRuntimeError {
 }
 
 /** Narrowing helper for `catch` blocks. */
-export function isAgentRuntimeError(error: unknown): error is AgentRuntimeError {
+export function isAgentRuntimeError(
+  error: unknown,
+): error is AgentRuntimeError {
   return error instanceof AgentRuntimeError;
 }
