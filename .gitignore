@@ -17,6 +17,7 @@
 
 # testing
 /coverage
+/.lighthouseci
 /playwright-report
 /test-results
 /blob-report
@@ -49,3 +50,10 @@ next-env.d.ts
 
 # agent run evidence (large, machine-generated)
 .claude/god-of-war/runs/*/evidence/
+
+# agent scratch
+.tmpbench/
+
+# python bytecode
+__pycache__/
+*.pyc

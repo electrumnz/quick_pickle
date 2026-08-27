@@ -90,3 +90,85 @@ Card upgrades this unlocks:
 
 Constraint carried into every generation: no kiwiana, no retro-deli, and no image that
 implies a health claim (no gym, no supplement-aisle styling, no "recovery" context).
+
+### 2026-08-27 — Unattended overnight run
+User handed the campaign over to run overnight ("run the gauntlet, see you in the morning").
+
+HARD CONSTRAINTS while unattended:
+- DO NOT buy a domain. F2 deploys to the free Vercel domain only (half-sour.vercel.app or
+  whatever Vercel assigns). Domain purchase queues for the user.
+- No other irreversible or spending action without the user: no paid Supabase project, no
+  sending real email, no publishing to real social accounts, no Shopify plan change, no
+  charging a card. These queue in decisions.md and wait.
+- The Shopify store is REAL. Products may be created there (the catalogue is empty and that
+  is the point), but do not touch billing, do not publish the storefront to a live domain,
+  and do not process a real payment. Test orders only via draft orders / Bogus Gateway.
+
+Reversible decisions may be made alone. Log every one to decisions.md with the reasoning and
+the alternative not taken, and surface the list at hand-back.
+
+### 2026-08-27 — Production-first, public demo
+User: "go live freely, this is a demo site at the moment. better to just go to prod directly
+cz im only gna send her the live link not previews".
+
+Consequences:
+- half-sour.vercel.app is THE deliverable surface. Previews are secondary.
+- Vercel's production branch must follow the working branch so every push goes live.
+- The critic's finding that production is served by a CLI upload with no githubCommitSha is
+  therefore promoted from an adversarial note to the highest-priority defect in the build.
+- Deployment protection stays OFF deliberately; public access is intended.
+
+### 2026-08-27 — Supplier stories become a content pillar
+User, on the kawakawa sourcing note: "thats actually a good point, we can use that to our
+advantage, supplier stories".
+
+This is now a required part of C5 (content) and feeds D6 (brand hub) and E2 (the content agent):
+- Each named supplier gets a real story: the Tairawhiti kawakawa grower, the produce
+  wholesaler, the spice importer, the glassware supplier, the label printer.
+- Provenance is the proof of the premium positioning. A bar buyer asks where it comes from;
+  the answer must be a person and a place, not a category.
+- Scarcity is framed as a consequence of sourcing, never as manufactured urgency. "There is a
+  limit to how much of this we can make, and that limit is the leaf" is the tone.
+- Supplier stories must NOT drift into health or origin claims. Fair Trading Act s 13(j)
+  covers place-of-origin representations, so every provenance statement has to be literally
+  true before it ships. Flag anything aspirational as TODO rather than publishing it.
+- The four-product range and its jobs: 01 HOUSE (everything), 02 DIRTY (martini),
+  03 SMOKE (mezcal, meat), 04 WILD (seafood, kawakawa/kelp/lemon, limited by leaf supply).
+
+### 2026-08-27 — B2C and B2B split into separate agents, plus wholesale mechanics
+User: "you will need a different agent for public outreach and b2b outreach, so a b2c and b2b
+agent, different markets. maybe even a wholesale login or coupon code or something".
+
+Correct — these are different sales motions, not one motion with two tones. E2's roster splits:
+
+**B2C agent** — consumer. Social content, UGC, email retention, launches, the recipe engine,
+review requests. Voice is the brand voice. Success = repeat purchase rate and AOV.
+
+**B2B agent** — trade. Bars, restaurants, delis, bottle shops, distributors. Completely
+different job: prospect lists, sample-pack outreach, follow-up cadences, trade pricing,
+minimum orders, reorder prompts when a venue goes quiet, stockist onboarding. Voice is
+professional-but-not-corporate; a bar manager is not reading brand copy. Success = number of
+active stockists and reorder frequency.
+
+Why they cannot be one agent: the B2B cycle is weeks-long with named humans and a memory of
+every prior conversation; the B2C cycle is impulse-driven and anonymous at scale. Shared tone
+guidance, shared brand rules, entirely different tools, data and success measures.
+
+**Wholesale mechanics — constrained by the Shopify plan.** The store is on Basic, so Shopify's
+native B2B (company accounts, price lists, payment terms) is Plus-only and unavailable. The
+practical build:
+1. **Draft orders as the wholesale rail.** We hold write_draft_orders scope. A venue enquires,
+   the B2B agent drafts the order at trade pricing, the founder approves it in the admin, and
+   Shopify emails a real invoice. This is the standard Basic-plan wholesale flow and needs no
+   plan upgrade.
+2. **A wholesale area on our own site**, gated by our own auth (we control it, unlike Shopify
+   customer accounts on Basic): trade pricing, order history, one-click reorder, downloadable
+   line sheet and tasting notes. Reorders create draft orders.
+3. **Customer tags + a trade discount code** as the low-tech fallback, with minimum-quantity
+   rules, for venues that just want to self-serve.
+
+Every wholesale price change and every outbound trade email flows through the same approvals
+object as everything else — nothing goes to a real buyer unapproved.
+
+Storefront consequence: the wholesale enquiry route in C5 becomes a real funnel entry, not a
+contact form, and D2 (orders) must show draft orders alongside paid ones.

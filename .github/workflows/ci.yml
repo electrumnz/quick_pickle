@@ -4,22 +4,34 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  # A manually dispatched run is an evidence run — give it a group of its own
+  # so a push landing mid-run cannot cancel it. Automatic runs still supersede
+  # their own predecessors on the same ref.
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || 'auto' }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
+# Every job reads its Node major from .nvmrc, which matches package.json
+# `engines.node` and the Vercel project's Node version — one runtime, verified
+# and shipped.
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
 jobs:
   verify:
     name: typecheck / lint / test / build
+    # A same-repo pull request is already covered by the push event on its
+    # branch, so only run the pull_request event for forks, which push misses.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      NEXT_TELEMETRY_DISABLED: "1"
-      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -27,7 +39,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v5
         with:
-          node-version: "22"
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
@@ -44,3 +56,108 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  e2e:
+    name: e2e (Playwright)
+    # A same-repo pull request is already covered by the push event on its
+    # branch, so only run the pull_request event for forks, which push misses.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve Playwright version
+        id: pw
+        run: |
+          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: Run e2e suite
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  lighthouse:
+    name: Lighthouse budget
+    # A same-repo pull request is already covered by the push event on its
+    # branch, so only run the pull_request event for forks, which push misses.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve Chrome for Lighthouse
+        run: |
+          if command -v google-chrome-stable >/dev/null 2>&1; then
+            CHROME_BIN="$(command -v google-chrome-stable)"
+          elif command -v google-chrome >/dev/null 2>&1; then
+            CHROME_BIN="$(command -v google-chrome)"
+          else
+            npx playwright install --with-deps chromium
+            CHROME_BIN="$(node -p "require('@playwright/test').chromium.executablePath()")"
+          fi
+          echo "Using Chrome at $CHROME_BIN"
+          "$CHROME_BIN" --version || true
+          echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
+
+      # Lighthouse measures the production build served by `next start`,
+      # never `next dev` — dev ships unminified bundles and a HMR client.
+      - name: Build
+        run: npm run build
+
+      - name: Assert Lighthouse budget
+        run: npm run lhci
+
+      - name: Upload Lighthouse reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          retention-days: 14
+          if-no-files-found: ignore

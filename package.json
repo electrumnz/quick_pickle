@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.9.0"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "next dev",
@@ -14,20 +14,40 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lhci": "lhci autorun",
+    "auth:hash-password": "node lib/auth/scripts/hash-password.mts",
+    "auth:new-session-secret": "node lib/auth/scripts/new-session-secret.mts",
+    "auth:unlock": "node lib/auth/scripts/unlock.mts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.44",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
+    "@supabase/supabase-js": "^2.112.4",
+    "ai": "^7.0.83",
+    "hash-wasm": "^4.12.0",
+    "inngest": "^4.18.1",
+    "leva": "^0.10.1",
     "next": "16.3.3",
+    "pg": "^8.23.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "three": "^0.185.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@playwright/test": "1.62.1",
+    "@electric-sql/pglite": "^0.3.16",
+    "@lhci/cli": "0.15.1",
+    "@playwright/test": "1.56.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^22.19.2",
+    "@types/pg": "^8.23.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
-    "eslint": "10.9.1",
+    "@types/three": "^0.185.4",
+    "eslint": "9.39.5",
     "eslint-config-next": "16.3.3",
     "eslint-config-prettier": "10.1.8",
     "prettier": "3.9.6",
