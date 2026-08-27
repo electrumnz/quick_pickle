@@ -378,37 +378,34 @@ values
 -- =============================================================================
 -- CARTS  (one live shopper, one abandoned, one that became order HS-01006)
 -- =============================================================================
-insert into public.carts (token, customer_id, email, status, subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, created_at, updated_at, provider, shopify_gid, sync_status, synced_at) values
-  ('7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1', null, null, 'active', 4200, 0, 990, 677, 5190, now() - interval '22 minutes', now() - interval '4 minutes', 'shopify', 'gid://shopify/Cart/c1-7f3a91c04b28de65a1f7093c', 'synced', now() - interval '4 minutes'),
-  ('c82d17e5904ab36f1e75c0d3948a2b6f5e19d47c03b8a6215fd0e93c7a4b8016', null, 'nadine.oputa@gmail.com', 'abandoned', 9600, 0, 0, 1252, 9600, now() - interval '3 days', now() - interval '3 days' + interval '9 minutes', 'shopify', 'gid://shopify/Cart/c1-c82d17e5904ab36f1e75c0d3', 'synced', now() - interval '3 days'),
-  ('a4e0b9317dc6f28504ba71e3d95c8f062a7b3e14c0d95f8623ab7104ed3f9c25', null, null, 'active', 3700, 0, 990, 612, 4690, now() - interval '2 days' - interval '31 minutes', now() - interval '2 days', 'local', null, 'local', null);
-
-update public.carts set abandoned_at = updated_at + interval '6 hours' where status = 'abandoned';
+insert into public.carts (token, customer_id, email, status, subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, abandoned_at, recovery_email_sent_at, created_at, updated_at, provider, shopify_gid, sync_status, synced_at) values
+  -- Live shopper, mid-session right now.
+  ('7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1', null, null, 'active',
+   6000, 0, 990, 912, 6990, null, null,
+   now() - interval '22 minutes', now() - interval '4 minutes',
+   'shopify', 'gid://shopify/Cart/c1-7f3a91c04b28de65a1f7093c', 'synced', now() - interval '4 minutes'),
+  -- Abandoned three days ago; the recovery email has not gone out yet, which is
+  -- what puts it in Dot's queue.
+  ('c82d17e5904ab36f1e75c0d3948a2b6f5e19d47c03b8a6215fd0e93c7a4b8016', null, 'nadine.oputa@gmail.com', 'abandoned',
+   9600, 0, 0, 1252, 9600, now() - interval '3 days' + interval '6 hours', null,
+   now() - interval '3 days', now() - interval '3 days' + interval '9 minutes',
+   'shopify', 'gid://shopify/Cart/c1-c82d17e5904ab36f1e75c0d3', 'synced', now() - interval '3 days'),
+  -- The cart that became order HS-01006; flipped to 'converted' after the order
+  -- rows exist, because carts_converted_has_order will not allow it before.
+  ('a4e0b9317dc6f28504ba71e3d95c8f062a7b3e14c0d95f8623ab7104ed3f9c25', null, 'tom.whitiora@gmail.com', 'active',
+   3700, 0, 990, 612, 4690, null, null,
+   now() - interval '2 days' - interval '31 minutes', now() - interval '2 days',
+   'local', null, 'local', null);
 
 insert into public.cart_items (cart_id, currency, product_id, variant_id, quantity, unit_price_cents, created_at)
 select ct.id, 'NZD', v.product_id, v.id, ci.qty, ci.price, ct.created_at + interval '2 minutes'
   from (values
-    ('7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1', 'HS-FIRE-750', 1, 1800),
-    ('7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1', 'HS-GOLD-750', 1, 1800),
-    ('7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1', 'HS-CONC-250', 0, 0),
+    ('7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1', 'HS-FIRE-750',   1, 1800),
+    ('7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1', 'HS-GOLD-750',   1, 1800),
+    ('7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1', 'HS-CONC-250',   1, 2400),
     ('c82d17e5904ab36f1e75c0d3948a2b6f5e19d47c03b8a6215fd0e93c7a4b8016', 'HS-FIRE-750-6', 1, 9600),
-    ('a4e0b9317dc6f28504ba71e3d95c8f062a7b3e14c0d95f8623ab7104ed3f9c25', 'HS-CHRY-750', 1, 2100),
-    ('a4e0b9317dc6f28504ba71e3d95c8f062a7b3e14c0d95f8623ab7104ed3f9c25', 'HS-DILL-750', 1, 1600)
+    ('a4e0b9317dc6f28504ba71e3d95c8f062a7b3e14c0d95f8623ab7104ed3f9c25', 'HS-CHRY-750',   1, 2100),
+    ('a4e0b9317dc6f28504ba71e3d95c8f062a7b3e14c0d95f8623ab7104ed3f9c25', 'HS-DILL-750',   1, 1600)
   ) as ci(token, sku, qty, price)
   join public.carts ct on ct.token = ci.token
-  join public.product_variants v on v.sku = ci.sku
- where ci.qty > 0;
-
--- The live cart actually holds 750ml Fire + 750ml Golden + a 250ml concentrate.
-update public.cart_items ci
-   set quantity = 1, unit_price_cents = 2400
-  from public.carts c, public.product_variants v
- where false;
-insert into public.cart_items (cart_id, currency, product_id, variant_id, quantity, unit_price_cents, created_at)
-select c.id, 'NZD', v.product_id, v.id, 1, 2400, c.created_at + interval '5 minutes'
-  from public.carts c, public.product_variants v
- where c.token = '7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1'
-   and v.sku = 'HS-CONC-250';
-
-update public.carts set subtotal_cents = 6000, tax_cents = 912, total_cents = 6990
- where token = '7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1';
+  join public.product_variants v on v.sku = ci.sku;

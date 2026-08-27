@@ -103,46 +103,63 @@ def svg(w, h, title, body, width=None):
 BW, BH = 360.0, 900.0
 
 def bottle(s, x=0.0):
-    """A 500ml flint bottle carrying the label."""
-    bx0, bx1 = 44.0, 316.0
-    body_top, body_bot = 268.0, 872.0
-    nx0, nx1 = 146.0, 214.0
-    neck_top = 86.0
-    shape = ("M%s %s L%s %s "
-             "C%s %s %s %s %s %s "
-             "L%s %s Q%s %s %s %s L%s %s Q%s %s %s %s L%s %s "
-             "C%s %s %s %s %s %s Z") % (
-        nx0, neck_top, nx0, 176,
-        nx0, 214, bx0, 214, bx0, body_top,
-        bx0, body_bot-14, bx0, body_bot, bx0+14, body_bot,
-        bx1-14, body_bot, bx1, body_bot, bx1, body_bot-14,
-        bx1, body_top,
-        bx1, 214, nx1, 214, nx1, 176,
-        )
-    shape = shape.replace("L%s %s C" % (nx1, 176), "L%s %s C" % (nx1, 176))
-    cid = "clip-%s" % s["no"]
-    o = ['<defs><clipPath id="%s"><path d="%s"/></clipPath>'
+    """A 500 ml flint bottle carrying the wrap label."""
+    nx0, nx1   = 150.0, 210.0
+    neck_top   = 96.0
+    neck_bot   = 196.0
+    bx0, bx1   = 62.0, 298.0
+    body_top   = 306.0
+    body_bot   = 862.0
+    rr         = 16.0
+    shape = (
+        "M{nx0} {nt} L{nx0} {nb} "
+        "C{nx0} {c1} {bx0} {c2} {bx0} {bt} "
+        "L{bx0} {bb1} Q{bx0} {bb} {bx0r} {bb} "
+        "L{bx1r} {bb} Q{bx1} {bb} {bx1} {bb1} "
+        "L{bx1} {bt} "
+        "C{bx1} {c2} {nx1} {c1} {nx1} {nb} "
+        "L{nx1} {nt} Z"
+    ).format(nx0=nx0, nx1=nx1, nt=neck_top, nb=neck_bot,
+             c1=neck_bot+52, c2=body_top-58, bx0=bx0, bx1=bx1,
+             bt=body_top, bb=body_bot, bb1=body_bot-rr,
+             bx0r=bx0+rr, bx1r=bx1-rr)
+    uid = s["no"]
+    o = ['<defs>'
+         '<clipPath id="clip-%s"><path d="%s"/></clipPath>'
          '<linearGradient id="gl-%s" x1="0" y1="0" x2="1" y2="0">'
-         '<stop offset="0" stop-color="#FFFFFF" stop-opacity=".55"/>'
-         '<stop offset=".18" stop-color="#FFFFFF" stop-opacity="0"/>'
-         '<stop offset=".78" stop-color="#FFFFFF" stop-opacity="0"/>'
-         '<stop offset="1" stop-color="#000000" stop-opacity=".14"/></linearGradient></defs>'
-         % (cid, shape, s["no"])]
-    # glass + brine
-    o.append('<path d="%s" fill="#DBE0AE"/>' % shape)
-    o.append('<g clip-path="url(#%s)"><rect x="0" y="0" width="%s" height="150" fill="#EDEFD8"/></g>' % (cid, BW))
-    o.append('<path d="%s" fill="url(#gl-%s)"/>' % (shape, s["no"]))
-    o.append('<path d="%s" fill="none" stroke="%s" stroke-width="1.6" stroke-opacity=".5"/>' % (shape, PEPPER))
+         '<stop offset="0" stop-color="#0F1511" stop-opacity=".18"/>'
+         '<stop offset=".10" stop-color="#FFFFFF" stop-opacity=".42"/>'
+         '<stop offset=".30" stop-color="#FFFFFF" stop-opacity="0"/>'
+         '<stop offset=".74" stop-color="#FFFFFF" stop-opacity="0"/>'
+         '<stop offset=".92" stop-color="#0F1511" stop-opacity=".13"/>'
+         '<stop offset="1" stop-color="#0F1511" stop-opacity=".26"/></linearGradient>'
+         '<linearGradient id="br-%s" x1="0" y1="0" x2="0" y2="1">'
+         '<stop offset="0" stop-color="#E2E7B4"/><stop offset="1" stop-color="#CBD394"/>'
+         '</linearGradient></defs>' % (uid, shape, uid, uid)]
+    o.append('<ellipse cx="180" cy="874" rx="118" ry="13" fill="#0F1511" fill-opacity=".22"/>')
+    o.append('<path d="%s" fill="#EFF1E2"/>' % shape)
+    o.append('<g clip-path="url(#clip-%s)">'
+             '<rect x="0" y="168" width="%s" height="%s" fill="url(#br-%s)"/>'
+             '<rect x="0" y="168" width="%s" height="7" fill="#0F1511" fill-opacity=".10"/>'
+             '</g>' % (uid, _f(BW), _f(BH), uid, _f(BW)))
+    o.append('<path d="%s" fill="url(#gl-%s)"/>' % (shape, uid))
+    o.append('<path d="%s" fill="none" stroke="#4E554A" stroke-width="1.4" stroke-opacity=".45"/>' % shape)
     # closure
-    o.append('<rect x="%s" y="%s" width="%s" height="60" rx="3" fill="%s"/>'
-             % (_f(nx0-8), 30, _f(nx1-nx0+16), s["band"] if s["band"] != BONE else INK))
-    o.append('<rect x="%s" y="%s" width="%s" height="10" fill="%s" fill-opacity=".2"/>'
-             % (_f(nx0-8), 80, _f(nx1-nx0+16), INK))
-    # label
-    lw, lh = bx1-bx0-24.0, 470.0
-    lx, ly = bx0+12.0, 350.0
+    capc = s["band"]
+    o.append('<rect x="%s" y="44" width="%s" height="70" rx="3" fill="%s"/>'
+             % (_f(nx0-9), _f(nx1-nx0+18), capc))
+    o.append('<rect x="%s" y="44" width="6" height="70" fill="#FFFFFF" fill-opacity=".22"/>' % _f(nx0-9))
+    o.append('<rect x="%s" y="%s" width="6" height="70" fill="#0F1511" fill-opacity=".18"/>' % (_f(nx1+3), 44))
+    o.append('<rect x="%s" y="112" width="%s" height="9" fill="#0F1511" fill-opacity=".16"/>'
+             % (_f(nx0-3), _f(nx1-nx0+6)))
+    # wrap label, aspect-locked to the flat artwork
+    lw = (bx1 - bx0) - 8.0
+    lh = lw * LH / LW
+    lx, ly = bx0 + 4.0, 396.0
     o.append('<g transform="translate(%s %s) scale(%s)">%s</g>'
-             % (_f(lx), _f(ly), _f(lw/LW), "".join(label_body(s, LW, LW*lh/lw))))
+             % (_f(lx), _f(ly), _f(lw/LW), "".join(label_body(s, LW, LH))))
+    o.append('<g clip-path="url(#clip-%s)"><rect x="%s" y="%s" width="%s" height="%s" '
+             'fill="url(#gl-%s)" opacity=".55"/></g>' % (uid, _f(lx), _f(ly), _f(lw), _f(lh), uid))
     return '<g transform="translate(%s 0)">%s</g>' % (_f(x), "".join(o))
 
 if __name__ == "__main__":
