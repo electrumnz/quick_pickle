@@ -10,7 +10,7 @@ import {
 import { issueLoginCsrf } from "../csrf";
 import type { LoginDependencies, LoginResult } from "../login";
 import { attemptLogin } from "../login";
-import { clientIpSubject, resolveClientIp } from "./client-ip";
+import { resolveClientIp } from "./client-ip";
 import {
   readCookie,
   serializeClearCookie,

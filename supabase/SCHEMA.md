@@ -17,8 +17,14 @@ marketing, and the AI staff that run most of it. One human operates it.
 20260101000500_shopify_sync.sql      webhook_events, sync_state
 20260101000600_production.sql        suppliers, ingredients, recipes, batches, traceability
 20260101000700_marketing.sql         social, content, campaigns, email, reviews
-20260101000800_rls_grants_triggers.sql  RLS policies, grants, triggers, and the assertions
+20260101000800_rls_grants_triggers.sql  RLS policies, grants, triggers, storefront RPC
+20260101999900_schema_guarantees.sql    backfills anything missed, then asserts — sorts last
 ```
+
+Several agents write migrations into this directory. `..._schema_guarantees.sql`
+sorts last on purpose: a table added by any later migration still gets RLS, a
+policy and its `updated_at` trigger, and the guarantees below are re-checked
+over the _final_ schema rather than a snapshot of the middle of the run.
 
 ---
 
@@ -221,9 +227,9 @@ the policy level — RLS does not filter `TRUNCATE`.
 
 ## The migrations verify themselves
 
-The last migration ends with five `DO` blocks that **raise and fail the
-migration** rather than merely reporting. If any of these is ever untrue, the
-schema does not ship:
+The last migration backfills anything a later migration left out, then runs six
+`DO` blocks that **raise and fail the migration** rather than merely reporting.
+If any of these is ever untrue, the schema does not ship:
 
 1. every table in `public` has RLS enabled **and** at least one policy
 2. every foreign key is served by a non-partial index whose leading columns are
@@ -231,7 +237,11 @@ schema does not ship:
 3. no money column is `float`/`numeric`/`money`, and no column is a naive
    `timestamp`
 4. every table carrying `updated_at` has the trigger attached
-5. `anon` holds no privilege on any back-office table
+5. `anon` holds no privilege on any back-office table — and any `anon` grant
+   without a matching `anon` policy is revoked, because a grant nobody wrote a
+   policy for is an accident rather than a decision
+6. every mirrored table (one carrying both `shopify_gid` and `sync_status`)
+   still has its `synced_has_identity` check
 
 Current state, from a clean build:
 

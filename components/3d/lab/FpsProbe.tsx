@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 
 /**
@@ -19,6 +19,15 @@ export function FpsProbe({
   }) => void;
 }) {
   const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
+  const camera = useThree((s) => s.camera);
+  // Lab-only handle so automated captures can inspect the live scene graph.
+  useEffect(() => {
+    (window as unknown as { __hs?: unknown }).__hs = { scene, gl, camera };
+    return () => {
+      delete (window as unknown as { __hs?: unknown }).__hs;
+    };
+  }, [scene, gl, camera]);
   const dpr = useThree((s) => s.viewport.dpr);
   const frames = useRef(0);
   const last = useRef(performance.now());

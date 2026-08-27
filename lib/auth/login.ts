@@ -6,6 +6,7 @@ import { verifyPassword } from "./crypto/argon2";
 import type { Bytes } from "./crypto/encoding";
 import { randomRequestId } from "./crypto/random";
 import type { LoginFailureReason } from "./errors";
+import { clientIpSubject } from "./http/client-ip";
 import { runFactorChain } from "./factors/registry";
 import type { AuthFactor, FactorChallenge } from "./factors/types";
 import { createSession } from "./session";
@@ -103,7 +104,7 @@ export async function attemptLogin(
 ): Promise<LoginResult> {
   const startedAt = deps.clock.now();
   const requestId = randomRequestId();
-  const ipSubject = input.ipAddress ?? "unknown";
+  const ipSubject = clientIpSubject(input.ipAddress);
 
   let result: LoginResult;
   try {

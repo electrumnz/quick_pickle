@@ -18,7 +18,31 @@ import type { MockProvider } from "../mock/provider";
 import type { SimulatedCheckoutInput } from "../provider";
 import type { SqlExecutor } from "../sql/executor";
 
-const FIXTURE_SQL_PATH = new URL("./half-sour.seed.sql", import.meta.url);
+const FIXTURE_RELATIVE_PATH = path.join(
+  "lib",
+  "commerce",
+  "seed",
+  "half-sour.seed.sql",
+);
+
+/**
+ * Locate the fixture without `import.meta.url`.
+ *
+ * The suite runs under Vitest (ESM), Playwright's runner (CJS) and plain Node,
+ * and `import.meta` is a syntax error in one of those. Walking up from the
+ * working directory works under all three and needs no build step.
+ */
+function resolveFixturePath(): string {
+  let directory = process.cwd();
+  for (let depth = 0; depth < 8; depth += 1) {
+    const candidate = path.join(directory, FIXTURE_RELATIVE_PATH);
+    if (existsSync(candidate)) return candidate;
+    const parent = path.dirname(directory);
+    if (parent === directory) break;
+    directory = parent;
+  }
+  throw new Error(`Could not find ${FIXTURE_RELATIVE_PATH} from ${process.cwd()}`);
+}
 
 /** Variant ids from the fixture, so callers do not have to look them up. */
 export const SEED_VARIANTS = {
@@ -60,7 +84,7 @@ export const SEED_PRODUCTS = {
  */
 export async function seedCatalogue(
   sql: SqlExecutor,
-  source: string | URL = FIXTURE_SQL_PATH,
+  source: string | URL = resolveFixturePath(),
 ): Promise<string> {
   const text = readFileSync(source, "utf8");
   await sql.execScript(text);
@@ -360,7 +384,7 @@ export async function seedCommerce(
   now?: Date,
   source_?: string | URL,
 ): Promise<{ source: string; orderIds: readonly string[] }> {
-  const source = await seedCatalogue(sql, source_ ?? FIXTURE_SQL_PATH);
+  const source = await seedCatalogue(sql, source_ ?? resolveFixturePath());
   const orderIds = await seedOrderHistory(provider, sql, now);
   return { source, orderIds };
 }

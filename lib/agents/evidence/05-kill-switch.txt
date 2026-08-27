@@ -3,7 +3,7 @@ KILL SWITCH — STOPS A RUN THAT IS ALREADY IN FLIGHT
 ==============================================================================
 The model call is open and holding when the switch is thrown. The in-flight
 watcher aborts the request; the runtime then records why the run stopped.
-generated: 2026-08-27T13:18:50.685Z (npx vitest run tests/agents/evidence.test.ts)
+generated: 2026-08-27T13:23:22.236Z (npx vitest run tests/agents/evidence.test.ts)
 model: SCRIPTED (lib/agents/model/mock.ts). Everything below the model is the real runtime.
 
 BEFORE THE SWITCH
@@ -35,6 +35,6 @@ AFTER
 
 STRUCTURED LOG
   {"level":"warn","event":"agent.control.kill_switch_engaged","at":"2026-08-27T09:00:00.000Z","fields":{"reason":"smoke in the kitchen","engagedBy":"founder"}}
-  {"level":"error","event":"agent.run.halted","at":"2026-08-27T09:00:00.000Z","runId":"2f76f267-5d4b-442d-9e58-44ad68f5b636","agentSlug":"test-role","fields":{"code":"kill_switch_engaged","reason":"Global kill switch engaged: smoke in the kitchen","status":"cancelled"}}
+  {"level":"error","event":"agent.run.halted","at":"2026-08-27T09:00:00.000Z","runId":"8e16c9db-c4ca-4812-b680-60de5a720bb7","agentSlug":"test-role","fields":{"code":"kill_switch_engaged","reason":"Global kill switch engaged: smoke in the kitchen","status":"cancelled"}}
 
 PER-AGENT PAUSE (the narrower control) is exercised in tests/agents/kill-switch.test.ts.

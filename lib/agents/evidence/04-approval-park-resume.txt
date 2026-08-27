@@ -4,21 +4,21 @@ DURABLE RUN — PARKED ON waitForEvent, RESUMED BY AN APPROVAL
 The workflow body is the one inngest/functions/agent-run.ts registers. The step
 driver here reproduces Inngest's model: completed steps memoised by id, the whole
 function re-invoked after a park. No process is held open while the founder decides.
-generated: 2026-08-27T13:18:50.663Z (npx vitest run tests/agents/evidence.test.ts)
+generated: 2026-08-27T13:23:22.176Z (npx vitest run tests/agents/evidence.test.ts)
 model: SCRIPTED (lib/agents/model/mock.ts). Everything below the model is the real runtime.
 
 ATTEMPT 1
   parked at step      approval-0-0
   waiting for event   agent/approval.decided
   timeout             3d
-  match predicate     async.data.approvalId == "64e986b5-0ae6-4e02-92ba-99cae9170116"
+  match predicate     async.data.approvalId == "8063fd47-5c9e-40c5-8285-aa88e39e59dd"
   model calls so far  1
   external sends      0
   agent_runs.status   awaiting_approval
-  blocking approval   64e986b5-0ae6-4e02-92ba-99cae9170116
+  blocking approval   8063fd47-5c9e-40c5-8285-aa88e39e59dd
   approvals row raised:
 {
-  "id": "64e986b5-0ae6-4e02-92ba-99cae9170116",
+  "id": "8063fd47-5c9e-40c5-8285-aa88e39e59dd",
   "subject_type": "email_outreach",
   "status": "pending",
   "risk": "high",
@@ -42,12 +42,12 @@ ATTEMPT 1
     start-run, control-0, model-0, gate-0-0
 
 FOUNDER DECIDES
-  approval 64e986b5-0ae6-4e02-92ba-99cae9170116 -> approved by founder
+  approval 8063fd47-5c9e-40c5-8285-aa88e39e59dd -> approved by founder
   event emitted: agent/approval.decided
 
 ATTEMPT 2 (re-invoked, as Inngest re-invokes after a park)
   result status       succeeded
-  run id              d1c92524-6527-494f-996c-400bedd2f98a
+  run id              2cfcbd5e-c3e0-48a9-b742-02ed46bb6625
   model calls total   2  (one more than attempt 1)
   external sends      1
 

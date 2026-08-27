@@ -456,6 +456,7 @@ function TypeSpecimen() {
             ) : null}
           </div>
           <p
+            data-type-step={step.name}
             className={[
               TYPE_CLASS[step.name] ?? "text-body",
               "text-primary",
@@ -500,6 +501,7 @@ function SpacingSpecimen() {
                 {step.usage}
               </span>
               <span
+                data-space-step={step.name}
                 className="bg-accent border-accent-edge block h-4 max-w-full rounded-xs border"
                 style={{ width: `var(--spacing-${step.name})` }}
               />
