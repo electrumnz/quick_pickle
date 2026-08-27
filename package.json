@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.16",
+    "@lhci/cli": "0.15.1",
     "@playwright/test": "1.56.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^22.19.2",
