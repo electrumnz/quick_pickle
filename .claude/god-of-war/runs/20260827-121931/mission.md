@@ -117,3 +117,20 @@ Consequences:
 - The critic's finding that production is served by a CLI upload with no githubCommitSha is
   therefore promoted from an adversarial note to the highest-priority defect in the build.
 - Deployment protection stays OFF deliberately; public access is intended.
+
+### 2026-08-27 — Supplier stories become a content pillar
+User, on the kawakawa sourcing note: "thats actually a good point, we can use that to our
+advantage, supplier stories".
+
+This is now a required part of C5 (content) and feeds D6 (brand hub) and E2 (the content agent):
+- Each named supplier gets a real story: the Tairawhiti kawakawa grower, the produce
+  wholesaler, the spice importer, the glassware supplier, the label printer.
+- Provenance is the proof of the premium positioning. A bar buyer asks where it comes from;
+  the answer must be a person and a place, not a category.
+- Scarcity is framed as a consequence of sourcing, never as manufactured urgency. "There is a
+  limit to how much of this we can make, and that limit is the leaf" is the tone.
+- Supplier stories must NOT drift into health or origin claims. Fair Trading Act s 13(j)
+  covers place-of-origin representations, so every provenance statement has to be literally
+  true before it ships. Flag anything aspirational as TODO rather than publishing it.
+- The four-product range and its jobs: 01 HOUSE (everything), 02 DIRTY (martini),
+  03 SMOKE (mezcal, meat), 04 WILD (seafood, kawakawa/kelp/lemon, limited by leaf supply).

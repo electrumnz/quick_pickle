@@ -1,6 +1,6 @@
 import { buildLoginAuditEntry } from "./audit";
 import type { Clock } from "./clock";
-import type { Argon2Params, ThrottlePolicy } from "./config";
+import type { ThrottlePolicy } from "./config";
 import { verifyLoginCsrf } from "./csrf";
 import { verifyPassword } from "./crypto/argon2";
 import type { Bytes } from "./crypto/encoding";
@@ -62,11 +62,12 @@ export type LoginDependencies = {
   readonly sessionSecret: Bytes;
   /** Argon2id PHC string from the environment. */
   readonly passwordHash: string | null;
-  readonly argon2Params: Argon2Params;
   readonly ownerEmail: string;
   readonly ownerName: string;
   /** Wall-clock floor applied to every outcome. */
   readonly minResponseMs: number;
+  /** Whether forwarded-for headers may be believed when identifying the client. */
+  readonly trustProxyHeaders: boolean;
 };
 
 export type LoginResult =

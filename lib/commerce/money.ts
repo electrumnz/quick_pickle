@@ -442,12 +442,34 @@ export function fromMoneyV2(value: MoneyV2): Money {
  */
 export function formatMoney(value: Money, locale = "en-NZ"): string {
   const digits = minorUnitDigits(value.currencyCode);
-  return new Intl.NumberFormat(locale, {
+  const negative = value.amountInMinorUnits < 0;
+  const magnitude = BigInt(Math.abs(value.amountInMinorUnits));
+  const scale = 10n ** BigInt(digits);
+  const whole = magnitude / scale;
+  const fraction = (magnitude % scale).toString().padStart(digits, "0");
+
+  const formatter = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: value.currencyCode,
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
-  }).format(toDecimalString(value));
+  });
+
+  // Format the integral part as a BigInt — which Intl handles exactly — and
+  // then splice the exact minor-unit digits into the fraction slot the locale
+  // produced. A cents value is never divided by 100 and no double is ever
+  // formed, which is the entire reason this codebase stores minor units.
+  // `-1n` stands in when the amount is negative but rounds to a zero integral
+  // part (-$0.50), purely so the locale puts its minus sign in the right place.
+  const sample = negative ? (whole === 0n ? -1n : -whole) : whole;
+  return formatter
+    .formatToParts(sample)
+    .map((part) => {
+      if (part.type === "fraction") return fraction;
+      if (part.type === "integer" && negative && whole === 0n) return "0";
+      return part.value;
+    })
+    .join("");
 }
 
 /** A price range, as the storefront shows it under a product title. */

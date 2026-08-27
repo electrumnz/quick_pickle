@@ -12,10 +12,18 @@ import type {
   LanguageModelV4,
   LanguageModelV4CallOptions,
   LanguageModelV4Content,
+  LanguageModelV4FinishReason,
   LanguageModelV4GenerateResult,
   LanguageModelV4StreamResult,
   LanguageModelV4Usage,
 } from "@ai-sdk/provider";
+
+/**
+ * The unified finish reasons a provider may actually return. Taken from the
+ * installed `@ai-sdk/provider` union rather than typed as a string, so a script
+ * cannot express an outcome a real model never produces.
+ */
+export type ScriptedFinishReason = LanguageModelV4FinishReason["unified"];
 
 /** Token counts a scripted turn should report. */
 export interface ScriptedUsage {
@@ -31,6 +39,8 @@ export type ScriptedTurn =
       readonly kind: "text";
       readonly text: string;
       readonly usage?: ScriptedUsage;
+      /** Defaults to `stop`. `length`, `content-filter` and `other` are all reachable here. */
+      readonly finishReason?: Exclude<ScriptedFinishReason, "tool-calls">;
       /** Hold the call open until the abort signal fires. Used to prove the kill switch bites mid-call. */
       readonly holdUntilAborted?: boolean;
     }
@@ -52,6 +62,31 @@ export type ScriptedTurn =
 
 const DEFAULT_USAGE: ScriptedUsage = { inputTokens: 120, outputTokens: 40 };
 
+/**
+ * The finish reason a turn reports.
+ *
+ * A tool-calling turn is always `tool-calls`, matching the provider contract; a
+ * text turn defaults to `stop` but may declare `length`, `content-filter` or
+ * `other`, so the runtime's handling of those is exercised rather than assumed.
+ */
+function finishReasonFor(
+  turn: Extract<ScriptedTurn, { kind: "text" | "tool-calls" }>,
+): LanguageModelV4FinishReason {
+  if (turn.kind === "tool-calls") {
+    return { unified: "tool-calls", raw: "tool_use" };
+  }
+  const unified: ScriptedFinishReason = turn.finishReason ?? "stop";
+  const raw: Record<ScriptedFinishReason, string> = {
+    stop: "end_turn",
+    length: "max_tokens",
+    "content-filter": "refusal",
+    "tool-calls": "tool_use",
+    error: "error",
+    other: "other",
+  };
+  return { unified, raw: raw[unified] };
+}
+
 function toUsage(usage: ScriptedUsage | undefined): LanguageModelV4Usage {
   const value = usage ?? DEFAULT_USAGE;
   const cacheRead = value.cacheReadTokens ?? 0;
@@ -68,7 +103,6 @@ function toUsage(usage: ScriptedUsage | undefined): LanguageModelV4Usage {
       text: value.outputTokens,
       reasoning: 0,
     },
-    totalTokens: value.inputTokens + value.outputTokens,
   };
 }
 
@@ -154,7 +188,7 @@ export class ScriptedModel implements LanguageModelV4 {
 
     return {
       content,
-      finishReason: turn.kind === "tool-calls" ? "tool-calls" : "stop",
+      finishReason: finishReasonFor(turn),
       usage: toUsage(turn.usage),
       warnings: [],
       response: { id: `mock-response-${this.index}`, modelId: this.modelId },

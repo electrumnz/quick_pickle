@@ -574,3 +574,194 @@ select s.id, 'NZD', v.product_id, v.id, 1, 8400
   from public.subscriptions s
   join public.customers c on c.id = s.customer_id and c.email = 'hana.f@protonmail.com'
   join public.product_variants v on v.sku = 'HS-DILL-750-6';
+
+-- =============================================================================
+-- PRODUCTION — suppliers, ingredients, versioned recipes
+-- =============================================================================
+insert into public.suppliers
+  (code, name, contact_name, email, phone, website, address_line, suburb, city, region, postcode,
+   status, payment_terms, lead_time_days, minimum_order_cents, nzbn, gst_number,
+   is_organic_certified, food_safety_programme, food_safety_expires_on, rating, notes)
+values
+  ('PUKEKOHE', 'Pukekohe Market Gardens Co-operative', 'Manu Tipene', 'orders@pukekohegardens.co.nz', '+64 9 238 4410', 'https://pukekohegardens.co.nz', '188 Buckland Road', null, 'Pukekohe', 'Auckland', '2120', 'active', '20th of the month following', 3, 15000, '9429037718204', '076-118-442', false, 'NZGAP certified — GlobalG.A.P. equivalent', (current_date + 214), 5, 'Telegraph cucumbers and alliums. Cut to order Tuesday and Friday. Quality has never dropped.'),
+  ('HBHERBS', 'Hawke''s Bay Herb Growers', 'Sione Latu', 'sione@hbherbs.co.nz', '+64 6 878 2201', 'https://hbherbs.co.nz', '44 Kereru Road', null, 'Hastings', 'Hawke''s Bay', '4120', 'active', 'Net 14', 4, 8000, '9429041008372', '113-990-227', true, 'Food Control Plan — MPI registered', (current_date + 96), 4, 'Fresh dill heads and long red chillies. Dill supply gets tight from late August.'),
+  ('GRASSMERE', 'Grassmere Salt Works', 'Bridget Coates', 'sales@grassmeresalt.co.nz', '+64 3 575 7188', 'https://grassmeresalt.co.nz', '2140 State Highway 1', 'Lake Grassmere', 'Seddon', 'Marlborough', '7285', 'active', 'Net 30', 7, 25000, '9429030117744', '051-204-889', false, 'Food Control Plan — MPI registered', (current_date + 331), 5, 'Solar-evaporated sea salt, 25kg sacks. Price locked until March.'),
+  ('CANTVIN', 'Canterbury Vinegar Works', 'Rachel Fenn', 'accounts@cantvin.co.nz', '+64 3 344 9012', null, '19 Waterloo Road', 'Hornby', 'Christchurch', 'Canterbury', '8042', 'active', 'Net 30', 5, 20000, '9429035581093', '088-441-206', false, 'Food Control Plan — MPI registered', (current_date + 58), 4, 'White vinegar at 10% acetic in 200L drums, plus cane sugar and citric acid. Certificate is up for renewal — Marlow is chasing.'),
+  ('BOPSPICE', 'Bay of Plenty Spice Merchants', 'Ari Devlin', 'ari@bopspice.co.nz', '+64 7 573 6640', 'https://bopspice.co.nz', '7 Jellicoe Street', null, 'Te Puke', 'Bay of Plenty', '3119', 'active', 'Net 14', 5, 12000, '9429042230866', '129-007-513', true, 'Food Control Plan — MPI registered', (current_date + 402), 5, 'Whole spice only, nothing ground. Batch certificates come with every delivery.'),
+  ('ORCHARD', 'Central Otago Orchard Collective', 'Nell Brooking', 'nell@centralorchard.nz', '+64 3 445 1177', null, '1180 Ripponvale Road', null, 'Cromwell', 'Otago', '9310', 'active', 'Net 30', 10, 40000, '9429044519028', '134-882-770', false, 'Food Control Plan — MPI registered', (current_date + 168), 4, 'Sour cherries, picked in January and held frozen. One order a year, placed in February.'),
+  ('GLASSCO', 'Onehunga Glass and Closures', 'Peter Yeung', 'sales@onehungaglass.co.nz', '+64 9 622 0180', 'https://onehungaglass.co.nz', '9 Victoria Street', 'Onehunga', 'Auckland', 'Auckland', '1061', 'active', 'Net 30', 14, 50000, '9429031104822', '042-116-395', false, null, null, 3, 'Flint glass, caps, labels and cans. Lead time crept from 10 to 14 days this year — plan around it.');
+
+insert into public.ingredients
+  (code, name, category, unit, description, allergens, is_organic, storage, shelf_life_days,
+   standard_cost_cents, stock_on_hand, reorder_point, reorder_quantity, preferred_supplier_id, notes)
+select i.code, i.name, i.cat::public.ingredient_category, i.unit::public.unit_of_measure, i.descr,
+       i.allergens::text[], i.organic, i.storage::public.storage_requirement, i.shelf,
+       i.cost, i.stock, i.rp, i.rq, s.id, i.notes
+  from (values
+    ('CUCUMBER',  'Telegraph cucumbers',            'produce',   'kg', 'Grade 1 telegraph cucumbers, 300-400g each.', '{}', false, 'chilled',  14,   480, 138.000,  60.000, 240.000, 'PUKEKOHE', 'Cut to order. Anything over five days off the vine goes soft in the brine.'),
+    ('DILL_FRESH','Fresh dill heads',               'herb',      'kg', 'Whole flowering dill heads, stems attached.', '{}', true,  'chilled',   7,  2600,   4.200,   8.000,  24.000, 'HBHERBS',  'Supply tightens from late August. This is the one that stops production.'),
+    ('DILL_SEED', 'Dill seed',                      'spice',     'kg', 'Whole dill seed for the concentrate.',        '{}', false, 'dry',     720,  4200,   3.400,   2.000,   6.000, 'BOPSPICE', null),
+    ('GARLIC',    'Garlic bulbs',                   'produce',   'kg', 'New Zealand grown, cured.',                   '{}', false, 'ambient', null, 1250,  11.500,   6.000,  20.000, 'PUKEKOHE', null),
+    ('SALT_SEA',  'Marlborough sea salt',           'salt',      'kg', 'Solar-evaporated, medium flake, 25kg sacks.', '{}', false, 'dry',    1800,   640,  74.000,  40.000, 120.000, 'GRASSMERE',null),
+    ('VIN_WHITE', 'White vinegar 10% acetic',       'acid',      'l',  '200L food-grade drums.',                      '{}', false, 'ambient', null,  310, 196.000, 100.000, 400.000, 'CANTVIN',  null),
+    ('WATER_FILT','Filtered water',                 'water',     'l',  'Reverse osmosis, in-house.',                  '{}', false, 'ambient', null,     2,   0.000,   0.000,   0.000, null,       'Made on site. Costed at the metered rate for batch costing only.'),
+    ('PEPPER_BLK','Black peppercorn',               'spice',     'kg', 'Whole Tellicherry.',                          '{}', false, 'dry',     720,  3900,   2.100,   1.500,   5.000, 'BOPSPICE', null),
+    ('CORIAND',   'Coriander seed',                 'spice',     'kg', 'Whole, unroasted.',                           '{}', false, 'dry',     720,  2100,   2.800,   2.000,   6.000, 'BOPSPICE', null),
+    ('MUSTARD',   'Yellow mustard seed',            'spice',     'kg', 'Whole yellow.',                               '{mustard}', false, 'dry', 720, 1450,   4.300,   3.000,   9.000, 'BOPSPICE', 'Declared allergen. Appears on every label that uses it.'),
+    ('BAYLEAF',   'Bay leaf',                       'herb',      'kg', 'Whole dried leaf.',                           '{}', false, 'dry',     540,  5200,   0.850,   0.500,   2.000, 'BOPSPICE', null),
+    ('CHILLI_LR', 'Hawke''s Bay long red chilli',   'produce',   'kg', 'Fresh long reds, roughly 12,000 SHU.',        '{}', true,  'chilled',  10,  1900,  10.400,   8.000,  30.000, 'HBHERBS',  'Heat varies by pick. Every batch gets tasted before the chilli goes in.'),
+    ('TURMERIC',  'Fresh turmeric',                 'produce',   'kg', 'Fresh rhizome.',                              '{}', false, 'chilled',  21,  2400,   6.600,   5.000,  15.000, 'PUKEKOHE', 'Stains everything it touches. Dedicated boards.'),
+    ('GINGER',    'Fresh ginger',                   'produce',   'kg', 'Fresh rhizome.',                              '{}', false, 'chilled',  30,  1650,   8.200,   6.000,  18.000, 'PUKEKOHE', null),
+    ('CHERRY_SR', 'Central Otago sour cherries',    'produce',   'kg', 'Pitted, individually quick frozen.',          '{}', false, 'frozen',  365,  2950,  41.000,  20.000,  80.000, 'ORCHARD',  'One order a year in February. What we hold is what we get.'),
+    ('FENNEL_SD', 'Fennel seed',                    'spice',     'kg', 'Whole.',                                      '{}', false, 'dry',     720,  2400,   1.900,   1.500,   5.000, 'BOPSPICE', null),
+    ('SUGAR_CANE','Raw cane sugar',                 'sweetener', 'kg', 'Unrefined, 25kg sacks.',                      '{}', false, 'dry',     720,   290,  22.000,  15.000,  50.000, 'CANTVIN',  null),
+    ('CITRIC',    'Citric acid',                    'acid',      'kg', 'Anhydrous, food grade.',                      '{}', false, 'dry',     900,   880,   4.900,   3.000,  10.000, 'CANTVIN',  null),
+    ('BOTTLE_750','750ml flint glass bottle',       'packaging', 'ea', 'Flint glass, 38mm neck.',                     '{}', false, 'ambient', null,   118,1980.000,1200.000,3600.000, 'GLASSCO', 'Fourteen day lead time. Never let this one go short.'),
+    ('CAP_38',    '38mm tamper-evident cap',        'packaging', 'ea', 'Brine-green, tamper band.',                   '{}', false, 'ambient', null,    22,4400.000,2500.000,7500.000, 'GLASSCO', null),
+    ('LABEL_750', '750ml wrap label',               'label',     'ea', 'Uncoated stock, batch code overprinted.',     '{}', false, 'ambient', null,    31,2650.000,1500.000,4500.000, 'GLASSCO', 'Overprinted with the batch code at bottling. Never pre-printed.'),
+    ('CAN_250',   '250ml sleek can',                'packaging', 'ea', 'Sleek 250ml, brine-green print.',             '{}', false, 'ambient', null,    44,1420.000,1500.000,6000.000, 'GLASSCO', 'Below reorder point. Marlow flagged it on the last sweep.')
+  ) as i(code, name, cat, unit, descr, allergens, organic, storage, shelf, cost, stock, rp, rq, supplier_code, notes)
+  left join public.suppliers s on s.code = i.supplier_code;
+
+insert into public.ingredient_suppliers
+  (ingredient_id, supplier_id, supplier_sku, unit, pack_size, pack_cost_cents, lead_time_days, minimum_quantity, is_preferred, last_quoted_at)
+select i.id, s.id, x.sku, x.unit::public.unit_of_measure, x.pack, x.cost, x.lead, x.minq, x.preferred, now() - x.quoted_ago
+  from (values
+    ('CUCUMBER',  'PUKEKOHE', 'PKG-CUC-TEL',  'kg', 20.000,   9600,  3, 20.000, true,  interval '3 weeks'),
+    ('DILL_FRESH','HBHERBS',  'HBH-DILL-HD',  'kg',  2.000,   5200,  4,  2.000, true,  interval '2 weeks'),
+    ('DILL_FRESH','PUKEKOHE', 'PKG-DILL',     'kg',  1.000,   3100,  3,  5.000, false, interval '9 weeks'),
+    ('DILL_SEED', 'BOPSPICE', 'BOP-DILLSD',   'kg',  5.000,  20500,  5,  5.000, true,  interval '5 weeks'),
+    ('GARLIC',    'PUKEKOHE', 'PKG-GAR',      'kg', 10.000,  12200,  3, 10.000, true,  interval '3 weeks'),
+    ('SALT_SEA',  'GRASSMERE','GSW-MED-25',   'kg', 25.000,  15600,  7, 25.000, true,  interval '4 months'),
+    ('VIN_WHITE', 'CANTVIN',  'CVW-AC10-200', 'l', 200.000,  60500,  5,200.000, true,  interval '7 weeks'),
+    ('PEPPER_BLK','BOPSPICE', 'BOP-PEPBLK',   'kg',  5.000,  19200,  5,  5.000, true,  interval '5 weeks'),
+    ('CORIAND',   'BOPSPICE', 'BOP-CORSD',    'kg',  5.000,  10300,  5,  5.000, true,  interval '5 weeks'),
+    ('MUSTARD',   'BOPSPICE', 'BOP-MUSTYEL',  'kg',  5.000,   7100,  5,  5.000, true,  interval '5 weeks'),
+    ('BAYLEAF',   'BOPSPICE', 'BOP-BAY',      'kg',  1.000,   5200,  5,  1.000, true,  interval '5 weeks'),
+    ('CHILLI_LR', 'HBHERBS',  'HBH-CHILR',    'kg',  5.000,   9300,  4,  5.000, true,  interval '2 weeks'),
+    ('TURMERIC',  'PUKEKOHE', 'PKG-TURM',     'kg',  5.000,  11800,  3,  5.000, true,  interval '6 weeks'),
+    ('GINGER',    'PUKEKOHE', 'PKG-GING',     'kg',  5.000,   8100,  3,  5.000, true,  interval '6 weeks'),
+    ('CHERRY_SR', 'ORCHARD',  'COC-SRCH-IQF', 'kg', 10.000,  29000, 10, 20.000, true,  interval '7 months'),
+    ('FENNEL_SD', 'BOPSPICE', 'BOP-FENSD',    'kg',  5.000,  11700,  5,  5.000, true,  interval '5 weeks'),
+    ('SUGAR_CANE','CANTVIN',  'CVW-SUGRAW25', 'kg', 25.000,   7100,  5, 25.000, true,  interval '7 weeks'),
+    ('CITRIC',    'CANTVIN',  'CVW-CITRIC',   'kg', 10.000,   8600,  5, 10.000, true,  interval '7 weeks'),
+    ('BOTTLE_750','GLASSCO',  'OGC-750FL-38', 'ea',1200.000,140400, 14,1200.000, true, interval '5 weeks'),
+    ('CAP_38',    'GLASSCO',  'OGC-CAP38-GRN','ea',2500.000, 54000, 14,2500.000, true, interval '5 weeks'),
+    ('LABEL_750', 'GLASSCO',  'OGC-LBL750',   'ea',1500.000, 45500, 14,1500.000, true, interval '5 weeks'),
+    ('CAN_250',   'GLASSCO',  'OGC-CAN250SL', 'ea',3000.000,130500, 21,3000.000, true, interval '8 weeks')
+  ) as x(ing, sup, sku, unit, pack, cost, lead, minq, preferred, quoted_ago)
+  join public.ingredients i on i.code = x.ing
+  join public.suppliers s on s.code = x.sup;
+
+insert into public.recipes
+  (slug, version, name, description, product_id, status, batch_size_litres, expected_yield_units,
+   target_ph, target_salinity_pct, ferment_days, steep_hours, method, equipment, allergen_statement,
+   estimated_cost_cents, change_note, is_current, approved_by, approved_at)
+select r.slug, r.version, r.name, r.descr, p.id, r.status::public.recipe_status,
+       r.size_l, r.yield, r.ph, r.salinity, r.ferment, r.steep, r.method, r.equipment::text[],
+       r.allergen, r.cost, r.change_note, r.is_current, o.id,
+       case when r.status = 'draft' then null else now() - r.approved_ago end
+  from (values
+    ('house-dill-brine', 1, 'House Dill Brine v1', 'The original. 4.2% salt, ten days, no garlic.', 'classic-dill-brine', 'retired', 300.00, 390, 3.40, 4.20, 10, null,
+     'Rack cucumbers, cover with 4.2% brine, hold at 18C for ten days, strain twice through muslin, bottle cold.',
+     '{"300L fermenter","muslin","gravity filler"}', 'No declared allergens.', 68000, null, false, interval '26 months'),
+    ('house-dill-brine', 2, 'House Dill Brine v2', 'Garlic added, salt lifted to 4.6%, twelve days.', 'classic-dill-brine', 'retired', 400.00, 520, 3.35, 4.60, 12, null,
+     'As v1 with 0.9% crushed garlic added at day two. Salt lifted to 4.6% after three batches came in soft. Twelve days at 18C.',
+     '{"400L fermenter","muslin","gravity filler"}', 'No declared allergens.', 89000,
+     'Three v1 batches finished above pH 3.5 and tasted flat. Lifted salt to 4.6%, added garlic at day two and extended to twelve days.', false, interval '19 months'),
+    ('house-dill-brine', 3, 'House Dill Brine v3', 'Current. Mustard seed in, second strain through a 5 micron pad.', 'classic-dill-brine', 'active', 480.00, 620, 3.30, 4.60, 12, null,
+     'Rack 190kg cucumbers in the 480L fermenter. Cover with 4.6% brine. Dill heads, crushed garlic, black peppercorn, yellow mustard seed and bay at day two. Hold 18C for twelve days. Strain through muslin, then a 5 micron pad. Chill to 4C, bottle, cap, overprint the batch code.',
+     '{"480L fermenter","muslin","5 micron pad","plate chiller","gravity filler","code printer"}',
+     'Contains mustard. Gluten free. Suitable for vegans.', 92000,
+     'Added yellow mustard seed for length on the finish and a 5 micron second strain to stop the faint haze that showed up after six weeks in the bottle. Mustard is now a declared allergen on the label.', true, interval '8 months'),
+    ('fire-brine', 1, 'Fire Brine v1', 'v2 of the house brine with chilli at day one.', 'fire-brine', 'retired', 400.00, 520, 3.35, 4.60, 12, null,
+     'House Dill v2 with 3.5% long red chilli added at day one.', '{"400L fermenter","muslin","gravity filler"}',
+     'No declared allergens.', 96000, 'Chilli in at day one stripped the dill out. Heat was sharp and front-loaded.', false, interval '17 months'),
+    ('fire-brine', 2, 'Fire Brine v2', 'Current. Chilli at day four, split whole rather than sliced.', 'fire-brine', 'active', 480.00, 610, 3.30, 4.60, 12, null,
+     'House Dill v3 base. Split 17kg long reds lengthways and add at day four so the capsaicin infuses behind the dill rather than in front of it. Taste every batch before the chilli goes in — heat varies by pick.',
+     '{"480L fermenter","muslin","5 micron pad","plate chiller","gravity filler","code printer"}',
+     'Contains mustard. Gluten free. Suitable for vegans.', 108000,
+     'Moved chilli from day one to day four and switched from sliced to split whole. Heat now arrives about three seconds late, which is what we wanted.', true, interval '11 months'),
+    ('golden-hour', 1, 'Golden Hour v1', 'Turmeric and ginger, no dill, lighter salt.', 'golden-hour-brine', 'active', 300.00, 380, 3.45, 3.80, 8, null,
+     'Lighter 3.8% brine, no dill. Fresh turmeric and ginger pressed and added at day one with coriander seed and 1.2% cane sugar. Eight days at 18C. Strain twice. Dedicated turmeric boards and a dedicated filler line — it stains.',
+     '{"300L fermenter","press","muslin","5 micron pad","dedicated turmeric line"}',
+     'No declared allergens. Gluten free. Suitable for vegans.', 74000, null, true, interval '9 months'),
+    ('sour-cherry-fennel', 1, 'Sour Cherry and Fennel v1', 'Seasonal. Frozen Central Otago sour cherries, fennel seed, no dill.', 'sour-cherry-fennel', 'active', 200.00, 260, 3.25, 4.00, 14, null,
+     'Thaw 48kg sour cherries overnight at 4C. 4.0% brine, fennel seed and a little star anise at day one, cherries at day three so the colour does not bleach. Fourteen days. Strain three times — the cherry pulp blinds a 5 micron pad fast.',
+     '{"200L fermenter","muslin","5 micron pad","spare pads"}',
+     'No declared allergens. Gluten free. Suitable for vegans.', 118000, null, true, interval '5 months'),
+    ('bar-concentrate', 1, 'Bar Strength Concentrate v1', 'House Dill v3 reduced and salt-adjusted to pour at 5:1.', 'brine-concentrate', 'active', 120.00, 460, 3.10, 12.40, null, 6,
+     'Take House Dill v3 finished brine and reduce under vacuum at 55C to one fifth volume. Adjust salt to 12.4% and acid with citric to pH 3.10. Steep dill seed six hours off heat. Strain, chill, bottle at 250ml.',
+     '{"vacuum evaporator","refractometer","pH meter","250ml filler"}',
+     'Contains mustard. Gluten free. Suitable for vegans.', 62000, null, true, interval '8 months'),
+    ('spritz-base', 1, 'Half Sour Spritz base v1', 'House Dill v3 at 4% by volume with lime and carbonation.', 'half-sour-spritz', 'active', 600.00, 2400, 3.60, 0.19, null, null,
+     'Blend House Dill v3 to 4% by volume with chilled filtered water and 0.6% lime. Carbonate to 3.4 volumes at 2C. Can at 250ml, seam check every fiftieth can, pasteurise in-can at 72C for ten minutes.',
+     '{"blend tank","carbonator","seamer","seam gauge","tunnel pasteuriser"}',
+     'Contains mustard. Gluten free. Suitable for vegans. Non-alcoholic.', 96000, null, true, interval '6 months'),
+    ('pickleback-pack', 1, 'Pickleback Kit pack-out v1', 'Pack-out procedure, not a brine.', 'pickleback-kit', 'active', 1.00, 120, null, null, null, null,
+     'Pack one 750ml Classic Dill, two Whanganui shot glasses in moulded pulp, one instruction card. Tape, weigh, and record the brine batch code on the pack sheet — the kit inherits its traceability from the bottle inside it.',
+     '{"pack bench","scale","tape gun"}', 'Contains mustard (brine). Gluten free.', 4200, null, true, interval '13 months'),
+    ('trio-pack', 1, 'Bar Cart Trio pack-out v1', 'Pack-out procedure for the gift box.', 'bar-cart-trio', 'active', 1.00, 90, null, null, null, null,
+     'Pack one 250ml each of Classic, Fire and Golden Hour into the rigid box with three recipe cards. Record all three brine batch codes on the pack sheet.',
+     '{"pack bench","scale"}', 'Contains mustard (Classic and Fire). Gluten free.', 5100, null, true, interval '10 months'),
+    ('house-dill-brine', 4, 'House Dill Brine v4 (draft)', 'Trialling a 5% salt at ten days to shorten the cycle.', 'classic-dill-brine', 'draft', 480.00, 620, 3.28, 5.00, 10, null,
+     'As v3 but at 5.0% salt and ten days instead of twelve. Two trial batches so far. Not approved and not to be run in production.',
+     '{"480L fermenter","muslin","5 micron pad","plate chiller","gravity filler","code printer"}',
+     'Contains mustard. Gluten free. Suitable for vegans.', 90000,
+     'Trial only. Shortens the cycle by two days, which is roughly one extra batch a month. Waiting on a taste panel before it goes anywhere near a customer.', false, interval '3 weeks')
+  ) as r(slug, version, name, descr, product_handle, status, size_l, yield, ph, salinity, ferment, steep,
+         method, equipment, allergen, cost, change_note, is_current, approved_ago)
+  left join public.products p on p.handle = r.product_handle
+  cross join lateral (select id from public.operators where email = 'nadia@halfsour.co.nz') o;
+
+update public.recipes r
+   set supersedes_recipe_id = prev.id
+  from public.recipes prev
+ where prev.slug = r.slug and prev.version = r.version - 1;
+
+update public.recipes set approved_by = null where status = 'draft';
+
+insert into public.recipe_ingredients (recipe_id, ingredient_id, quantity, unit, percentage_of_batch, step_order, preparation, is_optional)
+select r.id, i.id, x.qty, x.unit::public.unit_of_measure, x.pct, x.step, x.prep, x.optional
+  from (values
+    ('house-dill-brine', 3, 'CUCUMBER',   190.000, 'kg',  39.58, 1, 'Washed, ends trimmed, racked whole.', false),
+    ('house-dill-brine', 3, 'WATER_FILT', 455.000, 'l',   94.79, 2, 'Filtered, held at 18C.', false),
+    ('house-dill-brine', 3, 'SALT_SEA',    22.100, 'kg',   4.60, 3, 'Dissolved fully before racking.', false),
+    ('house-dill-brine', 3, 'DILL_FRESH',   4.800, 'kg',   1.00, 4, 'Whole heads, added day two.', false),
+    ('house-dill-brine', 3, 'GARLIC',       4.300, 'kg',   0.90, 5, 'Crushed, skins on, added day two.', false),
+    ('house-dill-brine', 3, 'PEPPER_BLK',   0.960, 'kg',   0.20, 6, 'Whole, added day two.', false),
+    ('house-dill-brine', 3, 'MUSTARD',      0.720, 'kg',   0.15, 7, 'Whole yellow, added day two. Declared allergen.', false),
+    ('house-dill-brine', 3, 'BAYLEAF',      0.120, 'kg',   0.03, 8, 'Whole leaf, added day two.', false),
+    ('fire-brine',       2, 'CUCUMBER',   190.000, 'kg',  39.58, 1, 'Washed, ends trimmed, racked whole.', false),
+    ('fire-brine',       2, 'WATER_FILT', 455.000, 'l',   94.79, 2, 'Filtered, held at 18C.', false),
+    ('fire-brine',       2, 'SALT_SEA',    22.100, 'kg',   4.60, 3, 'Dissolved fully before racking.', false),
+    ('fire-brine',       2, 'DILL_FRESH',   4.800, 'kg',   1.00, 4, 'Whole heads, added day two.', false),
+    ('fire-brine',       2, 'GARLIC',       4.300, 'kg',   0.90, 5, 'Crushed, skins on, added day two.', false),
+    ('fire-brine',       2, 'CHILLI_LR',   17.000, 'kg',   3.54, 6, 'Split lengthways, seeds in, added day four.', false),
+    ('fire-brine',       2, 'MUSTARD',      0.720, 'kg',   0.15, 7, 'Whole yellow, added day two.', false),
+    ('fire-brine',       2, 'PEPPER_BLK',   0.960, 'kg',   0.20, 8, 'Whole, added day two.', false),
+    ('golden-hour',      1, 'CUCUMBER',   112.000, 'kg',  37.33, 1, 'Washed, ends trimmed.', false),
+    ('golden-hour',      1, 'WATER_FILT', 288.000, 'l',   96.00, 2, 'Filtered.', false),
+    ('golden-hour',      1, 'SALT_SEA',    11.400, 'kg',   3.80, 3, 'Dissolved before racking.', false),
+    ('golden-hour',      1, 'TURMERIC',     5.400, 'kg',   1.80, 4, 'Pressed, added day one. Dedicated boards.', false),
+    ('golden-hour',      1, 'GINGER',       6.600, 'kg',   2.20, 5, 'Pressed, added day one.', false),
+    ('golden-hour',      1, 'CORIAND',      0.900, 'kg',   0.30, 6, 'Whole, added day one.', false),
+    ('golden-hour',      1, 'SUGAR_CANE',   3.600, 'kg',   1.20, 7, 'Dissolved into the brine.', false),
+    ('sour-cherry-fennel',1,'CUCUMBER',    62.000, 'kg',  31.00, 1, 'Washed, ends trimmed.', false),
+    ('sour-cherry-fennel',1,'WATER_FILT', 192.000, 'l',   96.00, 2, 'Filtered.', false),
+    ('sour-cherry-fennel',1,'SALT_SEA',     8.000, 'kg',   4.00, 3, 'Dissolved before racking.', false),
+    ('sour-cherry-fennel',1,'CHERRY_SR',   48.000, 'kg',  24.00, 4, 'Thawed overnight at 4C, added day three.', false),
+    ('sour-cherry-fennel',1,'FENNEL_SD',    1.200, 'kg',   0.60, 5, 'Whole, added day one.', false),
+    ('sour-cherry-fennel',1,'CITRIC',       0.300, 'kg',   0.15, 6, 'To final pH only if needed.', true),
+    ('bar-concentrate',  1, 'WATER_FILT', 600.000, 'l',  500.00, 1, 'House Dill v3 finished brine, reduced to one fifth.', false),
+    ('bar-concentrate',  1, 'SALT_SEA',    14.900, 'kg',  12.42, 2, 'Adjusted post-reduction against a refractometer.', false),
+    ('bar-concentrate',  1, 'CITRIC',       0.480, 'kg',   0.40, 3, 'To pH 3.10.', false),
+    ('bar-concentrate',  1, 'DILL_SEED',    0.600, 'kg',   0.50, 4, 'Steeped six hours off heat, then strained.', false),
+    ('spritz-base',      1, 'WATER_FILT', 570.000, 'l',   95.00, 1, 'Chilled to 2C before blending.', false),
+    ('spritz-base',      1, 'CITRIC',       0.180, 'kg',   0.03, 2, 'Acid trim only.', true),
+    ('spritz-base',      1, 'CAN_250',   2400.000, 'ea',   null, 3, 'Seam check every fiftieth can.', false),
+    ('pickleback-pack',  1, 'BOTTLE_750',   1.000, 'ea',   null, 1, 'One filled 750ml Classic Dill per kit.', false),
+    ('trio-pack',        1, 'BOTTLE_750',   3.000, 'ea',   null, 1, 'Three 250ml bottles per box.', false)
+  ) as x(slug, version, ing, qty, unit, pct, step, prep, optional)
+  join public.recipes r on r.slug = x.slug and r.version = x.version
+  join public.ingredients i on i.code = x.ing;
