@@ -462,10 +462,14 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
 
   // -- Catalogue -----------------------------------------------------------
 
-  async listProducts(query: ProductListQuery = {}): Promise<Connection<Product>> {
+  async listProducts(
+    query: ProductListQuery = {},
+  ): Promise<Connection<Product>> {
     const scope = "products";
     const countParams = new Params();
-    const countWhere = productConditions(query.filter, countParams).join(" and ");
+    const countWhere = productConditions(query.filter, countParams).join(
+      " and ",
+    );
     const total = await this.count(
       this.sql,
       `${CATALOGUE_CTES}
@@ -576,7 +580,12 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
         limit $1 offset $2`,
       [window.limit, window.offset],
     );
-    return buildConnection(scope, result.rows.map(mapCollection), window, total);
+    return buildConnection(
+      scope,
+      result.rows.map(mapCollection),
+      window,
+      total,
+    );
   }
 
   async getCollectionByHandle(
@@ -597,7 +606,9 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
 
     const countParams = new Params();
     const collectionParam = countParams.add(collection.id);
-    const countWhere = productConditions(query.filter, countParams).join(" and ");
+    const countWhere = productConditions(query.filter, countParams).join(
+      " and ",
+    );
     const total = await this.count(
       this.sql,
       `${CATALOGUE_CTES}
@@ -637,7 +648,12 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
     );
     return {
       collection,
-      products: buildConnection(scope, result.rows.map(mapProduct), window, total),
+      products: buildConnection(
+        scope,
+        result.rows.map(mapProduct),
+        window,
+        total,
+      ),
     };
   }
 
@@ -675,21 +691,26 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
         ],
       );
       if (inserted === null) {
-        throw commerceErrors.providerUnavailable("mock", "cart insert returned no row");
+        throw commerceErrors.providerUnavailable(
+          "mock",
+          "cart insert returned no row",
+        );
       }
       const id = str(inserted.id, "carts.id");
       const cartId = composeCartId(id, token);
-      await tx.query(`update public.carts set checkout_url = $2 where id = $1`, [
-        id,
-        this.checkoutUrlFor(id, token),
-      ]);
+      await tx.query(
+        `update public.carts set checkout_url = $2 where id = $1`,
+        [id, this.checkoutUrlFor(id, token)],
+      );
 
       const warnings: CartWarning[] = [];
       if (input.lines !== undefined && input.lines.length > 0) {
         warnings.push(...(await this.applyLineAdditions(tx, id, input.lines)));
       }
       if (input.discountCodes !== undefined && input.discountCodes.length > 0) {
-        warnings.push(...(await this.applyDiscountCodes(tx, id, input.discountCodes)));
+        warnings.push(
+          ...(await this.applyDiscountCodes(tx, id, input.discountCodes)),
+        );
       }
       return {
         cart: await this.refreshAndBuild(tx, cartId, id),
@@ -704,7 +725,10 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
     return this.sql.transaction(async (tx) => {
       const loaded = await this.loadCart(tx, parsed.id, parsed.token, true);
       if (loaded === null) return null;
-      if (loaded.cart.status === "converted" || loaded.cart.status === "expired") {
+      if (
+        loaded.cart.status === "converted" ||
+        loaded.cart.status === "expired"
+      ) {
         return null;
       }
       if (this.isExpired(loaded.cart)) {
@@ -733,7 +757,8 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
       const byId = new Map(loaded.lines.map((line) => [line.lineId, line]));
       for (const update of updates) {
         const line = byId.get(update.lineId);
-        if (line === undefined) throw commerceErrors.cartLineNotFound(update.lineId);
+        if (line === undefined)
+          throw commerceErrors.cartLineNotFound(update.lineId);
         if (!Number.isSafeInteger(update.quantity) || update.quantity < 0) {
           throw commerceErrors.invalidQuantity(update.quantity);
         }
@@ -847,7 +872,8 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
         else attributes[BUYER_PHONE_KEY] = buyerIdentity.phone;
       }
       if (buyerIdentity.countryCode !== undefined) {
-        if (buyerIdentity.countryCode === null) delete attributes[BUYER_COUNTRY_KEY];
+        if (buyerIdentity.countryCode === null)
+          delete attributes[BUYER_COUNTRY_KEY];
         else attributes[BUYER_COUNTRY_KEY] = buyerIdentity.countryCode;
       }
 
@@ -869,9 +895,7 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
       );
 
       if (customer !== null) {
-        warnings.push(
-          ...(await this.mergeOtherCarts(tx, loaded, customer.id)),
-        );
+        warnings.push(...(await this.mergeOtherCarts(tx, loaded, customer.id)));
       }
       return warnings;
     });
@@ -897,7 +921,12 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
     const parsed = parseCartId(cartId);
     if (parsed === null) throw commerceErrors.cartNotFound(cartId);
     return this.sql.transaction(async (tx) => {
-      const loaded = await this.requireLiveCart(tx, parsed.id, parsed.token, cartId);
+      const loaded = await this.requireLiveCart(
+        tx,
+        parsed.id,
+        parsed.token,
+        cartId,
+      );
       const warnings = await apply(tx, loaded);
       const cart = await this.refreshAndBuild(tx, cartId, parsed.id);
       return { cart, warnings };
@@ -1011,7 +1040,9 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
         totals.subtotalCents,
         totals.discountCents,
         totals.totalCents,
-        discount !== null && discount.outcome.applicable ? discount.rule.id : null,
+        discount !== null && discount.outcome.applicable
+          ? discount.rule.id
+          : null,
         this.checkoutUrlFor(id, cart.token),
       ],
     );
@@ -1090,12 +1121,17 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
   private capToStock(
     line: Pick<
       CartLineRow,
-      "trackInventory" | "inventoryPolicy" | "stockAvailable" | "sku" | "variantId"
+      | "trackInventory"
+      | "inventoryPolicy"
+      | "stockAvailable"
+      | "sku"
+      | "variantId"
     >,
     desired: number,
     warnings: CartWarning[],
   ): number {
-    if (!line.trackInventory || line.inventoryPolicy === "continue") return desired;
+    if (!line.trackInventory || line.inventoryPolicy === "continue")
+      return desired;
     if (line.stockAvailable <= 0) {
       throw commerceErrors.outOfStock(line.variantId, line.sku);
     }
@@ -1135,7 +1171,8 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
 
     for (const line of lines) {
       const variant = variants.get(line.variantId);
-      if (variant === undefined) throw commerceErrors.variantNotFound(line.variantId);
+      if (variant === undefined)
+        throw commerceErrors.variantNotFound(line.variantId);
       if (!variant.productSellable) {
         throw commerceErrors.variantUnavailable(
           line.variantId,
@@ -1152,7 +1189,9 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
       const current = existing.get(line.variantId);
       const desired = (current?.quantity ?? 0) + line.quantity;
       const quantity = this.capToStock(variant, desired, warnings);
-      const properties = JSON.stringify(attributesToJson(line.attributes ?? []));
+      const properties = JSON.stringify(
+        attributesToJson(line.attributes ?? []),
+      );
 
       if (current === undefined) {
         const lineCount = await this.count(
@@ -1193,7 +1232,9 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
     tx: SqlExecutor,
     variantIds: readonly string[],
   ): Promise<Map<string, CartLineRow>> {
-    const result = await tx.query<SqlRow>(VARIANT_FOR_CART_SQL, [[...variantIds]]);
+    const result = await tx.query<SqlRow>(VARIANT_FOR_CART_SQL, [
+      [...variantIds],
+    ]);
     return new Map(
       result.rows.map((row) => {
         const line = mapCartLineRow(row);
@@ -1276,7 +1317,10 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
       if (row === null) {
         throw commerceErrors.customerNotFound(buyerIdentity.customerId);
       }
-      return { id: str(row.id, "customers.id"), email: str(row.email, "customers.email") };
+      return {
+        id: str(row.id, "customers.id"),
+        email: str(row.email, "customers.email"),
+      };
     }
     if (buyerIdentity.email != null && buyerIdentity.email !== "") {
       const row = await queryOne<SqlRow>(
@@ -1286,7 +1330,10 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
         [buyerIdentity.email],
       );
       if (row === null) return null;
-      return { id: str(row.id, "customers.id"), email: str(row.email, "customers.email") };
+      return {
+        id: str(row.id, "customers.id"),
+        email: str(row.email, "customers.email"),
+      };
     }
     return null;
   }
@@ -1372,7 +1419,12 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
     if (parsed === null) throw commerceErrors.cartNotFound(cartId);
 
     return this.sql.transaction(async (tx) => {
-      const loaded = await this.requireLiveCart(tx, parsed.id, parsed.token, cartId);
+      const loaded = await this.requireLiveCart(
+        tx,
+        parsed.id,
+        parsed.token,
+        cartId,
+      );
       // Reprice and prune before anything is committed to.
       await this.refreshAndBuild(tx, cartId, parsed.id);
 
@@ -1463,7 +1515,10 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
         ],
       );
       if (orderRow === null) {
-        throw commerceErrors.providerUnavailable("mock", "order insert returned no row");
+        throw commerceErrors.providerUnavailable(
+          "mock",
+          "order insert returned no row",
+        );
       }
       const orderId = str(orderRow.id, "orders.id");
 
@@ -1496,7 +1551,10 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
           ],
         );
         if (itemRow === null) {
-          throw commerceErrors.providerUnavailable("mock", "order line insert failed");
+          throw commerceErrors.providerUnavailable(
+            "mock",
+            "order line insert failed",
+          );
         }
         await this.takeStock(tx, line, str(itemRow.id, "order_items.id"));
       }
@@ -1533,7 +1591,10 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
 
       const order = await this.readOrder(tx, "o.id = $1", [orderId]);
       if (order === null) {
-        throw commerceErrors.providerUnavailable("mock", "order vanished after insert");
+        throw commerceErrors.providerUnavailable(
+          "mock",
+          "order vanished after insert",
+        );
       }
       return order;
     });
@@ -1652,7 +1713,10 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
       ],
     );
     if (created === null) {
-      throw commerceErrors.providerUnavailable("mock", "customer insert failed");
+      throw commerceErrors.providerUnavailable(
+        "mock",
+        "customer insert failed",
+      );
     }
     return str(created.id, "customers.id");
   }
@@ -1770,9 +1834,12 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
       }
       const params = new Params();
       const sets: string[] = [];
-      if (patch.email !== undefined) sets.push(`email = ${params.add(patch.email)}`);
-      if (patch.phone !== undefined) sets.push(`phone = ${params.add(patch.phone)}`);
-      if (patch.note !== undefined) sets.push(`note = ${params.add(patch.note)}`);
+      if (patch.email !== undefined)
+        sets.push(`email = ${params.add(patch.email)}`);
+      if (patch.phone !== undefined)
+        sets.push(`phone = ${params.add(patch.phone)}`);
+      if (patch.note !== undefined)
+        sets.push(`note = ${params.add(patch.note)}`);
       if (patch.customerNote !== undefined) {
         sets.push(`customer_note = ${params.add(patch.customerNote)}`);
       }
@@ -1799,7 +1866,8 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
       if (current.status === "cancelled") {
         throw commerceErrors.orderNotEditable(orderId, "it is cancelled");
       }
-      if (current.financialStatus === "paid") return this.requireOrder(tx, orderId);
+      if (current.financialStatus === "paid")
+        return this.requireOrder(tx, orderId);
       await tx.query(
         `update public.orders
             set financial_status = 'paid', paid_at = coalesce(paid_at, $2)
@@ -1993,3 +2061,339 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
     if (order === null) throw commerceErrors.orderNotFound(orderId);
     return order;
   }
+
+  // -- Inventory -----------------------------------------------------------
+
+  async listLocations(): Promise<readonly InventoryLocation[]> {
+    const result = await this.sql.query<SqlRow>(
+      `select * from public.inventory_locations order by is_default desc, code asc`,
+    );
+    return result.rows.map(mapLocation);
+  }
+
+  async getInventoryLevels(
+    query: InventoryQuery = {},
+  ): Promise<Connection<InventoryLevel>> {
+    const scope = "inventory";
+    const build = (params: Params): string => {
+      const conditions = ["v.deleted_at is null"];
+      if (query.variantIds !== undefined) {
+        const ids = query.variantIds.filter(isUuid);
+        if (ids.length === 0) return "false";
+        conditions.push(`il.variant_id = any(${params.add([...ids])}::uuid[])`);
+      }
+      if (query.locationId !== undefined) {
+        if (!isUuid(query.locationId)) return "false";
+        conditions.push(`il.location_id = ${params.add(query.locationId)}`);
+      }
+      if (query.belowReorderPoint === true) {
+        conditions.push(
+          "il.reorder_point > 0 and il.available <= il.reorder_point",
+        );
+      }
+      return conditions.join(" and ");
+    };
+
+    const countParams = new Params();
+    const countWhere = build(countParams);
+    const total = await this.count(
+      this.sql,
+      `select count(*)::int as total
+         from public.inventory_levels il
+         join public.product_variants v on v.id = il.variant_id
+        where ${countWhere}`,
+      countParams.values,
+    );
+    const window = resolvePageWindow(scope, query, total);
+    if (window.limit === 0 || window.offset >= total) {
+      return buildConnection<InventoryLevel>(scope, [], window, total);
+    }
+    const params = new Params();
+    const where = build(params);
+    const limit = params.add(window.limit);
+    const offset = params.add(window.offset);
+    const result = await this.sql.query<SqlRow>(
+      `select il.*, v.sku, l.code as location_code
+         from public.inventory_levels il
+         join public.product_variants v on v.id = il.variant_id
+         join public.inventory_locations l on l.id = il.location_id
+        where ${where}
+        order by v.sku asc, l.code asc
+        limit ${limit} offset ${offset}`,
+      params.values,
+    );
+    return buildConnection(
+      scope,
+      result.rows.map(mapInventoryLevel),
+      window,
+      total,
+    );
+  }
+
+  async adjustInventory(
+    input: InventoryAdjustInput,
+  ): Promise<InventoryAdjustResult> {
+    if (input.changes.length === 0) {
+      throw commerceErrors.invalidInput("No inventory changes given", [
+        "changes",
+      ]);
+    }
+    return this.sql.transaction(async (tx) => {
+      const applied: InventoryAdjustResult["changes"][number][] = [];
+      // Sorted so two concurrent multi-line adjustments take the same row locks
+      // in the same order and cannot deadlock against each other.
+      const changes = [...input.changes].sort((a, b) =>
+        `${a.variantId}:${a.locationId}`.localeCompare(
+          `${b.variantId}:${b.locationId}`,
+        ),
+      );
+
+      for (const change of changes) {
+        if (!Number.isSafeInteger(change.delta) || change.delta === 0) {
+          throw commerceErrors.invalidInput(
+            `Delta must be a non-zero integer, got ${String(change.delta)}`,
+            ["changes", "delta"],
+          );
+        }
+        if (!isUuid(change.variantId)) {
+          throw commerceErrors.variantNotFound(change.variantId);
+        }
+        if (!isUuid(change.locationId)) {
+          throw commerceErrors.locationNotFound(change.locationId);
+        }
+
+        const variant = await queryOne<SqlRow>(
+          tx,
+          `select id, sku, track_inventory from public.product_variants
+            where id = $1 and deleted_at is null`,
+          [change.variantId],
+        );
+        if (variant === null)
+          throw commerceErrors.variantNotFound(change.variantId);
+        if (
+          !bool(variant.track_inventory, "product_variants.track_inventory")
+        ) {
+          throw commerceErrors.inventoryNotTracked(
+            change.variantId,
+            str(variant.sku, "product_variants.sku"),
+          );
+        }
+
+        const location = await queryOne<SqlRow>(
+          tx,
+          `select id from public.inventory_locations where id = $1`,
+          [change.locationId],
+        );
+        if (location === null) {
+          throw commerceErrors.locationNotFound(change.locationId);
+        }
+
+        let level = await queryOne<SqlRow>(
+          tx,
+          `select id, on_hand from public.inventory_levels
+            where variant_id = $1 and location_id = $2 for update`,
+          [change.variantId, change.locationId],
+        );
+        if (level === null) {
+          level = await queryOne<SqlRow>(
+            tx,
+            `insert into public.inventory_levels
+               (variant_id, location_id, provider, sync_status, on_hand)
+             values ($1, $2, 'local', 'local', 0)
+             returning id, on_hand`,
+            [change.variantId, change.locationId],
+          );
+        }
+        if (level === null) {
+          throw commerceErrors.providerUnavailable(
+            "mock",
+            "inventory level missing",
+          );
+        }
+
+        const onHand = int(level.on_hand, "inventory_levels.on_hand");
+        if (
+          change.changeFromQuantity !== undefined &&
+          change.changeFromQuantity !== onHand
+        ) {
+          throw commerceErrors.inventoryStaleRead(
+            change.variantId,
+            change.changeFromQuantity,
+            onHand,
+          );
+        }
+        const next = onHand + change.delta;
+        if (next < 0) {
+          throw commerceErrors.inventoryWouldGoNegative(
+            change.variantId,
+            change.locationId,
+            onHand,
+            change.delta,
+          );
+        }
+
+        await tx.query(
+          `update public.inventory_levels set on_hand = $2 where id = $1`,
+          [str(level.id, "inventory_levels.id"), next],
+        );
+        await tx.query(
+          `insert into public.inventory_adjustments
+             (variant_id, location_id, delta, reason, actor_type, note)
+           values ($1, $2, $3, $4, 'operator', $5)`,
+          [
+            change.variantId,
+            change.locationId,
+            change.delta,
+            input.reason,
+            input.note ?? input.referenceDocumentUri ?? null,
+          ],
+        );
+        applied.push({
+          variantId: change.variantId,
+          locationId: change.locationId,
+          delta: change.delta,
+          quantityAfterChange: next,
+        });
+      }
+
+      return {
+        reason: input.reason,
+        adjustedAt: this.now().toISOString(),
+        changes: applied,
+      };
+    });
+  }
+
+  // -- Customers -----------------------------------------------------------
+
+  async listCustomers(
+    query: CustomerListQuery = {},
+  ): Promise<Connection<Customer>> {
+    const scope = "customers";
+    const build = (params: Params): string => {
+      const conditions = ["c.deleted_at is null"];
+      if (query.customerType !== undefined) {
+        conditions.push(`c.customer_type = ${params.add(query.customerType)}`);
+      }
+      if (query.acceptsMarketing !== undefined) {
+        conditions.push(
+          query.acceptsMarketing
+            ? "c.accepts_marketing"
+            : "not c.accepts_marketing",
+        );
+      }
+      if (query.search !== undefined && query.search.trim() !== "") {
+        const term = params.add(`%${query.search.trim()}%`);
+        conditions.push(
+          `(c.email ilike ${term} or coalesce(c.full_name, '') ilike ${term} or coalesce(c.company_name, '') ilike ${term})`,
+        );
+      }
+      return conditions.join(" and ");
+    };
+
+    const countParams = new Params();
+    const total = await this.count(
+      this.sql,
+      `select count(*)::int as total from public.customers c where ${build(countParams)}`,
+      countParams.values,
+    );
+    const window = resolvePageWindow(scope, query, total);
+    if (window.limit === 0 || window.offset >= total) {
+      return buildConnection<Customer>(scope, [], window, total);
+    }
+    const params = new Params();
+    const where = build(params);
+    const limit = params.add(window.limit);
+    const offset = params.add(window.offset);
+    const result = await this.sql.query<SqlRow>(
+      `select ${CUSTOMER_COLUMNS} from public.customers c
+        where ${where}
+        order by c.created_at desc, c.id asc
+        limit ${limit} offset ${offset}`,
+      params.values,
+    );
+    return buildConnection(scope, result.rows.map(mapCustomer), window, total);
+  }
+
+  async getCustomer(customerId: string): Promise<Customer | null> {
+    if (!isUuid(customerId)) return null;
+    const row = await queryOne<SqlRow>(
+      this.sql,
+      `select ${CUSTOMER_COLUMNS} from public.customers c
+        where c.id = $1 and c.deleted_at is null`,
+      [customerId],
+    );
+    return row === null ? null : mapCustomer(row);
+  }
+
+  async getCustomerByEmail(email: string): Promise<Customer | null> {
+    const row = await queryOne<SqlRow>(
+      this.sql,
+      `select ${CUSTOMER_COLUMNS} from public.customers c
+        where lower(c.email) = lower($1) and c.deleted_at is null`,
+      [email],
+    );
+    return row === null ? null : mapCustomer(row);
+  }
+
+  // -- Discounts -----------------------------------------------------------
+
+  async getDiscountByCode(code: string): Promise<Discount | null> {
+    const row = await queryOne<SqlRow>(
+      this.sql,
+      `select * from public.discounts where upper(code) = upper($1)`,
+      [code],
+    );
+    return row === null ? null : mapDiscount(row);
+  }
+
+  async validateDiscountCode(
+    cartId: string,
+    code: string,
+  ): Promise<DiscountValidation> {
+    const parsed = parseCartId(cartId);
+    if (parsed === null) throw commerceErrors.cartNotFound(cartId);
+    return this.sql.transaction(async (tx) => {
+      await this.requireLiveCart(tx, parsed.id, parsed.token, cartId);
+      // Rebuild first so the cart handed back is the same object the caller
+      // would get from getCart, and so pricing is current.
+      const cart = await this.refreshAndBuild(tx, cartId, parsed.id);
+      const row = await queryOne<SqlRow>(
+        tx,
+        `select * from public.carts where id = $1`,
+        [parsed.id],
+      );
+      if (row === null) throw commerceErrors.cartNotFound(cartId);
+      const cartRow = mapCartRow(row);
+      const priced = toPricedLines(await this.loadCartLines(tx, parsed.id));
+
+      const discountRow = await queryOne<SqlRow>(
+        tx,
+        `select * from public.discounts where upper(code) = upper($1)`,
+        [code],
+      );
+      if (discountRow === null) {
+        return {
+          code,
+          applicable: false,
+          discount: null,
+          rejectionCode: "DISCOUNT_NOT_FOUND" as CommerceErrorCode,
+          rejectionMessage: `${code} is not a valid code`,
+          amountOff: zeroMoney(this.currencyCode),
+          cart,
+        };
+      }
+      const rule = mapDiscountRule(discountRow);
+      const outcome = await this.evaluateRule(tx, rule, cartRow, priced);
+      return {
+        code: rule.code,
+        applicable: outcome.applicable,
+        discount: mapDiscount(discountRow),
+        rejectionCode: outcome.rejectionCode,
+        rejectionMessage: outcome.rejectionMessage,
+        amountOff: money(outcome.amountCents, this.currencyCode),
+        cart,
+      };
+    });
+  }
+}
