@@ -15,7 +15,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "lhci": "lhci autorun"
+    "lhci": "lhci autorun",
+    "auth:hash-password": "node lib/auth/scripts/hash-password.mts",
+    "auth:new-session-secret": "node lib/auth/scripts/new-session-secret.mts",
+    "auth:unlock": "node lib/auth/scripts/unlock.mts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.44",

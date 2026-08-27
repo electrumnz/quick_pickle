@@ -264,7 +264,7 @@ const RULES = [
   r(
     "NCC-05",
     BANNED,
-    /\b(?:zero|no)\s+(?:calories?|kilojoules?|kj)\b|\bcalorie[\s-]?free\b/i,
+    /\b(?:zero|no|0)\s+(?:calories?|kilojoules?|kj)\b|\bcalorie[\s-]?free\b/i,
     "Not a listed descriptor for energy; unlisted descriptors are constrained by Std 1.2.7-12(8) and 1.2.7-13(2).",
     "FSC Std 1.2.7-12(8), 1.2.7-13(2)",
   ),

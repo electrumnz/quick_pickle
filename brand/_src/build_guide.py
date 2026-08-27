@@ -930,3 +930,154 @@ def build2(o):
         o.append('<div class="rule"><span class="data">%s</span><p><b>%s</b> %s</p></div>' % (n, b, t))
     o.append('</div></div></section>')
     return o
+
+def build3(o):
+    def sec(n, title, kicker):
+        return ('<section id="s%s"><div class="wrap"><div class="sec-head">'
+                '<span class="n data">%s</span><h2>%s</h2>'
+                '<span class="k data">%s</span></div>' % (n, n, title, kicker))
+
+    # ---------------------------------------------------------------- 10
+    o.append(sec("10", "The line", "Three SKUs, numbered, so there can be a fourth"))
+    o.append('</div><div class="bottleband">' + asset("bottles.svg") + '</div><div class="wrap">')
+    o.append('<div class="skus">')
+    for no, name, sub, body, bar, _ in SKUS:
+        o.append('<div class="sku"><div class="bar" style="background:%s"></div><div class="in">'
+                 '<span class="no">No. %s</span><h4>%s</h4><div class="sub">%s</div><p>%s</p></div></div>'
+                 % (bar, no, name, sub, body))
+    o.append('</div>')
+    o.append('<p class="lede mut" style="margin-top:22px">Formats: <b style="color:var(--text)">500ml</b> flint '
+             'glass for retail and the home bar; <b style="color:var(--text)">2L</b> for on-premise. The numbering '
+             'matters — it tells a bar there is a system, and it lets No. 04 arrive without renaming anything.</p>')
+
+    o.append('<h3 class="data" style="color:var(--muted);margin:44px 0 16px">'
+             'Label artwork — flat, at size</h3>')
+    o.append('<div class="labels">' + asset("label-01-house.svg") + asset("label-02-dirty.svg")
+             + asset("label-03-smoke.svg") + '</div>')
+
+    o.append('<div class="grid g2" style="margin-top:34px">')
+    o.append('<div class="card"><span class="data">Label direction</span>'
+             '<h4>Set like a spirits label, not a condiment label</h4>'
+             '<p>That one decision does most of the strategic work: it is what lets a bar put the bottle where '
+             'customers can see it. <b style="color:var(--text)">Stock:</b> uncoated bone paper, wet-strength — it '
+             'lives in a fridge and it will get wet. No varnish, no foil, no emboss. The only finish is the ink. '
+             '<b style="color:var(--text)">Architecture, top to bottom:</b> hairline rule → wordmark → hairline '
+             'rule → <code>PICKLE BRINE</code> at 0.44em → the Half seal in the SKU colour → the SKU number in a '
+             'hairline box → the name at 62pt cap → the descriptor → the ingredient run, slashed, in Pepper → a '
+             'solid foot band carrying <code>500 ML</code> and <code>MADE IN AOTEAROA NEW ZEALAND</code>.</p></div>')
+    o.append('<div class="card"><span class="data">The variable</span>'
+             '<h4>Only the band and the seal change</h4>'
+             '<p>No. 01 is Brine, No. 02 is Ink, No. 03 is Chilli. Nothing else moves between SKUs — same grid, '
+             'same type sizes, same everything. A range that changes only its colour block reads as a '
+             '<em>range</em>; a range that redesigns itself per flavour reads as three unrelated products. The cap '
+             'matches the band, because from three metres the cap is the only thing you can see. Everything is '
+             'centred, because centred type on a tall label is formal, and formal is the joke. '
+             '<b style="color:var(--danger)">Never on the label:</b> a cucumber illustration, a jar, a splash, a '
+             'mascot, a script face, a starburst, a medal, a “new!” flash, or any claim about what the product '
+             'does to a person.</p></div>')
+    o.append('</div></div></section>')
+
+    # ---------------------------------------------------------------- 11
+    o.append(sec("11", "Art direction", "A bar at four in the afternoon"))
+    o.append('<p class="serif" style="font-size:34px;line-height:1.28;letter-spacing:-.02em;max-width:24ch;'
+             'margin:0 0 34px">Hard light, real glass, and nothing styled that isn’t '
+             '<em style="font-style:italic;color:var(--accent)">going into a drink.</em></p>')
+    o.append('<div class="ad">')
+    o.append('<div class="adcol"><h3>What it is</h3><span class="data">Eight non-negotiables</span>')
+    for h, b in AD_IS:
+        o.append('<div class="adrow"><h5>%s</h5><p>%s</p></div>' % (h, b))
+    o.append('</div>')
+    o.append('<div class="adcol no"><h3>What it is never</h3><span class="data">Reject the shot, reshoot</span>')
+    for h, b in AD_NEVER:
+        o.append('<div class="adrow"><h5>%s</h5><p>%s</p></div>' % (h, b))
+    o.append('</div></div>')
+
+    o.append('<h3 class="data" style="color:var(--muted);margin:44px 0 4px">The three plates — the shot list</h3>')
+    o.append('<div class="plates">')
+    for cls, n, t, b in [
+        ("lightdiag", "Plate 01", "Bar-side",
+         "Bottle at the edge of frame, coupe centre, brine going in from a jigger. Dark stone, one hard source from the right at 60°, long shadow left. Crop so the bottle is half out of frame."),
+        ("surfdiag", "Plate 02", "Ingredient",
+         "Overhead on Bone. Cucumber cross-sections, dill, whole peppercorns, one garlic clove, a shallow pool of brine, on an invisible grid. Hard light, no fill. This is the shot that proves it is food."),
+        ("cropdiag", "Plate 03", "Bench",
+         "A chicken in a stainless bowl, brine poured over it, one hand. Kitchen light, still hard. This is the shot that proves the culinary half and keeps us out of the mixer-only box."),
+    ]:
+        o.append('<div class="plate"><div class="top %s"></div><div class="in">'
+                 '<span class="data">%s</span><h5>%s</h5><p>%s</p></div></div>' % (cls, n, t, b))
+    o.append('</div>')
+
+    o.append('<h3 class="data" style="color:var(--danger);margin:44px 0 4px">'
+             'Never this — three looks that are banned by name</h3>')
+    o.append('<p class="lede mut" style="margin-bottom:18px;font-size:14.5px">Each of these is a real, '
+             'plausible route for a pickle brand, and each one is off limits. If a shot, a deck or a supplier '
+             'mock-up starts drifting toward any of them, it is rejected — not revised.</p>')
+    o.append('<div class="nevers">')
+    o.append('<div class="nev"><div class="art nev-deli"><span class="t">Ye Olde<br>Pickle Co.</span></div>'
+             '<div class="in"><span class="data">Never 01 — retro deli</span>'
+             '<p>Checkerboard, 1950s script, distressed cream, faux-heritage “since 19—”. Every second fermentation '
+             'brand on the shelf already looks like this. It is the safest possible choice and therefore the most '
+             'invisible.</p></div></div>')
+    o.append('<div class="nev"><div class="art nev-kiwi"><span class="t">SWEET AS,<br>BRO</span></div>'
+             '<div class="in"><span class="data">Never 02 — kiwiana</span>'
+             '<p>Ferns, jandals, #8 wire, bach nostalgia, landscape backdrops, “sweet as”. It is tacky, it does not '
+             'export, and it tells a bartender in Sydney nothing about whether the product is any good.</p></div></div>')
+    o.append('<div class="nev"><div class="art nev-well"><span class="t">Restore · Replenish</span></div>'
+             '<div class="in"><span class="data">Never 03 — wellness / recovery</span>'
+             '<p>Supplement-aisle styling: white infinity curve, thin tracked lowercase, sports or post-workout '
+             'context. It implies a claim about the body that we are legally barred from making under the FSANZ '
+             'Code, and it aims the product at the wrong shelf entirely.</p></div></div>')
+    o.append('</div></div></section>')
+
+    # ---------------------------------------------------------------- 12
+    o.append(sec("12", "Notes", "Method, gaps, and what is not in v1.0"))
+    o.append('<div class="notes">')
+    for h, b in [
+        ("Trade mark route",
+         "IPONZ’s own endpoint refused non-browser clients with <code>403</code> and this environment’s Chromium had "
+         "no network egress, so the register was read through TMview, which carries IPONZ data. A pre-filing search "
+         "by a New Zealand attorney is still required."),
+        ("Photographic plates were not produced",
+         "Image generation was unavailable here: the MCP image tool returned <code>invoke operation is disabled "
+         "because gradio=none is set</code>, and the Spaces behind it (<code>mcp-tools/Qwen-Image</code>, "
+         "<code>Qwen-Image-Fast</code>) returned <code>event: error</code> on every direct Gradio API call — ZeroGPU "
+         "needs an authenticated token that is not present. <code>FLUX.1-Krea-dev</code> and "
+         "<code>evalstate/flux1_schnell</code> returned HTTP 503 throughout. §11 is therefore written as an "
+         "enforceable specification rather than a mood board, and every product image in this guide is authored "
+         "vector, not photography."),
+        ("Not in scope for v1.0",
+         "Motion, sound, packaging engineering (closure liner, fill line, wet-strength adhesive), on-premise POS, "
+         "and the 2L format artwork."),
+    ]:
+        o.append('<div class="note"><h4>%s</h4><p>%s</p></div>' % (h, b))
+    o.append('</div><div class="spacer"></div></div></section>')
+
+    # ---------------------------------------------------------------- footer
+    o.append('<footer><div class="wrap"><div class="f">'
+             '<div>' + asset("lockup-masthead.svg", cur=True) + '</div>'
+             '<div class="data" style="text-align:right;line-height:1.9">'
+             '<div>Brand guide v1.0 — August 2026</div>'
+             '<div>Pickle brine — Aotearoa New Zealand</div>'
+             '<div>Zero health claims. Zero kiwiana. Zero puns.</div>'
+             '</div></div></div></footer>')
+
+    o.append('<script>'
+             '(function(){var r=document.documentElement,l=document.getElementById("tl"),'
+             'd=document.getElementById("td");'
+             'function set(t){if(t==="dark"){r.setAttribute("data-theme","dark")}else{r.removeAttribute("data-theme")}'
+             'l.setAttribute("aria-pressed",String(t!=="dark"));d.setAttribute("aria-pressed",String(t==="dark"));'
+             'try{localStorage.setItem("hs-theme",t)}catch(e){}}'
+             'l.addEventListener("click",function(){set("light")});'
+             'd.addEventListener("click",function(){set("dark")});'
+             'try{var s=localStorage.getItem("hs-theme");if(s){set(s)}}catch(e){}'
+             '})();</script>')
+    o.append('</body></html>')
+    return o
+
+if __name__ == "__main__":
+    out = build()
+    out = build2(out)
+    out = build3(out)
+    html = "".join(out)
+    path = os.path.join(ROOT, "guide.html")
+    open(path, "w").write(html)
+    print("guide.html", len(html), "bytes")
