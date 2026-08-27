@@ -1,0 +1,16 @@
+HALF SOUR — admin auth evidence
+CSRF refusals on POST /login/session, with the CORRECT password every time
+
+case                                    status  location      session issued
+----------------------------------------------------------------------------
+no token, no cookie                     303     /login?e=1    no
+token present, cookie missing           303     /login?e=1    no
+cookie present, token missing           303     /login?e=1    no
+token from a different cookie           303     /login?e=1    no
+cookie forged under another key         303     /login?e=1    no
+cross-site Origin                       303     /login?e=1    no
+sibling subdomain (Sec-Fetch-Site: same-site)303     /login?e=1    no
+matching token and cookie, same origin  303     /admin        YES
+
+Every refusal produces the identical status and destination, so the
+response distinguishes none of them. The reason is written to audit_log.

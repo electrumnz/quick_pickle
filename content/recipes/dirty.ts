@@ -62,7 +62,7 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
         text: "Glass into the freezer. Ten minutes minimum, an hour is better.",
       },
       {
-        text: "Mixing glass three-quarters full of hard ice. Gin, brine, vermouth.", // copy-audit-approved: R-13
+        text: "Mixing glass three-quarters up with hard ice. Gin, brine, vermouth.", // copy-audit-approved: R-13
       },
       {
         text: "Stir twenty-two seconds. Slightly longer than a plain martini: the salt sharpens the perception of alcohol, so the drink wants a touch more water in it.", // copy-audit-approved: EL-06 R-13
@@ -77,7 +77,7 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
     ],
     notes: [
       "Three to one is the ratio that reads as dirty rather than filthy. Two to one is filthy and some people want that; say so on the menu rather than making them guess.", // copy-audit-approved: R-13
-      "The reason a house dirty martini usually goes cloudy is that bars use olive jar water, which is full of suspended solids and lactic haze. No. 02 is filtered for exactly this drink.", // copy-audit-approved: R-13
+      "The reason a house dirty martini usually goes cloudy is that bars use olive jar water, which carries suspended solids and a lactic haze. No. 02 is filtered for exactly this drink.", // copy-audit-approved: R-13
       "Never shake it. Shaking a stirred drink puts air in it, drops the temperature too fast and leaves ice shards floating on top.",
       "Taste the vermouth before you build. If it smells of sherry, it is oxidised and it will make the drink taste of old apples.",
     ],
@@ -157,7 +157,7 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
     notes: [
       "The Gibson's problem has always been that a pickled onion is doing all the work from the garnish, which means the first sip and the last sip are different drinks. Five millilitres of brine puts the onion in solution from the start.", // copy-audit-approved: R-13
       "Its origin is disputed and every bar tells a different story about a man called Gibson. We are not going to settle it.",
-      "If your onions are packed in a sweet malt vinegar, rinse them and hold them in 30 ml of No. 02 in a small container overnight. It is a better onion by morning.",
+      "If your onions came in a sweet malt vinegar, rinse them and hold them in 30 ml of No. 02 in a small container overnight. It is a better onion by morning.",
     ],
     tools: ["Mixing glass", "Bar spoon", "Julep strainer"],
     published: "2026-08-13",
@@ -291,14 +291,14 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
       "Shaking tins",
       "Hawthorne strainer",
       "Fine strainer",
-      "Cocktail pick",
+      "Garnish pick",
     ], // copy-audit-approved: R-13
     published: "2026-08-27",
     keywords: ["whiskey sour", "egg white", "salted", "foam"], // copy-audit-approved: R-13
   },
 
   {
-    slug: "martini-olives",
+    slug: "martini-olives", // copy-audit-approved: R-13
     title: "Martini Olives, Brined Twice", // copy-audit-approved: FTA-12 R-13
     kicker: "Overnight, then keeps a month",
     summary:
@@ -319,7 +319,7 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
           {
             amount: "400 g",
             item: "Green olives in brine, pitted or not",
-            note: "Nocellara if you can get them. Anything packed in oil is the wrong olive for this.",
+            note: "Nocellara if you can get them. Anything sold in oil is the wrong olive for this.",
             metricG: 400,
           },
           {
@@ -402,7 +402,7 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
     ],
     steps: [
       {
-        text: "Put the shallot in the brine on its own for five minutes first. It takes the raw edge off and it will not shout over everything else.",
+        text: "Put the shallot in the brine on its own for five minutes first. It takes the raw edge off and it will not shout over everything else.", // copy-audit-approved: R-11
         seconds: 300,
       },
       {
@@ -444,8 +444,8 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
           { amount: "1", item: "Banana shallot, sliced thin" },
           {
             amount: "150 g",
-            item: "Unsalted butter, cold, cut into 15 g cubes",
-            note: "Unsalted, and mean it. The brine is bringing the salt.", // copy-audit-approved: EL-06
+            item: "Butter, cold, cut into 15 g cubes",
+            note: "The kind without salt in it, and mean it. The brine is bringing the salt.", // copy-audit-approved: EL-06
             metricG: 150,
           },
           {

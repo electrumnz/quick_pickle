@@ -318,7 +318,6 @@ erDiagram
     APPROVALS ||--o{ BATCHES : "gates release"
 
     WEBHOOK_EVENTS }o--o| ORDERS : "mirrors into"
-    SYNC_STATE ||--o{ WEBHOOK_EVENTS : "cursors for"
     AUDIT_LOG }o--o| AGENT_RUNS : "written by"
     SETTINGS ||--o| OPERATORS : "edited by"
 ```
@@ -465,10 +464,11 @@ relative to `now()` so the store looks current whenever it is loaded.
 - **The real catalogue**: No 01 HOUSE (NZ$18.00), No 02 DIRTY (NZ$20.00),
   No 03 SMOKE (NZ$22.00) and The Full Set (NZ$54.00), all 500ml, carrying their
   live Shopify product gids and the real `The Brines` collection gid.
-- **95 orders** across four months with a believable curve — 12 in month one,
-  then 15, 25 and 43 — including the spike after the Brass and Bitters feature,
-  two unpaid trade invoices, two part refunds and one cancellation traced to
-  carrier damage. NZ$18,145.80 net.
+- **95 orders** across four months with a believable curve — 1, then 11, 16, 31
+  and 36 by calendar month — including the spike that followed the Brass and
+  Bitters feature, two unpaid trade invoices, two part refunds and one
+  cancellation traced to carrier damage. NZ$18,317.70 gross, NZ$16,893.00
+  collected.
 - **50 customers** across Auckland, Wellington, Christchurch, Dunedin, Tauranga,
   Hamilton, Napier and Queenstown, with the LTV spread you would actually see:
   six trade accounts at the top, seven devoted repeat buyers, twenty-six
