@@ -53,7 +53,17 @@ Updated 2026-08-27. Honest status, not a summary.
 - [x] 3D bottle system — procedural glass with refraction, brine shader with suspended
       particulate, pour scrubbing, automatic quality tiering. Live at `/lab/bottle`
 - [x] CI — typecheck, lint, test, build, Playwright e2e, and a Lighthouse budget **proven
-      to bite** (deliberately breached at CLS 0.194 against a 0.02 budget, then removed)
+      to bite** (deliberately breached at CLS 0.194 against a 0.02 budget, then removed).
+      It bit again for real on the homepage commit — script transfer 479,827 against a
+      400,000 ceiling and performance 0.55 against a 0.95 floor, both from the WebGL
+      hero. Now green: 189,803 bytes, performance 0.95, CLS 0.000, and the accessibility,
+      SEO and practices categories all 1.00.
+      **Performance sits exactly on the 0.95 floor with no margin**, so a slower runner
+      could tip it red. If that happens the lever is `components/home/MotionRoot.tsx` —
+      GSAP and Lenis are ~46 kB of the remaining ~190 kB and buy section reveals and
+      smooth scroll, nothing structural.
+      The **Lint step is still red and always was** — 27 ESLint errors plus a Prettier
+      failure in `components/3d/` and `lib/commerce/`, untouched by the homepage work.
 - [x] Vercel project, live and public
 - [x] **Homepage** — hero, the range as a back-bar spec sheet, the four serves, the
       kitchen band and the four-step process. Renders `components/home/data.ts` and
@@ -61,10 +71,14 @@ Updated 2026-08-27. Honest status, not a summary.
       390, light and dark, and with reduced motion forced: no horizontal overflow, no
       console errors, no failed requests. Built and on `main` — **not yet on the live
       domain**, see the branch-tracking item above.
-      Two things it is honest about rather than faking: the hero drops the label texture,
-      because the shipped one is a UV registration card that renders the words
-      "PLACEHOLDER LABEL", and `components/home/routes.ts` filters out the eight nav
-      destinations whose routes do not exist yet rather than linking to 404s.
+      The hero is the drawn range illustration, not the 3D bottle — that was dropped on
+      the founder's call after CI went red and the render was judged to look cheap. The
+      3D system is untouched and still live at `/lab/bottle`; what it would take to earn
+      a place back on the homepage is in
+      `.claude/god-of-war/runs/20260827-121931/decisions.md` 14. `Hero.tsx` is now a
+      server component with no client JavaScript.
+      `components/home/routes.ts` filters out the eight nav destinations whose routes do
+      not exist yet rather than linking to 404s.
 
 ## In progress
 

@@ -43,6 +43,61 @@ a `<dt class="sr-only">` in the spec figures duplicated the visible label, so a 
 read every number's caption twice; and the CSS-module typing issue in #11 was live in the
 first draft of the page.
 
+### Decision 14 — the 3D bottle is OFF the homepage (founder's call)
+
+Not reversible by a prop, so it gets its own note rather than a table row.
+
+**What happened.** CI went red on the homepage commit. Two of the three failing
+jobs were regressions from C2b (verified against run 82 on `main` at ff346ba,
+where e2e and Lighthouse were both green and only Lint was red):
+
+| Job | ff346ba | c10efc0 | Whose |
+|---|---|---|---|
+| typecheck / lint / test / build | failure (Lint) | failure | pre-existing |
+| e2e (Playwright) | success | **failure** | C2b — no `<h1>` on the page. Fixed in e832a53 |
+| Lighthouse budget | success | **failure** | C2b — see below |
+
+**The Lighthouse numbers.** `three` + `drei` are ~285 kB compressed and loaded
+on first paint, because the hero sits at the top of the page and BottleHero's
+IntersectionObserver fires immediately:
+
+| | script transfer | budget 400,000 |
+|---|---|---|
+| Homepage with the WebGL hero | 479,827 | over by 79,827 |
+| Same page, 3D not loaded | 194,710 | under by 205,290 |
+| Shipped homepage (illustration) | 189,803 | under by 210,197 |
+
+Performance scored **0.55** (0.44 / 0.57 / 0.55) against a 0.95 floor. A WebGL
+hero that loads on first paint cannot satisfy a 400 kB *total* script budget —
+the two requirements are mutually exclusive as written.
+
+**What was chosen.** Three options went to the founder: defer the 3D behind
+first scroll, raise the budget to fit a WebGL storefront, or drop the 3D from
+the homepage. The answer was to drop it — *"unless we can make it look way
+better, it looks shithouse the bottle"* — and that judgement is correct on the
+render as it stands: generic glass, a blank grey band where the label art
+belongs, and nothing grounding it. `brand/assets/bottles.svg` runs in its place
+and is frankly the better picture, because it carries the real drawn labels.
+
+**Nothing was deleted.** `components/3d/` is untouched and `/lab/bottle` still
+runs the full system. The homepage simply no longer imports it, which is also
+why `Hero.tsx` is now a server component with no client JavaScript at all.
+
+**What it would take to earn a place back on the homepage.** This is C2a's
+work, not a prop change:
+1. **Real label textures.** The blank band is the single biggest reason it
+   reads cheap. `brand/assets/label-01-house.svg` and its siblings exist as
+   vector; they need baking to a texture the shader can map, and
+   `DEFAULT_LABEL.textureUrl` needs to stop pointing at the UV registration
+   card that renders the words "PLACEHOLDER LABEL".
+2. **Ground it.** With the studio backdrop off, the bottle floats. It needs a
+   contact shadow that works on the page's own ground rather than the painted
+   dark room, which is what forced the backdrop off in the first place.
+3. **Then re-argue the budget.** Even a beautiful bottle is ~285 kB. Whoever
+   brings it back has to pair it with either deferred loading behind scroll
+   intent or an explicit, deliberate change to `lighthouserc.json`. Do not
+   quietly raise the budget to make a red job green.
+
 ---
 
 ## Queued for the user — NOT actioned
