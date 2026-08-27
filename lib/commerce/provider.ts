@@ -238,7 +238,10 @@ export interface CommerceProvider {
     buyerIdentity: BuyerIdentityInput,
   ): Promise<CartMutationResult>;
 
-  updateCartNote(cartId: string, note: string | null): Promise<CartMutationResult>;
+  updateCartNote(
+    cartId: string,
+    note: string | null,
+  ): Promise<CartMutationResult>;
 
   updateCartAttributes(
     cartId: string,
@@ -289,7 +292,9 @@ export interface CommerceProvider {
 
   listLocations(): Promise<readonly InventoryLocation[]>;
 
-  getInventoryLevels(query?: InventoryQuery): Promise<Connection<InventoryLevel>>;
+  getInventoryLevels(
+    query?: InventoryQuery,
+  ): Promise<Connection<InventoryLevel>>;
 
   /**
    * Apply a set of deltas atomically: either every change lands or none does.

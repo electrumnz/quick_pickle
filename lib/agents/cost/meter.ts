@@ -30,7 +30,10 @@ import {
 export const LEDGER_TIME_ZONE = "Pacific/Auckland";
 
 /** `YYYY-MM-DD` for an instant, in the ledger's timezone. */
-export function ledgerDate(instant: Date, timeZone: string = LEDGER_TIME_ZONE): string {
+export function ledgerDate(
+  instant: Date,
+  timeZone: string = LEDGER_TIME_ZONE,
+): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
@@ -40,13 +43,17 @@ export function ledgerDate(instant: Date, timeZone: string = LEDGER_TIME_ZONE): 
 }
 
 /** First day of the ledger month containing `instant`, as `YYYY-MM-DD`. */
-export function ledgerMonthStart(instant: Date, timeZone: string = LEDGER_TIME_ZONE): string {
+export function ledgerMonthStart(
+  instant: Date,
+  timeZone: string = LEDGER_TIME_ZONE,
+): string {
   const day = ledgerDate(instant, timeZone);
   return `${day.slice(0, 7)}-01`;
 }
 
 /** Which ceiling was hit. */
-export type CapKind = "run" | "agent_daily" | "agent_monthly" | "global_monthly";
+export type CapKind =
+  "run" | "agent_daily" | "agent_monthly" | "global_monthly";
 
 /** The answer to "may this call proceed?". */
 export type CapVerdict =
@@ -99,7 +106,8 @@ export class CostMeter {
   /** The operator-configurable global ceiling, in micros. */
   async globalMonthlyCapMicros(): Promise<number> {
     const raw = await this.store.getSetting(GLOBAL_MONTHLY_CAP_SETTING_KEY);
-    const cents = typeof raw === "number" ? raw : DEFAULT_GLOBAL_MONTHLY_CAP_CENTS;
+    const cents =
+      typeof raw === "number" ? raw : DEFAULT_GLOBAL_MONTHLY_CAP_CENTS;
     return centsToMicros(cents);
   }
 
@@ -203,7 +211,11 @@ export class CostMeter {
   }
 
   /** Worst-case cost of a call that has not happened yet. */
-  project(model: string, promptTokens: number, maxOutputTokens: number): number {
+  project(
+    model: string,
+    promptTokens: number,
+    maxOutputTokens: number,
+  ): number {
     return projectedCostMicros({
       model,
       promptTokens,

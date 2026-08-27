@@ -9,7 +9,7 @@ Run: HALF SOUR, 2026-08-27. Skill version: the one at `~/.claude/skills/synced/g
 
 ## 1. Two literal bugs in SKILL.md
 
-**Line ~42 — wrong variable name in prose.** The text says *"Set `COW` once"* but the code
+**Line ~42 — wrong variable name in prose.** The text says _"Set `COW` once"_ but the code
 block sets `GOW`, and every later command uses `$GOW`. Anyone following the prose exports the
 wrong variable and every script call fails.
 
@@ -57,7 +57,7 @@ declare overlapping paths.
 ## 3. No protocol for amending a run already in flight
 
 The skill is firm that the mission doesn't change mid-run unless the human says so — good. But
-in practice the human *does* say so, and mid-wave. In this run, three things landed after
+in practice the human _does_ say so, and mid-wave. In this run, three things landed after
 builders were dispatched: a Shopify store appeared, the brand name was confirmed, and an
 image-generation pipeline became available. Each materially changed a unit already being built.
 
@@ -81,7 +81,7 @@ Phase 0 step 4 is "ask what is left, once". For an unattended or overnight run t
 ask, and the skill's own §7 (headless runs) actively encourages running for hours alone — but
 never reconciles the two.
 
-The gap bites when a *new* question arises mid-run, which is exactly when a long run is most
+The gap bites when a _new_ question arises mid-run, which is exactly when a long run is most
 likely to go wrong quietly. Needs an explicit unattended mode:
 
 - Before going unattended, agree the **decision budget**: which classes of decision the loop may
@@ -89,7 +89,7 @@ likely to go wrong quietly. Needs an explicit unattended mode:
 - When a blocking question arises with nobody present: pick the reversible option, log it to a
   `decisions.md` with the reasoning and the alternative not taken, and keep going. Surface the
   whole list at hand-back rather than one at a time.
-- Never let an unattended run make an *irreversible* decision (buying a domain, deleting data,
+- Never let an unattended run make an _irreversible_ decision (buying a domain, deleting data,
   publishing, sending email) on its own. Those queue and wait.
 
 ---
@@ -110,7 +110,7 @@ against, and a mismatch becomes visible at split time.
 
 ---
 
-## 6. Answer-key bars need the evidence *command*, not just the check
+## 6. Answer-key bars need the evidence _command_, not just the check
 
 The engineering answer key worked far better once each check named how to produce its evidence
 (`npm run typecheck`, an axe run, a contrast table) rather than just asserting the condition. A
@@ -128,7 +128,7 @@ Suggest the answer-key template carry three columns: **id | check | how to evide
   Unlikely, but a short random suffix costs nothing.
 - `ledger.py init` accepts `--budget` as free text. If budget is a real stop condition (§6 exit 3),
   it needs to be machine-comparable, otherwise nothing can actually detect the stop.
-- Worth stating that the orchestrator should commit *between* waves as well as on unit PASS. A
+- Worth stating that the orchestrator should commit _between_ waves as well as on unit PASS. A
   wave that dies mid-flight otherwise loses everything the builders wrote.
 
 ---
@@ -148,7 +148,7 @@ None of these are defects. All of them burn a CI run, a deploy, and orchestrator
 on a watched PR they generate failure notifications that look like regressions.
 
 The skill says to commit each unit as it passes, which is right, but says nothing about what to
-do when an external gate (CI, a watched PR, a deploy pipeline) observes the tree *between*
+do when an external gate (CI, a watched PR, a deploy pipeline) observes the tree _between_
 passes. Worth stating explicitly:
 
 > **A shared CI gate is only meaningful at wave boundaries.** Mid-wave the tree contains
@@ -157,6 +157,7 @@ passes. Worth stating explicitly:
 > yourself to green at the boundary.
 
 Two concrete mitigations that worked:
+
 1. Run the formatter across the tree as part of the checkpoint routine, not as a fix after the
    gate fails. Formatting is never a real failure and should never consume a cycle.
 2. Scan for credential material on every checkpoint, since builders handling secrets are exactly

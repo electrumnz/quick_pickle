@@ -1,15 +1,19 @@
+# Build output and caches — generated, never hand-edited.
 .next/
 out/
 build/
 coverage/
-node_modules/
+.lighthouseci/
+
+# Test and tooling artefacts.
 playwright-report/
+blob-report/
 test-results/
-next-env.d.ts
+
+# Dependencies and generated files.
+node_modules/
 package-lock.json
-supabase/
-brand/
-legal/
+next-env.d.ts
+
+# Gauntlet run bookkeeping: machine-written and rewritten in place.
 .claude/
-**/*.md
-.env.example

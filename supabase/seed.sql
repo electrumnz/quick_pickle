@@ -409,3 +409,163 @@ select ct.id, 'NZD', v.product_id, v.id, ci.qty, ci.price, ct.created_at + inter
   ) as ci(token, sku, qty, price)
   join public.carts ct on ct.token = ci.token
   join public.product_variants v on v.sku = ci.sku;
+
+-- =============================================================================
+-- ORDERS
+-- NZ retail prices are GST-inclusive, so tax_cents is the GST already inside
+-- total_cents (total = subtotal - discount + shipping, which is what the
+-- orders_total_balances check enforces).
+-- =============================================================================
+insert into public.orders
+  (order_number, customer_id, email, phone, channel, status, financial_status, fulfillment_status,
+   subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, refunded_cents,
+   shipping_address_id, billing_address_id, shipping_method, tracking_carrier, tracking_number, tracking_url,
+   discount_id, discount_code, note, customer_note, tags,
+   placed_at, paid_at, fulfilled_at, delivered_at, cancelled_at, cancel_reason, payment_gateway,
+   provider, shopify_gid, shopify_updated_at, sync_status, synced_at)
+select
+  o.order_number, c.id, c.email, c.phone, o.channel::public.sales_channel, o.status::public.order_status,
+  o.fin::public.order_financial_status, o.ful::public.order_fulfillment_status,
+  o.subtotal, o.discount, o.shipping, o.tax, o.total, o.refunded,
+  addr.id, addr.id, o.ship_method, o.carrier, o.tracking,
+  case when o.tracking is null then null else 'https://www.nzpost.co.nz/tools/tracking/item/' || o.tracking end,
+  d.id, o.discount_code, o.note, o.customer_note, o.tags::text[],
+  now() - o.placed_ago,
+  case when o.paid_ago is null then null else now() - o.paid_ago end,
+  case when o.fulfilled_ago is null then null else now() - o.fulfilled_ago end,
+  case when o.delivered_ago is null then null else now() - o.delivered_ago end,
+  case when o.cancelled_ago is null then null else now() - o.cancelled_ago end,
+  o.cancel_reason,
+  o.gateway,
+  'shopify', 'gid://shopify/Order/' || o.gid_suffix, now() - o.placed_ago, 'synced', now() - interval '14 minutes'
+from (values
+  ('HS-01001','aroha.wetere@gmail.com','online','open','paid','delivered',            10200,     0,  990-990,  1330, 10200,    0, 'NZ Post Courier','NZ Post','CE923841077NZ', null, null,'Regular. Threw in a sticker.',null,'{}',                       interval '6 days',  interval '6 days',  interval '5 days',  interval '3 days',  null, null, 'shopify_payments','52340000001'),
+  ('HS-01002','orders@brassandbitters.co.nz','wholesale','open','paid','delivered',   38000,  3800,        0,  4461, 34200,    0, 'Own van — Auckland CBD', null, null, 'TRADE10','Before 11am, rear door.','Same as last time please.','{trade,auckland}',        interval '9 days',  interval '9 days',  interval '8 days',  interval '7 days',  null, null, 'invoice','52340000002'),
+  ('HS-01003','sam.kerrison@outlook.co.nz','online','open','paid','fulfilled',         6700,     0,      990,  1003,  7690,    0, 'NZ Post Courier','NZ Post','CE923841184NZ', null, null,null,'Gift for my brother — no invoice in the box.','{gift}',          interval '11 days', interval '11 days', interval '9 days',  null,               null, null, 'shopify_payments','52340000003'),
+  ('HS-01004','priya.nair@fastmail.com','online','open','paid','delivered',            4400,     0,      990,   703,  5390,    0, 'NZ Post Courier','NZ Post','CE923840912NZ', null, null,null,null,'{}',                                                             interval '17 days', interval '17 days', interval '16 days', interval '14 days', null, null, 'shopify_payments','52340000004'),
+  ('HS-01005','bar@thesaltroom.co.nz','wholesale','open','paid','delivered',          25200,     0,        0,  3287, 25200,    0, 'Freightways overnight','Post Haste','PH2298410043', null, null,null,null,'{trade,wellington}',                                    interval '13 days', interval '13 days', interval '12 days', interval '11 days', null, null, 'invoice','52340000005'),
+  ('HS-01006','tom.whitiora@gmail.com','online','open','paid','unfulfilled',           3700,     0,      990,   612,  4690,    0, 'NZ Post Courier', null, null, null, null,null,'Is the cherry one back next year?','{}',                                    interval '2 days',  interval '2 days',  null,               null,               null, null, 'shopify_payments','52340000006'),
+  ('HS-01007','elise@marchetti.nz','online','cancelled','refunded','cancelled',       12000,     0,        0,  1565, 12000,12000, 'NZ Post Courier','NZ Post','CE923840455NZ', null, null,'Batch HS-SPZ-260625-A. Two cans split in transit — carrier damage, not a seam fault. Replacement case sent free.',null,'{refunded,damage}', interval '21 days', interval '21 days', interval '20 days', null, interval '19 days', 'Two cans split in transit. Refunded in full and a replacement case sent at our cost.', 'shopify_payments','52340000007'),
+  ('HS-01008','hana.f@protonmail.com','subscription','open','paid','delivered',         8400,   840,        0,   986,  7560,    0, 'NZ Post Courier','NZ Post','CE923840108NZ', null, 'SUBSCRIBER10',null,null,'{subscription}',                                 interval '5 weeks', interval '5 weeks', interval '5 weeks' - interval '1 day', interval '5 weeks' - interval '3 days', null, null, 'shopify_payments','52340000008'),
+  ('HS-01009','hello@nightjarqt.nz','wholesale','open','pending','unfulfilled',       28700,     0,        0,  3743, 28700,    0, 'Freightways to Queenstown', null, null, null, null,'First order. Flynn confirmed invoice on the 20th by phone.',null,'{trade,queenstown,new-account}', interval '4 days', null, null, null, null, null, 'invoice','52340000009'),
+  ('HS-01010','accounts@moxieprovisions.co.nz','wholesale','open','paid','fulfilled', 50400, 10080,        0,  5259, 40320,    0, 'Pallet — Mainfreight','Mainfreight','MF80442917', null, 'WHOLESALE20','Dock 3, booked for 7am.',null,'{wholesale,pallet}',    interval '8 days',  interval '8 days',  interval '6 days',  null,               null, null, 'invoice','52340000010'),
+  ('HS-01011','aroha.wetere@gmail.com','online','archived','paid','delivered',         8400,     0,        0,  1096,  8400,    0, 'NZ Post Courier','NZ Post','CE923839114NZ', null, null,null,null,'{}',                                                          interval '5 weeks', interval '5 weeks', interval '5 weeks' - interval '1 day', interval '5 weeks' - interval '4 days', null, null, 'shopify_payments','52340000011'),
+  ('HS-01012','aroha.wetere@gmail.com','online','archived','paid','delivered',         6500,     0,      990,   977,  7490,    0, 'NZ Post Courier','NZ Post','CE923835002NZ', null, null,null,'Birthday present, can you write on the card?','{gift}',           interval '3 months',interval '3 months',interval '3 months' - interval '2 days', interval '3 months' - interval '5 days', null, null, 'shopify_payments','52340000012'),
+  ('HS-01013','aroha.wetere@gmail.com','online','archived','paid','delivered',         3600,     0,      990,   599,  4590,    0, 'NZ Post Courier','NZ Post','CE923829771NZ', null, null,null,null,'{}',                                                          interval '7 months',interval '7 months',interval '7 months' - interval '1 day',  interval '7 months' - interval '4 days', null, null, 'shopify_payments','52340000013'),
+  ('HS-01014','orders@brassandbitters.co.nz','wholesale','archived','paid','delivered',53700,  5370,       0,  6304, 48330,    0, 'Own van — Auckland CBD', null, null, 'TRADE10',null,null,'{trade,auckland}',                                                    interval '6 weeks', interval '6 weeks', interval '6 weeks' - interval '1 day',  interval '6 weeks' - interval '1 day', null, null, 'invoice','52340000014'),
+  ('HS-01015','bar@thesaltroom.co.nz','wholesale','archived','paid','delivered',      50400,  5040,        0,  5917, 45360,    0, 'Freightways overnight','Post Haste','PH2298402118', null, 'TRADE10',null,null,'{trade,wellington}',                              interval '2 months',interval '2 months',interval '2 months' - interval '1 day',  interval '2 months' - interval '2 days', null, null, 'invoice','52340000015'),
+  ('HS-01016','accounts@moxieprovisions.co.nz','wholesale','archived','paid','delivered',144000,28800,     0, 15026,115200,    0, 'Pallet — Mainfreight','Mainfreight','MF80441002', null, 'WHOLESALE20','Summer Spritz load-in.',null,'{wholesale,pallet,spritz}',   interval '6 weeks', interval '6 weeks', interval '6 weeks' - interval '2 days',  interval '6 weeks' - interval '4 days', null, null, 'invoice','52340000016'),
+  ('HS-01017','accounts@moxieprovisions.co.nz','wholesale','archived','paid','delivered',100800,20160,     0, 10518, 80640,    0, 'Pallet — Mainfreight','Mainfreight','MF80435566', null, 'WHOLESALE20',null,null,'{wholesale,pallet}',                              interval '4 months',interval '4 months',interval '4 months' - interval '2 days', interval '4 months' - interval '5 days', null, null, 'invoice','52340000017'),
+  ('HS-01018','sam.kerrison@outlook.co.nz','online','archived','paid','delivered',      6600,     0,      990,   990,  7590,    0, 'NZ Post Courier','NZ Post','CE923832240NZ', null, null,null,null,'{}',                                                          interval '5 months',interval '5 months',interval '5 months' - interval '1 day',  interval '5 months' - interval '4 days', null, null, 'shopify_payments','52340000018')
+) as o(order_number, email, channel, status, fin, ful, subtotal, discount, shipping, tax, total, refunded,
+       ship_method, carrier, tracking, note_unused, discount_code, note, customer_note, tags,
+       placed_ago, paid_ago, fulfilled_ago, delivered_ago, cancelled_ago, cancel_reason, gateway, gid_suffix)
+join public.customers c on c.email = o.email
+left join public.addresses addr on addr.customer_id = c.id and addr.address_type = 'shipping' and addr.is_default
+left join public.discounts d on d.code = o.discount_code;
+
+select setval('public.order_number_seq', 1019, false);
+
+insert into public.order_items
+  (order_id, currency, product_id, variant_id, shopify_gid, sku, title, variant_title,
+   quantity, quantity_fulfilled, quantity_refunded, unit_price_cents, unit_cost_cents,
+   discount_cents, tax_cents, line_total_cents, position)
+select ord.id, 'NZD', v.product_id, v.id,
+       'gid://shopify/LineItem/' || li.gid_suffix,
+       v.sku, p.title, v.title,
+       li.qty,
+       case when ord.fulfillment_status in ('fulfilled','delivered') then li.qty else 0 end,
+       case when ord.financial_status = 'refunded' then li.qty else 0 end,
+       li.price, v.unit_cost_cents, li.disc,
+       ((li.qty * li.price - li.disc) * 3 + 11) / 23,
+       li.qty * li.price - li.disc,
+       li.pos
+  from (values
+    ('HS-01001','HS-DILL-750-6',  1, 8400,     0, 10, '63340000001'),
+    ('HS-01001','HS-FIRE-750',    1, 1800,     0, 20, '63340000002'),
+    ('HS-01002','HS-DILL-5L',     4, 9500,  3800, 10, '63340000003'),
+    ('HS-01003','HS-KIT-PB',      1, 4900,     0, 10, '63340000004'),
+    ('HS-01003','HS-GOLD-750',    1, 1800,     0, 20, '63340000005'),
+    ('HS-01004','HS-SPZ-250-4',   2, 2200,     0, 10, '63340000006'),
+    ('HS-01005','HS-CONC-250-12', 1,25200,     0, 10, '63340000007'),
+    ('HS-01006','HS-CHRY-750',    1, 2100,     0, 10, '63340000008'),
+    ('HS-01006','HS-DILL-750',    1, 1600,     0, 20, '63340000009'),
+    ('HS-01007','HS-SPZ-250-24',  1,12000,     0, 10, '63340000010'),
+    ('HS-01008','HS-DILL-750-6',  1, 8400,   840, 10, '63340000011'),
+    ('HS-01009','HS-FIRE-750-6',  2, 9600,     0, 10, '63340000012'),
+    ('HS-01009','HS-DILL-5L',     1, 9500,     0, 20, '63340000013'),
+    ('HS-01010','HS-DILL-750-6',  6, 8400, 10080, 10, '63340000014'),
+    ('HS-01011','HS-DILL-750-6',  1, 8400,     0, 10, '63340000015'),
+    ('HS-01012','HS-KIT-PB',      1, 4900,     0, 10, '63340000016'),
+    ('HS-01012','HS-DILL-750',    1, 1600,     0, 20, '63340000017'),
+    ('HS-01013','HS-FIRE-750',    2, 1800,     0, 10, '63340000018'),
+    ('HS-01014','HS-DILL-5L',     3, 9500,  2850, 10, '63340000019'),
+    ('HS-01014','HS-CONC-250-12', 1,25200,  2520, 20, '63340000020'),
+    ('HS-01015','HS-CONC-250-12', 2,25200,  5040, 10, '63340000021'),
+    ('HS-01016','HS-SPZ-250-24', 12,12000, 28800, 10, '63340000022'),
+    ('HS-01017','HS-DILL-750-6', 12, 8400, 20160, 10, '63340000023'),
+    ('HS-01018','HS-SPZ-250-4',   3, 2200,     0, 10, '63340000024')
+  ) as li(order_number, sku, qty, price, disc, pos, gid_suffix)
+  join public.orders ord on ord.order_number = li.order_number
+  join public.product_variants v on v.sku = li.sku
+  join public.products p on p.id = v.product_id;
+
+-- The cart that became HS-01006.
+update public.orders o
+   set cart_id = c.id
+  from public.carts c
+ where o.order_number = 'HS-01006'
+   and c.token = 'a4e0b9317dc6f28504ba71e3d95c8f062a7b3e14c0d95f8623ab7104ed3f9c25';
+
+update public.carts c
+   set status = 'converted', converted_order_id = o.id
+  from public.orders o
+ where o.order_number = 'HS-01006' and c.id = o.cart_id;
+
+insert into public.discount_redemptions (discount_id, order_id, customer_id, amount_cents, redeemed_at)
+select o.discount_id, o.id, o.customer_id, o.discount_cents, o.placed_at
+  from public.orders o
+ where o.discount_id is not null and o.discount_cents > 0;
+
+-- Customer lifetime figures are derived, never typed. Anything else drifts.
+update public.customers c set
+  orders_count      = coalesce(agg.cnt, 0),
+  total_spent_cents = coalesce(agg.spend, 0),
+  first_ordered_at  = agg.first_at,
+  last_ordered_at   = agg.last_at
+from (
+  select o.customer_id,
+         count(*) as cnt,
+         sum(case when o.financial_status in ('paid','partially_refunded')
+                  then o.total_cents - o.refunded_cents else 0 end) as spend,
+         min(o.placed_at) as first_at,
+         max(o.placed_at) as last_at
+    from public.orders o
+   where o.customer_id is not null
+   group by o.customer_id
+) agg
+where agg.customer_id = c.id;
+
+update public.customers set orders_count = 0, total_spent_cents = 0,
+       first_ordered_at = null, last_ordered_at = null
+ where id not in (select distinct customer_id from public.orders where customer_id is not null);
+
+-- =============================================================================
+-- SUBSCRIPTIONS
+-- =============================================================================
+insert into public.subscriptions
+  (customer_id, status, interval_unit, interval_count, discount_bp, shipping_address_id,
+   delivery_price_cents, started_at, next_billing_at, last_billed_at, cycles_completed,
+   provider, shopify_gid, shopify_updated_at, sync_status, synced_at)
+select c.id, 'active', 'month', 1, 1000, a.id, 0,
+       now() - interval '5 weeks', now() + interval '2 weeks', now() - interval '5 weeks', 1,
+       'shopify', 'gid://shopify/SubscriptionContract/33440000001', now() - interval '5 weeks', 'synced', now() - interval '14 minutes'
+  from public.customers c
+  join public.addresses a on a.customer_id = c.id and a.address_type = 'shipping' and a.is_default
+ where c.email = 'hana.f@protonmail.com';
+
+insert into public.subscription_items (subscription_id, currency, product_id, variant_id, quantity, unit_price_cents)
+select s.id, 'NZD', v.product_id, v.id, 1, 8400
+  from public.subscriptions s
+  join public.customers c on c.id = s.customer_id and c.email = 'hana.f@protonmail.com'
+  join public.product_variants v on v.sku = 'HS-DILL-750-6';

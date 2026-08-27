@@ -16,7 +16,10 @@ import type { PourParams } from "../types";
 
 export type StreamUniforms = Record<string, THREE.IUniform>;
 
-export function createStreamUniforms(liquid: LiquidUniforms, pour: PourParams): StreamUniforms {
+export function createStreamUniforms(
+  liquid: LiquidUniforms,
+  pour: PourParams,
+): StreamUniforms {
   return {
     uTime: liquid.uTime!,
     uDeep: liquid.uDeep!,
@@ -54,7 +57,9 @@ varying vec3 vWorldPos;
 varying vec3 vWorldNormal;
 `;
 
-export function createStreamMaterial(uniforms: StreamUniforms): THREE.MeshPhysicalMaterial {
+export function createStreamMaterial(
+  uniforms: StreamUniforms,
+): THREE.MeshPhysicalMaterial {
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     roughness: 0.035,
@@ -108,8 +113,7 @@ export function createStreamMaterial(uniforms: StreamUniforms): THREE.MeshPhysic
   vWorldPos = transformed;
   vWorldNormal = normalize(hsSide * hsRing.x + hsUp * hsRing.y);
 `,
-      )
-      ;
+      );
 
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", `#include <common>\n${PARS}`)
