@@ -30,7 +30,12 @@ import type { ControlPlane } from "../control/kill-switch";
 import { ControlWatcher } from "../control/kill-switch";
 import type { CostMeter } from "../cost/meter";
 import { AgentRuntimeError, isAgentRuntimeError } from "../errors";
-import { toJsonValue, type JsonObject, type JsonValue } from "../json";
+import {
+  toJsonObject,
+  toJsonValue,
+  type JsonObject,
+  type JsonValue,
+} from "../json";
 import type { AgentLogger } from "../logger";
 import type { ModelResolver } from "../model/provider";
 import type { AgentStore } from "../store/types";
@@ -87,6 +92,9 @@ export type TurnOutcome =
   | { readonly type: "finished"; readonly outcome: string }
   | { readonly type: "halted"; readonly code: string; readonly reason: string }
   | { readonly type: "tool_calls"; readonly toolCallIds: readonly string[] };
+
+/** The subset of {@link TurnOutcome} the control plane can produce. */
+export type HaltOutcome = Extract<TurnOutcome, { type: "halted" }>;
 
 /** What the gate decided about one proposed tool call. */
 export type GateOutcome =
@@ -233,7 +241,7 @@ export class AgentRuntime {
   }
 
   /** Consult the kill switch and the per-agent pause. */
-  async checkControls(runId: string): Promise<TurnOutcome | null> {
+  async checkControls(runId: string): Promise<HaltOutcome | null> {
     const run = await this.requireRun(runId);
     const verdict = await this.deps.control.evaluate(run.agentSlug);
     if (!verdict.halted) {
@@ -420,7 +428,7 @@ export class AgentRuntime {
         runId,
         messageId: assistantMessageId,
         toolName: call.toolName,
-        arguments: asJsonObject(call.input),
+        arguments: toJsonObject(call.input),
         isMutation: this.isMutationTool(call.toolName),
         status: "pending",
       });
@@ -734,6 +742,22 @@ export class AgentRuntime {
     return this.summarise(runId, steps);
   }
 
+  /**
+   * Stop a run from outside it.
+   *
+   * Inngest cancels a function the moment the kill switch fires, which means the
+   * run's own loop never gets to write down why it stopped. The kill-switch
+   * function calls this so the record is complete even when the process handling
+   * the run was killed mid-step.
+   */
+  async cancelRun(runId: string, code: string, reason: string): Promise<void> {
+    const run = await this.requireRun(runId);
+    if (run.finishedAt !== null) {
+      return;
+    }
+    await this.halt(runId, code, reason, "cancelled");
+  }
+
   /** Terminal state of a run, for the caller and the admin. */
   async summarise(runId: string, steps: number): Promise<RunSummary> {
     const run = await this.requireRun(runId);
@@ -828,6 +852,46 @@ export class AgentRuntime {
     return null;
   }
 
+  /**
+   * The provider's own id for a proposed tool call.
+   *
+   * A tool result must carry the same `toolCallId` the assistant turn used, or
+   * the next model call is rejected as an unanswered tool call. The id is not a
+   * column on `agent_tool_calls`; it is already in the stored assistant message,
+   * so it is read back from the transcript rather than held in memory — which is
+   * also what lets a resumed or replayed run reproduce the prompt exactly.
+   */
+  private async providerToolCallId(runId: string, call: ToolCallRecord): Promise<string> {
+    if (call.messageId === null) {
+      return call.id;
+    }
+    const messages = await this.deps.store.listMessages(runId);
+    const message = messages.find((entry) => entry.id === call.messageId);
+    const stored = message?.contentJson;
+    if (stored === undefined || stored === null || typeof stored !== "object" || Array.isArray(stored)) {
+      return call.id;
+    }
+    const parts = stored["content"];
+    if (!Array.isArray(parts)) {
+      return call.id;
+    }
+    const ids: string[] = [];
+    for (const part of parts) {
+      if (typeof part !== "object" || part === null || Array.isArray(part)) {
+        continue;
+      }
+      const record: Record<string, JsonValue> = part;
+      if (record["type"] === "tool-call" && typeof record["toolCallId"] === "string") {
+        ids.push(record["toolCallId"]);
+      }
+    }
+    const siblings = (await this.deps.store.listToolCalls(runId))
+      .filter((entry) => entry.messageId === call.messageId)
+      .sort((left, right) => left.seq - right.seq);
+    const index = siblings.findIndex((entry) => entry.id === call.id);
+    return ids[index] ?? call.id;
+  }
+
   private async appendToolMessage(
     runId: string,
     call: ToolCallRecord,
@@ -838,9 +902,9 @@ export class AgentRuntime {
       content: [
         {
           type: "tool-result",
-          toolCallId: call.id,
+          toolCallId: await this.providerToolCallId(runId, call),
           toolName: call.toolName,
-          output: { type: "json", value: value as never },
+          output: { type: "json", value },
         },
       ],
     };
@@ -935,12 +999,4 @@ export class AgentRuntime {
       fields: { code, reason, status, ...detail },
     });
   }
-}
-
-function asJsonObject(value: unknown): JsonObject {
-  const json = toJsonValue(value);
-  if (typeof json === "object" && json !== null && !Array.isArray(json)) {
-    return json;
-  }
-  return { value: json };
 }

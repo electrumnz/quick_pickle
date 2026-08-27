@@ -1,8 +1,12 @@
 /**
  * The event vocabulary of the agent runtime.
  *
- * Schemas are zod, which Inngest reads as Standard Schema, so an event that
- * does not match its declared shape is rejected before a function ever sees it.
+ * Schemas are zod, which Inngest reads as Standard Schema, so an event that does
+ * not match its declared shape is rejected before a function ever sees it.
+ *
+ * No field uses `.default()`: a default makes a schema's input and output types
+ * differ, which Inngest rejects as a transform. Optional fields are defaulted by
+ * the handler instead.
  */
 
 import { eventType } from "inngest";
@@ -14,18 +18,18 @@ import { AGENT_RUN_TRIGGERS } from "@/lib/agents/types";
 export const agentRunRequestedSchema = z.object({
   agentSlug: z.string().min(1),
   goal: z.string().min(1),
-  trigger: z.enum(AGENT_RUN_TRIGGERS).default("manual"),
+  trigger: z.enum(AGENT_RUN_TRIGGERS).optional(),
   /** Whatever the caller wants the agent to see. Persisted on the run. */
-  input: z.record(z.string(), z.unknown()).default({}),
-  parentRunId: z.string().nullable().default(null),
+  input: z.record(z.string(), z.unknown()).optional(),
+  parentRunId: z.string().nullable().optional(),
 });
 
 /** A human decided an approval. Parked runs wait on this. */
 export const approvalDecidedSchema = z.object({
   approvalId: z.string().min(1),
   status: z.enum(["approved", "rejected", "cancelled", "expired"]),
-  decidedBy: z.string().nullable().default(null),
-  note: z.string().nullable().default(null),
+  decidedBy: z.string().nullable().optional(),
+  note: z.string().nullable().optional(),
 });
 
 /** The kill switch was thrown. Every in-flight run is cancelled on this. */

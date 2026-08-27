@@ -138,9 +138,11 @@ begin
     return v_row;
   end if;
 
+  -- Inclusive at the boundary, matching `escalatingDelayMs` in the Node layer:
+  -- a failure exactly one window old no longer counts.
   v_reset := v_row.last_failure_at is null
              or v_row.last_failure_at
-                < p_now - make_interval(secs => p_window_seconds);
+                <= p_now - make_interval(secs => p_window_seconds);
 
   v_next := case when v_reset then 1 else v_row.consecutive_failures + 1 end;
 

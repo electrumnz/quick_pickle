@@ -306,10 +306,34 @@ export function BottleModel({
   }, [cheapGlass, glass]);
   useEffect(() => () => cheapGlass.dispose(), [cheapGlass]);
 
+  const labelMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        roughness: DEFAULT_LABEL.roughness,
+        metalness: 0,
+        side: THREE.FrontSide,
+      }),
+    [],
+  );
+  useEffect(() => () => labelMat.dispose(), [labelMat]);
+
   const labelTex = useOptionalTexture(
     label.enabled ? label.textureUrl : undefined,
     label.repeat,
   );
+
+  useEffect(() => {
+    labelMat.color.set(label.paperColor as string);
+    labelMat.roughness = label.roughness;
+    labelMat.opacity = label.opacity;
+    labelMat.transparent = label.opacity < 0.999;
+    // Swapping a map in or out changes the compiled program, so the material
+    // has to be told. This is why a late-loading label silently stays blank.
+    if (labelMat.map !== labelTex) {
+      labelMat.map = labelTex;
+      labelMat.needsUpdate = true;
+    }
+  }, [labelMat, labelTex, label]);
 
   const rootRef = useRef<THREE.Group>(null);
   const bottleRef = useRef<THREE.Group>(null);
@@ -578,17 +602,12 @@ export function BottleModel({
         ) : null}
 
         {label.enabled ? (
-          <mesh ref={labelRef} geometry={labelGeo} renderOrder={3}>
-            <meshStandardMaterial
-              color={label.paperColor as string}
-              roughness={label.roughness}
-              metalness={0}
-              map={labelTex}
-              transparent={label.opacity < 0.999}
-              opacity={label.opacity}
-              side={THREE.FrontSide}
-            />
-          </mesh>
+          <mesh
+            ref={labelRef}
+            geometry={labelGeo}
+            material={labelMat}
+            renderOrder={3}
+          />
         ) : null}
 
         {cap.enabled ? (

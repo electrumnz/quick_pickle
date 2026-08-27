@@ -62,7 +62,7 @@ const RULES = [
   r(
     "HC-05",
     BANNED,
-    /\bdigestions?\b|\bdigestive\b|\bdigest(?:s|ing|ed)\b|\bbloat(?:ing|ed|s)?\b|\bregularity\b/i,
+    /\bdigestions?\b|\bdigestive\b|\beas(?:y|ier)\s+to\s+digest\b|\b(?:aids?|helps?|supports?|improves?)\s+(?:you\s+)?digest\w*\b|\bbloat(?:ing|ed|s)?\b|\bregularity\b/i,
     "Health claim about a functional process.",
     "FSC Std 1.2.7-18",
   ),
@@ -133,7 +133,7 @@ const RULES = [
   r(
     "HC-16",
     BANNED,
-    /\bbioavailab\w*\b|\babsorption\b/i,
+    /\bbioavailab\w*\b|\b(?:nutrient|mineral|iron|calcium|magnesium|potassium|water|electrolyte)\s+absorption\b|\babsorption\s+(?:of|by)\s+(?:nutrients?|minerals?|iron|calcium)\b/i,
     "Health claim about a biochemical process.",
     "FSC Std 1.2.7-18",
   ),
@@ -149,7 +149,7 @@ const RULES = [
   r(
     "TH-02",
     BANNED,
-    /\bcure[\s-]?all\b|\bcure\s+for\b|\bcures?\s+(?:your|you|the\s+body)\b|\bcures?\s+(?:for\s+)?(?:your|the|a|an|any)?\s*(?:hangover|cramp|nausea|headache|ailment|illness|sickness|symptom|bloat|indigestion|heartburn|cold|flu|soreness)\w*\b|\bcurative\b|\bremed(?:y|ies)\b|\bheals?\b|\bhealing\b|\btreatments?\b|\btreats?\b(?=\s+(?:your|the|a|an|any|symptom|illness|condition|cramp|hangover))/i,
+    /\bcure[\s-]?all\b|\bcure\s+for\b|\bcures?\s+(?:your|you|the\s+body)\b|\bcures?\s+(?:for\s+)?(?:your|the|a|an|any)?\s*(?:hangover|cramp|nausea|headache|ailment|illness|sickness|symptom|bloat|indigestion|heartburn|cold|flu|soreness)\w*\b|\bcurative\b|\bremed(?:y|ies)\b|\bheals?\b|\bhealing\b|\b(?:medical|therapeutic|natural)\s+treatments?\b|\btreatments?\s+for\s+(?:cramp|hangover|nausea|illness|ailment|symptom)\w*\b|\btreats?\b(?=\s+(?:your|the|a|an|any|symptom|illness|condition|cramp|hangover))/i,
     "Therapeutic claim - the MEDICAL sense of cure/heal/remedy only. The FOOD-PROCESS sense ('cured in brine', 'a three-week cure', 'cure time', 'curing salt') is approved brand vocabulary and is deliberately NOT matched.",
     "FSC Std 1.2.7-8(a)",
   ),
@@ -221,14 +221,14 @@ const RULES = [
   r(
     "EL-04",
     BANNED,
-    /\brecover(?:y|ies|ing|ed|s)?\b|\b(?:post|pre)[\s-]?workout\b|\bworkouts?\b|\bgyms?\b|\bathletes?\b|\bathletic\b|\bsports?\s+(?:drink|beverage|nutrition|recovery)\b|\bisotonic\b/i,
+    /\b(?:muscle|workout|exercise|training|post[\s-]?workout|sports?)\s+recover(?:y|ies)\b|\b(?:aids?|speeds?|helps?|supports?|boosts?)\s+recover(?:y|ies)\b|\brecover(?:y|ies)\s+(?:drink|shot|aid|after\s+(?:a\s+)?(?:workout|run|game|match|session))\b|\brecover\s+(?:faster|quicker)\b|\b(?:post|pre)[\s-]?workout\b|\bworkouts?\b|\bgyms?\b|\bathletes?\b|\bathletic\b|\bsports?\s+(?:drink|beverage|nutrition)\b|\bisotonic\b/i,
     "Health claim about physical performance; also drags us toward Std 2.9.4 (formulated supplementary sports foods) and Std 2.6.2.",
     "FSC Std 1.2.7-18; Std 2.9.4; Std 2.6.2",
   ),
   r(
     "EL-05",
     BANNED,
-    /\bendurance\b|\bstamina\b|\bmuscles?\b|\bsoreness\b|\bDOMS\b|\bperformance\b(?!\s*\.)/i,
+    /\bendurance\b|\bstamina\b|\bmuscles?\b|\bsoreness\b|\bDOMS\b|\b(?:physical|athletic|sporting|sports|exercise)\s+performance\b|\bperformance\s+(?:gains?|boost|edge|drink)\b/i,
     "Health claim about physical performance.",
     "FSC Std 1.2.7-18",
   ),
@@ -321,7 +321,7 @@ const RULES = [
   r(
     "NCC-13",
     BANNED,
-    /\b(?:good|excellent)?\s*sources?\s+of\b(?!\s+(?:truth|record|income|revenue|inspiration))/i,
+    /\b(?:good|excellent)\s+sources?\s+of\b|\bsources?\s+of\s+(?:vitamins?|minerals?|calcium|iron|potassium|magnesium|sodium|protein|fibre|fiber|antioxidants?|omega[\s-]?\d?|zinc|folate|electrolytes?|nutrients?|energy|goodness)\b/i,
     'Vitamin/mineral: >= 10% RDI/ESADDI per serving (>= 25% for "good source"). Protein: >= 5 g/serving (>= 10 g "good source"). Fibre: >= 2 g (>= 4 g "good source", >= 7 g "excellent source").',
     "FSC S4-3 (Vitamin or mineral; Protein; Dietary fibre)",
   ),
@@ -393,7 +393,7 @@ const RULES = [
   r(
     "FTA-04",
     BANNED,
-    /\bbest\b(?![\s-]?before)|\bworld'?s\s+finest\b|\bnumber\s+one\b|\bno\.?\s?1\b|\bvoted\s+best\b/i,
+    /\bbest\b(?![\s-]?before)(?!\s+practices?)|\bworld'?s\s+finest\b|\bnumber\s+one\b|\bno\.?\s?1\b|\bvoted\s+best\b/i,
     'Superiority claim requiring proof. ("Best before" is exempt so the mandatory date mark is not flagged.)',
     "FTA 1986 ss 12A, 13(a), 13(e)",
   ),
@@ -646,6 +646,23 @@ const SCAN_EXT = new Set([
   ".rss",
 ]);
 
+/** Source-code extensions. In these files, comments and identifiers are stripped
+ *  before scanning: a shader uniform called `absorption`, a SHA `digest`, or a
+ *  code comment about token `recovery` is not a claim about food, and flagging
+ *  them trains people to ignore the scanner. Only string/JSX-visible text is
+ *  scanned. Marketing copy in .md/.mdx/.html/.json is scanned verbatim. */
+const CODE_EXT = new Set([
+  ".js",
+  ".jsx",
+  ".ts",
+  ".tsx",
+  ".mjs",
+  ".cjs",
+  ".svelte",
+  ".vue",
+  ".astro",
+]);
+
 const SKIP_DIRS = new Set([
   "node_modules",
   ".git",
@@ -779,6 +796,72 @@ function headingExemptedLines(lines, headings) {
   return skip;
 }
 
+/** Blank out comment text in a code line, preserving column positions so
+ *  file:line:column stays accurate. Returns [maskedLine, nextBlockState]. */
+function maskComments(line, inBlock) {
+  let out = "";
+  let i = 0;
+  let block = inBlock;
+  let quote = null;
+  while (i < line.length) {
+    const two = line.slice(i, i + 2);
+    if (block) {
+      if (two === "*/") {
+        block = false;
+        out += "  ";
+        i += 2;
+        continue;
+      }
+      out += " ";
+      i += 1;
+      continue;
+    }
+    if (quote) {
+      out += line[i];
+      if (line[i] === "\\") {
+        out += line[i + 1] === undefined ? "" : line[i + 1];
+        i += 2;
+        continue;
+      }
+      if (line[i] === quote) quote = null;
+      i += 1;
+      continue;
+    }
+    if (line[i] === '"' || line[i] === "'" || line[i] === "`") {
+      quote = line[i];
+      out += line[i];
+      i += 1;
+      continue;
+    }
+    if (two === "//") {
+      out += " ".repeat(line.length - i);
+      break;
+    }
+    if (two === "/*") {
+      block = true;
+      out += "  ";
+      i += 2;
+      continue;
+    }
+    out += line[i];
+    i += 1;
+  }
+  if (out.length < line.length) out += " ".repeat(line.length - out.length);
+  return [out, block];
+}
+
+/** In code files, ignore matches that are plainly identifiers rather than prose:
+ *  `params.absorption`, `absorption: number`, `--best-practice`, `foo_recovery`. */
+function looksLikeIdentifier(line, index, match) {
+  const before = index > 0 ? line[index - 1] : "";
+  const after = line[index + match.length] || "";
+  if (before === "." || before === "_" || before === "$" || before === "#")
+    return true;
+  if (after === ":" || after === "_" || after === "(" || after === "=")
+    return true;
+  return false;
+}
+
 function scanFile(file, findings, exemptions, opts) {
   let text;
   try {
@@ -800,10 +883,18 @@ function scanFile(file, findings, exemptions, opts) {
     ex && ex.sections ? headingExemptedLines(lines, ex.sections) : new Set();
   const literalSkips = (ex && ex.linePatterns) || [];
 
+  const isCode = CODE_EXT.has(extname(file).toLowerCase());
   let inIgnoreBlock = false;
+  let inCommentBlock = false;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    const raw = lines[i];
+    let line = raw;
+    if (isCode) {
+      const [masked, nextBlock] = maskComments(raw, inCommentBlock);
+      inCommentBlock = nextBlock;
+      line = masked;
+    }
 
     if (line.includes(IGNORE_START)) {
       inIgnoreBlock = true;
@@ -819,16 +910,16 @@ function scanFile(file, findings, exemptions, opts) {
 
     const prev = precedingSignificantLine(lines, i);
     const lineIgnored =
-      line.includes(IGNORE_LINE) &&
-      !line.includes(IGNORE_FILE) &&
-      !APPROVE_RE.test(line);
+      raw.includes(IGNORE_LINE) &&
+      !raw.includes(IGNORE_FILE) &&
+      !APPROVE_RE.test(raw);
     const prevIgnored =
       prev.includes(IGNORE_LINE) &&
       !prev.includes(IGNORE_FILE) &&
       !APPROVE_RE.test(prev);
     if (lineIgnored || prevIgnored) continue;
 
-    const approvals = approvedIds(line) || approvedIds(prev);
+    const approvals = approvedIds(raw) || approvedIds(prev);
 
     for (const rule of RULES) {
       rule.re.lastIndex = 0;
@@ -840,6 +931,7 @@ function scanFile(file, findings, exemptions, opts) {
         }
         if (rule.severity === RESTRICTED && approvals && approvals.has(rule.id))
           continue;
+        if (isCode && looksLikeIdentifier(line, m.index, m[0])) continue;
         findings.push({
           file,
           line: i + 1,
@@ -849,7 +941,7 @@ function scanFile(file, findings, exemptions, opts) {
           severity: rule.severity,
           why: rule.why,
           source: rule.src,
-          excerpt: line.trim().slice(0, 160),
+          excerpt: raw.trim().slice(0, 160),
         });
       }
     }

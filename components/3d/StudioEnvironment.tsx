@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, type ReactNode, useMemo } from "react";
+import { Component, type ReactNode, useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { ContactShadows, Environment, Lightformer } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
@@ -12,6 +12,7 @@ import {
 } from "./defaults";
 import {
   createCausticMaterial,
+  createFloorMaterial,
   createSweepMaterial,
 } from "./materials/backdrop";
 import type { BackdropParams, QualityTier, StudioParams } from "./types";
@@ -194,6 +195,18 @@ export function StudioEnvironment({
       ),
     [backdrop.topColor, backdrop.bottomColor],
   );
+  const floor = useMemo(
+    () =>
+      createFloorMaterial(
+        backdrop.floorColor as string,
+        backdrop.bottomColor as string,
+        height * 2.2,
+        height * 9,
+      ),
+    [backdrop.floorColor, backdrop.bottomColor, height],
+  );
+  useEffect(() => () => floor.dispose(), [floor]);
+
   const tint = useMemo(
     () => liquidTint ?? new THREE.Color(DEFAULT_LIQUID.shallowColor as string),
     [liquidTint],
@@ -217,20 +230,15 @@ export function StudioEnvironment({
       {backdrop.enabled ? (
         <>
           <mesh material={sweep} renderOrder={-10}>
-            <sphereGeometry args={[24, 32, 24]} />
+            <sphereGeometry args={[height * 26, 32, 24]} />
           </mesh>
           <mesh
             rotation={[-Math.PI / 2, 0, 0]}
             position={[0, 0, 0]}
-            receiveShadow
+            material={floor}
+            renderOrder={-9}
           >
-            <circleGeometry args={[8, 64]} />
-            <meshStandardMaterial
-              color={backdrop.floorColor as string}
-              roughness={0.42}
-              metalness={0.1}
-              envMapIntensity={0.7}
-            />
+            <circleGeometry args={[height * 16, 96]} />
           </mesh>
           {q.contactShadows ? (
             <ContactShadows

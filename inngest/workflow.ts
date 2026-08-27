@@ -15,7 +15,7 @@ import { z } from "zod";
 
 import type { AgentPlatform } from "@/lib/agents/factory";
 import { APPROVAL_WAIT_TIMEOUT } from "@/lib/agents/constants";
-import type { JsonObject } from "@/lib/agents/json";
+import { toJsonObject } from "@/lib/agents/json";
 import type { AgentRunTrigger } from "@/lib/agents/types";
 
 import type { DurableStep } from "./durable-step";
@@ -26,7 +26,7 @@ export interface AgentRunInput {
   readonly agentSlug: string;
   readonly goal: string;
   readonly trigger: AgentRunTrigger;
-  readonly input?: JsonObject;
+  readonly input?: Record<string, unknown>;
   readonly parentRunId?: string | null;
 }
 
@@ -105,7 +105,9 @@ export async function runAgentWorkflow(params: {
         agentSlug: input.agentSlug,
         goal: input.goal,
         trigger: input.trigger,
-        ...(input.input === undefined ? {} : { input: input.input }),
+        ...(input.input === undefined
+          ? {}
+          : { input: toJsonObject(input.input) }),
         ...(input.parentRunId === undefined
           ? {}
           : { parentRunId: input.parentRunId }),

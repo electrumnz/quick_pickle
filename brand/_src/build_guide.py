@@ -8,6 +8,12 @@ from palette import LIGHT, DARK, PAIRS_LIGHT, PAIRS_DARK, table
 ROOT = "/home/user/pickled_jews/brand"
 A    = os.path.join(ROOT, "assets")
 
+
+import base64 as _b64
+def data_uri(name):
+    raw = open(os.path.join(A, name), "rb").read()
+    return "data:image/svg+xml;base64," + _b64.b64encode(raw).decode()
+
 def asset(name, cls="", cur=False, style=""):
     s = open(os.path.join(A, name)).read()
     s = re.sub(r'\s(width|height)="[^"]*"', '', s, count=2)
@@ -42,8 +48,8 @@ def contrast_rows(pairs, tokens):
     for fg, bg, fh, bh, r, need, ok, role, cls in table(pairs, tokens):
         out.append(
             '<tr><td class="cx-demo"><span style="background:%s;color:%s">Aa</span></td>'
-            '<td><code>%s</code><em>%s</em></td>'
-            '<td><code>%s</code><em>%s</em></td>'
+            '<td class="stk"><code>%s</code><em>%s</em></td>'
+            '<td class="stk"><code>%s</code><em>%s</em></td>'
             '<td class="cx-num">%.2f:1</td><td class="cx-need">%.1f</td>'
             '<td><span class="pill %s">%s</span></td><td class="cx-role">%s</td></tr>'
             % (bh, fh, fh.upper(), tokens[fg][1], bh.upper(), tokens[bg][1],
@@ -294,7 +300,7 @@ th{text-align:left;font-family:"Martian Mono",ui-monospace,monospace;font-size:1
   letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
   padding:0 12px 10px 0;border-bottom:1.5px solid var(--text);white-space:nowrap}
 td{padding:12px 12px 12px 0;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.5}
-td em{font-style:normal;color:var(--muted)}
+td em{font-style:italic;color:var(--muted)}
 tr:last-child td{border-bottom:0}
 
 .pill{display:inline-block;font-family:"Martian Mono",ui-monospace,monospace;font-size:9.5px;
@@ -415,8 +421,8 @@ tr:last-child td{border-bottom:0}
 .cx-num{font-family:"Martian Mono",monospace;font-size:12.5px;font-weight:500;white-space:nowrap}
 .cx-need{font-family:"Martian Mono",monospace;font-size:11px;color:var(--muted)}
 .cx-role{color:var(--muted);font-size:13px}
-td code{display:block;font-size:10.5px;letter-spacing:.06em}
-td em{display:block;font-size:12px;margin-top:2px}
+td.stk code{display:block;font-size:10.5px;letter-spacing:.06em}
+td.stk em{display:block;font-style:normal;font-size:12px;margin-top:2px;color:var(--muted)}
 
 .rules{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border-top:2px solid var(--text);
   border-bottom:2px solid var(--text);margin-top:40px}
@@ -475,7 +481,7 @@ td em{display:block;font-size:12px;margin-top:2px}
 /* ---------- product ---------- */
 .bottleband{background:var(--dill);padding:52px 0 40px;margin:44px 0 40px}
 [data-theme="dark"] .bottleband{background:#0F1A14}
-.bottleband svg{display:block;width:100%;height:auto}
+.bottleband svg{display:block;width:100%;max-width:920px;height:auto;margin:0 auto}
 .labels{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:32px}
 .labels svg{display:block;width:100%;height:auto;box-shadow:0 2px 0 rgba(15,21,17,.10)}
 @media(max-width:900px){.labels{grid-template-columns:1fr}}
@@ -505,20 +511,12 @@ td em{display:block;font-size:12px;margin-top:2px}
 .plates{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:34px}
 @media(max-width:1000px){.plates{grid-template-columns:1fr}}
 .plate{border:1.4px solid var(--line);background:var(--surface);padding:0;overflow:hidden}
-.plate .top{height:132px;position:relative;overflow:hidden;border-bottom:1.4px solid var(--line)}
+.plate .top{position:relative;overflow:hidden;border-bottom:1.4px solid var(--line);line-height:0}
 .plate .in{padding:16px 18px 20px}
 .plate .data{color:var(--accent);margin-bottom:7px}
 .plate h5{margin:0 0 6px;font-size:16px;font-weight:600}
 .plate p{margin:0;font-size:13.5px;line-height:1.5;color:var(--muted)}
-.lightdiag{background:linear-gradient(112deg,#EFEDE0 0%,#EFEDE0 38%,#3A4238 38.5%,#12180F 100%)}
-.lightdiag::after{content:"";position:absolute;left:26%;top:14%;width:58px;height:104px;border-radius:6px;
-  background:#CBD394;box-shadow:34px 8px 0 -6px rgba(15,21,17,.55)}
-.surfdiag{background:#171E18}
-.surfdiag::after{content:"";position:absolute;inset:0;
-  background:repeating-linear-gradient(90deg,rgba(234,232,219,.07) 0 1px,transparent 1px 9px)}
-.cropdiag{background:#EFEDE0;display:flex;align-items:center;justify-content:center}
-.cropdiag::after{content:"";width:96px;height:150px;background:#CBD394;border:2px solid #0F1511;
-  margin-top:44px}
+.plate .top svg{display:block;width:100%;height:auto}
 
 /* the forbidden plate */
 .nevers{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:22px}
@@ -532,8 +530,10 @@ td em{display:block;font-size:12px;margin-top:2px}
 .nev .data{color:var(--danger);margin-bottom:6px}
 .nev p{margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
 .nev-deli{background:#F3E7CE;
-  background-image:repeating-conic-gradient(from 0deg at 0 0,#9E2B20 0% 25%,#F3E7CE 0% 50%);
-  background-size:34px 34px}
+  background-image:
+    linear-gradient(45deg,#DFC9A0 25%,transparent 25%,transparent 75%,#DFC9A0 75%),
+    linear-gradient(45deg,#DFC9A0 25%,transparent 25%,transparent 75%,#DFC9A0 75%);
+  background-size:36px 36px;background-position:0 0,18px 18px}
 .nev-deli .t{font-family:"Instrument Serif",serif;font-style:italic;font-size:42px;color:#9E2B20;
   text-shadow:2px 2px 0 #E8D6AE;z-index:1;line-height:1}
 .nev-kiwi{background:linear-gradient(#8FB8CF,#8FB8CF 52%,#3E6B3A 52%,#2C5230)}
@@ -556,6 +556,38 @@ footer .f{display:flex;justify-content:space-between;align-items:flex-end;gap:24
 footer .data{color:var(--brine)}
 footer svg{width:250px;height:auto;color:var(--bone)}
 .spacer{height:66px}
+
+/* ---------- responsive ---------- */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.grid>*,.sws>*,.faces>*,.plates>*,.nevers>*,.notes>*,.labels>*,.skus>*,
+.prins>*,.rules>*,.lines>*,.stats>*,.ad>*,.trait>*,.adrow>*,.nv>*,.line>*{min-width:0}
+.tw table{min-width:600px}
+@media(max-width:900px){
+  .wrap{padding:0 20px}
+  .sec-head{flex-wrap:wrap;gap:12px}
+  .sec-head h2{font-size:32px}
+  .sec-head .k{margin-left:0;text-align:left;width:100%;max-width:none}
+  .hero{padding-top:56px}
+  .hero-lede{font-size:26px;margin-top:36px}
+  .hero-top,.hero-desc{flex-wrap:wrap;gap:6px}
+  .favs{flex-wrap:wrap;gap:18px;justify-content:flex-start!important}
+  .lock{padding:22px;min-height:150px}
+  .darkband{padding:44px 0 48px;margin:36px 0}
+  .verdict .v-l{min-width:0}
+  .lines{gap:0}
+  .ui-404{font-size:60px}
+  .tt{top:12px;right:12px}
+  .tt button{padding:7px 10px;font-size:9px}
+  section{padding:60px 0 0}
+  .never-band{padding:48px 0 52px;margin-top:52px}
+  .bottleband{padding:32px 0 24px}
+}
+@media(max-width:560px){
+  .sec-head h2{font-size:27px}
+  .hero-lede{font-size:22px}
+  .trait h4{font-size:24px}
+  .sku h4{font-size:32px}
+}
 """
 
 def H(x): return x
@@ -567,7 +599,7 @@ def build():
              '<title>HALF SOUR — Brand Guide</title>'
              '<meta name="description" content="HALF SOUR — brand guide v1.0. Pickle brine for bars '
              'and kitchens, Aotearoa New Zealand.">'
-             '<link rel="icon" href="assets/favicon.svg">'
+             '<link rel="icon" href="' + data_uri("favicon.svg") + '">'
              '<style>' + FONTS + CSS + '</style></head><body>')
 
     # rail
@@ -770,7 +802,7 @@ def build():
              '</tr></thead><tbody>')
     for pos, who, geo, owns, gap in COMPETITORS:
         o.append('<tr><td class="data" style="color:var(--accent)">%s</td>'
-                 '<td><b style="font-size:15px">%s</b><em>%s</em></td><td>%s</td><td>%s</td></tr>'
+                 '<td class="stk"><b style="font-size:15px">%s</b><em>%s</em></td><td>%s</td><td>%s</td></tr>'
                  % (pos, who, geo, owns, gap))
     o.append('</tbody></table>')
     o.append('<p class="lede" style="margin-top:26px;max-width:78ch"><b>The strategic read.</b> Good Girl Snacks '
@@ -847,13 +879,13 @@ def build2(o):
     for sample, name, role, why, lic, fam, weight in [
         ("Aa", "Instrument Serif", "Editorial display",
          "High contrast, tight fit, real character at 44px and up. Carries long headlines and pull quotes without looking like a template.",
-         "Google Fonts · OFL · free for web", '"Instrument Serif",serif', "400"),
+         "Google Fonts · OFL · free for web", "&#39;Instrument Serif&#39;,serif", "400"),
         ("Aa", "Archivo", "Text and UI",
          "A grotesque drawn for both print and screen. Tight caps, sturdy at 15px, never fussy. Does every functional job on the site.",
-         "Google Fonts · OFL · free for web", '"Archivo",sans-serif', "600"),
+         "Google Fonts · OFL · free for web", "&#39;Archivo&#39;,sans-serif", "600"),
         ("A1", "Martian Mono", "Data and micro",
          "Spec lines, lot codes, nav, buttons, prices. It makes numbers look like measurements, which is the entire personality.",
-         "Google Fonts · OFL · free for web", '"Martian Mono",monospace', "500"),
+         "Google Fonts · OFL · free for web", "&#39;Martian Mono&#39;,monospace", "500"),
     ]:
         o.append('<div class="face"><div class="sample" style="font-family:%s;font-weight:%s">%s</div>'
                  '<span class="data">%s</span><h4>%s</h4><p>%s</p><div class="lic">%s</div></div>'
@@ -868,7 +900,7 @@ def build2(o):
     for step, size, track, face, use, cls in SCALE:
         o.append('<tr><td class="data" style="color:var(--accent)">%s</td>'
                  '<td class="cx-num">%s</td><td class="cx-need">%s</td>'
-                 '<td><b style="font-size:13.5px">%s</b><em>%s</em></td>'
+                 '<td class="stk"><b style="font-size:13.5px">%s</b><em>%s</em></td>'
                  '<td><span class="spec %s">Half sour, twice as useful</span></td></tr>'
                  % (step, size, track, face, use, cls))
     o.append('</tbody></table>')
@@ -905,15 +937,15 @@ def build2(o):
              '<span class="capn">The Half — 120 unit em, ring 21, hairline 3.5</span></div>'
              % asset("mark.svg", cur=True))
     o.append('<div><div class="favs" style="min-height:190px;justify-content:space-around">'
-             '<figure><img src="assets/favicon.svg" width="16" height="16" alt="favicon at 16 pixels">'
+             '<figure><img src="' + data_uri("favicon.svg") + '" width="16" height="16" alt="favicon at 16 pixels">'
              '<figcaption>16 px</figcaption></figure>'
-             '<figure><img src="assets/favicon.svg" width="24" height="24" alt="favicon at 24 pixels">'
+             '<figure><img src="' + data_uri("favicon.svg") + '" width="24" height="24" alt="favicon at 24 pixels">'
              '<figcaption>24 px</figcaption></figure>'
-             '<figure><img src="assets/favicon.svg" width="32" height="32" alt="favicon at 32 pixels">'
+             '<figure><img src="' + data_uri("favicon.svg") + '" width="32" height="32" alt="favicon at 32 pixels">'
              '<figcaption>32 px</figcaption></figure>'
-             '<figure><img src="assets/favicon.svg" width="48" height="48" alt="favicon at 48 pixels">'
+             '<figure><img src="' + data_uri("favicon.svg") + '" width="48" height="48" alt="favicon at 48 pixels">'
              '<figcaption>48 px</figcaption></figure>'
-             '<figure><img src="assets/avatar.svg" width="88" height="88" alt="social avatar" '
+             '<figure><img src="' + data_uri("avatar.svg") + '" width="88" height="88" alt="social avatar" '
              'style="border-radius:50%"><figcaption>Avatar 512</figcaption></figure>'
              '</div><span class="capn">Favicon cut — the hairline is removed below 24px because it vanishes</span></div>')
     o.append('</div>')
@@ -929,6 +961,62 @@ def build2(o):
         o.append('<div class="rule"><span class="data">%s</span><p><b>%s</b> %s</p></div>' % (n, b, t))
     o.append('</div></div></section>')
     return o
+
+
+PLATE_SVG = {
+"bar": '''<svg viewBox="0 0 300 132" role="img" aria-label="Key light diagram: one hard source at 60 degrees">
+<rect width="300" height="132" fill="#12180F"/>
+<rect x="0" y="98" width="300" height="34" fill="#1C241A"/>
+<circle cx="252" cy="26" r="9" fill="#C8D93B"/>
+<g stroke="#C8D93B" stroke-width="1.2" opacity=".75">
+<path d="M252 8v-6M252 50v6M230 26h-6M274 26h6M237 11l-4-4M267 41l4 4M267 11l4-4M237 41l-4 4"/></g>
+<path d="M247 33 L150 92" stroke="#C8D93B" stroke-width="1" stroke-dasharray="3 4" opacity=".6"/>
+<path d="M138 98 L46 116 L4 116 L4 106 L104 98 Z" fill="#070B08"/>
+<rect x="120" y="44" width="26" height="54" fill="#CBD394"/>
+<rect x="128" y="30" width="10" height="16" fill="#CBD394"/>
+<rect x="126" y="26" width="14" height="7" fill="#C8D93B"/>
+<rect x="120" y="44" width="7" height="54" fill="#0F1511" opacity=".28"/>
+<ellipse cx="196" cy="92" rx="24" ry="6" fill="none" stroke="#EAE8DB" stroke-width="1.2" opacity=".7"/>
+<path d="M180 92 L196 74 L212 92" fill="none" stroke="#EAE8DB" stroke-width="1.2" opacity=".7"/>
+<text x="12" y="20" fill="#9BA694" font-family="monospace" font-size="8" letter-spacing="1.6">KEY 60&#176; &#183; RATIO 8:1 &#183; NO FILL</text>
+</svg>''',
+"ing": '''<svg viewBox="0 0 300 132" role="img" aria-label="Overhead grid layout of ingredients">
+<rect width="300" height="132" fill="#EFEDE0"/>
+<g stroke="#0F1511" stroke-width=".5" opacity=".16">
+<path d="M60 0v132M120 0v132M180 0v132M240 0v132M0 44h300M0 88h300"/></g>
+<g>
+<circle cx="60" cy="44" r="19" fill="#0F1511" opacity=".16"/><circle cx="57" cy="41" r="19" fill="#CBD394"/>
+<circle cx="57" cy="41" r="9" fill="#B7C179"/>
+<circle cx="180" cy="88" r="15" fill="#0F1511" opacity=".16"/><circle cx="177" cy="85" r="15" fill="#CBD394"/>
+<circle cx="177" cy="85" r="7" fill="#B7C179"/>
+<circle cx="240" cy="44" r="12" fill="#0F1511" opacity=".16"/><circle cx="237" cy="41" r="12" fill="#CBD394"/>
+</g>
+<g fill="#0F1511"><circle cx="120" cy="44" r="3.4"/><circle cx="132" cy="52" r="2.6"/><circle cx="112" cy="56" r="2.2"/>
+<circle cx="252" cy="96" r="3"/><circle cx="264" cy="88" r="2.4"/></g>
+<path d="M100 96 q12-16 24 0 q12 16 24 0" fill="none" stroke="#3E6B4E" stroke-width="2"/>
+<path d="M112 96 v14M136 96 v14" stroke="#3E6B4E" stroke-width="1.4"/>
+<text x="12" y="18" fill="#4E554A" font-family="monospace" font-size="8" letter-spacing="1.6">OVERHEAD &#183; BONE GROUND &#183; ON GRID</text>
+</svg>''',
+"crop": '''<svg viewBox="0 0 300 132" role="img" aria-label="Crop diagram: subject bleeding off the frame">
+<rect width="300" height="132" fill="#EFEDE0"/>
+<g stroke="#0F1511" stroke-width="1" opacity=".45">
+<path d="M18 8v12M8 18h12M282 8v12M292 18h-12M18 124v-12M8 114h12M282 124v-12M292 114h-12"/></g>
+<rect x="18" y="18" width="264" height="96" fill="none" stroke="#0F1511" stroke-width=".7" stroke-dasharray="4 4" opacity=".35"/>
+<ellipse cx="112" cy="98" rx="66" ry="15" fill="#C3C7BC"/>
+<path d="M46 88 q0 22 66 22 q66 0 66-22 Z" fill="#D7DACF"/>
+<path d="M46 88 q0 22 66 22 q66 0 66-22 Z" fill="#0F1511" opacity=".10"/>
+<rect x="216" y="14" width="52" height="118" fill="#CBD394"/>
+<rect x="216" y="14" width="13" height="118" fill="#0F1511" opacity=".22"/>
+<rect x="216" y="52" width="52" height="46" fill="#F2EFE3"/>
+<rect x="222" y="60" width="40" height="3" fill="#0F1511"/>
+<rect x="222" y="70" width="40" height="8" fill="#0F1511"/>
+<rect x="222" y="86" width="40" height="6" fill="#C8D93B"/>
+<path d="M150 40 q22 18 44 26" fill="none" stroke="#B7C179" stroke-width="5" stroke-linecap="round"/>
+<text x="12" y="140" fill="#4E554A" font-family="monospace" font-size="8"></text>
+<text x="24" y="34" fill="#4E554A" font-family="monospace" font-size="8" letter-spacing="1.6">CUT THE BOTTLE &#183; LET IT LEAVE</text>
+</svg>''',
+}
+
 
 def build3(o):
     def sec(n, title, kicker):
@@ -994,15 +1082,16 @@ def build3(o):
     o.append('<h3 class="data" style="color:var(--muted);margin:44px 0 4px">The three plates — the shot list</h3>')
     o.append('<div class="plates">')
     for cls, n, t, b in [
-        ("lightdiag", "Plate 01", "Bar-side",
+        ("bar", "Plate 01", "Bar-side",
          "Bottle at the edge of frame, coupe centre, brine going in from a jigger. Dark stone, one hard source from the right at 60°, long shadow left. Crop so the bottle is half out of frame."),
-        ("surfdiag", "Plate 02", "Ingredient",
+        ("ing", "Plate 02", "Ingredient",
          "Overhead on Bone. Cucumber cross-sections, dill, whole peppercorns, one garlic clove, a shallow pool of brine, on an invisible grid. Hard light, no fill. This is the shot that proves it is food."),
-        ("cropdiag", "Plate 03", "Bench",
+        ("crop", "Plate 03", "Bench",
          "A chicken in a stainless bowl, brine poured over it, one hand. Kitchen light, still hard. This is the shot that proves the culinary half and keeps us out of the mixer-only box."),
     ]:
-        o.append('<div class="plate"><div class="top %s"></div><div class="in">'
-                 '<span class="data">%s</span><h5>%s</h5><p>%s</p></div></div>' % (cls, n, t, b))
+        o.append('<div class="plate"><div class="top">%s</div><div class="in">'
+                 '<span class="data">%s</span><h5>%s</h5><p>%s</p></div></div>'
+                 % (PLATE_SVG[cls], n, t, b))
     o.append('</div>')
 
     o.append('<h3 class="data" style="color:var(--danger);margin:44px 0 4px">'
@@ -1020,7 +1109,7 @@ def build3(o):
              '<div class="in"><span class="data">Never 02 — kiwiana</span>'
              '<p>Ferns, jandals, #8 wire, bach nostalgia, landscape backdrops, “sweet as”. It is tacky, it does not '
              'export, and it tells a bartender in Sydney nothing about whether the product is any good.</p></div></div>')
-    o.append('<div class="nev"><div class="art nev-well"><span class="t">Restore · Replenish</span></div>'
+    o.append('<div class="nev"><div class="art nev-well"><span class="t">Balance · Ritual · Clean</span></div>'
              '<div class="in"><span class="data">Never 03 — wellness / recovery</span>'
              '<p>Supplement-aisle styling: white infinity curve, thin tracked lowercase, sports or post-workout '
              'context. It implies a claim about the body that we are legally barred from making under the FSANZ '
@@ -1077,6 +1166,7 @@ if __name__ == "__main__":
     out = build2(out)
     out = build3(out)
     html = "".join(out)
+    html = html.replace("<table", "<div class=\"tw\"><table").replace("</table>", "</table></div>")
     path = os.path.join(ROOT, "guide.html")
     open(path, "w").write(html)
     print("guide.html", len(html), "bytes")

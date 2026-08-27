@@ -71,6 +71,7 @@ import {
   type CustomerType,
   type Discount,
   type DiscountAllocation,
+  type Image,
   type DiscountValidation,
   type InventoryAdjustInput,
   type InventoryAdjustResult,
@@ -108,12 +109,15 @@ import {
   type PageWindow,
 } from "./cursor";
 import {
+  mapAddress,
   mapCollection,
   mapCustomer,
   mapDiscount,
   mapInventoryLevel,
   mapLocation,
   mapProduct,
+  selectedOptionsFor,
+  unitPricingFor,
 } from "./mappers";
 import {
   computeCartTotals,
@@ -226,6 +230,7 @@ type CartLineRow = {
   readonly heroImageUrl: string | null;
   readonly stockAvailable: number;
   readonly collectionIds: readonly string[];
+  readonly variantImage: Image | null;
 };
 
 type LoadedCart = {
@@ -2706,5 +2711,373 @@ function mapDiscountRule(row: SqlRow): DiscountRule {
     ),
     startsAt: iso(row.starts_at, "discounts.starts_at"),
     endsAt: isoOrNull(row.ends_at, "discounts.ends_at"),
+  };
+}
+
+function buildDomainCart(args: {
+  readonly cartId: string;
+  readonly cart: CartRow;
+  readonly lines: readonly CartLineRow[];
+  readonly totals: ReturnType<typeof computeCartTotals>;
+  readonly discount: { rule: DiscountRule; outcome: DiscountOutcome } | null;
+  readonly checkoutUrl: string;
+}): Cart {
+  const { cart, lines, totals, discount } = args;
+  const currency = cart.currencyCode;
+  const rule = discount?.rule ?? null;
+  const applicable = discount?.outcome.applicable ?? false;
+
+  const domainLines: CartLine[] = lines.map((line, index) => {
+    const subtotal = totals.lineSubtotals[index] ?? 0;
+    const lineDiscount = totals.lineDiscounts[index] ?? 0;
+    const unit = unitPricingFor(
+      line.priceCents,
+      line.sizeMl,
+      line.packCount,
+      line.currencyCode,
+    );
+    const inStock =
+      !line.trackInventory ||
+      line.inventoryPolicy === "continue" ||
+      line.stockAvailable > 0;
+
+    return {
+      id: line.lineId,
+      quantity: line.quantity,
+      merchandise: {
+        id: line.variantId,
+        productId: line.productId,
+        sku: line.sku,
+        barcode: line.barcode,
+        title: line.variantTitle,
+        price: money(line.priceCents, line.currencyCode),
+        compareAtPrice:
+          line.compareAtPriceCents === null
+            ? null
+            : money(line.compareAtPriceCents, line.currencyCode),
+        unitPrice: unit.unitPrice,
+        unitPriceMeasurement: unit.measurement,
+        availableForSale: line.productSellable && inStock,
+        quantityAvailable: line.trackInventory ? line.stockAvailable : null,
+        currentlyNotInStock:
+          line.trackInventory &&
+          line.stockAvailable <= 0 &&
+          line.inventoryPolicy === "continue",
+        requiresShipping: line.requiresShipping,
+        weightGrams: line.weightGrams,
+        selectedOptions: selectedOptionsFor(line.sizeMl, line.packCount),
+        image: line.variantImage,
+        position: line.position,
+        product: {
+          id: line.productId,
+          handle: line.productHandle,
+          title: line.productTitle,
+          featuredImage:
+            line.heroImageUrl === null
+              ? line.variantImage
+              : {
+                  id: `${line.productId}:hero`,
+                  url: line.heroImageUrl,
+                  altText: line.productTitle,
+                  width: null,
+                  height: null,
+                },
+        },
+      },
+      cost: {
+        amountPerQuantity: money(line.priceCents, line.currencyCode),
+        compareAtAmountPerQuantity:
+          line.compareAtPriceCents === null
+            ? null
+            : money(line.compareAtPriceCents, line.currencyCode),
+        subtotalAmount: money(subtotal, currency),
+        totalAmount: money(subtotal - lineDiscount, currency),
+      },
+      attributes: line.attributes,
+      discountAllocations:
+        lineDiscount > 0 && rule !== null
+          ? [
+              {
+                discountedAmount: money(lineDiscount, currency),
+                title: rule.title,
+                code: rule.code,
+              },
+            ]
+          : [],
+    };
+  });
+
+  const cartAllocations: DiscountAllocation[] =
+    totals.discountCents > 0 && rule !== null
+      ? [
+          {
+            discountedAmount: money(totals.discountCents, currency),
+            title: rule.title,
+            code: rule.code,
+          },
+        ]
+      : [];
+
+  const phone = cart.attributes[BUYER_PHONE_KEY];
+  const country = cart.attributes[BUYER_COUNTRY_KEY];
+
+  return {
+    id: args.cartId,
+    currencyCode: currency,
+    totalQuantity: lines.reduce((sum, line) => sum + line.quantity, 0),
+    lines: domainLines,
+    cost: {
+      subtotalAmount: money(totals.subtotalCents, currency),
+      // The merchandise subtotal is exact: it is a sum of catalogue prices.
+      subtotalAmountEstimated: false,
+      totalAmount: money(totals.totalCents, currency),
+      // The total is not: shipping and the final GST treatment are settled by
+      // the hosted checkout, which is the only thing that knows the address.
+      totalAmountEstimated: true,
+      checkoutChargeAmount: money(totals.totalCents, currency),
+    },
+    discountCodes:
+      cart.discountCode === null
+        ? []
+        : [{ code: cart.discountCode, applicable }],
+    discountAllocations: cartAllocations,
+    buyerIdentity: {
+      email: cart.email,
+      phone: typeof phone === "string" ? phone : null,
+      customerId: cart.customerId,
+      countryCode: typeof country === "string" ? country : "NZ",
+    },
+    note: cart.note,
+    attributes: jsonToAttributes(cart.attributes),
+    checkoutUrl: args.checkoutUrl,
+    createdAt: cart.createdAt,
+    updatedAt: cart.updatedAt,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+// ---------------------------------------------------------------------------
+
+type OrderFilterArg = NonNullable<OrderListQuery["filter"]>;
+
+function orderConditions(
+  filter: OrderFilterArg | undefined,
+  params: Params,
+): string[] {
+  const conditions = ["true"];
+  if (filter === undefined) return conditions;
+  if (filter.status !== undefined) {
+    conditions.push(`o.status = ${params.add(filter.status)}`);
+  }
+  if (filter.financialStatus !== undefined) {
+    conditions.push(
+      `o.financial_status = ${params.add(filter.financialStatus)}`,
+    );
+  }
+  if (filter.fulfillmentStatus !== undefined) {
+    conditions.push(
+      `o.fulfillment_status = ${params.add(filter.fulfillmentStatus)}`,
+    );
+  }
+  if (filter.channel !== undefined) {
+    conditions.push(`o.channel = ${params.add(filter.channel)}`);
+  }
+  if (filter.customerId !== undefined) {
+    conditions.push(
+      isUuid(filter.customerId)
+        ? `o.customer_id = ${params.add(filter.customerId)}`
+        : "false",
+    );
+  }
+  if (filter.email !== undefined) {
+    conditions.push(`lower(o.email) = lower(${params.add(filter.email)})`);
+  }
+  if (filter.placedAfter !== undefined) {
+    conditions.push(`o.placed_at >= ${params.add(filter.placedAfter)}`);
+  }
+  if (filter.placedBefore !== undefined) {
+    conditions.push(`o.placed_at <= ${params.add(filter.placedBefore)}`);
+  }
+  if (filter.search !== undefined && filter.search.trim() !== "") {
+    const term = params.add(`%${filter.search.trim()}%`);
+    conditions.push(`(o.order_number ilike ${term} or o.email ilike ${term})`);
+  }
+  return conditions;
+}
+
+function orderOrderBy(
+  sortKey: OrderListQuery["sortKey"],
+  reverse: boolean,
+): string {
+  const direction = reverse ? "desc" : "asc";
+  switch (sortKey ?? "PROCESSED_AT") {
+    case "TOTAL_PRICE":
+      return `o.total_cents ${direction}, o.id asc`;
+    case "ORDER_NUMBER":
+      return `o.order_number ${direction}, o.id asc`;
+    case "UPDATED_AT":
+      return `o.updated_at ${direction}, o.id asc`;
+    case "PROCESSED_AT":
+      return `o.placed_at ${direction}, o.id asc`;
+  }
+}
+
+function mapOrder(row: SqlRow): Order {
+  const currency = str(row.currency, "orders.currency");
+  const taxRateBp = int(row.tax_rate_bp, "orders.tax_rate_bp");
+  const lineItems: OrderLineItem[] = jsonArray(
+    row.line_items,
+    "order_items",
+  ).map((raw) => {
+    const item = jsonObject(raw, "order_items");
+    return {
+      id: str(item.id, "order_items.id"),
+      variantId: str(item.variant_id, "order_items.variant_id"),
+      productId: str(item.product_id, "order_items.product_id"),
+      sku: str(item.sku, "order_items.sku"),
+      title: str(item.title, "order_items.title"),
+      variantTitle: strOrNull(item.variant_title, "order_items.variant_title"),
+      quantity: int(item.quantity, "order_items.quantity"),
+      quantityFulfilled: int(
+        item.quantity_fulfilled,
+        "order_items.quantity_fulfilled",
+      ),
+      quantityRefunded: int(
+        item.quantity_refunded,
+        "order_items.quantity_refunded",
+      ),
+      unitPrice: money(
+        int(item.unit_price_cents, "order_items.unit_price_cents"),
+        currency,
+      ),
+      discountTotal: money(
+        int(item.discount_cents, "order_items.discount_cents"),
+        currency,
+      ),
+      taxTotal: money(int(item.tax_cents, "order_items.tax_cents"), currency),
+      lineTotal: money(
+        int(item.line_total_cents, "order_items.line_total_cents"),
+        currency,
+      ),
+      position: int(item.position, "order_items.position"),
+    };
+  });
+
+  const summaryRaw = row.customer_summary;
+  const trackingCarrier = strOrNull(
+    row.tracking_carrier,
+    "orders.tracking_carrier",
+  );
+  const trackingNumber = strOrNull(
+    row.tracking_number,
+    "orders.tracking_number",
+  );
+
+  return {
+    id: str(row.id, "orders.id"),
+    orderNumber: str(row.order_number, "orders.order_number"),
+    email: str(row.email, "orders.email"),
+    phone: strOrNull(row.phone, "orders.phone"),
+    status: oneOf(
+      row.status,
+      ["open", "archived", "cancelled"] as const,
+      "orders.status",
+    ),
+    financialStatus: oneOf(
+      row.financial_status,
+      [
+        "pending",
+        "authorized",
+        "partially_paid",
+        "paid",
+        "partially_refunded",
+        "refunded",
+        "voided",
+      ] as const,
+      "orders.financial_status",
+    ),
+    fulfillmentStatus: oneOf(
+      row.fulfillment_status,
+      [
+        "unfulfilled",
+        "partially_fulfilled",
+        "fulfilled",
+        "delivered",
+        "restocked",
+      ] as const,
+      "orders.fulfillment_status",
+    ),
+    channel: oneOf(
+      row.channel,
+      [
+        "online",
+        "wholesale",
+        "market",
+        "phone",
+        "retail",
+        "subscription",
+      ] as const,
+      "orders.channel",
+    ),
+    currencyCode: currency,
+    subtotal: money(int(row.subtotal_cents, "orders.subtotal_cents"), currency),
+    discountTotal: money(
+      int(row.discount_cents, "orders.discount_cents"),
+      currency,
+    ),
+    shippingTotal: money(
+      int(row.shipping_cents, "orders.shipping_cents"),
+      currency,
+    ),
+    taxTotal: money(int(row.tax_cents, "orders.tax_cents"), currency),
+    taxIncluded: bool(row.tax_inclusive, "orders.tax_inclusive"),
+    taxRateBasisPoints: taxRateBp,
+    total: money(int(row.total_cents, "orders.total_cents"), currency),
+    refundedTotal: money(
+      int(row.refunded_cents, "orders.refunded_cents"),
+      currency,
+    ),
+    lineItems,
+    customer:
+      summaryRaw == null
+        ? null
+        : (() => {
+            const summary = jsonObject(summaryRaw, "orders.customer");
+            return {
+              id: str(summary.id, "customers.id"),
+              email: str(summary.email, "customers.email"),
+              displayName: strOrNull(
+                summary.display_name,
+                "customers.full_name",
+              ),
+            };
+          })(),
+    shippingAddress:
+      row.shipping_address == null ? null : mapAddress(row.shipping_address),
+    billingAddress:
+      row.billing_address == null ? null : mapAddress(row.billing_address),
+    shippingMethod: strOrNull(row.shipping_method, "orders.shipping_method"),
+    tracking:
+      trackingCarrier === null || trackingNumber === null
+        ? null
+        : {
+            carrier: trackingCarrier,
+            number: trackingNumber,
+            url: strOrNull(row.tracking_url, "orders.tracking_url"),
+          },
+    discountCode: strOrNull(row.discount_code, "orders.discount_code"),
+    note: strOrNull(row.note, "orders.note"),
+    customerNote: strOrNull(row.customer_note, "orders.customer_note"),
+    tags: strArray(row.tags, "orders.tags"),
+    cartId: strOrNull(row.cart_id, "orders.cart_id"),
+    placedAt: iso(row.placed_at, "orders.placed_at"),
+    paidAt: isoOrNull(row.paid_at, "orders.paid_at"),
+    fulfilledAt: isoOrNull(row.fulfilled_at, "orders.fulfilled_at"),
+    deliveredAt: isoOrNull(row.delivered_at, "orders.delivered_at"),
+    cancelledAt: isoOrNull(row.cancelled_at, "orders.cancelled_at"),
+    cancelReason: strOrNull(row.cancel_reason, "orders.cancel_reason"),
+    createdAt: iso(row.created_at, "orders.created_at"),
+    updatedAt: iso(row.updated_at, "orders.updated_at"),
   };
 }

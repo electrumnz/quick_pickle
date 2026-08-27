@@ -43,6 +43,7 @@ function run(args) {
 // 1 + 2 — dirty fixture
 const dirty = run([
   "--include-legal",
+  "--no-exemptions",
   "--json",
   join(FIXTURES, "dirty-copy.md"),
 ]);
@@ -152,6 +153,75 @@ try {
   rmSync(tmp, { recursive: true, force: true });
 }
 
+// 7 — TH-02 must not fire on the culinary sense of "cure"
+const culinary = join(tmpdir(), `halfsour-cure-${process.pid}.md`);
+writeFileSync(
+  culinary,
+  [
+    "A cucumber cured in salt brine rather than vinegar.",
+    "A three-week cure.",
+    "Cure time is printed on every bottle.",
+    "Curing salt is not used.",
+    "Batch sizes, cure times, salinity, stock counts.",
+  ].join("\n") + "\n",
+);
+const cul = run([culinary]);
+check(
+  "culinary 'cure' vocabulary passes (TH-02 not over-broad)",
+  cul.code === 0,
+  cul.out,
+);
+rmSync(culinary, { force: true });
+
+const medical = join(tmpdir(), `halfsour-cure-bad-${process.pid}.md`);
+writeFileSync(
+  medical,
+  "It cures cramp. A cure for hangovers. Curative properties.\n",
+);
+const med = run(["--json", medical]);
+let medIds = new Set();
+try {
+  medIds = new Set(JSON.parse(med.out).findings.map((f) => f.id));
+} catch {}
+check(
+  "therapeutic 'cure' still fails",
+  med.code === 1 && medIds.has("TH-02"),
+  med.out,
+);
+rmSync(medical, { force: true });
+
+// 8 — block markers and the exemption registry
+const blocked = join(tmpdir(), `halfsour-block-${process.pid}.md`);
+writeFileSync(
+  blocked,
+  [
+    "A dill-forward brine.",
+    "<!-- copy-audit-ignore-start: this section enumerates what we never say -->",
+    "Never: electrolytes, hydration, cramps, probiotics, gut health.",
+    "<!-- copy-audit-ignore-end -->",
+    "Bottled in 375 ml.",
+  ].join("\n") + "\n",
+);
+const bl = run([blocked]);
+check("copy-audit-ignore-start/end suppresses a block", bl.code === 0, bl.out);
+rmSync(blocked, { force: true });
+
+const exFile = run([
+  "--include-legal",
+  "--json",
+  join(FIXTURES, "dirty-copy.md"),
+]);
+try {
+  const j = JSON.parse(exFile.out);
+  check(
+    "registered exemption skips the dirty fixture",
+    exFile.code === 0 && j.filesExempted === 1,
+    exFile.out,
+  );
+} catch (e) {
+  check("registered exemption skips the dirty fixture", false, e.message);
+}
+
 // 6 — usage
 const usage = run([]);
 check("no arguments exits 2", usage.code === 2, `exit was ${usage.code}`);
@@ -159,4 +229,4 @@ check("no arguments exits 2", usage.code === 2, `exit was ${usage.code}`);
 process.stdout.write(
   `\n${failures === 0 ? "ALL PASS" : failures + " ASSERTION(S) FAILED"}\n`,
 );
-process.exit(failures === 0 ? 0 : 1);
+process.exitCode = failures === 0 ? 0 : 1;

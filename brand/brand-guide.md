@@ -512,7 +512,10 @@ _Rendered plates were not producible in this build — see section 12._
 | `_src/palette.py`                              | Colour tokens and the WCAG contrast computation                                                        |
 
 **Every asset is outlined geometry. There is no live `<text>` element in any file in
-`brand/assets/`.** Every file carries `role="img"`, an `aria-label` and a `<title>`.
+`brand/assets/`** — verified by grep. Every file carries `role="img"`, an `aria-label` and a
+`<title>`. `guide.html` makes **zero external requests**: the three web faces are embedded as
+base64 woff2, every SVG is inlined, and the favicon and avatar are `data:` URIs. It renders with
+no horizontal overflow at 390, 768, 1024 and 1600px.
 
 ### Logo rules
 

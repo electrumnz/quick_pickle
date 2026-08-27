@@ -20,42 +20,92 @@ import type { QualityTier } from "../types";
 
 type Sample = { fps: number; calls: number; triangles: number; dpr: number };
 
-/** Scroll fraction of the tall scrub track, clamped and overscroll-safe. */
+/**
+ * Scroll fraction of the tall scrub track.
+ *
+ * Reads the lab's own scroll container rather than the window, because the
+ * lab renders as a full-viewport overlay so it can escape the storefront
+ * chrome without editing a layout it does not own.
+ */
 function useScrollProgress(
-  ref: React.RefObject<HTMLDivElement | null>,
+  scroller: React.RefObject<HTMLDivElement | null>,
+  track: React.RefObject<HTMLDivElement | null>,
   active: boolean,
 ) {
   const [p, setP] = useState(0);
   useEffect(() => {
-    if (!active) return;
+    const el = scroller.current;
+    if (!active || !el) return;
     let raf = 0;
     const read = () => {
       raf = 0;
-      const el = ref.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      const span = Math.max(r.height - window.innerHeight, 1);
-      // iOS elastic overscroll pushes this past both ends; clamping here is
-      // what stops the pour snapping when the rubber band lets go.
-      setP(Math.min(1, Math.max(0, -r.top / span)));
+      const t = track.current;
+      if (!t) return;
+      const span = Math.max(t.offsetHeight - el.clientHeight, 1);
+      // Momentum scrolling overshoots and elastic overscroll goes negative;
+      // clamping here is what stops the pour snapping when the band lets go.
+      setP(Math.min(1, Math.max(0, el.scrollTop / span)));
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(read);
     };
     read();
-    window.addEventListener("scroll", onScroll, { passive: true });
+    el.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
     return () => {
       if (raf) cancelAnimationFrame(raf);
-      window.removeEventListener("scroll", onScroll);
+      el.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
-  }, [ref, active]);
+  }, [scroller, track, active]);
   return p;
 }
 
+/**
+ * The scroll container's own height in pixels.
+ *
+ * Percentage and viewport units both go wrong here: `100%` of a 340%-tall
+ * track is 340vh, and `svh`/`lvh` disagree with a fixed container while a
+ * mobile URL bar is moving. Measuring is the only thing that is right on
+ * every device.
+ */
+function useScrollerHeight(ref: React.RefObject<HTMLDivElement | null>) {
+  const [h, setH] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const read = () => setH(el.clientHeight);
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return h;
+}
+
+/** Deterministic overrides for automated capture: ?tier=high&pour=0.55&still=1 */
+function useUrlOverrides() {
+  const [o, setO] = useState<{ tier?: string; pour?: number; still?: boolean }>(
+    {},
+  );
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const tier = q.get("tier") ?? undefined;
+    const pour = q.get("pour");
+    setO({
+      tier: tier && ["low", "medium", "high"].includes(tier) ? tier : undefined,
+      pour: pour == null ? undefined : Math.min(1, Math.max(0, Number(pour))),
+      still: q.get("still") === "1",
+    });
+  }, []);
+  return o;
+}
+
 export function BottleLab() {
+  const scrollRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const url = useUrlOverrides();
+  const viewH = useScrollerHeight(scrollRef);
   const [manual, setManual] = useState<number | null>(null);
   const [sample, setSample] = useState<Sample>({
     fps: 0,
@@ -69,7 +119,7 @@ export function BottleLab() {
   );
   useEffect(() => setDevice(detectDevice()), []);
 
-  const scrollP = useScrollProgress(trackRef, manual === null);
+  const scrollP = useScrollProgress(scrollRef, trackRef, manual === null);
   const progress = manual ?? scrollP;
 
   const scene = useControls({
@@ -506,7 +556,9 @@ export function BottleLab() {
   );
   const backdropProps = useMemo(() => ({ ...backdrop }), [backdrop]);
 
-  const effectiveProgress = scene.usePourSlider ? scene.pourProgress : progress;
+  const effectiveProgress =
+    url.pour ?? (scene.usePourSlider ? scene.pourProgress : progress);
+  const effectiveTier = url.tier ?? scene.forceTier;
 
   useEffect(() => {
     setManual(scene.usePourSlider ? scene.pourProgress : null);
@@ -579,22 +631,25 @@ export function BottleLab() {
       {/* A tall track with a pinned canvas: the pour is scrubbed by scroll,
           which is how the hero will drive it and the only way to see whether
           it survives touch momentum. */}
-      <div ref={trackRef} style={{ height: "340vh", position: "relative" }}>
+      <div
+        ref={trackRef}
+        style={{ height: viewH ? viewH * 3.4 : "340svh", position: "relative" }}
+      >
         <div
           style={{
             position: "sticky",
             top: 0,
-            height: "100svh",
+            height: viewH || "100svh",
             width: "100%",
           }}
         >
           <BottleScene
-            key={scene.forceTier}
+            key={effectiveTier}
             pourProgress={effectiveProgress}
             forceTier={
-              scene.forceTier === "auto"
+              effectiveTier === "auto"
                 ? undefined
-                : (scene.forceTier as QualityTier)
+                : (effectiveTier as QualityTier)
             }
             exposure={scene.exposure}
             cameraFov={scene.cameraFov}
@@ -611,7 +666,7 @@ export function BottleLab() {
             }
             progressSmoothing={scene.progressSmoothing}
             interactive={scene.interactive}
-            paused={scene.paused}
+            paused={scene.paused || url.still === true}
             fillLevel={liquid.useFillSlider ? liquid.fillLevel : undefined}
             glass={glassProps}
             liquid={liquidProps}

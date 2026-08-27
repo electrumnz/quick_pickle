@@ -27,7 +27,11 @@ export function createSweepMaterial(
       varying vec3 vPos;
       void main(){
         float h = clamp(vPos.y / length(vPos) * 0.5 + 0.5, 0.0, 1.0);
+        // Flatten the gradient below the horizon so the floor can dissolve
+        // into it without a seam.
+        float below = smoothstep(0.5, 0.34, h);
         vec3 c = mix(uBottom, uTop, pow(h, 0.85));
+        c = mix(c, uBottom, below);
         // A soft pool of light behind the subject, the way a sweep really lights.
         float glow = exp(-pow(length(vPos.xy / length(vPos) - vec2(0.0, 0.06)) * 2.6, 2.0));
         c += uTop * glow * 0.28;
@@ -152,4 +156,62 @@ export function createPoolMaterial(
       }
     `,
   });
+}
+
+/**
+ * Studio floor. A finite disc with a hard rim reads as a prop; this one takes
+ * real reflections near the subject and dissolves into the sweep colour long
+ * before its edge.
+ */
+export function createFloorMaterial(
+  color: THREE.ColorRepresentation,
+  horizon: THREE.ColorRepresentation,
+  fadeStart: number,
+  fadeEnd: number,
+): THREE.MeshStandardMaterial {
+  const mat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(color),
+    roughness: 0.36,
+    metalness: 0.12,
+    envMapIntensity: 0.85,
+  });
+  const uniforms = {
+    uHorizon: { value: new THREE.Color(horizon) },
+    uFadeStart: { value: fadeStart },
+    uFadeEnd: { value: fadeEnd },
+  };
+  mat.userData.uniforms = uniforms;
+  mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying vec3 vHsFloor;")
+      .replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\n  vHsFloor = (modelMatrix * vec4(transformed, 1.0)).xyz;",
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+varying vec3 vHsFloor;
+uniform vec3 uHorizon;
+uniform float uFadeStart;
+uniform float uFadeEnd;`,
+      )
+      .replace(
+        "#include <color_fragment>",
+        `#include <color_fragment>
+  float hsD = smoothstep(uFadeStart, uFadeEnd, length(vHsFloor.xz));
+  diffuseColor.rgb = mix(diffuseColor.rgb, uHorizon, hsD);`,
+      )
+      .replace(
+        "#include <roughnessmap_fragment>",
+        `#include <roughnessmap_fragment>
+  // Polish the floor close in and let it go matte with distance, which is
+  // what kills the tell-tale mirrored ring around the subject.
+  roughnessFactor = mix(roughnessFactor, 0.95, smoothstep(uFadeStart * 0.35, uFadeEnd, length(vHsFloor.xz)));`,
+      );
+  };
+  mat.customProgramCacheKey = () => "hs-floor";
+  return mat;
 }

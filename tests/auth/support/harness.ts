@@ -38,6 +38,19 @@ export type Harness = {
   close(): Promise<void>;
 };
 
+/**
+ * Hash the throwaway password once per worker.
+ *
+ * Argon2id at production parameters costs ~85 ms a call by design; paying that
+ * in every `beforeEach` would buy nothing. The verification path under test
+ * still runs the full hash on every attempt.
+ */
+let cachedPasswordHash: Promise<string> | null = null;
+function testPasswordHash(): Promise<string> {
+  cachedPasswordHash ??= hashPassword(TEST_PASSWORD);
+  return cachedPasswordHash;
+}
+
 export async function createHarness(options?: {
   readonly factors?: readonly AuthFactor[];
   readonly policy?: ThrottlePolicy;
@@ -48,8 +61,7 @@ export async function createHarness(options?: {
   const database = await createTestDatabase();
   const clock = new ControlledClock();
   const secret = randomBytes(32);
-  const passwordHash =
-    options?.passwordHash ?? (await hashPassword(TEST_PASSWORD));
+  const passwordHash = options?.passwordHash ?? (await testPasswordHash());
 
   const deps: LoginDependencies = {
     store: database.store,

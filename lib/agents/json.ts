@@ -23,3 +23,9 @@ export function toJsonValue(value: unknown): JsonValue {
   }
   return JSON.parse(JSON.stringify(value)) as JsonValue;
 }
+
+/** Coerce any value into a JSON object, boxing non-objects under `value`. */
+export function toJsonObject(value: unknown): JsonObject {
+  const json = toJsonValue(value);
+  return isJsonObject(json) ? json : { value: json };
+}
