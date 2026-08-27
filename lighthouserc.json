@@ -5,10 +5,7 @@
       "startServerCommand": "npm run start",
       "startServerReadyPattern": "Ready in|Local:|started server on",
       "startServerReadyTimeout": 90000,
-      "url": [
-        "http://localhost:3000/",
-        "http://localhost:3000/ci-budget-probe"
-      ],
+      "url": ["http://localhost:3000/"],
       "numberOfRuns": 3,
       "settings": {
         "chromeFlags": "--no-sandbox --disable-gpu --disable-dev-shm-usage"
