@@ -72,10 +72,24 @@ Updated 2026-08-27. Honest status, not a summary.
       400,000 ceiling and performance 0.55 against a 0.95 floor, both from the WebGL
       hero. Now green: 189,803 bytes, performance 0.95, CLS 0.000, and the accessibility,
       SEO and practices categories all 1.00.
-      **Performance sits exactly on the 0.95 floor with no margin**, so a slower runner
-      could tip it red. If that happens the lever is `components/home/MotionRoot.tsx` —
-      GSAP and Lenis are ~46 kB of the remaining ~190 kB and buy section reveals and
-      smooth scroll, nothing structural.
+      **Performance is RED on CI and 0.95 is not reachable there.** Six runs of identical
+      code across two independent CI runs scored 0.57, 0.86, 0.92, 0.93, 0.93, 0.94 —
+      medians 0.93 and 0.92, and never once 0.95. The same commit scores 0.95 / 0.95 /
+      0.95 on a quiet machine. The runner is heavily contended and the spread is far
+      wider than the margin, so **re-running will not clear this** and it should not be
+      treated as a flake.
+      The obvious lever was tried and does not work: dropping `MotionRoot` (GSAP + Lenis)
+      saves 54 kB of script — 189,803 down to 136,173 — but measured _worse_ TBT and LCP
+      under a 6x CPU throttle. GSAP and Lenis are not the bottleneck; the remaining
+      ~136 kB is the React and Next client runtime booting, which cannot be cut without
+      going static-only.
+      So this is a threshold question, not a code one. The realistic options are to lower
+      `categories:performance` in `lighthouserc.json` to something the runner can actually
+      hold (~0.90 is still a strong bar) or to accept the job as documented-red. **Do not
+      lower it silently** — the previous session built this gate deliberately and proved
+      it bites. It is the founder's call and it has been put to them.
+      Worth weighing: the gate measures `next start` on a shared runner, not the real
+      site. Production sits on Vercel's edge and is faster than anything CI scores.
       The **Lint step is still red and always was** — 27 ESLint errors plus a Prettier
       failure in `components/3d/` and `lib/commerce/`, untouched by the homepage work.
 - [x] Vercel project, live and public

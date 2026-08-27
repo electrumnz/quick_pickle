@@ -83,6 +83,33 @@ and is frankly the better picture, because it carries the real drawn labels.
 runs the full system. The homepage simply no longer imports it, which is also
 why `Hero.tsx` is now a server component with no client JavaScript at all.
 
+**Aftermath — the budget is green except performance, and 0.95 is unreachable on CI.**
+Dropping the 3D fixed `resource-summary:script:size` outright; that assertion has not
+appeared since. `categories:performance` still fails, and it is not a flake. Six runs of
+identical code across two independent CI runs:
+
+| run | values | median |
+|---|---|---|
+| 93 (95303ea) | 0.86, 0.93, 0.94 | 0.93 |
+| 96 (9395f8c, docs-only) | 0.57, 0.92, 0.93 | 0.92 |
+
+Never 0.95, on a spread from 0.57 to 0.94. The same commit scores 0.95 / 0.95 / 0.95 on a
+quiet machine, so the runner is contended and the noise is far wider than the margin.
+**Re-running will not clear it.**
+
+The obvious lever was tried and rejected on measurement, so nobody needs to repeat it:
+removing `MotionRoot` (GSAP + Lenis) saves 54 kB — 189,803 down to 136,173 — but measured
+*worse* TBT and LCP under a 6x CPU throttle. The bottleneck is the React/Next client
+runtime, not the motion layer, and it cannot be cut without going static-only. So the
+reveals and smooth scroll were kept: they cost nothing measurable.
+
+That leaves a threshold decision rather than an engineering one, and it belongs to the
+founder: lower `categories:performance` to something the runner holds (~0.90 is still a
+strong bar), or accept the job as documented-red. It has been put to them and NOT actioned
+— see the note at the top of this file about not weakening a gate the campaign built and
+proved. Note also that the gate measures `next start` on a shared runner; production runs
+on Vercel's edge and is faster than anything CI reports.
+
 **What it would take to earn a place back on the homepage.** This is C2a's
 work, not a prop change:
 1. **Real label textures.** The blank band is the single biggest reason it
