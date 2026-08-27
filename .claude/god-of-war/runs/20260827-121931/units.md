@@ -26,6 +26,7 @@ Each unit names its bar, what the critic inspects, and its dependencies.
 | D6 | Brand hub | ADMIN UX | live, agent output changes when a rule changes | A1,D1 |
 | E1 | Agent runtime | ENGINEERING key | replayable transcript + cap triggered deliberately | B2 |
 | E2 | Agent roster | ADMIN UX + BRAND | each agent's real output on seeded data | E1,D6 |
+| E2b | Wholesale rail | ENGINEERING key | draft order created at trade price, approved, invoiced | E2,C1,D2 |
 | E3 | Approval fabric | ADMIN UX (Linear) | every queue uses one component, one interaction model | E1,D1 |
 | E4 | Onboarding + briefing | ADMIN UX | first-run session ends in a completed real task | D1,E2 |
 | F1 | Legal & compliance | ENGINEERING key | copy audit output: zero health claims | — |

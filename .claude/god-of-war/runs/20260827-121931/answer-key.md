@@ -100,3 +100,21 @@ Binary. A check that cannot be evidenced is FALSE. Read-only to builders.
       squeezed. Evidence: the five-task walkthrough completed on a 375px viewport.
 - M37 Forms work on mobile: correct input types and inputmode so the right keyboard appears,
       no zoom-on-focus (>=16px font), visible labels. Evidence: demonstrated.
+
+## E2 Agent roster — market separation
+- M38 B2C and B2B are SEPARATE agents with separate system prompts, tools, memory and success
+      measures. One agent with a tone switch is a fail. Evidence: the two definitions.
+- M39 The B2B agent holds per-venue memory across a multi-week cycle — it knows who it last
+      spoke to, what was said, what was sampled, and when a stockist last reordered.
+      Evidence: a simulated multi-week thread replayed.
+- M40 No outbound message to a real trade buyer or consumer can send without an approvals row.
+      Evidence: attempted bypass test, per E1's M27.
+
+## E2b Wholesale rail
+- M41 A wholesale order can be raised end to end: enquiry -> agent drafts at trade pricing ->
+      founder approves -> Shopify draft order created -> invoice sent. Evidence: a real draft
+      order id created against the live store.
+- M42 Trade pricing is never exposed to retail customers, and retail pricing is never charged
+      to a trade account. Evidence: a test asserting both directions.
+- M43 The wholesale rail works on the store's ACTUAL Shopify plan (Basic). Any solution that
+      silently requires Shopify Plus B2B is a fail. Evidence: named APIs and the plan they need.

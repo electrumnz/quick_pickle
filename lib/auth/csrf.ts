@@ -101,3 +101,25 @@ export function verifySessionCsrf(input: {
   }
   return timingSafeEqualStrings(input.sessionCsrf, input.submitted);
 }
+
+/**
+ * Read the token out of an existing sealed login CSRF cookie.
+ *
+ * Lets the proxy reuse a still-valid token across page views instead of
+ * re-minting one on every render, which would break a form left open in a
+ * second tab.
+ */
+export async function readLoginCsrfToken(
+  secret: Bytes,
+  cookieValue: string | undefined | null,
+  now: Date,
+): Promise<string | null> {
+  const payload = await unseal(
+    secret,
+    "login-csrf",
+    cookieValue,
+    now,
+    parseLoginCsrf,
+  );
+  return payload === null ? null : payload.t;
+}

@@ -102,8 +102,8 @@ export const DEFAULT_POUR: PourParams = {
   streamWobble: 0.35,
   streamBreakup: 0.55,
   pool: true,
-  poolY: -0.62,
-  poolRadius: 0.17,
+  poolY: 0.004,
+  poolRadius: 0.24,
 };
 
 export const DEFAULT_STUDIO: StudioParams = {

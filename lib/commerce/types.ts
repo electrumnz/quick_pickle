@@ -193,6 +193,13 @@ export type OrderSortKey = (typeof ORDER_SORT_KEYS)[number];
  * list; nothing else is accepted, precisely so nothing unmappable creeps in.
  */
 export type ProductFilter = {
+  /**
+   * Defaults to `active`. The Storefront API only ever returns active,
+   * published products, so anything other than `active` here requires the
+   * Admin client — the field exists so the admin can list drafts, not so the
+   * storefront can.
+   */
+  readonly status?: ProductStatus;
   readonly availableForSale?: boolean;
   readonly productType?: string;
   readonly vendor?: string;
@@ -652,13 +659,18 @@ export type InventoryQuery = PageArgs & {
 };
 
 /**
- * Adjustment reasons. These are the schema's `public.inventory_reason` values;
+ * Reasons an operator can raise an adjustment for.
+ *
+ * A subset of the schema's `public.inventory_reason` enum on purpose. `sale`
+ * and `batch_release` are absent because the schema requires them to carry an
+ * order line and a batch respectively — they are written by checkout and by the
+ * production module, not by a person clicking "adjust stock", and listing them
+ * here would advertise an operation that always fails.
+ *
  * {@link SHOPIFY_INVENTORY_REASONS} maps each to the string Shopify's
  * `inventoryAdjustQuantities` accepts, so the adapter is a table lookup.
  */
 export const INVENTORY_REASONS = [
-  "batch_release",
-  "sale",
   "return",
   "damage",
   "sample",
@@ -674,8 +686,6 @@ export type InventoryReason = (typeof INVENTORY_REASONS)[number];
 export const SHOPIFY_INVENTORY_REASONS: Readonly<
   Record<InventoryReason, string>
 > = {
-  batch_release: "received",
-  sale: "shrinkage",
   return: "restock",
   damage: "damaged",
   sample: "promotion",

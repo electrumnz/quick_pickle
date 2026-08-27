@@ -134,3 +134,41 @@ This is now a required part of C5 (content) and feeds D6 (brand hub) and E2 (the
   true before it ships. Flag anything aspirational as TODO rather than publishing it.
 - The four-product range and its jobs: 01 HOUSE (everything), 02 DIRTY (martini),
   03 SMOKE (mezcal, meat), 04 WILD (seafood, kawakawa/kelp/lemon, limited by leaf supply).
+
+### 2026-08-27 — B2C and B2B split into separate agents, plus wholesale mechanics
+User: "you will need a different agent for public outreach and b2b outreach, so a b2c and b2b
+agent, different markets. maybe even a wholesale login or coupon code or something".
+
+Correct — these are different sales motions, not one motion with two tones. E2's roster splits:
+
+**B2C agent** — consumer. Social content, UGC, email retention, launches, the recipe engine,
+review requests. Voice is the brand voice. Success = repeat purchase rate and AOV.
+
+**B2B agent** — trade. Bars, restaurants, delis, bottle shops, distributors. Completely
+different job: prospect lists, sample-pack outreach, follow-up cadences, trade pricing,
+minimum orders, reorder prompts when a venue goes quiet, stockist onboarding. Voice is
+professional-but-not-corporate; a bar manager is not reading brand copy. Success = number of
+active stockists and reorder frequency.
+
+Why they cannot be one agent: the B2B cycle is weeks-long with named humans and a memory of
+every prior conversation; the B2C cycle is impulse-driven and anonymous at scale. Shared tone
+guidance, shared brand rules, entirely different tools, data and success measures.
+
+**Wholesale mechanics — constrained by the Shopify plan.** The store is on Basic, so Shopify's
+native B2B (company accounts, price lists, payment terms) is Plus-only and unavailable. The
+practical build:
+1. **Draft orders as the wholesale rail.** We hold write_draft_orders scope. A venue enquires,
+   the B2B agent drafts the order at trade pricing, the founder approves it in the admin, and
+   Shopify emails a real invoice. This is the standard Basic-plan wholesale flow and needs no
+   plan upgrade.
+2. **A wholesale area on our own site**, gated by our own auth (we control it, unlike Shopify
+   customer accounts on Basic): trade pricing, order history, one-click reorder, downloadable
+   line sheet and tasting notes. Reorders create draft orders.
+3. **Customer tags + a trade discount code** as the low-tech fallback, with minimum-quantity
+   rules, for venues that just want to self-serve.
+
+Every wholesale price change and every outbound trade email flows through the same approvals
+object as everything else — nothing goes to a real buyer unapproved.
+
+Storefront consequence: the wholesale enquiry route in C5 becomes a real funnel entry, not a
+contact form, and D2 (orders) must show draft orders alongside paid ones.

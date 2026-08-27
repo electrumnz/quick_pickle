@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { MeshTransmissionMaterial } from "@react-three/drei";
@@ -42,6 +42,12 @@ import type { BottleModelProps } from "./types";
 const V = new THREE.Vector3();
 const V2 = new THREE.Vector3();
 const M = new THREE.Matrix4();
+const Q = new THREE.Quaternion();
+const DIR = new THREE.Vector3();
+const VEL = new THREE.Vector3();
+const SCRATCH = new THREE.Vector3();
+const UP_AXIS = new THREE.Vector3(0, 1, 0);
+const X_AXIS = new THREE.Vector3(1, 0, 0);
 
 function ramp(p: number, [a, b]: [number, number]) {
   if (b <= a) return p >= b ? 1 : 0;
@@ -50,22 +56,15 @@ function ramp(p: number, [a, b]: [number, number]) {
 const ease = (t: number) => t * t * (3 - 2 * t);
 
 function useOptionalTexture(url: string | undefined, repeat: number) {
-  const ref = useRef<THREE.Texture | null>(null);
-  const [, force] = useMemo(
-    () => [0, { current: (_: number) => {} }] as const,
-    [],
-  );
-  void force;
-  const tex = useRef<THREE.Texture | null>(null);
-  const version = useRef(0);
+  const [tex, setTex] = useState<THREE.Texture | null>(null);
   useEffect(() => {
     if (!url) {
-      tex.current = null;
+      setTex(null);
       return;
     }
     let dead = false;
-    const loader = new THREE.TextureLoader();
-    loader.load(
+    let loaded: THREE.Texture | null = null;
+    new THREE.TextureLoader().load(
       url,
       (t) => {
         if (dead) {
@@ -77,17 +76,17 @@ function useOptionalTexture(url: string | undefined, repeat: number) {
         t.wrapT = THREE.ClampToEdgeWrapping;
         t.anisotropy = 8;
         t.repeat.set(repeat, 1);
-        tex.current = t;
-        version.current++;
+        loaded = t;
+        setTex(t);
       },
       undefined,
-      () => undefined,
+      () => setTex(null),
     );
     return () => {
       dead = true;
+      loaded?.dispose();
     };
   }, [url, repeat]);
-  void ref;
   return tex;
 }
 
@@ -226,6 +225,9 @@ export function BottleModel({
     inst.index = g.index;
     inst.attributes = g.attributes;
     inst.instanceCount = parts.count;
+    (
+      inst as THREE.InstancedBufferGeometry & { _maxInstanceCount?: number }
+    )._maxInstanceCount = parts.count;
     inst.setAttribute(
       "aOffset",
       new THREE.InstancedBufferAttribute(parts.offsets, 3),
@@ -354,20 +356,38 @@ export function BottleModel({
     const root = rootRef.current;
     if (!bottle || !root) return;
 
-    bottle.rotation.set(0, 0, 0);
-    bottle.rotation.y =
+    // Orientation is composed as quaternions rather than eulers: the pour
+    // tilt is about a world axis set by the pour bearing, and stacking that
+    // on top of a yaw with euler angles gimbals as soon as the bottle nears
+    // horizontal.
+    const yaw =
       rotation + (paused ? 0 : autoRotate * t) + par.x * pointerParallax * 1.6;
-    // Tilt happens around an axis rotated by the pour heading, so the bottle
-    // can pour toward any bearing without the rest of the rig moving.
-    bottle.rotateOnWorldAxis(
+    bottle.quaternion.setFromAxisAngle(UP_AXIS, yaw);
+    Q.setFromAxisAngle(
       V.set(Math.cos(pour.headingRad), 0, Math.sin(pour.headingRad)),
       -tilt,
     );
-    bottle.rotation.x +=
-      -par.y * pointerParallax * 0.55 + Math.sin(t * 0.42) * 0.006 * breathe;
-    bottle.position.set(0, Math.sin(t * 0.55) * height * 0.004 * breathe, 0);
-    // The bottle pivots about its middle, not its base, or the lip swings
-    // through an arc that reads as the whole set moving.
+    bottle.quaternion.premultiply(Q);
+    Q.setFromAxisAngle(
+      X_AXIS,
+      -par.y * pointerParallax * 0.55 + Math.sin(t * 0.42) * 0.006 * breathe,
+    );
+    bottle.quaternion.premultiply(Q);
+
+    // Pivot about the bottle's middle, not its base. Rotating a group about
+    // its origin swings the whole body through an arc, which reads as the set
+    // moving rather than a hand tipping. The lift is deliberate: a real pour
+    // rises as it tips.
+    const pivot = height * 0.5;
+    SCRATCH.set(0, pivot, 0).applyQuaternion(bottle.quaternion);
+    bottle.position.set(
+      -SCRATCH.x + tiltAmount * height * 0.05,
+      pivot -
+        SCRATCH.y +
+        tiltAmount * height * 0.19 +
+        Math.sin(t * 0.55) * height * 0.004 * breathe,
+      -SCRATCH.z,
+    );
     bottle.updateMatrixWorld(true);
 
     root.updateWorldMatrix(true, false);
@@ -420,23 +440,20 @@ export function BottleModel({
     // starts as a dribble, swells, and thins out again on its own.
     const speed =
       Math.sqrt(2 * pour.gravity * Math.max(head, 0)) * 0.9 + height * 0.12;
-    const dir = V2.clone()
-      .multiplyScalar(1)
-      .add(new THREE.Vector3(0, -0.62, 0))
-      .normalize();
-    const vel = dir.multiplyScalar(speed);
+    DIR.copy(V2).setY(-0.62).normalize();
+    VEL.copy(DIR).multiplyScalar(speed);
 
     const endY = pour.pool
       ? height * pour.poolY
       : V.y - height * pour.streamLength;
     const drop = Math.max(V.y - endY, height * 0.05);
     const flight =
-      (vel.y +
-        Math.sqrt(Math.max(vel.y * vel.y + 2 * pour.gravity * drop, 0))) /
+      (VEL.y +
+        Math.sqrt(Math.max(VEL.y * VEL.y + 2 * pour.gravity * drop, 0))) /
       pour.gravity;
 
     (streamU.uOrigin!.value as THREE.Vector3).copy(V);
-    (streamU.uVelocity!.value as THREE.Vector3).copy(vel);
+    (streamU.uVelocity!.value as THREE.Vector3).copy(VEL);
     streamU.uSpeed0!.value = Math.max(speed, 1e-3);
     streamU.uGravity!.value = pour.gravity;
     streamU.uFlight!.value = flight;
@@ -476,9 +493,9 @@ export function BottleModel({
       (poolMat.uniforms.uImpact as THREE.IUniform).value = flowEased;
       pool.matrixWorld.compose(
         V.set(
-          e[12]! + vel.x * flight * 0.5,
-          rootY + height * pour.poolY + height * 0.002,
-          e[14]! + vel.z * flight * 0.5,
+          e[12]! + VEL.x * flight * 0.55,
+          rootY + height * pour.poolY,
+          e[14]! + VEL.z * flight * 0.55,
         ),
         new THREE.Quaternion().setFromAxisAngle(
           new THREE.Vector3(1, 0, 0),
@@ -498,7 +515,6 @@ export function BottleModel({
       capGroup.position.set(0, height * cap.liftDistance * capOpen, 0);
       capGroup.rotation.z = capOpen * 0.42;
       capMat.opacity = 1 - THREE.MathUtils.smoothstep(capOpen, 0.55, 0.98);
-      capMat.transparent = capMat.opacity < 0.999;
     }
 
     const labelMesh = labelRef.current;
@@ -558,7 +574,7 @@ export function BottleModel({
               color={label.paperColor as string}
               roughness={label.roughness}
               metalness={0}
-              map={labelTex.current}
+              map={labelTex}
               transparent={label.opacity < 0.999}
               opacity={label.opacity}
               side={THREE.FrontSide}
