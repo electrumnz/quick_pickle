@@ -109,14 +109,7 @@ export function createStreamMaterial(uniforms: StreamUniforms): THREE.MeshPhysic
   vWorldNormal = normalize(hsSide * hsRing.x + hsUp * hsRing.y);
 `,
       )
-      .replace(
-        "#include <beginnormal_vertex>",
-        `#include <beginnormal_vertex>\n  objectNormal = vec3(0.0, 0.0, 1.0);`,
-      )
-      .replace(
-        "#include <defaultnormal_vertex>",
-        `#include <defaultnormal_vertex>\n  transformedNormal = normalMatrix * normalize(vec3(position.x, 0.0, position.z) + vec3(1e-6));`,
-      );
+      ;
 
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", `#include <common>\n${PARS}`)
