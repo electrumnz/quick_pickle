@@ -12,11 +12,11 @@ concurrency:
 permissions:
   contents: read
 
+# Every job reads its Node major from .nvmrc, which matches package.json
+# `engines.node` and the Vercel project's Node version — one runtime, verified
+# and shipped.
 env:
   NEXT_TELEMETRY_DISABLED: "1"
-  # Keep every job on the same runtime the repo declares (engines + .nvmrc)
-  # and the same major Vercel builds with.
-  NODE_VERSION_FILE: .nvmrc
 
 jobs:
   verify:

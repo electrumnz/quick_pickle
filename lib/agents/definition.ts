@@ -11,8 +11,8 @@ import {
 
 /** Matches the `agents_slug_format` check constraint. */
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
-/** Matches the `agent_tool_calls_name_format` check constraint. */
-const TOOL_NAME_PATTERN = /^[a-z][a-z0-9_.]*$/;
+/** Same narrowed rule the tool registry enforces: DB-legal and Anthropic-legal. */
+const TOOL_NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
 
 const budgetSchema = z
   .object({

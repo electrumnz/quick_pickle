@@ -411,6 +411,33 @@ export class InMemoryAgentStore implements AgentStore {
     return next;
   }
 
+  async markApprovalApplied(
+    approvalId: string,
+    appliedAt: string,
+    appliedResult: JsonValue,
+  ): Promise<ApprovalRecord> {
+    const current = this.approvals.get(approvalId);
+    if (current === undefined) {
+      throw new AgentRuntimeError(
+        "store_conflict",
+        `No approval with id "${approvalId}".`,
+        {
+          approvalId,
+        },
+      );
+    }
+    if (current.status !== "approved") {
+      throw new AgentRuntimeError(
+        "store_conflict",
+        `approvals_applied_requires_approved violated for approval ${approvalId}.`,
+        { approvalId, status: current.status },
+      );
+    }
+    const next: ApprovalRecord = { ...current, appliedAt, appliedResult };
+    this.approvals.set(approvalId, next);
+    return next;
+  }
+
   async listApprovals(query: ApprovalQuery): Promise<ApprovalRecord[]> {
     let rows = [...this.approvals.values()];
     if (query.status !== undefined) {

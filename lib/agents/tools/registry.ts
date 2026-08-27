@@ -23,8 +23,13 @@ import type { AgentLogger } from "../logger";
 import type { ApprovalRisk, ApprovalSubject, ToolEffect } from "../types";
 import { consumeEffectGrant, type EffectGrant } from "./effects";
 
-/** Matches `agent_tool_calls_name_format`: `^[a-z][a-z0-9_.]*$`. */
-const TOOL_NAME_PATTERN = /^[a-z][a-z0-9_.]*$/;
+/**
+ * The intersection of two rules: the `agent_tool_calls_name_format` check
+ * constraint (`^[a-z][a-z0-9_.]*$`) and Anthropic's tool-name rule, which allows
+ * no dots. Taking the narrower of the two means a tool name is always valid in
+ * both the database and a live model call.
+ */
+const TOOL_NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
 /** Matches `approvals_subject_table_format`: `^[a-z][a-z0-9_]*$`. */
 const SUBJECT_TABLE_PATTERN = /^[a-z][a-z0-9_]*$/;
 

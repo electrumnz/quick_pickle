@@ -107,3 +107,364 @@ Two consequences run straight into copy:
 2. **We are not a sports food.** Formulated supplementary sports foods are a separate regulated category
    (Standard 2.9.4) with their own composition and labelling rules. Sports positioning would drag us
    into it.
+
+---
+
+## 3. BANNED TERMS — never publish, in any medium, in any grammatical form
+
+Every entry below is banned **including** its plurals, verb forms, hyphenated and spaced variants, and
+hashtag forms (`#hydration` counts). The audit script enforces the regexes noted in
+`legal/scripts/audit-copy.mjs`; the rule IDs match.
+
+### Group A — health effects and body functions → **health claims**
+
+A "**health claim**" is any claim that "states, suggests or implies that a food or a property of food
+has, or may have, a **health effect**" (Standard 1.1.2—2, in Note 1 to Standard 1.2.7—2). A "**health
+effect**" expressly includes an effect on a biochemical process, a physiological process, a functional
+process, growth and development, **physical performance**, **mental performance**, or "a disease,
+disorder or condition".
+
+A health claim may **not** be made unless (a) the food **meets the NPSC** (nutrient profiling scoring
+criterion, Standard 1.2.7—18(1)(a), method in Schedule 5 per 1.2.7—25) **and** (b) the claim is either a
+pre-approved food–health relationship in the tables to **S4—4/S4—5**, or a relationship the maker has
+established by systematic review under Schedule 6 and **notified to the FSANZ CEO**
+(Standard 1.2.7—18(3)(b), 1.2.7—19). HALF SOUR has done none of this. Therefore **every** health claim is
+unlawful for us today.
+
+| ID    | Banned term / pattern                                                                                                                   | Why                                                                                                                                        |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| HC-01 | `gut health`, `gut-friendly`, `gut` (as a body reference)                                                                               | Health claim: functional/physiological outcome. Std 1.2.7—18.                                                                              |
+| HC-02 | `probiotic`, `probiotics`, `pro-biotic`                                                                                                 | Health claim by definition; also implies live-culture composition we do not verify. Std 1.2.7—18; FTA s 12A.                               |
+| HC-03 | `prebiotic`, `postbiotic`, `synbiotic`, `biotic`                                                                                        | Same as HC-02.                                                                                                                             |
+| HC-04 | `live cultures`, `live culture`, `live bacteria`, `good bacteria`, `friendly bacteria`, `microbiome`, `microbiota`, `flora` (gut sense) | Implied probiotic health claim. Std 1.2.7—2 definition of _claim_ ("implied").                                                             |
+| HC-05 | `digestion`, `digestive`, `digestive health`, `aids digestion`, `bloating`, `bloat`, `regularity`                                       | Health claim: functional process. Std 1.2.7—18.                                                                                            |
+| HC-06 | `immunity`, `immune`, `immune support`, `immune-boosting`                                                                               | Health claim. Std 1.2.7—18.                                                                                                                |
+| HC-07 | `detox`, `detoxify`, `detoxifying`, `cleanse`, `cleansing` (of the body)                                                                | Health claim, and unsubstantiable. Std 1.2.7—18; FTA s 12A.                                                                                |
+| HC-08 | `metabolism`, `metabolic`, `burns fat`, `fat burning`                                                                                   | Health claim: biochemical process. Std 1.2.7—18.                                                                                           |
+| HC-09 | `blood pressure`, `blood sugar`, `blood glucose`, `insulin`, `cholesterol` (as a benefit)                                               | Health claim, and a **biomarker of a serious disease** → _high level_ health claim, only permissible from the S4—4 table. Std 1.2.7—18(2). |
+| HC-10 | `energy boost`, `boosts energy`, `pick-me-up` (as a physiological effect), `alertness`, `focus`, `clarity`, `mood`                      | Health claim: mental performance. Std 1.2.7—18.                                                                                            |
+| HC-11 | `anti-inflammatory`, `inflammation`, `antioxidant`, `antioxidants`, `free radicals`                                                     | Health claim; antioxidant claims additionally require a permitted food–health relationship. Std 1.2.7—18.                                  |
+| HC-12 | `nutrients`, `nutrient-dense`, `nourishing`, `nutritious`, `nutrition` (as a benefit)                                                   | Reads as a health/nutrition claim without meeting any Schedule 4 condition. Std 1.2.7—12/13; FTA s 12A.                                    |
+| HC-13 | `superfood`, `functional food`, `functional beverage`, `wellness`, `wellbeing` (as a product benefit)                                   | Implied health claim; unsubstantiable. Std 1.2.7—2; FTA s 12A.                                                                             |
+| HC-14 | `good for you`, `good for your gut`, `does you good`, `healthy`, `healthier`, `healthiest`, `health` (as a benefit of the product)      | Implied health claim. Std 1.2.7—18.                                                                                                        |
+| HC-15 | `guilt-free`, `guilt free`, `no guilt`, `sin-free`, `virtuous`                                                                          | Implied nutrition/health claim about energy or sugar without meeting S4—3.                                                                 |
+| HC-16 | `bioavailable`, `absorption`, `uptake`                                                                                                  | Health claim: biochemical process.                                                                                                         |
+
+### Group B — therapeutic language → **always prohibited, for everyone**
+
+**Standard 1.2.7—8** is absolute and has no exception, no NPSC gateway, no notification path:
+
+> "A claim must not: (a) refer to the prevention, diagnosis, cure or alleviation of a disease, disorder or
+> condition; or (b) compare a food with a good that is … represented in any way to be for therapeutic
+> use…"
+
+It applies even to endorsements (Standard 1.2.7—24(1)(c)).
+
+| ID    | Banned term / pattern                                                                                                                               | Why                                                                                                                                            |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| TH-01 | `hangover`, `hangovers`, `hangover cure`, `morning after` (as a remedy), `the cure`                                                                 | A hangover is a _condition_; "cure"/"alleviation" is squarely Std 1.2.7—8(a). This is the single highest-risk phrase for a bar-adjacent brand. |
+| TH-02 | `cure`, `cures`, `curative`, `remedy`, `remedies` (of the product), `treatment`, `treats` (medically), `heals`, `healing`                           | Std 1.2.7—8(a).                                                                                                                                |
+| TH-03 | `prevents`, `prevention`, `protects against`, `wards off`, `fights off`                                                                             | Std 1.2.7—8(a).                                                                                                                                |
+| TH-04 | `cramp`, `cramps`, `cramping`, `muscle cramp`                                                                                                       | A condition. Std 1.2.7—8(a). Also the classic pickle-juice claim — precisely the one we will not make.                                         |
+| TH-05 | `nausea`, `morning sickness`, `heartburn`, `reflux`, `indigestion`, `upset stomach`, `settles your stomach`                                         | Conditions. Std 1.2.7—8(a).                                                                                                                    |
+| TH-06 | `medicinal`, `medicine`, `therapeutic`, `tonic` (as a health preparation), `elixir`, `remedy shot`, `wellness shot`                                 | Std 1.2.7—8(b); in NZ also risks the product being treated as a medicine under the Medicines Act 1981.                                         |
+| TH-07 | `doctor recommended`, `dietitian approved`, `nutritionist approved`, `clinically proven`, `scientifically proven`, `studies show`, `research shows` | Std 1.2.7—8; FTA s 12A and s 13(e).                                                                                                            |
+| TH-08 | `dose`, `dosage`, `daily dose`, `prescription`, `prescribed`                                                                                        | Therapeutic framing. Std 1.2.7—8(b).                                                                                                           |
+
+### Group C — electrolytes, hydration, sport and recovery
+
+| ID    | Banned term / pattern                                                                                                                                                                   | Why                                                                                                                                                                                                                                                                    |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EL-01 | `electrolyte`, `electrolytes`, `electrolyte drink`, `electrolyte replacement`                                                                                                           | "Electrolyte drink" is a **prescribed name** (Std 2.6.2—12(1)); Std 2.6.2—11(1) requires a food sold as one to _be_ one, and 2.6.2—11(2) sets a composition HALF SOUR does not meet. Std 2.6.2—15 also confines what may be said about such drinks.                    |
+| EL-02 | `hydrate`, `hydrates`, `hydrating`, `hydration`, `rehydrate`, `rehydration`, `dehydration`                                                                                              | Health claim (physiological process). Std 1.2.7—18.                                                                                                                                                                                                                    |
+| EL-03 | `replaces salts`, `salt replacement`, `mineral replacement`, `replenish`, `replenishes`, `restores` (of the body)                                                                       | Implied electrolyte/health claim. Std 1.2.7—18; Std 2.6.2—15.                                                                                                                                                                                                          |
+| EL-04 | `recovery`, `recover` (of the body), `aids recovery`, `post-workout`, `pre-workout`, `workout`, `training`, `gym`, `athlete`, `athletic`, `sports drink`, `sports beverage`, `isotonic` | Health claim: physical performance (Std 1.2.7—18); also drags us toward Std 2.9.4 formulated supplementary sports foods and Std 2.6.2 electrolyte drinks.                                                                                                              |
+| EL-05 | `endurance`, `stamina`, `performance` (physical), `muscle`, `muscles`, `soreness`, `DOMS`                                                                                               | Health claim: physical performance. Std 1.2.7—18.                                                                                                                                                                                                                      |
+| EL-06 | `sodium` / `potassium` / `magnesium` / `salts` **used as a benefit**                                                                                                                    | A nutrition content claim about sodium is only permitted on S4—3 terms; using it as a benefit also implies a health claim. Std 1.2.7—12; S4—3 "Salt or sodium". Stating sodium in the mandatory NIP is _not_ a claim (Std 1.1.2—9(2)) — the ban is on selling with it. |
+
+### Group D — nutrition content claims: banned **unless the Code's condition is actually met and evidenced**
+
+A **nutrition content claim** is a claim about the presence or absence of energy, protein, carbohydrate,
+fat and their components, dietary fibre, salt, sodium, potassium, minerals, vitamins, a biologically
+active substance, or about glycaemic index/load (**Standard 1.1.2—9(1)**, reproduced at Note 2 to
+Standard 1.2.7—2).
+
+Where a property of food appears in **Column 1 of the table to S4—3**, a claim about it may only be made
+if the food meets the **general claim conditions in Column 2**, and if a **Column 3 descriptor** (or a
+synonym of one) is used, the food must also meet the **Column 4 condition** (Standard 1.2.7—12(2)–(3)).
+Where the property is _not_ in S4—3, the claim may only state that the food contains / does not contain
+it, or state a specified amount — and may not use any descriptor other than one indicating absence
+(Standard 1.2.7—13).
+
+**These are banned by default.** They may only be used after the founder holds a current laboratory
+analysis of the actual production recipe showing the threshold is met, and that analysis is filed and
+cited in the copy brief. Approve a specific line with the marker described in §8.
+
+| ID     | Term                                                                                                                  | Code condition that must be proven first (S4—3 unless noted)                                                                                                                                                                                                         |
+| ------ | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NCC-01 | `low sugar`, `low in sugar`, `low sugars`                                                                             | ≤ **2.5 g sugars/100 mL** for liquid food.                                                                                                                                                                                                                           |
+| NCC-02 | `sugar free`, `sugar-free`, `no sugar`, `0% sugar`, `100% sugar free`                                                 | The "% Free" descriptor for sugars requires the food to meet the conditions for a **low sugar** claim (≤2.5 g/100 mL). "Sugar free" is _not_ a synonym for "contains no sugar".                                                                                      |
+| NCC-03 | `no added sugar`, `no added sugars`                                                                                   | Four cumulative conditions: not itself an added sugar; no added sugar as an ingredient; ≤ **7.5 g sugars/100 mL** for liquid food; no increase in hexose mono/disaccharides by hydrolysis during production. (Amended by Proposal P1063; transition to 29 Oct 2028.) |
+| NCC-04 | `low calorie`, `low kilojoule`, `low energy`, `low kJ`                                                                | ≤ **80 kJ/100 mL** for liquid food.                                                                                                                                                                                                                                  |
+| NCC-05 | `zero calorie`, `no calories`, `calorie free`, `0 calories`, `zero kJ`                                                | Not a listed descriptor; use of an unlisted descriptor for energy is constrained by Std 1.2.7—12(8) and Std 1.2.7—13(2). Treat as banned.                                                                                                                            |
+| NCC-06 | `diet` (as a product descriptor, e.g. "diet mixer")                                                                   | "Diet" requires the food to **meet the NPSC** _and_ be ≤80 kJ/100 mL **or** have ≥40% less energy than the reference food. Also triggers the comparative-claim disclosure in Std 1.2.7—16(2)(b) and the anti-slimming rule in **Std 1.2.7—15**.                      |
+| NCC-07 | `low salt`, `low sodium`, `low in salt`                                                                               | ≤ **120 mg sodium/100 mL**. A cucumber brine will almost certainly fail this.                                                                                                                                                                                        |
+| NCC-08 | `no added salt`, `unsalted`, `salt free`                                                                              | "No added" requires **no added sodium compound including no added salt**, in the food _and_ in its ingredients.                                                                                                                                                      |
+| NCC-09 | `reduced sugar`, `reduced salt`, `reduced sodium`, `reduced calorie`, `reduced fat`, `reduced carb`, `reduced energy` | ≥25% less than a named **reference food**, _and_ Std 1.2.7—16(1) requires the claim to state the identity of the reference food and the size of the difference, together with the claim.                                                                             |
+| NCC-10 | `light`/`lite` used of sugar, salt, fat, energy or carbohydrate                                                       | Same as NCC-09 — "light/lite" is a **comparative** descriptor under S4—3 and Std 1.2.7—16(2)(a)(ii)(A).                                                                                                                                                              |
+| NCC-11 | `low carb`, `low carbohydrate`, `keto`, `keto-friendly`                                                               | S4—3 lists **no** "low" descriptor for carbohydrate — only "reduced" and "increased". A "low carb" claim is therefore not available at all.                                                                                                                          |
+| NCC-12 | `high in X`, `high X`, `rich in X`, `packed with X`, `loaded with X`, `full of X` where X is a nutrient               | "High" is only a listed descriptor for gluten and glycaemic index. For everything else it is an unlisted descriptor used with a Column 1 property — not permitted (Std 1.2.7—12(1)–(3)).                                                                             |
+| NCC-13 | `source of X`, `good source of X`, `excellent source of X` where X is a nutrient                                      | Vitamin/mineral: ≥10% RDI/ESADDI per serving for a bare claim, **≥25% RDI/ESADDI** for "good source". Protein: ≥5 g/serving general, ≥10 g/serving for "good source". Dietary fibre: ≥2 g/serving general, ≥4 g "good source", ≥7 g "excellent source".              |
+| NCC-14 | `fat free`, `% fat free`, `low fat`                                                                                   | "% Free" for fat requires meeting the **low fat** condition (≤1.5 g/100 mL for liquid food).                                                                                                                                                                         |
+| NCC-15 | `gluten free`, `gluten-free`                                                                                          | Requires **no detectable gluten**, no oats or oat products, and no malted gluten-containing cereals or their products. Needs analytical evidence, not an assumption.                                                                                                 |
+| NCC-16 | `low GI`, `low glycaemic`, `glycaemic index`                                                                          | Requires GI testing, the numerical GI on the claim or NIP, **and** the food to meet the NPSC.                                                                                                                                                                        |
+| NCC-17 | `slimming`, `slim`, `skinny`, `waistline`, `weight loss`, `for weight management`                                     | **Standard 1.2.7—15** prohibits a nutrition content claim meeting the "diet" conditions from also using a slimming descriptor; weight-loss framing is otherwise a health claim under Std 1.2.7—18 and, if aimed at a condition, therapeutic under 1.2.7—8.           |
+| NCC-18 | `vitamin`, `vitamins`, `minerals`, `folic acid`, `choline`, `fluoride`                                                | Nutrition content claims about **choline, fluoride or folic acid** may only be made _if a health claim about that substance is also made_ (Std 1.2.7—14(3)) — which we cannot make. Vitamin/mineral claims must clear S4—3 Column 2 in full.                         |
+| NCC-19 | Claims that **compare our vitamin or mineral content to another food** ("more potassium than a banana")               | **Standard 1.2.7—9**: a claim that directly or indirectly compares the vitamin or mineral content of a food with another food must not be made unless the Code permits it. It does not.                                                                              |
+
+> **Reality check for HALF SOUR:** a salt-forward cucumber brine will fail "low sodium" and probably
+> "low sugar" is irrelevant. The honest, lawful position is to say **nothing** in this group and let the
+> nutrition information panel do the talking. The NIP is mandatory information and its inclusion is
+> expressly **not** a nutrition content claim (Standard 1.1.2—9(2)).
+
+### Group E — vague virtue and unsubstantiable puffery
+
+These are not Code-defined claims; they are **Fair Trading Act** exposure. Under **s 12A** we must hold
+reasonable grounds _at the moment of publication_, and under **s 12B** a court weighs the research and
+steps we took beforehand.
+
+| ID     | Banned term / pattern                                                                                                                | Why                                                                                                                                                                                                                                                                               |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FTA-01 | `clean`, `clean label`, `clean eating`, `no nasties`, `nothing artificial`                                                           | Undefined, unverifiable, and reads as a health/composition claim. FTA ss 9, 12A, 13(a).                                                                                                                                                                                           |
+| FTA-02 | `pure`, `purest`, `100% natural`, `all natural`, `natural` (as a virtue claim about the product)                                     | Unsubstantiated composition claim. FTA ss 12A, 13(a). Describing an _ingredient_ factually ("dill", "garlic") is fine.                                                                                                                                                            |
+| FTA-03 | `chemical free`, `no chemicals`, `preservative free`, `no preservatives`, `additive free`, `no additives`                            | Unverifiable absolutes; salt and acetic acid _are_ preservatives. FTA ss 9, 12A.                                                                                                                                                                                                  |
+| FTA-04 | `best`, `the best`, `world's best`, `number one`, `#1`, `award-winning`, `voted best`                                                | Superiority claims need proof. FTA ss 12A, 13(a), 13(e). ("Award-winning" is usable only after an actual award — see §4.)                                                                                                                                                         |
+| FTA-05 | `guaranteed`, `guarantee` used loosely, `risk free`, `no questions asked`, `lifetime guarantee`                                      | FTA **s 13(i)** specifically catches misrepresentation about rights and remedies, including CGA rights. Say exactly what `shipping-returns.md` says, no more, no less.                                                                                                            |
+| FTA-06 | `free` where a cost applies (`free shipping` with a spend threshold stated only in fine print)                                       | FTA ss 9, 13(g). State the threshold in the same sentence.                                                                                                                                                                                                                        |
+| FTA-07 | `sale`, `was $X now $Y`, `RRP`, `X% off` without a genuine prior selling price                                                       | FTA ss 9, 13(g); this is the Commerce Commission's most-litigated area.                                                                                                                                                                                                           |
+| FTA-08 | `sustainable`, `eco`, `eco-friendly`, `carbon neutral`, `carbon negative`, `plastic free`, `zero waste`, `climate positive`, `green` | Environmental claims require evidence under FTA ss 9, 12A, 13(a).                                                                                                                                                                                                                 |
+| FTA-09 | `organic`, `certified organic`, `biodynamic`, `spray free`                                                                           | In New Zealand, organic claims are being brought under the **Organic Products and Production Act 2023**; until certification is held and current this is unsubstantiated under FTA s 12A and a false endorsement risk under s 13(e)–(f).                                          |
+| FTA-10 | `kosher`, `certified kosher`, `hechsher`, `pareve`, `parve`                                                                          | Certification/endorsement claim. FTA s 13(e)–(f). **"Kosher dill" is a style of pickle, not a certification** — but a consumer can reasonably read it as one, so it is banned until a certifying authority is engaged. Use `deli-style`, `garlic-dill`, `full-sour`, `half-sour`. |
+| FTA-11 | `traditional`, `authentic`, `original recipe`, `century-old recipe`, `since 19XX`                                                    | Only usable if literally true and evidenced. FTA ss 12A, 13(a).                                                                                                                                                                                                                   |
+| FTA-12 | `handmade`, `handcrafted`, `artisan`, `small batch`, `craft`                                                                         | Usable **only** if literally accurate for the actual production method at the time of publication, and re-checked whenever production moves to a co-packer. FTA ss 12A, 13(a). Treated as **restricted**, not banned — see §4.                                                    |
+| FTA-13 | `made in New Zealand`, `NZ made`, `New Zealand grown`, `locally grown`, `product of New Zealand`, `Aotearoa grown`                   | Origin claims. FTA **s 13(j)**. Separately, for Australian sales, see §7.                                                                                                                                                                                                         |
+| FTA-14 | `no.1 seller`, `thousands of customers`, `as seen in`, `featured in`                                                                 | Unsubstantiated. FTA ss 12A, 13(e).                                                                                                                                                                                                                                               |
+
+### Group F — endorsements, testimonials and third-party voices
+
+**Standard 1.2.7—24** defines an _endorsement_ narrowly: a nutrition content claim or health claim made
+with the permission of an **endorsing body**, which must be a **not-for-profit** entity with a nutrition-
+or health-related purpose, unrelated to the supplier, with records kept for the "information period"
+(while on sale, plus 2 years). An endorsement must still comply with **1.2.7—8** and must not refer to a
+serious disease (1.2.7—24(3)).
+
+| ID     | Banned                                                                                                                | Why                                                                                                                 |
+| ------ | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| END-01 | Any health or nutrition tick, seal, badge or "approved by" mark                                                       | Std 1.2.7—24 conditions are not met.                                                                                |
+| END-02 | Publishing a customer review, quote, UGC repost, influencer caption or comment reply that contains any Group A–D term | Republication is publication. Std 1.2.1—23; FTA s 9. Moderate before reposting; do not "like" or pin such comments. |
+| END-03 | `#pickleback` etc. is fine, but `#pickleforcramps`-style tags                                                         | Same as above.                                                                                                      |
+| END-04 | Health Star Rating graphics                                                                                           | Only a _permitted_ HSR symbol is exempt from Std 1.2.7 (Std 1.2.7—6(d)); an unearned or miscalculated one is not.   |
+
+---
+
+## 4. RESTRICTED — allowed only when a stated condition is met and recorded
+
+These are flagged by the audit script as **restricted**. They still fail the build unless the line
+carries an approval marker (§8), which is your record that the condition was checked.
+
+| ID   | Term                                                                                                          | Condition that makes it lawful                                                                                                                                                                                                                                                                                                                                                             |
+| ---- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| R-01 | `handmade`, `handcrafted`, `artisan`, `small batch`, `craft`, `hand-packed`                                   | Literally true of the current production run. Re-verify on any move to contract manufacturing. FTA ss 12A, 13(a).                                                                                                                                                                                                                                                                          |
+| R-02 | `vegan`, `plant-based`, `vegetarian`, `dairy free`, `nut free`, `egg free`                                    | Verified against the actual ingredient and processing-aid list, **and** against cross-contact risk in the production environment. "Free from" claims about allergens interact with Standard 1.2.3 mandatory declarations — an inaccurate one is both an FTA breach and a food-safety incident.                                                                                             |
+| R-03 | `award-winning`, `medal`, `gold medal`, `finalist`                                                            | Name the award and the year in the same sentence. FTA s 13(e).                                                                                                                                                                                                                                                                                                                             |
+| R-04 | `new`, `limited edition`, `back in stock`, `selling fast`, `only X left`                                      | Must be true at the moment of display; automated scarcity counters that are not wired to real stock are misleading under FTA s 9.                                                                                                                                                                                                                                                          |
+| R-05 | `free shipping`, `free gift`, `free sample`                                                                   | State every condition (spend threshold, region, exclusions) in the same sentence. FTA s 13(g).                                                                                                                                                                                                                                                                                             |
+| R-06 | `refund`, `money back`, `returns`, `guarantee`, `warranty`                                                    | Must match `shipping-returns.md` and `terms-of-sale.md` exactly. FTA **s 13(i)**; CGA s 43(4) makes purporting to contract out of the CGA an offence against FTA s 13(i).                                                                                                                                                                                                                  |
+| R-07 | `subscription`, `subscribe & save`, `auto-renew`                                                              | Full price, frequency and cancellation terms disclosed before payment. FTA ss 9, 11.                                                                                                                                                                                                                                                                                                       |
+| R-08 | `kosher-style`, `deli-style`, `New York style`, `Jewish deli`                                                 | Style descriptors are fine; they must not slide into implying certification (see FTA-10) or a false place of origin (FTA s 13(j)) — "New York style" is a style, "from New York" is an origin claim.                                                                                                                                                                                       |
+| R-09 | `salty`, `salt`, `brine`, `sodium` used as **flavour** description                                            | Flavour language is safe. The moment it becomes a _benefit_ ("the salts you need") it is EL-06 and banned. Keep it sensory.                                                                                                                                                                                                                                                                |
+| R-10 | `fermented`, `fermentation`, `lacto-fermented`, `naturally fermented`, `cultured`                             | Only if the product is genuinely fermented rather than vinegar-brined; and never alongside any Group A term, or it becomes an implied probiotic claim (HC-04).                                                                                                                                                                                                                             |
+| R-11 | `raw`, `unpasteurised`, `unfiltered`, `cloudy`                                                                | Accurate process descriptors only, and they carry food-safety consequences under the Food Act 2014 — see `food-safety-checklist.md`. Never paired with a health inference.                                                                                                                                                                                                                 |
+| R-12 | `zero`, `no`, `without` + a nutrient (`no fat`, `zero carbs`)                                                 | A statement that the food does not contain a Column 1 property is permitted in bare form (Std 1.2.7—13(1)(a) for non-S4—3 properties; S4—3 conditions apply to listed properties), but the moment a descriptor is attached it becomes NCC-01..NCC-14. Verify against analysis.                                                                                                             |
+| R-13 | `alcohol`, `cocktail`, `martini`, `pickleback`, `shot`, `chaser`, `bar`, `vodka`, `gin`, `whiskey`, `bourbon` | Core to our positioning and **allowed**. Restricted only so that a human checks the surrounding context: do not encourage excessive or rapid consumption, do not target under-18s, and do not imply the product reduces the effects of alcohol (that is TH-01). If we ever co-market with a licensee, the ASA Code for Advertising and Promotion of Alcohol applies to that advertisement. |
+| R-14 | `hot`, `spicy`, `chilli`, `heat`                                                                              | Fine as flavour. Not fine as a metabolic claim (HC-08).                                                                                                                                                                                                                                                                                                                                    |
+
+---
+
+## 5. WHAT WE CAN SAY — the safe vocabulary
+
+This section exists so that no writer is left with nothing. Everything here is either a factual
+statement about the product, a sensory description, a use instruction, or an occasion — none of which is
+a nutrition content claim or a health claim.
+
+### 5.1 Flavour and sensation
+
+sour · half-sour · full-sour · tart · tangy · sharp · bracing · puckering · mouth-puckering · brisk ·
+crisp · clean-finishing · savoury · umami · briny · saline · salt-forward · vinegary · acidic · bright ·
+zippy · punchy · grassy · vegetal · cucumber-forward · dill-forward · garlicky · peppery · aromatic ·
+herbaceous · coriander seed · mustard seed · black peppercorn · bay · fennel · fresh · cold · chilled ·
+cloudy · unfiltered · golden · pale green · lingering · clings to the glass
+
+### 5.2 Craft, process and provenance (factual, verifiable)
+
+brined · barrel · vat · crock · cured · steeped · rested · aged for N days · N-day cure · slow · cold
+storage · Kaitaia-grown cucumbers _(name the actual place — and only if true)_ · single-varietal ·
+made in small runs _(R-01)_ · bottled in Auckland _(if true)_ · recipe developed by _(name)_ ·
+no cordial base, no concentrate _(if true)_ · the brine from our own pickles _(if true)_
+
+### 5.3 Use, occasion and ritual — the strongest safe territory
+
+- **Cocktails:** pickle martini · dirty martini alternative · brine-forward martini · dill martini ·
+  pickleback · whiskey chaser · gibson · bloody mary · michelada · caesar · sour mix · shrub ·
+  spritz · highball · reverse martini · brine wash · rinse the glass · 15 ml, 30 ml, 45 ml pours ·
+  batch it · shake it · stir it · serve ice-cold
+- **Cooking:** brine a chicken · brine a pork chop · a splash in potato salad · into a vinaigrette ·
+  deglaze the pan · loosen a mayonnaise · cut through fat · balance a rich sauce · macerate onions ·
+  quick-pickle anything in the fridge · marinade · dressing · finishing splash · gravy · slaw ·
+  egg salad · devilled eggs · bloody mary rim · sourdough starter feed _(if true)_
+- **Occasion:** Friday night · after service · the last drink of the night · the shift drink ·
+  the bartender's handshake · deli lunch · picnic · barbecue · the fridge door · straight from the
+  bottle, ice-cold · a taste you either love or you don't
+
+### 5.4 Product facts (always safe if accurate)
+
+ingredients list · net contents in mL · bottle format · number of serves at a stated pour ·
+"keep refrigerated after opening" · "best before" date · country of manufacture · the NIP figures
+themselves, presented as the panel, without adjectives · price · shipping timeframes · stock status
+
+### 5.5 Honest, human framing that carries no legal weight
+
+- "Made for the drink, not the diet."
+- "We make brine. That's the whole business."
+- "It's a mixer. Treat it like vermouth."
+- "Salt, acid, dill, garlic, time."
+- "If you drink the brine straight from the jar, this is for you."
+- "We are not going to tell you it's good for you. It's good in a martini."
+
+That last line is deliberately included: it is a **refusal** to make a claim, not a claim. It stays
+lawful only as written — do not extend it into "…but you know what they say."
+
+---
+
+## 6. Structural rules that are not about single words
+
+1. **Layout can be a claim.** Standard 1.2.7—2's definition of _claim_ includes a **design**. A photo of
+   a runner, a heart icon, a leaf motif, a "benefits" grid, a green colour-block that reads as
+   health-food packaging — all can carry an implied health claim. Ask what a reasonable consumer takes
+   from the whole page, not from the sentence.
+2. **Never imply by adjacency.** Do not place the NIP next to lifestyle copy about energy. Do not put
+   the sodium figure in a callout box. The NIP is mandatory information and is not a claim
+   (Std 1.1.2—9(2)) — pulling a number out of it _into_ marketing turns it into one (Std 1.1.2—9(3) makes
+   voluntary NIP information a nutrition content claim).
+3. **Questions are claims.** "Ever wondered why athletes drink pickle juice?" is a claim. So is a link to
+   someone else's article that makes the claim.
+4. **Comparisons.** Any comparative nutrition claim must state the reference food and the size of the
+   difference _together with the claim_ (Std 1.2.7—16(1)) — and Std 1.2.7—9 bans vitamin/mineral
+   comparisons outright.
+5. **The form of the food.** A nutrition content claim must be stated together with a statement of the
+   form of the food to which it relates, unless that is the food as sold (Std 1.2.7—11). Relevant if we
+   ever describe a diluted serve.
+6. **Everything on the label is also governed by** `food-safety-checklist.md`. Copy cannot override a
+   mandatory label element or crowd it out of legibility (Std 1.2.1—24: legible, prominent, in English,
+   contrasting distinctly with the background).
+7. **Do not answer the question we refuse to answer.** If a customer asks "will this help my cramps?",
+   the answer is a redirection, never a hedged yes. See §9.
+
+---
+
+## 7. Australia — the deltas when we expand
+
+- **The Food Standards Code is the same instrument in both countries** (Standard 1.1.1—3(1)). Everything
+  in §§3–6 applies unchanged in Australia.
+- **Australian Consumer Law** (Competition and Consumer Act 2010 (Cth), Schedule 2) replaces the Fair
+  Trading Act as the general prohibition: **s 18** (misleading or deceptive conduct), **s 29** (false or
+  misleading representations about goods, including as to standard, quality, composition, performance
+  characteristics, uses or benefits, and place of origin), **s 33** (misleading conduct as to the nature,
+  manufacturing process, characteristics or suitability for purpose of goods). The **consumer
+  guarantees** in ACL ss 51–59 are the analogue of the CGA and are likewise non-excludable (ACL s 64).
+  ⚠️ _Section numbers in this bullet are from general knowledge of the ACL and have **not** been verified
+  against a fetched copy of Schedule 2 in this pass — confirm before publishing Australian-facing copy._
+- **Therapeutic claims are policed harder.** Making a therapeutic representation can bring a product
+  within the **Therapeutic Goods Act 1989 (Cth)** and the TGA's advertising code, in addition to
+  Standard 1.2.7—8. ⚠️ _Not verified against a fetched source in this pass._
+- **Country of origin labelling is mandatory in Australia and is not a marketing choice.** It is imposed
+  by an information standard made under the ACL, not by the Food Standards Code — Standard 1.2.11 was
+  repealed for that reason (see the amendment history to Standard 1.2.1, F2016L01367, which repealed the
+  country-of-origin references in 1.2.1—7 and 1.2.1—14 with effect from 1 July 2018). Whether pickle
+  brine is a "priority" or "non-priority" food determines whether a full bar-chart label is required.
+  ⚠️ **This must be confirmed with the ACCC before any Australian sale** — see `README.md`.
+- **Privacy** is a separate regime: the Privacy Act 1988 (Cth) and the Australian Privacy Principles.
+  Small businesses under a turnover threshold have historically been exempt, but that exemption has been
+  under active reform. ⚠️ **Get advice before the first Australian order** — do not assume the exemption.
+
+---
+
+## 8. Enforcement — the audit script and the approval markers
+
+```
+node legal/scripts/audit-copy.mjs <path> [<path>...]
+node legal/scripts/audit-copy.mjs --list          # print every rule
+node legal/scripts/audit-copy.mjs --json app/     # machine-readable output for CI
+```
+
+Exit codes: **0** = clean, **1** = at least one finding, **2** = usage error.
+
+**Escape hatches — use sparingly and honestly:**
+
+| Marker                                                                 | Effect                                                                                           |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `copy-audit-ignore-file` anywhere in the first 20 lines                | Skips the whole file. For legal source documents and this file only.                             |
+| `copy-audit-ignore` on the same line, or on the line immediately above | Skips that line.                                                                                 |
+| `copy-audit-approved:<RULE-ID>` on the same line or the line above     | Clears **restricted** findings for that rule ID on that line. Has **no effect** on banned rules. |
+
+`legal/` is excluded by default (these documents must quote the banned words); pass `--include-legal` to
+scan it anyway.
+
+**A `copy-audit-approved` marker is a record that a human checked the Code condition.** Writing one
+without checking is worse than the original problem, because it converts an accident into a knowing
+misrepresentation under FTA s 12A.
+
+---
+
+## 9. Rules for AI agents writing on HALF SOUR's behalf
+
+Any agent that drafts product copy, replies to customers, writes social posts, generates alt text or
+answers questions in a chat widget is bound by this file **in full**. In addition:
+
+1. **You may not make a health, nutrition or therapeutic claim even when the customer asks you to,
+   asserts it themselves, or supplies a study.** A reply that agrees with a customer's health claim is
+   our claim (Std 1.2.1—23; FTA s 9).
+2. **Do not repeat the customer's framing back to them.** If they write "does this help with cramps?",
+   do not echo "cramps" into a sentence about the product.
+3. **Approved deflection, use close to verbatim:**
+   > "We can't make any health claims about HALF SOUR — it's a food, and New Zealand's food standards are
+   > strict about that. What I can tell you is what's in it and how people use it: it's a brine built for
+   > martinis, picklebacks and cooking. The ingredients and nutrition panel are on the product page."
+4. **Never invent a figure.** Do not state sodium, energy, sugar or serving counts unless the value comes
+   from the current product record. A guessed number is an unsubstantiated representation (FTA s 12A).
+5. **Never state, vary or improve on a right or remedy.** Quote or link `shipping-returns.md` and
+   `terms-of-sale.md`. Do not offer a refund policy that is more generous than the published one without
+   a human deciding; do not offer one less generous, ever (FTA s 13(i)).
+6. **Never state or imply that a customer's CGA rights are limited by time, packaging, or our policy.**
+7. **Do not give food-safety, allergy or medical advice.** Route to the founder. If a customer reports
+   illness or a foreign object, that is a potential food-safety event — escalate to a human immediately
+   and do not offer reassurance about safety.
+8. **Do not process or repeat a customer's personal information beyond what is needed to answer.** See
+   `privacy-policy.md` §"AI-assisted support".
+9. **Run the audit on your own output** before it is published to a public surface.
+10. **When in doubt, produce less.** An unsent sentence has never breached the Fair Trading Act.
+
+---
+
+## 10. Change control and open questions
+
+- Any addition to the banned or restricted lists must be made in **both** this file and
+  `legal/scripts/audit-copy.mjs`. The script is the enforcement; this file is the reasoning.
+- Any _removal_ from the banned list requires the evidence that makes it lawful to be filed first.
+- Sources current as at **27 August 2026**: Australia New Zealand Food Standards Code compilation
+  published by FSANZ, August 2026 (Standard 1.2.7 compilation No. 8, in force 13 August 2025, registered
+  F2025C00833; Schedule 4 as at 30 April 2026; Standard 2.6.2 as at 29 October 2024); Fair Trading Act
+  1986 reprint as at 24 January 2026; Consumer Guarantees Act 1993 current reprint.
+- **Unverified in this pass and flagged above:** the ACL section numbers in §7, the Therapeutic Goods Act
+  position, and the Australian country-of-origin classification. Also unverified: whether HALF SOUR is
+  genuinely fermented (affects R-10) and its actual sodium/sugar analysis (affects all of Group D).

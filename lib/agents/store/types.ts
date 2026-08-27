@@ -220,6 +220,12 @@ export interface AgentStore {
   createApproval(input: CreateApprovalInput): Promise<ApprovalRecord>;
   getApproval(approvalId: string): Promise<ApprovalRecord | null>;
   decideApproval(input: DecideApprovalInput): Promise<ApprovalRecord>;
+  /** Stamp an approved row as carried out. Mirrors `approvals_applied_requires_approved`. */
+  markApprovalApplied(
+    approvalId: string,
+    appliedAt: string,
+    appliedResult: JsonValue,
+  ): Promise<ApprovalRecord>;
   listApprovals(query: ApprovalQuery): Promise<ApprovalRecord[]>;
 
   recordCost(input: RecordCostInput): Promise<CostRecord>;
