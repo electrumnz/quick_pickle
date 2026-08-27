@@ -90,3 +90,19 @@ Card upgrades this unlocks:
 
 Constraint carried into every generation: no kiwiana, no retro-deli, and no image that
 implies a health claim (no gym, no supplement-aisle styling, no "recovery" context).
+
+### 2026-08-27 — Unattended overnight run
+User handed the campaign over to run overnight ("run the gauntlet, see you in the morning").
+
+HARD CONSTRAINTS while unattended:
+- DO NOT buy a domain. F2 deploys to the free Vercel domain only (half-sour.vercel.app or
+  whatever Vercel assigns). Domain purchase queues for the user.
+- No other irreversible or spending action without the user: no paid Supabase project, no
+  sending real email, no publishing to real social accounts, no Shopify plan change, no
+  charging a card. These queue in decisions.md and wait.
+- The Shopify store is REAL. Products may be created there (the catalogue is empty and that
+  is the point), but do not touch billing, do not publish the storefront to a live domain,
+  and do not process a real payment. Test orders only via draft orders / Bogus Gateway.
+
+Reversible decisions may be made alone. Log every one to decisions.md with the reasoning and
+the alternative not taken, and surface the list at hand-back.

@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = Number(process.env.PORT ?? 3000);
-const baseURL = `http://127.0.0.1:${PORT}`;
+const baseURL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -14,9 +14,7 @@ export default defineConfig({
     baseURL,
     trace: "on-first-retry",
   },
-  projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-  ],
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: `npx next dev --port ${PORT}`,
     url: baseURL,

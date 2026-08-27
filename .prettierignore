@@ -12,3 +12,4 @@ brand/
 legal/
 .claude/
 **/*.md
+.env.example
