@@ -224,6 +224,26 @@ export interface BottleModelProps extends Partial<BottleMaterialProps> {
   tier?: QualityTier;
   /** Freeze all time-based motion. Used by reduced-motion and by captures. */
   paused?: boolean;
+  /**
+   * Strength of the look-at-the-viewer parallax, in radians of yaw/pitch.
+   * Driven by the pointer on a mouse, by device orientation on a phone that
+   * grants it, and by an autonomous drift otherwise — see `parallaxMode`.
+   */
+  pointerParallax?: number;
+  /**
+   * How the parallax is driven.
+   * - `auto` (default): fine pointer -> pointer, coarse pointer -> device
+   *   orientation when it reports, otherwise an autonomous drift.
+   * - `pointer` | `orientation` | `drift` force one source.
+   * - `off` disables parallax entirely.
+   */
+  parallaxMode?: "auto" | "pointer" | "orientation" | "drift" | "off";
+  /**
+   * Seconds for `pourProgress` to catch up to a new value. Damping here is
+   * what keeps a scroll-scrubbed pour smooth under touch momentum and iOS
+   * elastic overscroll, where progress arrives in coarse, bursty steps.
+   */
+  progressSmoothing?: number;
 }
 
 export interface BottleSceneProps extends BottleModelProps {
