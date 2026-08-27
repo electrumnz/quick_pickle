@@ -88,6 +88,10 @@ class PgliteExecutor implements SqlExecutor {
     }
   }
 
+  async execScript(text: string): Promise<void> {
+    await this.db.exec(text);
+  }
+
   async close(): Promise<void> {
     await this.db.close();
   }

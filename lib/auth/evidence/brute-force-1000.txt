@@ -1,0 +1,18 @@
+HALF SOUR — admin auth evidence
+1000 failed sign-in attempts against the real route handler
+Store: PGlite (real Postgres) with supabase/migrations applied verbatim
+
+attempts driven ............ 1000
+audit_log rows written ..... 1000
+admin_sessions rows created  0
+
+audit_log breakdown by after_data->>'reason':
+  locked_out     993
+  bad_password   4
+  rate_limited   4
+
+final throttle state:
+  ip     {"scope":"ip","subject":"203.0.113.66","consecutiveFailures":1000,"totalFailures":1000,"totalAttempts":1000,"lastFailureAt":"2026-01-01T00:06:39.600Z","lastSuccessAt":null,"lockedUntil":"2026-01-01T00:15:02.800Z","lockCount":1}
+  global {"scope":"global","subject":"*","consecutiveFailures":1000,"totalFailures":1000,"totalAttempts":1000,"lastFailureAt":"2026-01-01T00:06:39.600Z","lastSuccessAt":null,"lockedUntil":"2026-01-01T00:15:15.600Z","lockCount":2}
+
+clock at end of run: 2026-01-01T00:06:40.000Z

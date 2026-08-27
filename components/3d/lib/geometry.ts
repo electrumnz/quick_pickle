@@ -132,7 +132,10 @@ export function buildLabelGeometry(
       const sn = Math.sin(a);
       positions.push(c * r, y, sn * r);
       normals.push(c * s.n.x, s.n.y, sn * s.n.x);
-      uvs.push(j / segments, arc[i]! / total);
+      // u runs the way the label is read, not the way the ring is built: the
+      // lathe winds anticlockwise seen from +Z, which mirrors artwork, and
+      // the quarter turn puts the seam at the back where it belongs.
+      uvs.push(0.75 - j / segments, arc[i]! / total);
     }
   }
   const stride = segments + 1;

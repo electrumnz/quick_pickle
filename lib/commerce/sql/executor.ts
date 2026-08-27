@@ -39,6 +39,13 @@ export interface SqlExecutor {
    */
   transaction<T>(fn: (tx: SqlExecutor) => Promise<T>): Promise<T>;
 
+  /**
+   * Run a multi-statement script — a migration or a seed file. No parameters,
+   * because the extended query protocol only carries one statement at a time;
+   * this is the simple-query path and is never given caller-supplied data.
+   */
+  execScript(text: string): Promise<void>;
+
   close(): Promise<void>;
 }
 

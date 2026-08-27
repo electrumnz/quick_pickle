@@ -82,7 +82,17 @@ describe("tokens.css carries the brand's own numbers", () => {
   });
 
   it("adds no colour the brand did not author", () => {
+    // Tailwind's stock palette is cleared in tokens.css; these four are the
+    // achromatic primitives that survive, and they are not pigments.
+    const ACHROMATIC = [
+      "--color-transparent",
+      "--color-current",
+      "--color-inherit",
+      "--color-black",
+      "--color-white",
+    ];
     const authored = new Set<string>([
+      ...ACHROMATIC,
       ...Object.keys(LIGHT_PIGMENTS).map((n) => cssVarFor("light", n)),
       ...Object.keys(DARK_PIGMENTS).map((n) => cssVarFor("dark", n)),
     ]);

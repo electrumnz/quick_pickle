@@ -169,9 +169,6 @@ function buildFragment(kind: "body" | "surface") {
   float hsUnder = exp(-max(hsDepth - uHeight * 0.016, 0.0) / (uHeight * 0.01));
   hsCol += uCloudColor * hsBand * 0.42;
   hsCol *= 1.0 - hsUnder * 0.22;
-  if (!gl_FrontFacing) {
-    hsCol = mix(hsCol * 0.45, uDeep, 0.45);
-  }
   diffuseColor.rgb = hsCol;
 `;
 
@@ -227,7 +224,10 @@ export function createLiquidMaterial(
     // that use the built-in transmission path.
     transparent: params.opacity < 0.999,
     opacity: params.opacity,
-    side: kind === "body" ? THREE.DoubleSide : THREE.FrontSide,
+    // Back faces only. The visible colour of a volume is what the ray has
+    // accumulated by the time it reaches the far interface — and drawing the
+    // near wall as well would bury every suspended seed behind it.
+    side: kind === "body" ? THREE.BackSide : THREE.FrontSide,
     envMapIntensity: params.envMapIntensity,
     clearcoat: kind === "surface" ? 0.6 : 0,
     clearcoatRoughness: 0.08,

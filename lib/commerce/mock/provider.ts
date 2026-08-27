@@ -1958,9 +1958,12 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
 
       await tx.query(
         `update public.orders
-            set fulfillment_status = $2,
-                fulfilled_at = case when $2 in ('fulfilled', 'delivered')
-                                    then coalesce(fulfilled_at, $3) else fulfilled_at end,
+            set fulfillment_status = $2::public.order_fulfillment_status,
+                fulfilled_at = case
+                  when $2::public.order_fulfillment_status
+                       in ('fulfilled', 'delivered')
+                  then coalesce(fulfilled_at, $3::timestamptz)
+                  else fulfilled_at end,
                 tracking_carrier = $4, tracking_number = $5, tracking_url = $6
           where id = $1`,
         [

@@ -26,7 +26,12 @@ import {
 } from "../errors";
 import { toJsonValue, type JsonObject, type JsonValue } from "../json";
 import type { AgentLogger } from "../logger";
-import type { ApprovalRisk, ApprovalSubject, ToolEffect } from "../types";
+import {
+  alwaysRequiresApproval,
+  type ApprovalRisk,
+  type ApprovalSubject,
+  type ToolEffect,
+} from "../types";
 import { consumeEffectGrant, type EffectGrant } from "./effects";
 
 /**
@@ -207,9 +212,16 @@ export function defineTool<TInput, TOutput>(
 /**
  * Run a tool.
  *
- * The single entry point. For any effect class other than `read`, a
- * runtime-minted {@link EffectGrant} is mandatory and is spent here. There is no
- * path that reaches the executor without passing this check.
+ * The single entry point, and the only place a tool's code is reachable.
+ *
+ * For `storefront_write` and `external` — the two classes that change what
+ * customers see or leave the company — a runtime-minted {@link EffectGrant} is
+ * mandatory. A grant cannot exist without an approved `approvals` row covering
+ * these exact arguments, so those effects cannot happen without one.
+ *
+ * An internal `business_write` is gated by the autonomy dial rather than by a
+ * capability, but when the runtime did route it through the queue, the grant it
+ * minted is still spent here.
  */
 export async function invokeTool(
   definition: ToolDefinition,
@@ -217,18 +229,18 @@ export async function invokeTool(
   context: ToolExecutionContext,
   grant?: EffectGrant,
 ): Promise<unknown> {
-  if (definition.effect !== "read") {
-    if (grant === undefined) {
-      throw new ApprovalGateError(
-        "grant_missing",
-        `Tool "${definition.name}" has effect "${definition.effect}" and cannot execute without an approval-backed grant.`,
-        {
-          tool: definition.name,
-          effect: definition.effect,
-          runId: context.runId,
-        },
-      );
-    }
+  if (alwaysRequiresApproval(definition.effect) && grant === undefined) {
+    throw new ApprovalGateError(
+      "grant_missing",
+      `Tool "${definition.name}" has effect "${definition.effect}" and cannot execute without an approval-backed grant.`,
+      {
+        tool: definition.name,
+        effect: definition.effect,
+        runId: context.runId,
+      },
+    );
+  }
+  if (grant !== undefined) {
     consumeEffectGrant(grant, {
       toolName: definition.name,
       runId: context.runId,

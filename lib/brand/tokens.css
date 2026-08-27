@@ -35,6 +35,17 @@
    1. PIGMENTS + 2. SCALES
    ---------------------------------------------------------------------- */
 @theme {
+  /* Tailwind's stock palette is cleared. There is no `bg-emerald-600` and no
+     `text-slate-400` in this build to reach for by accident — the only colour
+     utilities that exist are the brand's own and the achromatic primitives
+     below. Making the unsanctioned hard is half of what a token layer is for. */
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-inherit: inherit;
+  --color-black: #000000; /* achromatic primitive: scrims, overlays, alpha rules */
+  --color-white: #ffffff; /* achromatic primitive: scrims, overlays, alpha rules */
+
   /* --- Light palette — brand/_src/palette.py LIGHT ---------------------- */
   --color-ink: #0f1511; /* Primary type, rules, the mark */
   --color-pepper: #4e554a; /* Secondary type, captions, metadata */
@@ -60,15 +71,17 @@
   --color-ember: #e08163; /* Errors, sold-out */
 
   /* --- Families -------------------------------------------------------- */
-  /* --font-fraunces / --font-inter-tight are injected by next/font from
-     lib/brand/fonts.ts. The fallback stacks are metric-matched by next/font,
-     which is what keeps CLS at zero while the webfont loads. */
+  /* --font-fraunces and --font-inter-tight are injected by next/font from
+     lib/brand/fonts.ts, and each already ENDS in its metric-matched adjusted
+     face ("Fraunces Fallback", "Inter Tight Fallback") plus the Linux-metric
+     twins declared below. Everything after them here is the human fallback,
+     which only gets a look in if none of those resolve. */
   --font-display:
-    var(--font-fraunces), "Iowan Old Style", "Palatino Linotype", Palatino,
-    Georgia, "Times New Roman", serif;
+    var(--font-fraunces), "Fraunces Fallback Metric", "Iowan Old Style",
+    "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
   --font-sans:
-    var(--font-inter-tight), ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    var(--font-inter-tight), "Inter Tight Fallback Metric", ui-sans-serif,
+    system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-mono:
     ui-monospace, "SF Mono", "SFMono-Regular", "Roboto Mono", Menlo, Consolas,
     monospace;
@@ -155,18 +168,21 @@
   /* Base step drives Tailwind's whole numeric scale (p-4 = 1rem). */
   --spacing: 0.25rem;
 
-  /* Fluid layout spacing, 375px → 1920px. Endpoints asserted in CI. */
-  --space-gutter: clamp(1.25rem, 0.8252rem + 1.8123vw, 3rem);
-  --space-section: clamp(3.5rem, 1.9223rem + 6.7314vw, 10rem);
-  --space-block: clamp(2rem, 1.3932rem + 2.589vw, 4.5rem);
-  --space-stack: clamp(1rem, 0.8786rem + 0.5178vw, 1.5rem);
-  --space-inline: clamp(0.5rem, 0.4393rem + 0.2589vw, 0.75rem);
+  /* Fluid layout spacing, 375px → 1920px. Endpoints asserted in CI.
+     Named keys in the --spacing-* namespace, so p-gutter, gap-stack,
+     py-section and friends exist as utilities. */
+  --spacing-gutter: clamp(1.25rem, 0.8252rem + 1.8123vw, 3rem);
+  --spacing-section: clamp(3.5rem, 1.9223rem + 6.7314vw, 10rem);
+  --spacing-block: clamp(2rem, 1.3932rem + 2.589vw, 4.5rem);
+  --spacing-stack: clamp(1rem, 0.8786rem + 0.5178vw, 1.5rem);
+  --spacing-inline: clamp(0.5rem, 0.4393rem + 0.2589vw, 0.75rem);
 
   /* --- Measure and page width ------------------------------------------ */
-  --measure-prose: 66ch;
-  --measure-narrow: 46ch;
-  --page-max: 90rem; /* 1440px: content stops growing before 1920 */
-  --page-max-wide: 105rem; /* 1680px: full-bleed editorial bands */
+  /* --container-* drives max-w-* and w-*: max-w-prose, max-w-page. */
+  --container-prose: 66ch;
+  --container-narrow: 46ch;
+  --container-page: 90rem; /* 1440px: content stops growing before 1920 */
+  --container-wide: 105rem; /* 1680px: full-bleed editorial bands */
 
   /* --- Radius ---------------------------------------------------------- */
   /* Editorial and square by default; softness is the exception. */
@@ -502,3 +518,40 @@
 @custom-variant fine (@media (hover: hover) and (pointer: fine));
 @custom-variant reduce-motion (@media (prefers-reduced-motion: reduce));
 @custom-variant full-motion (@media (prefers-reduced-motion: no-preference));
+
+/* -------------------------------------------------------------------------
+   5. Metric-matched fallbacks for Linux
+   ---------------------------------------------------------------------- */
+/* next/font's own adjusted faces point at local(Times New Roman) and
+   local(Arial), which do not exist on most Linux boxes — including the CI
+   runners and the Lighthouse container. These two faces carry the identical
+   overrides against the metric-compatible Liberation / Nimbus / Croscore
+   families, so a Linux browser gets the same box the webfont will occupy and
+   the swap still costs nothing.
+
+   The numbers are not invented: they are next/font's, recomputed from the
+   capsize metrics that ship with Next —
+     Fraunces    xWidthAvg 938/2000  vs Times New Roman 832/2048
+     Inter Tight xWidthAvg 880/2048  vs Arial           913/2048
+   which is why they match the emitted faces to the second decimal. */
+@font-face {
+  font-family: "Fraunces Fallback Metric";
+  src:
+    local("Liberation Serif"), local("Tinos"), local("Nimbus Roman"),
+    local("Nimbus Roman No9 L"), local("Times New Roman");
+  ascent-override: 84.71%;
+  descent-override: 22.09%;
+  line-gap-override: 0%;
+  size-adjust: 115.45%;
+}
+
+@font-face {
+  font-family: "Inter Tight Fallback Metric";
+  src:
+    local("Liberation Sans"), local("Arimo"), local("Nimbus Sans"),
+    local("Helvetica"), local("Arial");
+  ascent-override: 100.51%;
+  descent-override: 25.03%;
+  line-gap-override: 0%;
+  size-adjust: 96.39%;
+}

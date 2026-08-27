@@ -77,7 +77,7 @@ export function createCapMaterial(
   });
   const uniforms = {
     uKnurlCount: { value: knurlCount },
-    uKnurlDepth: { value: knurlDepth * radius * 0.06 },
+    uKnurlDepth: { value: knurlDepth * radius * 0.14 },
     uBandLo: { value: height * 0.926 },
     uBandHi: { value: height * 1.008 },
   };

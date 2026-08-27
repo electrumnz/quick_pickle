@@ -40,6 +40,52 @@ class EnvBoundary extends Component<
  * source, and a warm source directly behind to push light through the brine.
  * The HDRI underneath supplies the room; the strips supply the edges.
  */
+/**
+ * Soft-edged softbox gradient.
+ *
+ * A flat emissive rectangle reflects in glass as a flat rectangle with hard
+ * corners, and hard-edged highlights are the loudest CG tell there is. Real
+ * softboxes fall off toward their edges, so the highlight running down the
+ * bottle has a gradient in it. One small canvas buys that.
+ */
+function useSoftboxTexture() {
+  return useMemo(() => {
+    if (typeof document === "undefined") return null;
+    const c = document.createElement("canvas");
+    c.width = 64;
+    c.height = 256;
+    const ctx = c.getContext("2d");
+    if (!ctx) return null;
+    const img = ctx.createImageData(c.width, c.height);
+    for (let y = 0; y < c.height; y++) {
+      for (let x = 0; x < c.width; x++) {
+        const u = (x + 0.5) / c.width - 0.5;
+        const v = (y + 0.5) / c.height - 0.5;
+        // Wide, gentle falloff across the strip; a harder shoulder along it,
+        // so the highlight has ends without looking clipped.
+        const a = Math.pow(
+          Math.max(0, 1 - Math.pow(Math.abs(u) * 2, 2.4)),
+          1.1,
+        );
+        const b = Math.pow(
+          Math.max(0, 1 - Math.pow(Math.abs(v) * 2, 5.5)),
+          0.8,
+        );
+        const k = Math.round(255 * a * b);
+        const i = (y * c.width + x) * 4;
+        img.data[i] = 255;
+        img.data[i + 1] = 255;
+        img.data[i + 2] = 255;
+        img.data[i + 3] = k;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+}
+
 function Rig({
   studio,
   resolution,
@@ -47,6 +93,7 @@ function Rig({
   studio: StudioParams;
   resolution: number;
 }) {
+  const soft = useSoftboxTexture();
   const lights = (
     <>
       {/* Key: tall and narrow, just off-axis. This is the highlight that runs
@@ -59,6 +106,8 @@ function Rig({
         rotation={[0, Math.PI / 2, 0]}
         scale={studio.keyScale}
         target={[0, 0.45, 0]}
+        map={soft ?? undefined}
+        toneMapped={false}
       />
       {/* Fill: cooler, wider, softer — separates the far edge from the set
           without flattening the form. */}
@@ -70,6 +119,8 @@ function Rig({
         rotation={[0, -Math.PI / 2, 0]}
         scale={studio.fillScale}
         target={[0, 0.45, 0]}
+        map={soft ?? undefined}
+        toneMapped={false}
       />
       {/* Overhead diffusion. */}
       <Lightformer
@@ -79,6 +130,8 @@ function Rig({
         position={[0, 3.2, 0.4]}
         rotation={[Math.PI / 2, 0, 0]}
         scale={[3.5, 3.5]}
+        map={soft ?? undefined}
+        toneMapped={false}
       />
       {/* Backlight. Everything that makes the brine glow rather than
           silhouette comes from this one. */}
@@ -223,7 +276,7 @@ export function StudioEnvironment({
           studio.keyPosition[1] * 2 + 2,
           studio.keyPosition[2] * 2,
         ]}
-        intensity={0.85}
+        intensity={0.45}
         color={studio.keyColor as string}
       />
 

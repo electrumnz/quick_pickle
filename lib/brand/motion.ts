@@ -77,6 +77,14 @@ export interface MotionDistance {
   readonly parallax: number;
 }
 
+/** Multipliers for the two transforms that are not travel. */
+export interface MotionScale {
+  /** The "look here" beat. 1 means the emphasis is carried some other way. */
+  readonly emphasis: number;
+  /** Press-down on a control. */
+  readonly press: number;
+}
+
 /** How a scroll-linked sequence behaves. */
 export interface MotionScrub {
   /**
@@ -122,6 +130,7 @@ export interface MotionProfile {
   readonly easing: MotionEasings;
   readonly stagger: MotionStagger;
   readonly distance: MotionDistance;
+  readonly scale: MotionScale;
   readonly scrub: MotionScrub;
   readonly springs: MotionSprings;
   /**
@@ -160,6 +169,7 @@ export const fullMotion: MotionProfile = {
     maxTotal: 900,
   },
   distance: { sm: 8, md: 24, lg: 48, parallax: 96 },
+  scale: { emphasis: 1.04, press: 0.98 },
   scrub: {
     mode: "continuous",
     start: 0.15,
@@ -218,6 +228,9 @@ export const reducedMotion: MotionProfile = {
     maxTotal: 400,
   },
   distance: { sm: 0, md: 0, lg: 0, parallax: 0 },
+  // Scale is displacement too. The emphasis beat survives as a ring of accent
+  // pulsing out from the element instead — see the hs-emphasis keyframes.
+  scale: { emphasis: 1, press: 1 },
   scrub: {
     mode: "threshold",
     start: 0.25,
@@ -334,4 +347,28 @@ export const MOTION_VARS = {
     lg: "--motion-distance-lg",
     parallax: "--motion-distance-parallax",
   },
+  scale: {
+    emphasis: "--motion-scale-emphasis",
+    press: "--motion-scale-press",
+  },
+} as const;
+
+/**
+ * Keyframes published by tokens.css. Every one is written in terms of the
+ * --motion-* custom properties, so under `prefers-reduced-motion: reduce` the
+ * SAME animation becomes the reduced design — `hs-enter` loses its travel and
+ * is a fade, `hs-emphasis` loses its scale and is a ring of accent. Nothing is
+ * switched off and no component needs a second code path.
+ */
+export const MOTION_KEYFRAMES = {
+  /** Arrive: rise and fade in. Reduced: fade in. */
+  enter: "hs-enter",
+  /** Arrive, small travel. For inline and dense items. */
+  enterSm: "hs-enter-sm",
+  /** Leave: fall away and fade out. Reduced: fade out. */
+  exit: "hs-exit",
+  /** Look here: a scale beat plus an accent ring. Reduced: the ring alone. */
+  emphasis: "hs-emphasis",
+  /** The threshold reveal a scrubbed sequence collapses to. */
+  reveal: "hs-reveal",
 } as const;

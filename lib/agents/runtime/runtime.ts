@@ -27,7 +27,7 @@ import type { ApprovalService } from "../approvals/service";
 import type { Clock } from "../clock";
 import { MODEL_CALL_TIMEOUT_MS } from "../constants";
 import type { ControlPlane } from "../control/kill-switch";
-import { ControlWatcher } from "../control/kill-switch";
+import { ControlWatcher, assertNotHalted } from "../control/kill-switch";
 import type { CostMeter } from "../cost/meter";
 import { AgentRuntimeError, isAgentRuntimeError } from "../errors";
 import {
@@ -45,12 +45,13 @@ import {
   type ToolDefinition,
   type ToolRegistry,
 } from "../tools/registry";
-import type {
-  AgentDefinition,
-  AgentRunTrigger,
-  ApprovalRecord,
-  RunRecord,
-  ToolCallRecord,
+import {
+  alwaysRequiresApproval,
+  type AgentDefinition,
+  type AgentRunTrigger,
+  type ApprovalRecord,
+  type RunRecord,
+  type ToolCallRecord,
 } from "../types";
 import {
   composeGoalMessage,
@@ -552,11 +553,22 @@ export class AgentRuntime {
     watcher.start();
 
     try {
+      // Checked here as well as before the model call: a tool must not fire
+      // because the switch was thrown a moment after the model proposed it.
+      await assertNotHalted(this.deps.control, run.agentSlug, runId);
+
+      // An effect that leaves the company or touches the storefront must carry
+      // an approval; an internal write only carries one if the dial sent it to
+      // the queue. Either way the grant is minted from the stored row, here,
+      // inside the same step that executes the call.
+      if (alwaysRequiresApproval(toolDefinition.effect)) {
+        this.requireApprovalId(call);
+      }
       const grant =
-        toolDefinition.effect === "read"
+        call.approvalId === null
           ? undefined
           : await this.deps.approvals.grantFor({
-              approvalId: this.requireApprovalId(call),
+              approvalId: call.approvalId,
               runId,
               toolName: call.toolName,
               input: parsed,
@@ -861,14 +873,22 @@ export class AgentRuntime {
    * so it is read back from the transcript rather than held in memory — which is
    * also what lets a resumed or replayed run reproduce the prompt exactly.
    */
-  private async providerToolCallId(runId: string, call: ToolCallRecord): Promise<string> {
+  private async providerToolCallId(
+    runId: string,
+    call: ToolCallRecord,
+  ): Promise<string> {
     if (call.messageId === null) {
       return call.id;
     }
     const messages = await this.deps.store.listMessages(runId);
     const message = messages.find((entry) => entry.id === call.messageId);
     const stored = message?.contentJson;
-    if (stored === undefined || stored === null || typeof stored !== "object" || Array.isArray(stored)) {
+    if (
+      stored === undefined ||
+      stored === null ||
+      typeof stored !== "object" ||
+      Array.isArray(stored)
+    ) {
       return call.id;
     }
     const parts = stored["content"];
@@ -881,7 +901,10 @@ export class AgentRuntime {
         continue;
       }
       const record: Record<string, JsonValue> = part;
-      if (record["type"] === "tool-call" && typeof record["toolCallId"] === "string") {
+      if (
+        record["type"] === "tool-call" &&
+        typeof record["toolCallId"] === "string"
+      ) {
         ids.push(record["toolCallId"]);
       }
     }

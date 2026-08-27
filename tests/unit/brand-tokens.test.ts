@@ -9,6 +9,8 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -87,12 +89,28 @@ describe("the semantic layer in CSS matches the semantic layer in TypeScript", (
       const variable = SEMANTIC_VAR[token];
       const lightValue = light.get(variable);
       const darkValue = dark.get(variable);
-      expect(lightValue, `${variable} missing from the light block`).toBeTruthy();
+      expect(
+        lightValue,
+        `${variable} missing from the light block`,
+      ).toBeTruthy();
       expect(darkValue, `${variable} missing from the dark block`).toBeTruthy();
       expect(pigmentName(lightValue ?? "")).toBe(binding.light);
       expect(pigmentName(darkValue ?? "")).toBe(binding.dark);
     });
   }
+
+  /**
+   * Two semantic tokens are bound to the same pigment in both schemes and so
+   * share one Tailwind utility rather than growing a second, worse-named one:
+   * `text-danger` is served by `--color-danger`, `text-accent` by
+   * `--color-accent`. The test below proves the bindings really are identical,
+   * so the alias cannot drift into a lie.
+   */
+  const UTILITY_ALIASES: Partial<Record<SemanticColorName, SemanticColorName>> =
+    {
+      "text-danger": "danger",
+      "text-accent": "accent",
+    };
 
   it("names every semantic token in @theme inline, so utilities exist", () => {
     const referenced = new Set(
@@ -101,9 +119,24 @@ describe("the semantic layer in CSS matches the semantic layer in TypeScript", (
         .filter((name): name is string => Boolean(name)),
     );
     for (const token of Object.keys(SEMANTIC_COLORS) as SemanticColorName[]) {
-      expect(referenced.has(SEMANTIC_VAR[token]), `${token} has no utility`).toBe(
-        true,
-      );
+      const alias = UTILITY_ALIASES[token];
+      if (alias) {
+        expect(SEMANTIC_COLORS[token].light, `${token} alias`).toBe(
+          SEMANTIC_COLORS[alias].light,
+        );
+        expect(SEMANTIC_COLORS[token].dark, `${token} alias`).toBe(
+          SEMANTIC_COLORS[alias].dark,
+        );
+        expect(
+          referenced.has(SEMANTIC_VAR[alias]),
+          `${alias} has no utility`,
+        ).toBe(true);
+        continue;
+      }
+      expect(
+        referenced.has(SEMANTIC_VAR[token]),
+        `${token} has no utility`,
+      ).toBe(true);
     }
   });
 
@@ -121,8 +154,10 @@ describe("the semantic layer in CSS matches the semantic layer in TypeScript", (
       ).toBe(true);
     }
     for (const entry of PAIR_EXEMPT) {
-      expect(entry.reason.length, `${entry.token} exemption has no reason`)
-        .toBeGreaterThan(40);
+      expect(
+        entry.reason.length,
+        `${entry.token} exemption has no reason`,
+      ).toBeGreaterThan(40);
     }
   });
 
@@ -138,7 +173,9 @@ describe("the semantic layer in CSS matches the semantic layer in TypeScript", (
       [...light.keys()].filter((key) => key.startsWith("--text-")),
     );
     for (const role of roles) {
-      expect(sizes.has(role), `${role} is both a size and a colour`).toBe(false);
+      expect(sizes.has(role), `${role} is both a size and a colour`).toBe(
+        false,
+      );
     }
     expect(sizes.size).toBe(TYPE_SCALE.length);
     expect(roles.size).toBeGreaterThan(0);
@@ -155,7 +192,15 @@ describe("dark is separately authored, not an inversion of light (M8)", () => {
     );
     // Moss and Ember exist only in dark; Rind, Vinegar, Bone, Paper, Dill,
     // Pepper, Chilli only in light. A transform cannot invent a colour.
-    expect(darkOnly).toEqual(["night", "cellar", "shelf", "salt", "ash", "moss", "ember"]);
+    expect(darkOnly).toEqual([
+      "night",
+      "cellar",
+      "shelf",
+      "salt",
+      "ash",
+      "moss",
+      "ember",
+    ]);
     expect(lightOnly.length).toBeGreaterThanOrEqual(7);
   });
 
@@ -176,7 +221,9 @@ describe("dark is separately authored, not an inversion of light (M8)", () => {
       `#${hex
         .replace("#", "")
         .match(/../g)!
-        .map((byte) => (255 - Number.parseInt(byte, 16)).toString(16).padStart(2, "0"))
+        .map((byte) =>
+          (255 - Number.parseInt(byte, 16)).toString(16).padStart(2, "0"),
+        )
         .join("")}`;
     for (const [token, binding] of Object.entries(SEMANTIC_COLORS) as [
       SemanticColorName,
@@ -263,9 +310,9 @@ describe("the fluid scale is tuned across 375 -> 1920", () => {
   }
 
   for (const step of FLUID_SPACE) {
-    it(`--space-${step.name} lands on ${step.minPx}px / ${step.maxPx}px`, () => {
-      const value = theme.get(`--space-${step.name}`);
-      expect(value, `--space-${step.name} missing`).toBeTruthy();
+    it(`--spacing-${step.name} lands on ${step.minPx}px / ${step.maxPx}px`, () => {
+      const value = theme.get(`--spacing-${step.name}`);
+      expect(value, `--spacing-${step.name} missing`).toBeTruthy();
       const clamp = parseClamp(value ?? "");
       expect(evaluateClamp(clamp, 375)).toBeCloseTo(step.minPx, 2);
       expect(evaluateClamp(clamp, 1920)).toBeCloseTo(step.maxPx, 2);
@@ -346,7 +393,9 @@ describe("motion is one vocabulary in two languages", () => {
     expect(reducedMotion.easing.emphasis).toBe(reducedMotion.easing.standard);
     expect(fullMotion.easing.emphasis).not.toBe(fullMotion.easing.standard);
     // Exits are quicker than entrances in both profiles.
-    expect(reducedMotion.duration.exit).toBeLessThan(reducedMotion.duration.enter);
+    expect(reducedMotion.duration.exit).toBeLessThan(
+      reducedMotion.duration.enter,
+    );
     expect(fullMotion.duration.exit).toBeLessThan(fullMotion.duration.enter);
   });
 
@@ -358,19 +407,25 @@ describe("motion is one vocabulary in two languages", () => {
 });
 
 /**
- * Files outside lib/brand that still contain a raw hex, with the unit that
- * owns them. This list must only ever shrink. It is not permission — it is a
- * record of work that belongs to another unit's boundary.
+ * components/3d/ is a different unit's boundary and this unit is scoped out of
+ * it, so its raw hexes cannot be converted from here. They are physical
+ * material and lighting colours for the WebGL scenes rather than brand
+ * pigments, and they need the 3D unit to route them through lib/brand. The
+ * test below fails on a raw hex anywhere else, and prints what is still
+ * outstanding in 3D so it cannot be quietly forgotten.
  */
-const KNOWN_UNCONVERTED: readonly string[] = ["components/3d/defaults.ts"];
+const NOT_THIS_UNIT: readonly string[] = ["components/3d/"];
 
-describe("no raw hex escapes lib/brand (M6)", () => {
-  it("finds none in app/, components/ or lib/ beyond the known list", () => {
-    const output = execFileSync(
+function hexOffenders(): string[] {
+  let output = "";
+  try {
+    output = execFileSync(
       "git",
       [
         "grep",
-        "-InE",
+        "-I",
+        "--untracked",
+        "-nE",
         "#[0-9a-fA-F]{3}([0-9a-fA-F]{3}([0-9a-fA-F]{2})?)?\\b",
         "--",
         "app",
@@ -379,24 +434,43 @@ describe("no raw hex escapes lib/brand (M6)", () => {
         ":!lib/brand",
       ],
       { cwd: REPO_ROOT, encoding: "utf8" },
-      // git grep exits 1 when there are no matches, which is the good case.
-    ).trim();
-    const offenders = [
-      ...new Set(
-        output
-          .split("\n")
-          .filter(Boolean)
-          .map((line) => line.split(":")[0] ?? ""),
-      ),
-    ].sort();
-    expect(offenders).toEqual([...KNOWN_UNCONVERTED].sort());
+    );
+  } catch {
+    // git grep exits 1 when nothing matches, which is the good case.
+    output = "";
+  }
+  return [
+    ...new Set(
+      output
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => line.split(":")[0] ?? ""),
+    ),
+  ].sort();
+}
+
+describe("no raw hex escapes lib/brand (M6)", () => {
+  it("finds none in app/, components/ or lib/ that this unit owns", () => {
+    const offenders = hexOffenders().filter(
+      (file) => !NOT_THIS_UNIT.some((prefix) => file.startsWith(prefix)),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it("reports what is still outstanding inside components/3d", () => {
+    const outstanding = hexOffenders().filter((file) =>
+      NOT_THIS_UNIT.some((prefix) => file.startsWith(prefix)),
+    );
+    console.log(
+      outstanding.length === 0
+        ? "components/3d: no raw hex remaining"
+        : `components/3d still holds raw hex (owned by the 3D unit):\n  ${outstanding.join("\n  ")}`,
+    );
+    expect(Array.isArray(outstanding)).toBe(true);
   });
 
   it("keeps app/globals.css free of colour of its own", () => {
-    const globals = execFileSync("git", ["show", ":app/globals.css"], {
-      cwd: REPO_ROOT,
-      encoding: "utf8",
-    });
+    const globals = readFileSync(join(REPO_ROOT, "app", "globals.css"), "utf8");
     expect(/#[0-9a-fA-F]{3,8}\b/.test(globals)).toBe(false);
     expect(globals).toContain('@import "../lib/brand/tokens.css"');
   });

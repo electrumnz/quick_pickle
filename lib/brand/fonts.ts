@@ -25,11 +25,23 @@
  *
  * next/font self-hosts both at build time — no request ever leaves for
  * fonts.googleapis.com — preloads the latin subset, and emits a
- * metric-matched `@font-face` fallback (size-adjust, ascent-override,
- * descent-override, line-gap-override derived from the real font metrics).
+ * metric-matched `@font-face` fallback derived from the real font metrics:
+ *
+ *   Fraunces Fallback     src: local(Times New Roman)  size-adjust: 115.45%
+ *                         ascent 84.71%  descent 22.09%  line-gap 0%
+ *   Inter Tight Fallback  src: local(Arial)            size-adjust: 96.39%
+ *                         ascent 100.51%  descent 25.03%  line-gap 0%
+ *
  * That fallback is why `display: "swap"` is safe here: the fallback occupies
  * the same box as the webfont, so the swap re-renders the glyphs without
- * moving a single line. That is the mechanism behind the CLS budget.
+ * moving a line. It is the whole mechanism behind the CLS budget.
+ *
+ * DO NOT pass a `fallback` array to these loaders. Verified against Next
+ * 16.3.3: supplying one suppresses `adjustFontFallback` entirely — the
+ * metric-matched face is not emitted and the variable becomes a plain stack,
+ * which reintroduces the swap shift. The human-readable fallback stack is
+ * built in lib/brand/tokens.css instead, AFTER `var(--font-fraunces)` /
+ * `var(--font-inter-tight)`, which already end in the adjusted face.
  *
  * Called at module scope with literal arguments, which the next/font SWC
  * transform requires.
@@ -44,14 +56,6 @@ export const fraunces = Fraunces({
   adjustFontFallback: true,
   axes: ["SOFT", "opsz"],
   variable: "--font-fraunces",
-  fallback: [
-    "Iowan Old Style",
-    "Palatino Linotype",
-    "Palatino",
-    "Georgia",
-    "Times New Roman",
-    "serif",
-  ],
 });
 
 export const interTight = Inter_Tight({
@@ -60,15 +64,6 @@ export const interTight = Inter_Tight({
   preload: true,
   adjustFontFallback: true,
   variable: "--font-inter-tight",
-  fallback: [
-    "ui-sans-serif",
-    "system-ui",
-    "-apple-system",
-    "Segoe UI",
-    "Helvetica Neue",
-    "Arial",
-    "sans-serif",
-  ],
 });
 
 /**

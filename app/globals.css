@@ -23,7 +23,7 @@
     text-size-adjust: 100%;
     scroll-behavior: smooth;
     /* Anchored sections clear a sticky header without a jump. */
-    scroll-padding-block-start: var(--space-block);
+    scroll-padding-block-start: var(--spacing-block);
   }
 
   /* Smooth scrolling is motion the user did not ask for. */

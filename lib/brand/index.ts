@@ -75,6 +75,7 @@ export {
 
 export {
   fullMotion,
+  MOTION_KEYFRAMES,
   MOTION_VARS,
   motionFor,
   prefersReducedMotion,
@@ -88,6 +89,7 @@ export {
   type MotionDurations,
   type MotionEasings,
   type MotionProfile,
+  type MotionScale,
   type MotionScrub,
   type MotionSpring,
   type MotionSprings,

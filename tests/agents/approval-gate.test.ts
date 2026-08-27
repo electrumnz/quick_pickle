@@ -40,7 +40,9 @@ function executionContext(runId: string, now: Date) {
 
 describe("M27 the approval gate cannot be bypassed", () => {
   it("refuses to execute an external tool with no grant at all", async () => {
-    const harness = await createHarness({ script: [{ kind: "text", text: "done" }] });
+    const harness = await createHarness({
+      script: [{ kind: "text", text: "done" }],
+    });
     const started = await harness.runtime.startRun({
       agentSlug: "test-role",
       goal: "bypass attempt",
@@ -58,7 +60,9 @@ describe("M27 the approval gate cannot be bypassed", () => {
   });
 
   it("refuses a grant that the runtime did not mint, even one shaped identically", async () => {
-    const harness = await createHarness({ script: [{ kind: "text", text: "done" }] });
+    const harness = await createHarness({
+      script: [{ kind: "text", text: "done" }],
+    });
     const started = await harness.runtime.startRun({
       agentSlug: "test-role",
       goal: "forge a grant",
@@ -103,7 +107,9 @@ describe("M27 the approval gate cannot be bypassed", () => {
   });
 
   it("refuses to mint a grant from an approval that is still pending", async () => {
-    const harness = await createHarness({ script: [{ kind: "text", text: "done" }] });
+    const harness = await createHarness({
+      script: [{ kind: "text", text: "done" }],
+    });
     const started = await harness.runtime.startRun({
       agentSlug: "test-role",
       goal: "mint from pending",
@@ -130,7 +136,9 @@ describe("M27 the approval gate cannot be bypassed", () => {
   });
 
   it("refuses to mint a grant from a rejected approval", async () => {
-    const harness = await createHarness({ script: [{ kind: "text", text: "done" }] });
+    const harness = await createHarness({
+      script: [{ kind: "text", text: "done" }],
+    });
     const started = await harness.runtime.startRun({
       agentSlug: "test-role",
       goal: "mint from rejected",
@@ -163,7 +171,9 @@ describe("M27 the approval gate cannot be bypassed", () => {
   });
 
   it("refuses a grant when the arguments differ from the ones approved", async () => {
-    const harness = await createHarness({ script: [{ kind: "text", text: "done" }] });
+    const harness = await createHarness({
+      script: [{ kind: "text", text: "done" }],
+    });
     const started = await harness.runtime.startRun({
       agentSlug: "test-role",
       goal: "swap the payload after approval",
@@ -196,7 +206,9 @@ describe("M27 the approval gate cannot be bypassed", () => {
   });
 
   it("refuses an approval raised by a different run", async () => {
-    const harness = await createHarness({ script: [{ kind: "text", text: "done" }] });
+    const harness = await createHarness({
+      script: [{ kind: "text", text: "done" }],
+    });
     const first = await harness.runtime.startRun({
       agentSlug: "test-role",
       goal: "run one",
@@ -234,7 +246,9 @@ describe("M27 the approval gate cannot be bypassed", () => {
   });
 
   it("spends a grant exactly once", async () => {
-    const harness = await createHarness({ script: [{ kind: "text", text: "done" }] });
+    const harness = await createHarness({
+      script: [{ kind: "text", text: "done" }],
+    });
     const started = await harness.runtime.startRun({
       agentSlug: "test-role",
       goal: "replay a grant",
@@ -285,7 +299,11 @@ describe("M27 the approval gate cannot be bypassed", () => {
     const harness = await createHarness({
       autonomy: "autonomous",
       script: [
-        toolTurn("send_external_message", EXTERNAL_ARGS, "Stock is low, so I am reordering."),
+        toolTurn(
+          "send_external_message",
+          EXTERNAL_ARGS,
+          "Stock is low, so I am reordering.",
+        ),
       ],
     });
     const started = await harness.runtime.startRun({
@@ -310,7 +328,9 @@ describe("M27 the approval gate cannot be bypassed", () => {
 
     const run = await harness.store.getRun(started.runId);
     expect(run?.status).toBe("awaiting_approval");
-    const approvals = await harness.store.listApprovals({ runId: started.runId });
+    const approvals = await harness.store.listApprovals({
+      runId: started.runId,
+    });
     expect(approvals).toHaveLength(1);
     expect(approvals[0]?.status).toBe("pending");
   });
@@ -321,7 +341,12 @@ describe("M27 the approval gate cannot be bypassed", () => {
       script: [
         toolTurn(
           "publish_storefront_change",
-          { handle: "no-01-house", field: "price_cents", value: "2200", priceCents: 2200 },
+          {
+            handle: "no-01-house",
+            field: "price_cents",
+            value: "2200",
+            priceCents: 2200,
+          },
           "Costs are up, so the price should follow.",
         ),
       ],
@@ -335,7 +360,10 @@ describe("M27 the approval gate cannot be bypassed", () => {
     if (turn.type !== "tool_calls" || turn.toolCallIds[0] === undefined) {
       throw new Error("expected a proposed tool call");
     }
-    const gate = await harness.runtime.gateToolCall(started.runId, turn.toolCallIds[0]);
+    const gate = await harness.runtime.gateToolCall(
+      started.runId,
+      turn.toolCallIds[0],
+    );
     expect(gate.type).toBe("awaiting_approval");
     expect(harness.effects.storefrontChanges).toHaveLength(0);
   });
@@ -377,7 +405,9 @@ describe("M27 the approval gate cannot be bypassed", () => {
   it("refuses to execute an effectful tool call that carries no approval id", async () => {
     const harness = await createHarness({
       autonomy: "autonomous",
-      script: [toolTurn("send_external_message", EXTERNAL_ARGS, "Reordering stock.")],
+      script: [
+        toolTurn("send_external_message", EXTERNAL_ARGS, "Reordering stock."),
+      ],
     });
     const started = await harness.runtime.startRun({
       agentSlug: "test-role",
@@ -390,7 +420,10 @@ describe("M27 the approval gate cannot be bypassed", () => {
     }
 
     // Skip the gate entirely and go straight for execution.
-    const call = await harness.runtime.executeToolCall(started.runId, turn.toolCallIds[0]);
+    const call = await harness.runtime.executeToolCall(
+      started.runId,
+      turn.toolCallIds[0],
+    );
     expect(call.status).toBe("failed");
     expect(call.error).toContain("approval_required");
     expect(harness.effects.externalMessages).toHaveLength(0);

@@ -35,14 +35,14 @@ export const DEFAULT_GLASS: GlassParams = {
 };
 
 export const DEFAULT_LIQUID: LiquidParams = {
-  deepColor: "#59661f",
-  shallowColor: "#c9c973",
+  deepColor: "#414d13",
+  shallowColor: "#d6d47c",
   cloudColor: "#e9edc4",
   scatterColor: "#e2d766",
-  cloudiness: 0.42,
+  cloudiness: 0.34,
   cloudScale: 7.5,
   cloudSpeed: 0.055,
-  absorption: 2.35,
+  absorption: 3.1,
   scatterStrength: 0.85,
   meniscusHeight: 0.011,
   meniscusWidth: 0.2,
@@ -129,11 +129,11 @@ export const DEFAULT_BACKDROP: BackdropParams = {
   enabled: true,
   topColor: "#24262a",
   bottomColor: "#0a0b0c",
-  floorColor: "#121316",
+  floorColor: "#0b0c0e",
   shadowOpacity: 0.62,
   shadowBlur: 2.4,
-  causticIntensity: 0.55,
-  causticScale: 3.2,
+  causticIntensity: 0.5,
+  causticScale: 4.6,
 };
 
 /** Per-tier budgets. Everything expensive is keyed off this table. */

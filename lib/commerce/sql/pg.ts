@@ -39,6 +39,15 @@ class PoolExecutor implements SqlExecutor {
     }
   }
 
+  async execScript(text: string): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query(text);
+    } finally {
+      client.release();
+    }
+  }
+
   async close(): Promise<void> {
     await this.pool.end();
   }
@@ -69,6 +78,10 @@ class ClientExecutor implements SqlExecutor {
       await this.client.query(`rollback to savepoint ${name}`);
       throw error;
     }
+  }
+
+  async execScript(text: string): Promise<void> {
+    await this.client.query(text);
   }
 
   async close(): Promise<void> {

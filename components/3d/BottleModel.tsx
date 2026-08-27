@@ -290,7 +290,7 @@ export function BottleModel({
     capMat.roughness = cap.roughness;
     const u = capMat.userData.uniforms as
       Record<string, THREE.IUniform> | undefined;
-    if (u) u.uKnurlDepth!.value = cap.knurlDepth * profile.radius * 0.06;
+    if (u) u.uKnurlDepth!.value = cap.knurlDepth * profile.radius * 0.14;
   }, [capMat, cap, profile]);
   useEffect(() => () => capMat.dispose(), [capMat]);
 

@@ -164,38 +164,96 @@ describe("sealed cookie values", () => {
     expect(await unseal(secret, "session", token, now, parse)).toBeNull();
   });
 
-  it("refuses any tampered byte", async () => {
+  it("refuses a bit flipped anywhere in the ciphertext or the tag", async () => {
     const secret = randomBytes(32);
     const token = await seal(secret, "session", { sid: "abc-123" }, later);
     const [version, iv, ciphertext] = token.split(".");
+    const bytes = fromBase64Url(ciphertext ?? "");
 
-    const flipped = flipLastCharacter(ciphertext ?? "");
-    expect(
-      await unseal(
+    // Every byte, not a sample: the last 16 are the GCM authentication tag and
+    // the rest are the message, and neither may be editable.
+    let rejected = 0;
+    for (let index = 0; index < bytes.length; index += 1) {
+      const mutated = Uint8Array.from(bytes);
+      mutated[index] = (mutated[index] ?? 0) ^ 0x01;
+      const result = await unseal(
         secret,
         "session",
-        `${version}.${iv}.${flipped}`,
+        `${version}.${iv}.${toBase64Url(mutated)}`,
         now,
         parse,
-      ),
-    ).toBeNull();
-    expect(
-      await unseal(
+      );
+      if (result === null) rejected += 1;
+    }
+    expect(rejected).toBe(bytes.length);
+  });
+
+  it("refuses a bit flipped anywhere in the nonce", async () => {
+    const secret = randomBytes(32);
+    const token = await seal(secret, "session", { sid: "abc-123" }, later);
+    const [version, iv, ciphertext] = token.split(".");
+    const bytes = fromBase64Url(iv ?? "");
+
+    let rejected = 0;
+    for (let index = 0; index < bytes.length; index += 1) {
+      const mutated = Uint8Array.from(bytes);
+      mutated[index] = (mutated[index] ?? 0) ^ 0x01;
+      const result = await unseal(
         secret,
         "session",
-        `${version}.${flipLastCharacter(iv ?? "")}.${ciphertext}`,
+        `${version}.${toBase64Url(mutated)}.${ciphertext}`,
         now,
         parse,
-      ),
-    ).toBeNull();
-    expect(
-      await unseal(secret, "session", `v2.${iv}.${ciphertext}`, now, parse),
-    ).toBeNull();
-    expect(
-      await unseal(secret, "session", `${iv}.${ciphertext}`, now, parse),
-    ).toBeNull();
-    expect(await unseal(secret, "session", "", now, parse)).toBeNull();
+      );
+      if (result === null) rejected += 1;
+    }
+    expect(rejected).toBe(bytes.length);
+  });
+
+  it("refuses truncation, extension and a re-versioned token", async () => {
+    const secret = randomBytes(32);
+    const token = await seal(secret, "session", { sid: "abc-123" }, later);
+    const [version, iv, ciphertext] = token.split(".");
+    const bytes = fromBase64Url(ciphertext ?? "");
+
+    const truncated = toBase64Url(bytes.slice(0, bytes.length - 1));
+    const extended = toBase64Url(
+      Uint8Array.from([...bytes, 0]) as Uint8Array<ArrayBuffer>,
+    );
+
+    for (const candidate of [
+      `${version}.${iv}.${truncated}`,
+      `${version}.${iv}.${extended}`,
+      `v2.${iv}.${ciphertext}`,
+      `${iv}.${ciphertext}`,
+      `${version}.${iv}`,
+      `${version}..${ciphertext}`,
+      "",
+    ]) {
+      expect(await unseal(secret, "session", candidate, now, parse)).toBeNull();
+    }
     expect(await unseal(secret, "session", undefined, now, parse)).toBeNull();
+  });
+
+  it("accepts a re-encoding that decodes to the same bytes, and only that", async () => {
+    // A guard against the obvious bad version of the tests above. Base64's
+    // final character can carry padding bits that decode to nothing, so
+    // "changed a base64 character" is NOT the same claim as "changed a byte".
+    // A token whose bytes are unchanged is not a tampered token, and AES-GCM is
+    // right to authenticate it.
+    const secret = randomBytes(32);
+    const token = await seal(secret, "session", { sid: "abc-123" }, later);
+    const [version, iv, ciphertext] = token.split(".");
+    const reencoded = toBase64Url(fromBase64Url(ciphertext ?? ""));
+    expect(
+      await unseal(
+        secret,
+        "session",
+        `${version}.${iv}.${reencoded}`,
+        now,
+        parse,
+      ),
+    ).toEqual({ sid: "abc-123" });
   });
 
   it("refuses an expired value even when the seal is intact", async () => {
@@ -215,11 +273,6 @@ describe("session token digests", () => {
     );
   });
 });
-
-function flipLastCharacter(value: string): string {
-  const last = value.slice(-1);
-  return `${value.slice(0, -1)}${last === "A" ? "B" : "A"}`;
-}
 
 function atobSafe(value: string): string {
   return value

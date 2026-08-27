@@ -87,7 +87,7 @@ export function createCausticMaterial(
         vec2 p = (vUv - 0.5) * uScale;
         float t = uTime * 0.11;
         float d = length(p / uSpread);
-        float mask = exp(-d * d * 3.1);
+        float mask = exp(-d * d * 5.2);
         // Split the channels slightly: dispersion through curved glass.
         float r = caustic(p * 0.99, t);
         float g = caustic(p, t + 0.07);
@@ -171,9 +171,9 @@ export function createFloorMaterial(
 ): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(color),
-    roughness: 0.36,
-    metalness: 0.12,
-    envMapIntensity: 0.85,
+    roughness: 0.34,
+    metalness: 0.28,
+    envMapIntensity: 0.42,
   });
   const uniforms = {
     uHorizon: { value: new THREE.Color(horizon) },

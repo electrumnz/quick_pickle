@@ -566,11 +566,19 @@ export function BottleLab() {
 
   return (
     <div
+      ref={scrollRef}
+      // The lab owns nothing outside components/3d, so rather than editing the
+      // storefront's route-group layout it takes the whole viewport as its own
+      // scroll container and sits over the top of it.
       style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 40,
         background: "#08090a",
         color: "#e9e6df",
-        minHeight: "100dvh",
         overflowX: "hidden",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
       }}
     >
       <Leva collapsed hidden={!panelOpen} titleBar={{ title: "Bottle" }} />
