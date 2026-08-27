@@ -530,7 +530,8 @@ td em{display:block;font-size:12px;margin-top:2px}
 .nev .data{color:var(--danger);margin-bottom:6px}
 .nev p{margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
 .nev-deli{background:#F3E7CE;
-  background-image:repeating-conic-gradient(#C6徒 0% 25%,transparent 0% 50%)}
+  background-image:repeating-conic-gradient(from 0deg at 0 0,#9E2B20 0% 25%,#F3E7CE 0% 50%);
+  background-size:34px 34px}
 .nev-deli .t{font-family:"Instrument Serif",serif;font-style:italic;font-size:42px;color:#9E2B20;
   text-shadow:2px 2px 0 #E8D6AE;z-index:1;line-height:1}
 .nev-kiwi{background:linear-gradient(#8FB8CF,#8FB8CF 52%,#3E6B3A 52%,#2C5230)}
@@ -554,3 +555,229 @@ footer .data{color:var(--brine)}
 footer svg{width:250px;height:auto;color:var(--bone)}
 .spacer{height:66px}
 """
+
+def H(x): return x
+
+def build():
+    o = []
+    o.append('<!doctype html><html lang="en-NZ"><head><meta charset="utf-8">'
+             '<meta name="viewport" content="width=device-width,initial-scale=1">'
+             '<title>HALF SOUR — Brand Guide</title>'
+             '<link rel="preconnect" href="https://fonts.googleapis.com">'
+             '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+             '<link href="https://fonts.googleapis.com/css2?'
+             'family=Archivo:wght@400;500;600;700&'
+             'family=Instrument+Serif:ital@0;1&'
+             'family=Martian+Mono:wght@400;500;600&display=swap" rel="stylesheet">'
+             '<style>' + CSS + '</style></head><body>')
+
+    # rail
+    o.append('<nav class="rail" aria-label="Sections">')
+    for n, t in SECTIONS:
+        o.append('<a href="#s%s" class="data"><i>%s</i>%s</a>' % (n, n, t))
+    o.append('</nav>')
+
+    # theme toggle
+    o.append('<div class="tt" role="group" aria-label="Theme">'
+             '<button id="tl" aria-pressed="true">Light</button>'
+             '<button id="td" aria-pressed="false">Dark</button></div>')
+
+    # ---------------------------------------------------------------- hero
+    o.append('<header class="hero"><div class="wrap">')
+    o.append('<div class="hero-top data"><span>Brand guide — v1.0</span>'
+             '<span>Aotearoa New Zealand — August 2026</span></div>')
+    o.append('<div class="hero-mark">' + asset("wordmark.svg", cur=True) + '</div>')
+    o.append('<div class="hero-desc"><span class="data">Pickle&nbsp;brine</span>'
+             '<span class="data">No. 01 House · No. 02 Dirty · No. 03 Smoke</span></div>')
+    o.append('<p class="hero-lede">Pickle brine built as an ingredient in its own right — '
+             '<em>measured, consistent, and good enough to put on a menu.</em></p>')
+    o.append('<div class="hero-chips data">'
+             '<span class="chip solid">Bar &amp; kitchen</span>'
+             '<span class="chip">New Zealand first</span>'
+             '<span class="chip">Class 32 — register clear</span>'
+             '<span class="chip">39 drawn glyphs</span>'
+             '<span class="chip">23 / 23 contrast pairs pass AA</span>'
+             '</div></div></header>')
+
+    def sec(n, title, kicker):
+        return ('<section id="s%s"><div class="wrap"><div class="sec-head">'
+                '<span class="n data">%s</span><h2>%s</h2>'
+                '<span class="k data">%s</span></div>' % (n, n, title, kicker))
+
+    # ---------------------------------------------------------------- 01
+    o.append(sec("01", "Clearance", "IPONZ register via TMview · 27 Aug 2026"))
+    o.append('<div class="verdict"><div class="v-l"><span class="data">Verdict</span>'
+             '<b>Not blocked</b><span class="data" style="margin-top:8px">HALF SOUR — NZ cl. 32 &amp; 33</span></div>'
+             '<div class="v-r">'
+             '<p><b>Method.</b> <code>app.iponz.govt.nz</code> serves Trade Mark Check from a client-rendered '
+             'app whose search handler returns <code>403</code> to non-browser clients, and this environment’s '
+             'headless Chromium has no outbound network (every navigation returns <code>ERR_CONNECTION_RESET</code>, '
+             'control URLs included). The New Zealand register was therefore read through <b>TMview</b>, the '
+             'TMDN/EUIPO federated service into which IPONZ publishes. Every row below is a real result set.</p>'
+             '<p><b>Before filing:</b> a New Zealand attorney must run a pre-filing search. TMview lags the live '
+             'register by days and does not surface pending oppositions.</p></div></div>')
+    o.append('<table><thead><tr><th>Query</th><th>Office</th><th>Classes</th><th>Hits</th>'
+             '<th style="width:52%">Reading</th><th></th></tr></thead><tbody>')
+    for q, off, cls, hits, read, st in TM_ROWS:
+        o.append('<tr><td><code>%s</code></td><td class="data" style="color:var(--muted)">%s</td>'
+                 '<td class="data" style="color:var(--muted)">%s</td>'
+                 '<td class="cx-num">%s</td><td>%s</td>'
+                 '<td><span class="pill %s">%s</span></td></tr>'
+                 % (q, off, cls, hits, read, st, "CLEAR" if st == "ok" else "WATCH"))
+    o.append('</tbody></table>')
+
+    o.append('<div class="grid g2" style="margin-top:34px">')
+    o.append('<div class="card"><span class="data">Condition 01 — distinctiveness</span>'
+             '<h4>“Half sour” is the trade term for the category</h4>'
+             '<p>Doc Pickle (US) sells a product literally named <em>Half Sour Pickle Brine</em>. Under '
+             's18(1)(b)–(c) Trade Marks Act 2002 a mark descriptive of the kind or quality of the goods can be '
+             'refused. <b style="color:var(--text)">Mitigation: file the composite first</b> — the drawn wordmark '
+             'plus the Half device — as a logo mark, which is registrable as artwork on day one. Pursue the plain '
+             'word mark on acquired distinctiveness after 18–24 months of trading. This is precisely why the '
+             'wordmark in §09 is drawn rather than typeset: a typeset name is not ownable; drawn letterforms are.</p></div>')
+    o.append('<div class="card"><span class="data">Condition 02 — filing order</span>'
+             '<h4>Class 32 first. Class 33 can wait.</h4>'
+             '<p>Class 32 (non-alcoholic beverages and preparations for making beverages) is the true class for a '
+             'mixer, and it is empty of conflicts — zero hits for both <code>half sour</code> and <code>brine</code>. '
+             'Class 33 contains <em>SOURZ</em> (reg. 295846), owned by Jim Beam Brands Co., who defend. There is no '
+             'reason to walk into that until there is a reason to be in class 33 at all.</p></div>')
+    o.append('</div>')
+
+    o.append('<h3 class="data" style="margin:44px 0 14px;color:var(--muted)">Domains — RDAP for gTLDs, DNS for .nz, 27 Aug 2026</h3>')
+    o.append('<div class="grid g3">')
+    for d, st, k in DOMAINS:
+        o.append('<div class="card" style="padding:14px 16px;display:flex;justify-content:space-between;'
+                 'align-items:center;gap:10px"><code style="font-size:12px">%s</code>'
+                 '<span class="pill %s">%s</span></div>' % (d, k, st.upper()))
+    o.append('</div>')
+    o.append('<p class="lede mut" style="margin-top:22px"><b style="color:var(--text)">Do this week:</b> register '
+             '<code>halfsour.co.nz</code>, <code>halfsour.nz</code> and <code>drinkhalfsour.com</code>. Open a quiet '
+             'broker approach on <code>halfsour.com</code> — it is parked, not trading, so it is buyable, and you '
+             'want it before there is a press cycle attached to the name.</p>')
+    o.append('</div></section>')
+
+    # ---------------------------------------------------------------- 02
+    o.append(sec("02", "Positioning", "The 2026 pickle boom is a bar trend, not a snack trend"))
+    o.append('<p class="serif" style="font-size:40px;line-height:1.24;letter-spacing:-.02em;max-width:20ch;'
+             'margin:0 0 34px">Nobody has yet made a pickle brine that a serious bar would put '
+             '<em style="font-style:italic;color:var(--accent)">on display.</em></p>')
+    o.append('<div class="stats">'
+             '<div class="stat"><b>+140%</b><span>Pickle mixer unit sales growth</span></div>'
+             '<div class="stat"><b>+24%</b><span>Pickle mixer dollar sales, 52 weeks, against ~1% for mixers overall</span></div>'
+             '<div class="stat"><b>$0.92bn</b><span>Cocktail mixer market, 2025</span></div>'
+             '<div class="stat"><b>$2.01bn</b><span>Same market, 2034</span></div>'
+             '</div>')
+    o.append('<div class="grid g2" style="margin-top:32px">'
+             '<div><h3 class="data" style="color:var(--accent);margin-bottom:12px">What we are</h3>'
+             '<p class="lede">The brine. On purpose, in a bottle, with the spec printed on it. Cured in fixed '
+             'batches to a fixed salinity, so a drink built on it tastes the same in June as it did in March — '
+             'which is the one thing the free brine at the bottom of a jar can never promise.</p></div>'
+             '<div><h3 class="data" style="color:var(--danger);margin-bottom:12px">What we will not become</h3>'
+             '<p class="lede mut">A sports or recovery drink. A gut-health or probiotic product. A novelty shot. '
+             'A snack brand with a drink attached. Each of those is a larger short-term market and a smaller '
+             'long-term business, and two of them are regulatory problems.</p></div></div>')
+    o.append('</div></section>')
+
+    # ---------------------------------------------------------------- 03
+    o.append(sec("03", "Customer", "One buyer creates the credibility, another creates the volume"))
+    o.append('<div class="grid g3">')
+    for tag, title, body in [
+        ("Primary — on-premise", "The credibility engine",
+         "Bar managers and head bartenders in Auckland, Wellington, Christchurch and Queenstown, plus small "
+         "restaurant kitchens. They buy 500ml and 2L. They care about consistency batch to batch, pour cost, "
+         "whether it clouds a stirred drink, and whether the bottle is acceptable on a back bar customers can see. "
+         "They are the reason the label is set like a spirits label."),
+        ("Secondary — home bar", "The volume",
+         "27–42, cooks properly, owns a mixing glass and at least one bottle of vermouth they feel guilty about. "
+         "Found us because a bartender told them, or because No. 02 was in a photo of somebody else’s kitchen bench. "
+         "Buys two or three bottles at a time and a variety box at Christmas."),
+        ("Tertiary — trade", "The shelf",
+         "Independent grocers, providores and bottle shops. Buys because the shelf presence does work their other "
+         "stock does not. Reorders on sell-through, not on story."),
+    ]:
+        o.append('<div class="card"><span class="data">%s</span><h4>%s</h4><p>%s</p></div>' % (tag, title, body))
+    o.append('</div>')
+    o.append('<p class="lede mut" style="margin-top:24px"><b style="color:var(--danger)">Not our customer:</b> '
+             'anyone buying it to feel better afterwards.</p>')
+    o.append('</div></section>')
+
+    # ---------------------------------------------------------------- 04
+    o.append(sec("04", "Personality", "Five traits, each with the thing it must not tip into"))
+    for t, means, no in TRAITS:
+        o.append('<div class="trait"><h4>%s</h4><p>%s</p><p class="no">%s</p></div>' % (t, means, no))
+    o.append('<p class="serif" style="font-size:30px;line-height:1.3;letter-spacing:-.02em;margin:34px 0 0;'
+             'max-width:26ch">The most serious person at the bar, who is also, quietly, '
+             '<em style="font-style:italic;color:var(--accent)">the funniest.</em></p>')
+    o.append('</div></section>')
+
+    # ---------------------------------------------------------------- 05
+    o.append(sec("05", "Voice", "Five principles. Twenty real lines. The unglamorous ones matter most."))
+    o.append('<div class="prins">')
+    for i, (h, b) in enumerate(PRINCIPLES, 1):
+        o.append('<div class="prin"><span class="data">%02d</span><h4>%s</h4><p>%s</p></div>' % (i, h, b))
+    o.append('</div>')
+
+    o.append('<h3 class="data" style="color:var(--muted);margin-bottom:18px">'
+             'Four of the twenty, shown where they actually live</h3>')
+    o.append('<div class="grid g4" style="margin-bottom:40px">')
+    o.append('<div class="ui"><div class="ui-bar"><i></i><i></i><i></i>'
+             '<span>halfsour.co.nz/no-such-page</span></div><div class="ui-body">'
+             '<div class="ui-404">404</div>'
+             '<p>There’s nothing here. There is something in the fridge, though.</p>'
+             '<span class="ui-btn">Back to the shop</span></div></div>')
+    o.append('<div class="ui"><div class="ui-bar"><i></i><i></i><i></i>'
+             '<span>halfsour.co.nz/no-03-smoke</span></div><div class="ui-body">'
+             '<div class="ui-soldout"><span class="pill bad">SOLD OUT</span>'
+             '<span class="data" style="color:var(--muted)">Back 14 Sep</span></div>'
+             '<h5>No. 03 SMOKE</h5>'
+             '<p>No. 03 is out until the 14th. We brine in 400-litre batches and we’re not going to rush one to '
+             'make a number look better. Leave your email and we’ll tell you the morning it lands.</p>'
+             '<span class="ui-btn">Notify me</span></div></div>')
+    o.append('<div class="ui"><div class="ui-bar"><i></i><i></i><i></i>'
+             '<span>Inbox — Your brine is on a truck.</span></div><div class="ui-body">'
+             '<h5>Your brine is on a truck.</h5>'
+             '<p>Two of No. 01 and one of No. 03 left Onehunga this morning. Tracking is below. Rural addresses '
+             'add a day. If it turns up leaking, reply to this email with a photo and we’ll send another — we '
+             'won’t ask you to post the broken one back.</p><div class="ui-rule"></div>'
+             '<div class="ui-kv"><span>Order</span><b>4417</b></div>'
+             '<div class="ui-kv"><span>Tracking</span><b>NZP 8841 0392</b></div>'
+             '<div class="ui-kv"><span>Batch</span><b>B-26-114</b></div></div></div>')
+    o.append('<div class="ui"><div class="ui-bar"><i></i><i></i><i></i>'
+             '<span>Server error — 500</span></div><div class="ui-body">'
+             '<div class="ui-404" style="color:var(--danger)">500</div>'
+             '<p>Something on our end fell over. Your order is fine — it didn’t get that far. Try again in a '
+             'minute, or email hello@halfsour.co.nz and we’ll do it by hand.</p>'
+             '<span class="ui-btn">Try again</span></div></div>')
+    o.append('</div>')
+
+    o.append('<div class="lines">')
+    for i, (tag, label, body) in enumerate(LINES, 1):
+        o.append('<div class="line"><span class="num">%02d</span><div>'
+                 '<span class="tag">%s — <b>%s</b></span><q>%s</q></div></div>' % (i, tag, label, body))
+    o.append('</div></div>')
+
+    # never band
+    o.append('<div class="never-band"><div class="wrap"><div class="sec-head">'
+             '<span class="n data">05b</span><h2>What HALF SOUR never says</h2>'
+             '<span class="k data">Scan this list before anything ships</span></div>')
+    for h, b in NEVER:
+        o.append('<div class="nv"><h4>%s</h4><p>%s</p></div>' % (h, b))
+    o.append('</div></div></section>')
+
+    # ---------------------------------------------------------------- 06
+    o.append(sec("06", "Landscape", "Who is on the shelf and what they leave behind"))
+    o.append('<table><thead><tr><th style="width:15%">Position</th><th style="width:20%">Who</th>'
+             '<th style="width:31%">What they own</th><th style="width:34%">Where they leave a gap</th>'
+             '</tr></thead><tbody>')
+    for pos, who, geo, owns, gap in COMPETITORS:
+        o.append('<tr><td class="data" style="color:var(--accent)">%s</td>'
+                 '<td><b style="font-size:15px">%s</b><em>%s</em></td><td>%s</td><td>%s</td></tr>'
+                 % (pos, who, geo, owns, gap))
+    o.append('</tbody></table>')
+    o.append('<p class="lede" style="margin-top:26px;max-width:78ch"><b>The strategic read.</b> Good Girl Snacks '
+             'proved the category can be culturally hot. Van Holten’s proved the format sells. Nobody has yet made '
+             'a pickle brine a serious bar would display. HALF SOUR wins by being the only one that looks like an '
+             'ingredient rather than a joke — and by being funny anyway, quietly, in the copy, where it costs the '
+             'shelf nothing.</p>')
+    o.append('</div></section>')
+    return o

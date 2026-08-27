@@ -18,8 +18,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 /* ---------------------------------------------------------------- HDRI --- */
 
-const W = 1024;
-const H = 512;
+const W = 512;
+const H = 256;
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const smoothstep = (a, b, x) => {
