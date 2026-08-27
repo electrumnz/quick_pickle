@@ -13,15 +13,14 @@
 
 import { z } from "zod";
 
-import { AgentRuntimeError, ToolAuthorisationError } from "../errors";
+import {
+  AgentRuntimeError,
+  ApprovalGateError,
+  ToolAuthorisationError,
+} from "../errors";
 import { toJsonValue, type JsonObject, type JsonValue } from "../json";
 import type { AgentLogger } from "../logger";
-import {
-  alwaysRequiresApproval,
-  type ApprovalRisk,
-  type ApprovalSubject,
-  type ToolEffect,
-} from "../types";
+import type { ApprovalRisk, ApprovalSubject, ToolEffect } from "../types";
 import { consumeEffectGrant, type EffectGrant } from "./effects";
 
 /** Matches `agent_tool_calls_name_format`: `^[a-z][a-z0-9_.]*$`. */
@@ -79,10 +78,16 @@ export interface ToolSpec<TInput, TOutput> {
   readonly effect: ToolEffect;
   readonly inputSchema: z.ZodType<TInput>;
   readonly approval?: ToolApprovalSpec<TInput>;
-  readonly execute: (input: TInput, context: ToolExecutionContext) => Promise<TOutput>;
+  readonly execute: (
+    input: TInput,
+    context: ToolExecutionContext,
+  ) => Promise<TOutput>;
 }
 
-type ErasedExecutor = (input: unknown, context: ToolExecutionContext) => Promise<unknown>;
+type ErasedExecutor = (
+  input: unknown,
+  context: ToolExecutionContext,
+) => Promise<unknown>;
 
 /**
  * Private executor table. The only reference to a tool's code lives here, keyed
@@ -103,7 +108,9 @@ function executorKey<TInput, TOutput>(
  * storefront or reaches outside the company with no way to describe itself to a
  * human is refused at declaration time, not at call time.
  */
-export function defineTool<TInput, TOutput>(spec: ToolSpec<TInput, TOutput>): ToolDefinition<TInput, TOutput> {
+export function defineTool<TInput, TOutput>(
+  spec: ToolSpec<TInput, TOutput>,
+): ToolDefinition<TInput, TOutput> {
   if (!TOOL_NAME_PATTERN.test(spec.name)) {
     throw new AgentRuntimeError(
       "invalid_agent_definition",
@@ -118,7 +125,10 @@ export function defineTool<TInput, TOutput>(spec: ToolSpec<TInput, TOutput>): To
       { tool: spec.name, effect: spec.effect },
     );
   }
-  if (spec.approval !== undefined && !SUBJECT_TABLE_PATTERN.test(spec.approval.subjectTable)) {
+  if (
+    spec.approval !== undefined &&
+    !SUBJECT_TABLE_PATTERN.test(spec.approval.subjectTable)
+  ) {
     throw new AgentRuntimeError(
       "invalid_agent_definition",
       `Tool "${spec.name}" declares subject_table "${spec.approval.subjectTable}", which the schema will reject.`,
@@ -176,10 +186,14 @@ export async function invokeTool<TInput, TOutput>(
 ): Promise<TOutput> {
   if (definition.effect !== "read") {
     if (grant === undefined) {
-      throw new (await import("../errors")).ApprovalGateError(
+      throw new ApprovalGateError(
         "grant_missing",
         `Tool "${definition.name}" has effect "${definition.effect}" and cannot execute without an approval-backed grant.`,
-        { tool: definition.name, effect: definition.effect, runId: context.runId },
+        {
+          tool: definition.name,
+          effect: definition.effect,
+          runId: context.runId,
+        },
       );
     }
     consumeEffectGrant(grant, {
@@ -238,16 +252,22 @@ export class ToolRegistry {
   get(name: string): ToolDefinition<never, never> {
     const definition = this.tools.get(name);
     if (definition === undefined) {
-      throw new ToolAuthorisationError("unknown_tool", `No tool named "${name}" is registered.`, {
-        tool: name,
-      });
+      throw new ToolAuthorisationError(
+        "unknown_tool",
+        `No tool named "${name}" is registered.`,
+        {
+          tool: name,
+        },
+      );
     }
     return definition;
   }
 
   /** Every registered tool, name-ordered. */
   list(): ToolDefinition<never, never>[] {
-    return [...this.tools.values()].sort((left, right) => left.name.localeCompare(right.name));
+    return [...this.tools.values()].sort((left, right) =>
+      left.name.localeCompare(right.name),
+    );
   }
 
   /** Only the tools this agent was granted, in the order the grant lists them. */

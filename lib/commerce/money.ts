@@ -84,7 +84,9 @@ export function assertCurrencyCode(
   currencyCode: string,
 ): asserts currencyCode is CurrencyCode {
   if (!CURRENCY_CODE_PATTERN.test(currencyCode)) {
-    fail(`Not an ISO 4217 alpha-3 currency code: ${JSON.stringify(currencyCode)}`);
+    fail(
+      `Not an ISO 4217 alpha-3 currency code: ${JSON.stringify(currencyCode)}`,
+    );
   }
 }
 
@@ -106,7 +108,9 @@ export function money(
 }
 
 /** Zero in the given currency. */
-export function zeroMoney(currencyCode: CurrencyCode = DEFAULT_CURRENCY): Money {
+export function zeroMoney(
+  currencyCode: CurrencyCode = DEFAULT_CURRENCY,
+): Money {
   return money(0, currencyCode);
 }
 
@@ -219,7 +223,9 @@ export function applyBasisPoints(
     fail(`Amount must be an integer, got ${String(amountInMinorUnits)}`);
   }
   if (!Number.isSafeInteger(basisPoints) || basisPoints < 0) {
-    fail(`Basis points must be a non-negative integer, got ${String(basisPoints)}`);
+    fail(
+      `Basis points must be a non-negative integer, got ${String(basisPoints)}`,
+    );
   }
   return bigIntToSafeInteger(
     divideRoundHalfAwayFromZero(
@@ -246,7 +252,9 @@ export function taxIncludedInTotal(
     fail(`Total must be an integer, got ${String(totalInMinorUnits)}`);
   }
   if (!Number.isSafeInteger(basisPoints) || basisPoints < 0) {
-    fail(`Basis points must be a non-negative integer, got ${String(basisPoints)}`);
+    fail(
+      `Basis points must be a non-negative integer, got ${String(basisPoints)}`,
+    );
   }
   return bigIntToSafeInteger(
     divideRoundHalfAwayFromZero(
@@ -370,7 +378,10 @@ export function parseShopifyMoney(
     const dropped = fraction.slice(digits);
     scaledFraction =
       BigInt(kept) +
-      divideRoundHalfAwayFromZero(BigInt(dropped), 10n ** BigInt(dropped.length));
+      divideRoundHalfAwayFromZero(
+        BigInt(dropped),
+        10n ** BigInt(dropped.length),
+      );
   }
 
   const magnitude = scaledWhole + scaledFraction;
@@ -402,7 +413,10 @@ export function toDecimalString(value: Money): string {
 /**
  * The Shopify `MoneyV2` shape, so adapter code can hand one straight back.
  */
-export type MoneyV2 = { readonly amount: string; readonly currencyCode: string };
+export type MoneyV2 = {
+  readonly amount: string;
+  readonly currencyCode: string;
+};
 
 export function toMoneyV2(value: Money): MoneyV2 {
   return { amount: toDecimalString(value), currencyCode: value.currencyCode };

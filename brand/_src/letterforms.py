@@ -163,8 +163,8 @@ def g_K():
     w = 92.0
     return w, [
         rect(0, 0, STEM, CAP),
-        poly([(70,0), (w,0), (STEM,74), (STEM,52)]),
-        poly([(STEM,46), (STEM,68), (w,CAP), (70,CAP)]),
+        poly([(68,0), (w,0), (STEM,70), (STEM,42)]),
+        poly([(STEM,50), (STEM,78), (w,CAP), (68,CAP)]),
     ]
 
 def g_E():
@@ -274,8 +274,8 @@ def g_G():
         rect(0, tc, STEM, bc-tc),
         band(cx, tc, r, STEM, 180, 333),
         band(cx, bc, r, STEM, 27, 180),
-        rect(w-STEM, 56, STEM, bc-56+1),
-        rect(cx+4, 56, w-cx-4, STEM),
+        rect(46, 58, w-46, STEM),
+        rect(w-STEM, 58, STEM, 42),
     ]
 
 def g_J():
@@ -366,8 +366,8 @@ def g_2():
 
 def g_3():
     return NW, [
-        band(NW/2, NTC, NCR, STEM, 195, 90),
-        band(NW/2, NBC, NCR, STEM, -90, 165),
+        band(NW/2, NTC, NCR, STEM, 196, 450),
+        band(NW/2, NBC, NCR, STEM, -90, 164),
     ]
 
 def g_4():
@@ -379,10 +379,10 @@ def g_4():
 
 def g_5():
     return NW, [
-        rect(0, 0, NW-6, STEM),
-        rect(0, 0, STEM, 50),
-        rect(STEM-1, 40, 30, STEM),
-        band(NW/2, NBC, NCR, STEM, -78, 168),
+        rect(0, 0, NW-4, STEM),
+        rect(0, 0, STEM, 58),
+        rect(0, 48, 28, STEM),
+        band(NW/2, NBC, NCR, STEM, -135, 166),
     ]
 
 def g_6():

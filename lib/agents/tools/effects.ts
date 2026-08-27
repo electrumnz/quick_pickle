@@ -64,7 +64,9 @@ export interface ApprovalPayloadShape {
   readonly arguments: unknown;
 }
 
-function readPayloadShape(approval: ApprovalRecord): ApprovalPayloadShape | null {
+function readPayloadShape(
+  approval: ApprovalRecord,
+): ApprovalPayloadShape | null {
   const tool = approval.payload["tool"];
   if (typeof tool !== "string") {
     return null;
@@ -89,7 +91,9 @@ export function mintEffectGrant(params: {
 
   if (approval.status !== "approved") {
     throw new ApprovalGateError(
-      approval.status === "rejected" ? "approval_rejected" : "approval_not_approved",
+      approval.status === "rejected"
+        ? "approval_rejected"
+        : "approval_not_approved",
       `Approval ${approval.id} is "${approval.status}", not "approved"; no grant can be minted.`,
       { approvalId: approval.id, status: approval.status, tool: toolName },
     );
@@ -101,7 +105,10 @@ export function mintEffectGrant(params: {
       { approvalId: approval.id, tool: toolName },
     );
   }
-  if (approval.expiresAt !== null && Date.parse(approval.expiresAt) <= now.getTime()) {
+  if (
+    approval.expiresAt !== null &&
+    Date.parse(approval.expiresAt) <= now.getTime()
+  ) {
     throw new ApprovalGateError(
       "approval_expired",
       `Approval ${approval.id} expired at ${approval.expiresAt}.`,
@@ -128,7 +135,11 @@ export function mintEffectGrant(params: {
     throw new ApprovalGateError(
       "grant_tool_mismatch",
       `Approval ${approval.id} approves "${shape.tool}", not "${toolName}".`,
-      { approvalId: approval.id, approvedTool: shape.tool, requestedTool: toolName },
+      {
+        approvalId: approval.id,
+        approvedTool: shape.tool,
+        requestedTool: toolName,
+      },
     );
   }
 
@@ -224,7 +235,10 @@ export function assertGrantUsable(grant: EffectGrant, usage: GrantUsage): void {
 }
 
 /** Verify and spend a grant. A grant authorises exactly one execution. */
-export function consumeEffectGrant(grant: EffectGrant, usage: GrantUsage): void {
+export function consumeEffectGrant(
+  grant: EffectGrant,
+  usage: GrantUsage,
+): void {
   assertGrantUsable(grant, usage);
   CONSUMED.add(grant);
 }
