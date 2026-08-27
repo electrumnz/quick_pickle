@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.9.0"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "next dev",
@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lhci": "lhci autorun"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.44",

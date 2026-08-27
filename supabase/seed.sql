@@ -319,3 +319,96 @@ select v.id, l.id, il.on_hand, il.committed, il.incoming, il.reorder_point, il.r
   ) as il(sku, loc, on_hand, committed, incoming, reorder_point, reorder_qty, gid_suffix)
   join public.product_variants v on v.sku = il.sku
   join public.inventory_locations l on l.code = il.loc;
+
+-- =============================================================================
+-- CUSTOMERS AND ADDRESSES
+-- =============================================================================
+insert into public.customers
+  (email, first_name, last_name, phone, customer_type, company_name, nzbn, gst_number, accepts_marketing, marketing_opt_in_at, tags, note, orders_count, total_spent_cents, first_ordered_at, last_ordered_at, provider, shopify_gid, shopify_updated_at, sync_status, synced_at)
+values
+  ('aroha.wetere@gmail.com', 'Aroha', 'Wetere', '+64 21 903 442', 'retail', null, null, null, true, now() - interval '8 months', '{repeat,auckland}', null, 4, 31600, now() - interval '8 months', now() - interval '6 days', 'shopify', 'gid://shopify/Customer/71234500001', now() - interval '6 days', 'synced', now() - interval '14 minutes'),
+  ('sam.kerrison@outlook.co.nz', 'Sam', 'Kerrison', '+64 27 118 664', 'retail', null, null, null, true, now() - interval '5 months', '{wellington}', null, 2, 14290, now() - interval '5 months', now() - interval '11 days', 'shopify', 'gid://shopify/Customer/71234500002', now() - interval '11 days', 'synced', now() - interval '14 minutes'),
+  ('priya.nair@fastmail.com', 'Priya', 'Nair', null, 'retail', null, null, null, false, null, '{christchurch}', null, 1, 5390, now() - interval '17 days', now() - interval '17 days', 'shopify', 'gid://shopify/Customer/71234500003', now() - interval '17 days', 'synced', now() - interval '14 minutes'),
+  ('orders@brassandbitters.co.nz', 'Kiri', 'Ngatai', '+64 9 302 7741', 'trade', 'Brass and Bitters Limited', '9429041827365', '128-449-006', true, now() - interval '10 months', '{trade,auckland,britomart}', 'Orders on the first Tuesday. Kiri prefers a text over an email.', 9, 271400, now() - interval '10 months', now() - interval '9 days', 'shopify', 'gid://shopify/Customer/71234500004', now() - interval '9 days', 'synced', now() - interval '14 minutes'),
+  ('bar@thesaltroom.co.nz', 'Dev', 'Ramanathan', '+64 4 385 1120', 'trade', 'Salt Room Hospitality Limited', '9429046612840', '104-772-318', true, now() - interval '7 months', '{trade,wellington}', 'Runs the concentrate on the well. Never wants 750ml bottles.', 6, 151200, now() - interval '7 months', now() - interval '13 days', 'shopify', 'gid://shopify/Customer/71234500005', now() - interval '13 days', 'synced', now() - interval '14 minutes'),
+  ('hello@nightjarqt.nz', 'Flynn', 'Mackereth', '+64 3 442 8890', 'trade', 'Nightjar Bar Limited', '9429048830175', '117-205-664', false, null, '{trade,queenstown,new-account}', 'First order. Invoice on the 20th, confirmed by Flynn on the phone.', 1, 0, now() - interval '4 days', now() - interval '4 days', 'shopify', 'gid://shopify/Customer/71234500006', now() - interval '4 days', 'synced', now() - interval '14 minutes'),
+  ('tom.whitiora@gmail.com', 'Tom', 'Whitiora', '+64 22 447 001', 'retail', null, null, null, true, now() - interval '2 months', '{tauranga}', null, 1, 4690, now() - interval '2 days', now() - interval '2 days', 'shopify', 'gid://shopify/Customer/71234500007', now() - interval '2 days', 'synced', now() - interval '14 minutes'),
+  ('elise@marchetti.nz', 'Elise', 'Marchetti', '+64 21 660 908', 'retail', null, null, null, true, now() - interval '3 months', '{napier,refunded}', 'Case arrived with two split cans. Refunded in full, replacement sent free.', 1, 0, now() - interval '21 days', now() - interval '21 days', 'shopify', 'gid://shopify/Customer/71234500008', now() - interval '19 days', 'synced', now() - interval '14 minutes'),
+  ('hana.f@protonmail.com', 'Hana', 'Fujimoto', '+64 27 883 215', 'retail', null, null, null, true, now() - interval '6 weeks', '{subscriber,dunedin}', null, 1, 7560, now() - interval '5 weeks', now() - interval '5 weeks', 'shopify', 'gid://shopify/Customer/71234500009', now() - interval '5 weeks', 'synced', now() - interval '14 minutes'),
+  ('accounts@moxieprovisions.co.nz', 'Wiremu', 'Paterson', '+64 9 579 4402', 'wholesale', 'Moxie Provisions Limited', '9429039914628', '099-663-114', true, now() - interval '14 months', '{wholesale,distributor,auckland}', 'Distributes to 40 grocers across Auckland and Waikato. Net 30.', 14, 512800, now() - interval '14 months', now() - interval '8 days', 'shopify', 'gid://shopify/Customer/71234500010', now() - interval '8 days', 'synced', now() - interval '14 minutes'),
+  ('jesse.lam@gmail.com', 'Jesse', 'Lam', null, 'retail', null, null, null, true, now() - interval '9 days', '{newsletter}', 'Signed up at the Coastville market. No order yet.', 0, 0, null, null, 'shopify', 'gid://shopify/Customer/71234500011', now() - interval '9 days', 'synced', now() - interval '14 minutes');
+
+insert into public.addresses
+  (customer_id, label, address_type, first_name, last_name, company, line1, line2, suburb, city, region, postcode, phone, delivery_instructions, is_default, provider, shopify_gid, sync_status, synced_at)
+select c.id, a.label, a.atype::public.address_type, a.fname, a.lname, a.company, a.line1, a.line2, a.suburb, a.city, a.region, a.postcode, a.phone, a.instructions, a.is_default,
+       'shopify', a.gid, 'synced', now() - interval '14 minutes'
+  from (values
+    ('aroha.wetere@gmail.com',        'Home',        'shipping', 'Aroha', 'Wetere', null, '14A Norfolk Street', null, 'Ponsonby', 'Auckland', 'Auckland', '1011', '+64 21 903 442', 'Green gate, leave in the porch.', true, 'gid://shopify/MailingAddress/81234500001'),
+    ('sam.kerrison@outlook.co.nz',    'Home',        'shipping', 'Sam', 'Kerrison', null, '9 Reef Street', null, 'Island Bay', 'Wellington', 'Wellington', '6023', '+64 27 118 664', null, true, 'gid://shopify/MailingAddress/81234500002'),
+    ('priya.nair@fastmail.com',       'Home',        'shipping', 'Priya', 'Nair', null, '212 Colombo Street', 'Flat 3', 'Sydenham', 'Christchurch', 'Canterbury', '8023', null, 'Buzzer is broken — phone on arrival.', true, 'gid://shopify/MailingAddress/81234500003'),
+    ('orders@brassandbitters.co.nz',  'Bar',         'shipping', 'Kiri', 'Ngatai', 'Brass and Bitters Limited', '30 Tyler Street', 'Rear delivery door', 'Britomart', 'Auckland', 'Auckland', '1010', '+64 9 302 7741', 'Deliveries before 11am only. Ring the bell at the rear door.', true, 'gid://shopify/MailingAddress/81234500004'),
+    ('bar@thesaltroom.co.nz',         'Bar',         'shipping', 'Dev', 'Ramanathan', 'Salt Room Hospitality Limited', '118 Cuba Street', null, 'Te Aro', 'Wellington', 'Wellington', '6011', '+64 4 385 1120', 'Loading zone out front, 15 minutes max.', true, 'gid://shopify/MailingAddress/81234500005'),
+    ('hello@nightjarqt.nz',           'Bar',         'shipping', 'Flynn', 'Mackereth', 'Nightjar Bar Limited', '7 Hawthorne Drive', 'Unit 2', 'Frankton', 'Queenstown', 'Otago', '9300', '+64 3 442 8890', null, true, 'gid://shopify/MailingAddress/81234500006'),
+    ('tom.whitiora@gmail.com',        'Home',        'shipping', 'Tom', 'Whitiora', null, '55 Marine Parade', null, 'Mount Maunganui', 'Tauranga', 'Bay of Plenty', '3116', '+64 22 447 001', null, true, 'gid://shopify/MailingAddress/81234500007'),
+    ('elise@marchetti.nz',            'Home',        'shipping', 'Elise', 'Marchetti', null, '3 Battery Road', null, 'Ahuriri', 'Napier', 'Hawke''s Bay', '4110', '+64 21 660 908', null, true, 'gid://shopify/MailingAddress/81234500008'),
+    ('hana.f@protonmail.com',         'Home',        'shipping', 'Hana', 'Fujimoto', null, '78 Clyde Street', null, 'Dunedin North', 'Dunedin', 'Otago', '9016', '+64 27 883 215', 'Flat 4, up the side path.', true, 'gid://shopify/MailingAddress/81234500009'),
+    ('accounts@moxieprovisions.co.nz','Warehouse',   'shipping', 'Wiremu', 'Paterson', 'Moxie Provisions Limited', '42 Hugo Johnston Drive', null, 'Penrose', 'Auckland', 'Auckland', '1061', '+64 9 579 4402', 'Pallet deliveries to dock 3. Booking required.', true, 'gid://shopify/MailingAddress/81234500010'),
+    ('accounts@moxieprovisions.co.nz','Accounts',    'billing',  'Wiremu', 'Paterson', 'Moxie Provisions Limited', 'PO Box 12-884', null, 'Penrose', 'Auckland', 'Auckland', '1642', null, null, true, 'gid://shopify/MailingAddress/81234500011')
+  ) as a(email, label, atype, fname, lname, company, line1, line2, suburb, city, region, postcode, phone, instructions, is_default, gid)
+  join public.customers c on c.email = a.email;
+
+update public.customers c
+   set default_address_id = a.id
+  from public.addresses a
+ where a.customer_id = c.id and a.address_type = 'shipping' and a.is_default;
+
+-- =============================================================================
+-- DISCOUNTS
+-- =============================================================================
+insert into public.discounts
+  (code, title, description, value_type, value_bp, value_cents, applies_to, target_product_id, minimum_subtotal_cents, customer_type_restriction, usage_limit, usage_limit_per_customer, used_count, starts_at, ends_at, status, provider, shopify_gid, sync_status, synced_at)
+values
+  ('TRADE10', 'Trade standing discount', '10% off for approved bar and restaurant accounts on orders of NZ$200 or more.', 'percentage', 1000, null, 'order', null, 20000, 'trade', null, null, 4, now() - interval '10 months', null, 'active', 'shopify', 'gid://shopify/DiscountCodeNode/91234500001', 'synced', now() - interval '14 minutes'),
+  ('WHOLESALE20', 'Distributor rate', '20% off for distributor accounts on orders of NZ$400 or more. Net 30 terms.', 'percentage', 2000, null, 'order', null, 40000, 'wholesale', null, null, 11, now() - interval '14 months', null, 'active', 'shopify', 'gid://shopify/DiscountCodeNode/91234500002', 'synced', now() - interval '14 minutes'),
+  ('SUBSCRIBER10', 'Standing order discount', '10% off every delivery on an active subscription.', 'percentage', 1000, null, 'order', null, null, null, null, null, 27, now() - interval '11 months', null, 'active', 'shopify', 'gid://shopify/DiscountCodeNode/91234500003', 'synced', now() - interval '14 minutes'),
+  ('BRINETIME', 'Newsletter welcome', 'NZ$5.00 off a first order of NZ$30 or more.', 'fixed_amount', null, 500, 'order', null, 3000, null, 500, 1, 118, now() - interval '6 months', null, 'active', 'shopify', 'gid://shopify/DiscountCodeNode/91234500004', 'synced', now() - interval '14 minutes'),
+  ('SPRITZFREIGHT', 'Spritz free freight', 'Free shipping on any order containing Half Sour Spritz. Starts with the summer push.', 'free_shipping', null, null, 'shipping', null, 5000, null, null, null, 0, now() + interval '3 weeks', now() + interval '3 months', 'scheduled', 'shopify', 'gid://shopify/DiscountCodeNode/91234500005', 'synced', now() - interval '14 minutes'),
+  ('PICKLEBACK25', 'Matariki kit promotion', '25% off The Pickleback Kit for the Matariki gifting window.', 'percentage', 2500, null, 'product', (select id from public.products where handle = 'pickleback-kit'), null, null, null, 2, 86, now() - interval '4 months', now() - interval '3 months', 'expired', 'shopify', 'gid://shopify/DiscountCodeNode/91234500006', 'synced', now() - interval '14 minutes');
+
+-- =============================================================================
+-- CARTS  (one live shopper, one abandoned, one that became order HS-01006)
+-- =============================================================================
+insert into public.carts (token, customer_id, email, status, subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, created_at, updated_at, provider, shopify_gid, sync_status, synced_at) values
+  ('7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1', null, null, 'active', 4200, 0, 990, 677, 5190, now() - interval '22 minutes', now() - interval '4 minutes', 'shopify', 'gid://shopify/Cart/c1-7f3a91c04b28de65a1f7093c', 'synced', now() - interval '4 minutes'),
+  ('c82d17e5904ab36f1e75c0d3948a2b6f5e19d47c03b8a6215fd0e93c7a4b8016', null, 'nadine.oputa@gmail.com', 'abandoned', 9600, 0, 0, 1252, 9600, now() - interval '3 days', now() - interval '3 days' + interval '9 minutes', 'shopify', 'gid://shopify/Cart/c1-c82d17e5904ab36f1e75c0d3', 'synced', now() - interval '3 days'),
+  ('a4e0b9317dc6f28504ba71e3d95c8f062a7b3e14c0d95f8623ab7104ed3f9c25', null, null, 'active', 3700, 0, 990, 612, 4690, now() - interval '2 days' - interval '31 minutes', now() - interval '2 days', 'local', null, 'local', null);
+
+update public.carts set abandoned_at = updated_at + interval '6 hours' where status = 'abandoned';
+
+insert into public.cart_items (cart_id, currency, product_id, variant_id, quantity, unit_price_cents, created_at)
+select ct.id, 'NZD', v.product_id, v.id, ci.qty, ci.price, ct.created_at + interval '2 minutes'
+  from (values
+    ('7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1', 'HS-FIRE-750', 1, 1800),
+    ('7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1', 'HS-GOLD-750', 1, 1800),
+    ('7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1', 'HS-CONC-250', 0, 0),
+    ('c82d17e5904ab36f1e75c0d3948a2b6f5e19d47c03b8a6215fd0e93c7a4b8016', 'HS-FIRE-750-6', 1, 9600),
+    ('a4e0b9317dc6f28504ba71e3d95c8f062a7b3e14c0d95f8623ab7104ed3f9c25', 'HS-CHRY-750', 1, 2100),
+    ('a4e0b9317dc6f28504ba71e3d95c8f062a7b3e14c0d95f8623ab7104ed3f9c25', 'HS-DILL-750', 1, 1600)
+  ) as ci(token, sku, qty, price)
+  join public.carts ct on ct.token = ci.token
+  join public.product_variants v on v.sku = ci.sku
+ where ci.qty > 0;
+
+-- The live cart actually holds 750ml Fire + 750ml Golden + a 250ml concentrate.
+update public.cart_items ci
+   set quantity = 1, unit_price_cents = 2400
+  from public.carts c, public.product_variants v
+ where false;
+insert into public.cart_items (cart_id, currency, product_id, variant_id, quantity, unit_price_cents, created_at)
+select c.id, 'NZD', v.product_id, v.id, 1, 2400, c.created_at + interval '5 minutes'
+  from public.carts c, public.product_variants v
+ where c.token = '7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1'
+   and v.sku = 'HS-CONC-250';
+
+update public.carts set subtotal_cents = 6000, tax_cents = 912, total_cents = 6990
+ where token = '7f3a91c04b28de65a1f7093c58bd2e4470a6c3159de824bf06a1c73e5d92f8b1';

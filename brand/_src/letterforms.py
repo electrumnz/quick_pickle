@@ -163,8 +163,8 @@ def g_K():
     w = 92.0
     return w, [
         rect(0, 0, STEM, CAP),
-        poly([(68,0), (w,0), (STEM,70), (STEM,42)]),
-        poly([(STEM,50), (STEM,78), (w,CAP), (68,CAP)]),
+        poly([(68,0), (w,0), (STEM,72), (STEM,44)]),
+        poly([(STEM,65), (STEM,93), (w,CAP), (68,CAP)]),
     ]
 
 def g_E():
