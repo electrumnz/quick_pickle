@@ -411,3 +411,512 @@ alter table public.customers
   foreign key (default_address_id, id)
   references public.addresses (id, customer_id)
   on delete set null (default_address_id);
+
+-- =============================================================================
+-- DISCOUNTS
+-- =============================================================================
+
+create table public.discounts (
+  id            uuid primary key default gen_random_uuid(),
+  provider      public.commerce_provider not null default 'shopify',
+  shopify_gid   text,
+  shopify_updated_at timestamptz,
+  sync_status   public.sync_status not null default 'pending',
+  synced_at     timestamptz,
+  sync_error    text,
+
+  code          text not null,
+  title         text not null,
+  description   text,
+  value_type    public.discount_type not null,
+  value_bp      integer,
+  value_cents   integer,
+  currency      public.currency_code not null default 'NZD',
+  applies_to    public.discount_scope not null default 'order',
+  target_product_id    uuid references public.products (id) on delete cascade,
+  target_collection_id uuid references public.collections (id) on delete cascade,
+  minimum_subtotal_cents integer,
+  minimum_quantity integer,
+  customer_type_restriction public.customer_type,
+  once_per_customer boolean not null default false,
+  usage_limit   integer,
+  usage_limit_per_customer integer,
+  used_count    integer not null default 0,
+  starts_at     timestamptz not null default now(),
+  ends_at       timestamptz,
+  status        public.discount_status not null default 'draft',
+  created_by_agent_id uuid references public.agents (id) on delete set null,
+  approval_id   uuid references public.approvals (id) on delete set null,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+
+  constraint discounts_code_format check (code ~ '^[A-Z0-9][A-Z0-9_-]*$'),
+  -- Exactly one value shape per discount type. A percentage discount cannot
+  -- carry a cash amount and free shipping cannot carry either.
+  constraint discounts_value_shape check (
+    (value_type = 'percentage'   and value_bp is not null and value_cents is null)
+ or (value_type = 'fixed_amount' and value_cents is not null and value_bp is null)
+ or (value_type = 'free_shipping' and value_bp is null and value_cents is null)),
+  constraint discounts_value_bp_range check (value_bp is null or value_bp between 1 and 10000),
+  constraint discounts_value_cents_positive check (value_cents is null or value_cents > 0),
+  constraint discounts_minimums_positive check (
+    (minimum_subtotal_cents is null or minimum_subtotal_cents >= 0)
+    and (minimum_quantity is null or minimum_quantity > 0)),
+  constraint discounts_limits_positive check (
+    (usage_limit is null or usage_limit > 0)
+    and (usage_limit_per_customer is null or usage_limit_per_customer > 0)),
+  constraint discounts_used_within_limit check (
+    used_count >= 0 and (usage_limit is null or used_count <= usage_limit)),
+  constraint discounts_window check (ends_at is null or ends_at > starts_at),
+  -- The scope column and the target column must agree.
+  constraint discounts_product_target check ((applies_to = 'product') = (target_product_id is not null)),
+  constraint discounts_collection_target check ((applies_to = 'collection') = (target_collection_id is not null)),
+  constraint discounts_free_shipping_scope check (
+    value_type <> 'free_shipping' or applies_to = 'shipping')
+);
+
+create unique index discounts_code_key on public.discounts (upper(code));
+create index discounts_status_idx on public.discounts (status, starts_at desc);
+create index discounts_active_window_idx on public.discounts (starts_at, ends_at) where status = 'active';
+create index discounts_product_idx on public.discounts (target_product_id);
+create index discounts_collection_idx on public.discounts (target_collection_id);
+create index discounts_agent_idx on public.discounts (created_by_agent_id);
+create index discounts_approval_idx on public.discounts (approval_id);
+
+-- =============================================================================
+-- CARTS
+--
+-- Carts are the one commerce object the anonymous storefront writes. They are
+-- bearer-authenticated by `token` (see current_cart_token()), never by user id.
+-- =============================================================================
+
+create table public.carts (
+  id            uuid primary key default gen_random_uuid(),
+  provider      public.commerce_provider not null default 'shopify',
+  shopify_gid   text,
+  shopify_updated_at timestamptz,
+  sync_status   public.sync_status not null default 'pending',
+  synced_at     timestamptz,
+  sync_error    text,
+
+  token         text not null unique default
+                  replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''),
+  customer_id   uuid references public.customers (id) on delete set null,
+  email         text,
+  status        public.cart_status not null default 'active',
+  currency      public.currency_code not null default 'NZD',
+  subtotal_cents  integer not null default 0,
+  discount_cents  integer not null default 0,
+  shipping_cents  integer not null default 0,
+  tax_cents       integer not null default 0,
+  total_cents     integer not null default 0,
+  discount_id   uuid references public.discounts (id) on delete set null,
+  discount_code text,
+  note          text,
+  attributes    jsonb not null default '{}',
+  checkout_url  text,
+  abandoned_at  timestamptz,
+  recovery_email_sent_at timestamptz,
+  converted_order_id uuid,
+  expires_at    timestamptz not null default (now() + interval '30 days'),
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+
+  constraint carts_token_format check (token ~ '^[0-9a-f]{32,128}$'),
+  constraint carts_money_nonneg check (
+    subtotal_cents >= 0 and discount_cents >= 0 and shipping_cents >= 0
+    and tax_cents >= 0 and total_cents >= 0),
+  constraint carts_discount_within_subtotal check (discount_cents <= subtotal_cents),
+  constraint carts_email_format check (
+    email is null or email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'),
+  constraint carts_abandoned_stamped check ((status = 'abandoned') = (abandoned_at is not null)),
+  constraint carts_converted_has_order check (status <> 'converted' or converted_order_id is not null),
+  constraint carts_expiry_after_creation check (expires_at > created_at),
+  -- Composite key so a cart line cannot be priced in a currency the cart isn't in.
+  unique (id, currency)
+);
+
+create index carts_status_idx on public.carts (status, updated_at desc);
+create index carts_customer_idx on public.carts (customer_id);
+create index carts_discount_idx on public.carts (discount_id);
+create index carts_converted_order_idx on public.carts (converted_order_id);
+create index carts_abandoned_idx on public.carts (abandoned_at desc)
+  where status = 'abandoned' and recovery_email_sent_at is null;
+create index carts_expiry_idx on public.carts (expires_at) where status = 'active';
+
+-- -----------------------------------------------------------------------------
+create table public.cart_items (
+  id            uuid primary key default gen_random_uuid(),
+  cart_id       uuid not null,
+  currency      public.currency_code not null default 'NZD',
+  product_id    uuid not null,
+  variant_id    uuid not null,
+  quantity      integer not null,
+  unit_price_cents integer not null,
+  line_total_cents integer generated always as (quantity * unit_price_cents) stored,
+  properties    jsonb not null default '{}',
+  shopify_gid   text,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+
+  constraint cart_items_quantity_positive check (quantity > 0),
+  constraint cart_items_price_nonneg check (unit_price_cents >= 0),
+  unique (cart_id, variant_id),
+  -- The line's currency must be the cart's currency.
+  foreign key (cart_id, currency) references public.carts (id, currency) on delete cascade,
+  -- The line's variant must belong to the line's product.
+  foreign key (variant_id, product_id)
+    references public.product_variants (id, product_id) on delete cascade
+);
+
+create index cart_items_cart_idx on public.cart_items (cart_id, currency);
+create index cart_items_variant_idx on public.cart_items (variant_id, product_id);
+create index cart_items_product_idx on public.cart_items (product_id);
+
+-- =============================================================================
+-- ORDERS
+-- =============================================================================
+
+create table public.orders (
+  id            uuid primary key default gen_random_uuid(),
+  provider      public.commerce_provider not null default 'shopify',
+  shopify_gid   text,
+  shopify_updated_at timestamptz,
+  sync_status   public.sync_status not null default 'pending',
+  synced_at     timestamptz,
+  sync_error    text,
+
+  order_number  text not null unique
+                  default 'HS-' || lpad(nextval('public.order_number_seq')::text, 5, '0'),
+  customer_id   uuid references public.customers (id) on delete set null,
+  email         text not null,
+  phone         text,
+  status        public.order_status not null default 'open',
+  financial_status public.order_financial_status not null default 'pending',
+  fulfillment_status public.order_fulfillment_status not null default 'unfulfilled',
+  channel       public.sales_channel not null default 'online',
+  currency      public.currency_code not null default 'NZD',
+
+  subtotal_cents  integer not null default 0,
+  discount_cents  integer not null default 0,
+  shipping_cents  integer not null default 0,
+  tax_cents       integer not null default 0,
+  total_cents     integer not null default 0,
+  refunded_cents  integer not null default 0,
+  tax_rate_bp     integer not null default 1500,
+  tax_inclusive   boolean not null default true,
+
+  shipping_address_id uuid references public.addresses (id) on delete set null,
+  billing_address_id  uuid references public.addresses (id) on delete set null,
+  shipping_method text,
+  tracking_carrier text,
+  tracking_number text,
+  tracking_url  text,
+  discount_id   uuid references public.discounts (id) on delete set null,
+  discount_code text,
+  cart_id       uuid references public.carts (id) on delete set null,
+  payment_gateway text,
+  note          text,
+  customer_note text,
+  tags          text[] not null default '{}',
+
+  placed_at     timestamptz not null default now(),
+  paid_at       timestamptz,
+  fulfilled_at  timestamptz,
+  delivered_at  timestamptz,
+  cancelled_at  timestamptz,
+  cancel_reason text,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+
+  constraint orders_email_format check (email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'),
+  constraint orders_money_nonneg check (
+    subtotal_cents >= 0 and discount_cents >= 0 and shipping_cents >= 0
+    and tax_cents >= 0 and total_cents >= 0 and refunded_cents >= 0),
+  constraint orders_tax_rate_range check (tax_rate_bp between 0 and 10000),
+  constraint orders_discount_within_subtotal check (discount_cents <= subtotal_cents),
+  constraint orders_refund_within_total check (refunded_cents <= total_cents),
+  -- The invoice has to add up. NZ pricing is GST-inclusive, so tax_cents is the
+  -- GST component already inside total_cents rather than something added on.
+  constraint orders_total_balances check (
+    total_cents = subtotal_cents - discount_cents + shipping_cents
+                  + (case when tax_inclusive then 0 else tax_cents end)),
+  constraint orders_paid_stamped check (
+    financial_status not in ('paid', 'partially_refunded', 'refunded') or paid_at is not null),
+  constraint orders_refund_status_agrees check (
+    (refunded_cents > 0) = (financial_status in ('partially_refunded', 'refunded'))),
+  constraint orders_full_refund check (
+    financial_status <> 'refunded' or refunded_cents = total_cents),
+  constraint orders_fulfilled_stamped check (
+    fulfillment_status not in ('fulfilled', 'delivered') or fulfilled_at is not null),
+  constraint orders_delivered_stamped check (
+    (fulfillment_status = 'delivered') = (delivered_at is not null)),
+  constraint orders_delivered_after_fulfilled check (
+    delivered_at is null or delivered_at >= fulfilled_at),
+  constraint orders_cancelled_stamped check ((status = 'cancelled') = (cancelled_at is not null)),
+  constraint orders_cancelled_has_reason check (cancelled_at is null or cancel_reason is not null),
+  constraint orders_dates_after_placed check (
+    (paid_at is null or paid_at >= placed_at)
+    and (fulfilled_at is null or fulfilled_at >= placed_at)
+    and (cancelled_at is null or cancelled_at >= placed_at)),
+  constraint orders_tracking_pair check ((tracking_number is null) = (tracking_carrier is null)),
+  unique (id, currency)
+);
+
+create index orders_placed_idx on public.orders (placed_at desc);
+create index orders_customer_idx on public.orders (customer_id, placed_at desc);
+create index orders_status_idx on public.orders (status, financial_status, placed_at desc);
+create index orders_fulfillment_idx on public.orders (fulfillment_status, placed_at)
+  where status = 'open';
+create index orders_channel_idx on public.orders (channel, placed_at desc);
+create index orders_shipping_address_idx on public.orders (shipping_address_id);
+create index orders_billing_address_idx on public.orders (billing_address_id);
+create index orders_discount_idx on public.orders (discount_id);
+create index orders_cart_idx on public.orders (cart_id);
+create index orders_email_idx on public.orders (lower(email));
+create index orders_total_idx on public.orders (total_cents desc);
+create index orders_tags_idx on public.orders using gin (tags);
+
+alter table public.carts
+  add constraint carts_converted_order_fk
+  foreign key (converted_order_id) references public.orders (id) on delete set null;
+
+-- -----------------------------------------------------------------------------
+create table public.order_items (
+  id            uuid primary key default gen_random_uuid(),
+  order_id      uuid not null,
+  currency      public.currency_code not null default 'NZD',
+  product_id    uuid not null,
+  variant_id    uuid not null,
+  shopify_gid   text,
+  sku           text not null,
+  title         text not null,
+  variant_title text,
+  quantity      integer not null,
+  quantity_fulfilled integer not null default 0,
+  quantity_refunded  integer not null default 0,
+  unit_price_cents integer not null,
+  unit_cost_cents  integer,
+  discount_cents integer not null default 0,
+  tax_cents     integer not null default 0,
+  line_total_cents integer not null,
+  position      integer not null default 0,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+
+  constraint order_items_quantity_positive check (quantity > 0),
+  constraint order_items_fulfilled_within check (quantity_fulfilled between 0 and quantity),
+  constraint order_items_refunded_within check (quantity_refunded between 0 and quantity),
+  constraint order_items_money_nonneg check (
+    unit_price_cents >= 0 and discount_cents >= 0 and tax_cents >= 0
+    and line_total_cents >= 0 and (unit_cost_cents is null or unit_cost_cents >= 0)),
+  constraint order_items_line_balances check (
+    line_total_cents = quantity * unit_price_cents - discount_cents),
+  -- Line currency must equal order currency.
+  foreign key (order_id, currency) references public.orders (id, currency) on delete cascade,
+  -- The line's variant must belong to the line's product. Orders are permanent
+  -- records, so the catalogue cannot be hard-deleted out from under them.
+  foreign key (variant_id, product_id)
+    references public.product_variants (id, product_id) on delete restrict,
+  -- Composite key so a batch can only be traced to a line of the same product.
+  unique (id, product_id),
+  unique (id, variant_id)
+);
+
+create index order_items_order_idx on public.order_items (order_id, currency, position);
+create index order_items_variant_idx on public.order_items (variant_id, product_id);
+create index order_items_product_idx on public.order_items (product_id);
+create index order_items_sku_idx on public.order_items (sku);
+
+-- -----------------------------------------------------------------------------
+create table public.discount_redemptions (
+  id            uuid primary key default gen_random_uuid(),
+  discount_id   uuid not null references public.discounts (id) on delete cascade,
+  order_id      uuid not null references public.orders (id) on delete cascade,
+  customer_id   uuid references public.customers (id) on delete set null,
+  amount_cents  integer not null,
+  redeemed_at   timestamptz not null default now(),
+
+  constraint discount_redemptions_amount_nonneg check (amount_cents >= 0),
+  unique (discount_id, order_id)
+);
+
+create index discount_redemptions_order_idx on public.discount_redemptions (order_id);
+create index discount_redemptions_customer_idx on public.discount_redemptions (customer_id, redeemed_at desc);
+create index discount_redemptions_discount_idx on public.discount_redemptions (discount_id, redeemed_at desc);
+
+-- =============================================================================
+-- SUBSCRIPTIONS  (Shopify subscription contracts, or local when mock)
+-- =============================================================================
+
+create table public.subscriptions (
+  id            uuid primary key default gen_random_uuid(),
+  provider      public.commerce_provider not null default 'shopify',
+  shopify_gid   text,
+  shopify_updated_at timestamptz,
+  sync_status   public.sync_status not null default 'pending',
+  synced_at     timestamptz,
+  sync_error    text,
+
+  customer_id   uuid not null references public.customers (id) on delete cascade,
+  status        public.subscription_status not null default 'active',
+  interval_unit public.subscription_interval not null default 'month',
+  interval_count integer not null default 1,
+  currency      public.currency_code not null default 'NZD',
+  discount_bp   integer not null default 0,
+  shipping_address_id uuid,
+  delivery_price_cents integer not null default 0,
+  started_at    timestamptz not null default now(),
+  next_billing_at timestamptz,
+  last_billed_at  timestamptz,
+  paused_at     timestamptz,
+  cancelled_at  timestamptz,
+  cancel_reason text,
+  cycles_completed integer not null default 0,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+
+  constraint subscriptions_interval_positive check (interval_count > 0),
+  constraint subscriptions_discount_range check (discount_bp between 0 and 10000),
+  constraint subscriptions_delivery_nonneg check (delivery_price_cents >= 0),
+  constraint subscriptions_cycles_nonneg check (cycles_completed >= 0),
+  constraint subscriptions_active_has_next check (status <> 'active' or next_billing_at is not null),
+  constraint subscriptions_paused_stamped check ((status = 'paused') = (paused_at is not null)),
+  constraint subscriptions_cancelled_stamped check ((status = 'cancelled') = (cancelled_at is not null)),
+  constraint subscriptions_cancelled_has_reason check (cancelled_at is null or cancel_reason is not null),
+  constraint subscriptions_billed_after_start check (last_billed_at is null or last_billed_at >= started_at),
+  -- Ship-to must be one of this customer's own addresses.
+  foreign key (shipping_address_id, customer_id)
+    references public.addresses (id, customer_id) on delete set null (shipping_address_id),
+  unique (id, currency)
+);
+
+create index subscriptions_customer_idx on public.subscriptions (customer_id, status);
+create index subscriptions_due_idx on public.subscriptions (next_billing_at)
+  where status = 'active';
+create index subscriptions_status_idx on public.subscriptions (status, started_at desc);
+create index subscriptions_address_idx on public.subscriptions (shipping_address_id, customer_id);
+
+-- -----------------------------------------------------------------------------
+create table public.subscription_items (
+  id            uuid primary key default gen_random_uuid(),
+  subscription_id uuid not null,
+  currency      public.currency_code not null default 'NZD',
+  product_id    uuid not null,
+  variant_id    uuid not null,
+  quantity      integer not null,
+  unit_price_cents integer not null,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+
+  constraint subscription_items_quantity_positive check (quantity > 0),
+  constraint subscription_items_price_nonneg check (unit_price_cents >= 0),
+  unique (subscription_id, variant_id),
+  foreign key (subscription_id, currency)
+    references public.subscriptions (id, currency) on delete cascade,
+  foreign key (variant_id, product_id)
+    references public.product_variants (id, product_id) on delete restrict
+);
+
+create index subscription_items_subscription_idx on public.subscription_items (subscription_id, currency);
+create index subscription_items_variant_idx on public.subscription_items (variant_id, product_id);
+create index subscription_items_product_idx on public.subscription_items (product_id);
+
+-- =============================================================================
+-- INVENTORY LEDGER
+-- Every movement of stock, with the reason and (where relevant) the batch or
+-- order line that caused it. inventory_levels is the running total; this is the
+-- history that explains it.
+-- =============================================================================
+
+create table public.inventory_adjustments (
+  id            uuid primary key default gen_random_uuid(),
+  variant_id    uuid not null references public.product_variants (id) on delete cascade,
+  location_id   uuid not null references public.inventory_locations (id) on delete cascade,
+  delta         integer not null,
+  reason        public.inventory_reason not null,
+  batch_id      uuid,
+  order_item_id uuid references public.order_items (id) on delete set null,
+  approval_id   uuid references public.approvals (id) on delete set null,
+  note          text,
+  actor_type    public.actor_type not null default 'operator',
+  actor_id      uuid,
+  occurred_at   timestamptz not null default now(),
+  created_at    timestamptz not null default now(),
+
+  constraint inventory_adjustments_delta_nonzero check (delta <> 0),
+  constraint inventory_adjustments_sale_is_negative check (reason <> 'sale' or delta < 0),
+  constraint inventory_adjustments_release_is_positive check (reason <> 'batch_release' or delta > 0),
+  constraint inventory_adjustments_release_has_batch check (reason <> 'batch_release' or batch_id is not null),
+  constraint inventory_adjustments_sale_has_line check (reason <> 'sale' or order_item_id is not null)
+);
+
+create index inventory_adjustments_variant_idx on public.inventory_adjustments (variant_id, occurred_at desc);
+create index inventory_adjustments_location_idx on public.inventory_adjustments (location_id, occurred_at desc);
+create index inventory_adjustments_batch_idx on public.inventory_adjustments (batch_id);
+create index inventory_adjustments_order_item_idx on public.inventory_adjustments (order_item_id);
+create index inventory_adjustments_approval_idx on public.inventory_adjustments (approval_id);
+create index inventory_adjustments_reason_idx on public.inventory_adjustments (reason, occurred_at desc);
+
+-- =============================================================================
+-- MIRROR INVARIANTS
+--
+-- Applied in one loop over the mirrored tables so the rule is written once and
+-- cannot drift table to table:
+--   1. provider = 'local'  <=>  sync_status = 'local'   (the discriminator)
+--   2. a local row carries no Shopify identity at all
+--   3. a row cannot claim to be 'synced' without a gid and a synced_at
+--   4. gids are well-formed Shopify global IDs
+-- Plus the unique index on shopify_gid that makes upsert-by-gid idempotent, and
+-- the resync queue index.
+-- =============================================================================
+do $$
+declare
+  t text;
+  mirrored text[] := array[
+    'products', 'product_variants', 'product_images', 'collections',
+    'inventory_locations', 'inventory_levels', 'customers', 'addresses',
+    'discounts', 'carts', 'orders', 'subscriptions'
+  ];
+begin
+  foreach t in array mirrored loop
+    execute format($f$
+      alter table public.%1$I
+        add constraint %1$s_provider_discriminator
+          check ((provider = 'local') = (sync_status = 'local')),
+        add constraint %1$s_local_has_no_shopify_identity
+          check (provider = 'shopify'
+                 or (shopify_gid is null and synced_at is null and shopify_updated_at is null)),
+        add constraint %1$s_synced_has_identity
+          check (sync_status <> 'synced' or (shopify_gid is not null and synced_at is not null)),
+        add constraint %1$s_gid_format
+          check (shopify_gid is null
+                 or shopify_gid ~ '^gid://shopify/[A-Za-z]+/[A-Za-z0-9_.-]+(\?[A-Za-z0-9_=&%%.-]*)?$')
+    $f$, t);
+
+    execute format(
+      'create unique index %1$s_shopify_gid_key on public.%1$I (shopify_gid) where shopify_gid is not null', t);
+    execute format(
+      'create index %1$s_resync_idx on public.%1$I (synced_at nulls first) where sync_status in (''pending'', ''stale'', ''failed'')', t);
+  end loop;
+end;
+$$;
+
+alter table public.products             enable row level security;
+alter table public.product_variants     enable row level security;
+alter table public.product_images       enable row level security;
+alter table public.collections          enable row level security;
+alter table public.collection_products  enable row level security;
+alter table public.inventory_locations  enable row level security;
+alter table public.inventory_levels     enable row level security;
+alter table public.customers            enable row level security;
+alter table public.addresses            enable row level security;
+alter table public.discounts            enable row level security;
+alter table public.carts                enable row level security;
+alter table public.cart_items           enable row level security;
+alter table public.orders               enable row level security;
+alter table public.order_items          enable row level security;
+alter table public.discount_redemptions enable row level security;
+alter table public.subscriptions        enable row level security;
+alter table public.subscription_items   enable row level security;
+alter table public.inventory_adjustments enable row level security;
