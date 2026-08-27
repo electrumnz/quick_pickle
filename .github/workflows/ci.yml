@@ -4,9 +4,13 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  # A manually dispatched run is an evidence run — give it a group of its own
+  # so a push landing mid-run cannot cancel it. Automatic runs still supersede
+  # their own predecessors on the same ref.
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || 'auto' }}
   cancel-in-progress: true
 
 permissions:
@@ -21,6 +25,11 @@ env:
 jobs:
   verify:
     name: typecheck / lint / test / build
+    # A same-repo pull request is already covered by the push event on its
+    # branch, so only run the pull_request event for forks, which push misses.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -50,6 +59,11 @@ jobs:
 
   e2e:
     name: e2e (Playwright)
+    # A same-repo pull request is already covered by the push event on its
+    # branch, so only run the pull_request event for forks, which push misses.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -97,6 +111,11 @@ jobs:
 
   lighthouse:
     name: Lighthouse budget
+    # A same-repo pull request is already covered by the push event on its
+    # branch, so only run the pull_request event for forks, which push misses.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

@@ -640,3 +640,239 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
       products: buildConnection(scope, result.rows.map(mapProduct), window, total),
     };
   }
+
+  // -- Cart ----------------------------------------------------------------
+
+  async createCart(input: CartCreateInput = {}): Promise<CartMutationResult> {
+    return this.sql.transaction(async (tx) => {
+      const token = newCartToken();
+      const now = this.now();
+      const expiresAt = new Date(
+        now.getTime() + this.cartTtlDays * 24 * 60 * 60 * 1000,
+      );
+      const attributes = attributesToJson(input.attributes ?? []);
+      if (input.buyerIdentity?.phone != null) {
+        attributes[BUYER_PHONE_KEY] = input.buyerIdentity.phone;
+      }
+      if (input.buyerIdentity?.countryCode != null) {
+        attributes[BUYER_COUNTRY_KEY] = input.buyerIdentity.countryCode;
+      }
+      const inserted = await queryOne<{ id: unknown }>(
+        tx,
+        `insert into public.carts
+           (provider, sync_status, token, currency, status, note, attributes,
+            email, customer_id, expires_at)
+         values ('local', 'local', $1, $2, 'active', $3, $4::jsonb, $5, $6, $7)
+         returning id`,
+        [
+          token,
+          this.currencyCode,
+          input.note ?? null,
+          JSON.stringify(attributes),
+          input.buyerIdentity?.email ?? null,
+          input.buyerIdentity?.customerId ?? null,
+          expiresAt.toISOString(),
+        ],
+      );
+      if (inserted === null) {
+        throw commerceErrors.providerUnavailable("mock", "cart insert returned no row");
+      }
+      const id = str(inserted.id, "carts.id");
+      const cartId = composeCartId(id, token);
+      await tx.query(`update public.carts set checkout_url = $2 where id = $1`, [
+        id,
+        this.checkoutUrlFor(id, token),
+      ]);
+
+      const warnings: CartWarning[] = [];
+      if (input.lines !== undefined && input.lines.length > 0) {
+        warnings.push(...(await this.applyLineAdditions(tx, id, input.lines)));
+      }
+      if (input.discountCodes !== undefined && input.discountCodes.length > 0) {
+        warnings.push(...(await this.applyDiscountCodes(tx, id, input.discountCodes)));
+      }
+      return {
+        cart: await this.refreshAndBuild(tx, cartId, id),
+        warnings,
+      };
+    });
+  }
+
+  async getCart(cartId: string): Promise<Cart | null> {
+    const parsed = parseCartId(cartId);
+    if (parsed === null) return null;
+    return this.sql.transaction(async (tx) => {
+      const loaded = await this.loadCart(tx, parsed.id, parsed.token, true);
+      if (loaded === null) return null;
+      if (loaded.cart.status === "converted" || loaded.cart.status === "expired") {
+        return null;
+      }
+      if (this.isExpired(loaded.cart)) {
+        await this.markExpired(tx, loaded.cart.id);
+        return null;
+      }
+      return this.refreshAndBuild(tx, cartId, parsed.id);
+    });
+  }
+
+  async addCartLines(
+    cartId: string,
+    lines: readonly CartLineInput[],
+  ): Promise<CartMutationResult> {
+    return this.mutateCart(cartId, async (tx, loaded) => {
+      return this.applyLineAdditions(tx, loaded.cart.id, lines);
+    });
+  }
+
+  async updateCartLines(
+    cartId: string,
+    updates: readonly CartLineUpdateInput[],
+  ): Promise<CartMutationResult> {
+    return this.mutateCart(cartId, async (tx, loaded) => {
+      const warnings: CartWarning[] = [];
+      const byId = new Map(loaded.lines.map((line) => [line.lineId, line]));
+      for (const update of updates) {
+        const line = byId.get(update.lineId);
+        if (line === undefined) throw commerceErrors.cartLineNotFound(update.lineId);
+        if (!Number.isSafeInteger(update.quantity) || update.quantity < 0) {
+          throw commerceErrors.invalidQuantity(update.quantity);
+        }
+        if (update.quantity === 0) {
+          await tx.query(`delete from public.cart_items where id = $1`, [
+            update.lineId,
+          ]);
+          continue;
+        }
+        const capped = this.capToStock(line, update.quantity, warnings);
+        await tx.query(
+          `update public.cart_items
+              set quantity = $2,
+                  unit_price_cents = $3,
+                  properties = coalesce($4::jsonb, properties)
+            where id = $1`,
+          [
+            update.lineId,
+            capped,
+            // Re-read from the catalogue on every write. The client never
+            // supplies a price and the stored one is never trusted.
+            line.priceCents,
+            update.attributes === undefined
+              ? null
+              : JSON.stringify(attributesToJson(update.attributes)),
+          ],
+        );
+      }
+      return warnings;
+    });
+  }
+
+  async removeCartLines(
+    cartId: string,
+    lineIds: readonly string[],
+  ): Promise<CartMutationResult> {
+    return this.mutateCart(cartId, async (tx, loaded) => {
+      const known = new Set(loaded.lines.map((line) => line.lineId));
+      for (const lineId of lineIds) {
+        if (!known.has(lineId)) throw commerceErrors.cartLineNotFound(lineId);
+      }
+      if (lineIds.length > 0) {
+        await tx.query(
+          `delete from public.cart_items where cart_id = $1 and id = any($2::uuid[])`,
+          [loaded.cart.id, [...lineIds]],
+        );
+      }
+      return [];
+    });
+  }
+
+  async updateCartDiscountCodes(
+    cartId: string,
+    codes: readonly string[],
+  ): Promise<CartMutationResult> {
+    return this.mutateCart(cartId, async (tx, loaded) =>
+      this.applyDiscountCodes(tx, loaded.cart.id, codes),
+    );
+  }
+
+  async updateCartNote(
+    cartId: string,
+    note: string | null,
+  ): Promise<CartMutationResult> {
+    return this.mutateCart(cartId, async (tx, loaded) => {
+      await tx.query(`update public.carts set note = $2 where id = $1`, [
+        loaded.cart.id,
+        note,
+      ]);
+      return [];
+    });
+  }
+
+  async updateCartAttributes(
+    cartId: string,
+    attributes: readonly Attribute[],
+  ): Promise<CartMutationResult> {
+    return this.mutateCart(cartId, async (tx, loaded) => {
+      const next = attributesToJson(attributes);
+      for (const key of RESERVED_ATTRIBUTE_KEYS) {
+        const existing = loaded.cart.attributes[key];
+        if (existing !== undefined) next[key] = existing;
+      }
+      await tx.query(
+        `update public.carts set attributes = $2::jsonb where id = $1`,
+        [loaded.cart.id, JSON.stringify(next)],
+      );
+      return [];
+    });
+  }
+
+  /**
+   * Identify the buyer, merging any cart they already had into this one.
+   *
+   * The cart in hand wins: it is the one the shopper is looking at. The older
+   * cart's lines are folded in (quantities summed, then capped to stock) and it
+   * is retired as abandoned with a pointer to its successor, so an abandoned
+   * cart report does not double-count.
+   */
+  async updateCartBuyerIdentity(
+    cartId: string,
+    buyerIdentity: BuyerIdentityInput,
+  ): Promise<CartMutationResult> {
+    return this.mutateCart(cartId, async (tx, loaded) => {
+      const warnings: CartWarning[] = [];
+      const customer = await this.resolveCustomer(tx, buyerIdentity);
+
+      const attributes = { ...loaded.cart.attributes };
+      if (buyerIdentity.phone !== undefined) {
+        if (buyerIdentity.phone === null) delete attributes[BUYER_PHONE_KEY];
+        else attributes[BUYER_PHONE_KEY] = buyerIdentity.phone;
+      }
+      if (buyerIdentity.countryCode !== undefined) {
+        if (buyerIdentity.countryCode === null) delete attributes[BUYER_COUNTRY_KEY];
+        else attributes[BUYER_COUNTRY_KEY] = buyerIdentity.countryCode;
+      }
+
+      const email =
+        buyerIdentity.email !== undefined
+          ? buyerIdentity.email
+          : (customer?.email ?? loaded.cart.email);
+
+      await tx.query(
+        `update public.carts
+            set customer_id = $2, email = $3, attributes = $4::jsonb
+          where id = $1`,
+        [
+          loaded.cart.id,
+          customer?.id ?? loaded.cart.customerId,
+          email,
+          JSON.stringify(attributes),
+        ],
+      );
+
+      if (customer !== null) {
+        warnings.push(
+          ...(await this.mergeOtherCarts(tx, loaded, customer.id)),
+        );
+      }
+      return warnings;
+    });
+  }

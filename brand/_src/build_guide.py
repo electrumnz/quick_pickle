@@ -781,3 +781,152 @@ def build():
              'shelf nothing.</p>')
     o.append('</div></section>')
     return o
+
+def build2(o):
+    def sec(n, title, kicker):
+        return ('<section id="s%s"><div class="wrap"><div class="sec-head">'
+                '<span class="n data">%s</span><h2>%s</h2>'
+                '<span class="k data">%s</span></div>' % (n, n, title, kicker))
+
+    # ---------------------------------------------------------------- 07
+    o.append(sec("07", "Colour", "Brine is not green. It is acid."))
+    o.append('<p class="lede" style="margin-bottom:30px">The signature is a chartreuse pulled from the colour of a '
+             'real half-sour brine held up to a window — cloudy, yellow-leaning, slightly uncomfortable. Everything '
+             'else exists to make it look expensive rather than radioactive.</p>')
+    o.append('<h3 class="data" style="color:var(--muted);margin-bottom:16px">Light</h3>')
+    o.append('<div class="sws">' + swatch_row(LIGHT, ["ink","pepper","dill","brine","vinegar","bone","paper","rind","chilli"]) + '</div>')
+
+    o.append('</div><div class="darkband"><div class="wrap">')
+    o.append('<span class="data">Dark mode — authored, not inverted</span>')
+    o.append('<h3>The bar at eleven.</h3>')
+    o.append('<p class="dl">Inverting Bone gives a grey-brown mud and inverting Brine gives a searing green that '
+             'vibrates on black. So dark mode is a different room, drawn from scratch: the ground is a green-black '
+             'rather than a neutral, the text warms toward salt, <b>Brine steps down one notch</b> so it stops '
+             'glaring, and a second accent — <b>Moss</b> — appears that has no light-mode equivalent. It does the '
+             'job Dill does in light, but from the other direction. Two tokens here exist only in the dark.</p>')
+    o.append('<div class="sws">' + swatch_row(DARK, ["night","cellar","shelf","salt","ash","brine","moss","ember"]) + '</div>')
+    o.append('</div></div><div class="wrap">')
+
+    o.append('<h3 class="data" style="color:var(--muted);margin:44px 0 16px">'
+             'Contrast — every sanctioned pair, computed. Anything not in these tables is not approved.</h3>')
+    o.append('<div class="grid g2" style="gap:34px">')
+    for label, pairs, tok in (("Light", PAIRS_LIGHT, LIGHT), ("Dark", PAIRS_DARK, DARK)):
+        o.append('<div><h4 class="data" style="color:var(--accent);margin-bottom:12px">%s — %d pairs</h4>'
+                 '<table><thead><tr><th></th><th>Foreground</th><th>Background</th><th>Ratio</th><th>Needs</th>'
+                 '<th></th><th>Role</th></tr></thead><tbody>%s</tbody></table></div>'
+                 % (label, len(pairs), contrast_rows(pairs, tok)))
+    o.append('</div>')
+    o.append('<p class="lede mut" style="margin-top:18px;font-size:14px">WCAG 2.1 relative luminance. Body text '
+             '4.5:1, large text (≥24px, or ≥19px bold) 3:1. Recomputable at any time with '
+             '<code>python3 brand/_src/palette.py</code>.</p>')
+
+    o.append('<div class="rules">')
+    for n, b, t in [
+        ("01", "Brine is a field, not an ink.", "On light grounds. Brine type on Bone is 1.36:1 and is forbidden — put Ink <em>on</em> Brine instead. On dark grounds Brine 600 may be type."),
+        ("02", "One Brine event per view.", "A cap, a band, a highlight — one. Two makes it a sports drink."),
+        ("03", "Ink is never #000.", "Pure black next to Bone reads cheap. Ink is a green-black."),
+        ("04", "Chilli is reserved.", "Errors, sold-out states, allergen notices, and No. 03. Never decorative."),
+        ("05", "No gradients.", "The only exception is the physical gradient on glass in a product render."),
+    ]:
+        o.append('<div class="rule"><span class="data">%s</span><p><b>%s</b> %s</p></div>' % (n, b, t))
+    o.append('</div></div></section>')
+
+    # ---------------------------------------------------------------- 08
+    o.append(sec("08", "Type", "Three licensable faces and a fourth that is ours"))
+    o.append('<div class="alphabox"><div class="data"><span>HALF SOUR Display — drawn for this brand</span>'
+             '<span><b>39 glyphs</b> · cap 120 · stem 21 · flat radial terminals</span></div>')
+    o.append(alphabet_svg())
+    o.append('<p class="lede mut" style="margin:26px 0 0;font-size:14.5px;max-width:82ch">Monolinear, cap-only, '
+             'condensed round forms built on vertical stadiums, low crossbars. It exists as parametric geometry in '
+             '<code>brand/_src/letterforms.py</code>, so every asset in <code>brand/assets/</code> is generated '
+             'from one source of truth and <b style="color:var(--text)">no asset contains a live text element</b>. '
+             '<b style="color:var(--text)">Use it for</b> the wordmark, pack names, pack numerals, poster '
+             'headlines and the descriptor rule. <b style="color:var(--danger)">Never</b> for body copy, anything '
+             'below 11px, or anything with lowercase.</p></div>')
+
+    o.append('<div class="faces">')
+    for sample, name, role, why, lic, fam, weight in [
+        ("Aa", "Instrument Serif", "Editorial display",
+         "High contrast, tight fit, real character at 44px and up. Carries long headlines and pull quotes without looking like a template.",
+         "Google Fonts · OFL · free for web", '"Instrument Serif",serif', "400"),
+        ("Aa", "Archivo", "Text and UI",
+         "A grotesque drawn for both print and screen. Tight caps, sturdy at 15px, never fussy. Does every functional job on the site.",
+         "Google Fonts · OFL · free for web", '"Archivo",sans-serif', "600"),
+        ("A1", "Martian Mono", "Data and micro",
+         "Spec lines, lot codes, nav, buttons, prices. It makes numbers look like measurements, which is the entire personality.",
+         "Google Fonts · OFL · free for web", '"Martian Mono",monospace', "500"),
+    ]:
+        o.append('<div class="face"><div class="sample" style="font-family:%s;font-weight:%s">%s</div>'
+                 '<span class="data">%s</span><h4>%s</h4><p>%s</p><div class="lic">%s</div></div>'
+                 % (fam, weight, sample, role, name, why, lic))
+    o.append('</div>')
+    o.append('<p class="lede mut" style="margin:-20px 0 34px;font-size:14.5px"><b style="color:var(--text)">'
+             'Commercial upgrade path, when funded:</b> GT Alpina (editorial), Söhne (text), Söhne Mono (data). '
+             'Same three roles, same rhythm — swap without redrawing anything.</p>')
+
+    o.append('<table class="scale"><thead><tr><th>Step</th><th>Size / leading</th><th>Tracking</th>'
+             '<th>Face</th><th>Specimen</th></tr></thead><tbody>')
+    for step, size, track, face, use, cls in SCALE:
+        o.append('<tr><td class="data" style="color:var(--accent)">%s</td>'
+                 '<td class="cx-num">%s</td><td class="cx-need">%s</td>'
+                 '<td><b style="font-size:13.5px">%s</b><em>%s</em></td>'
+                 '<td><span class="spec %s">Half sour, twice as useful</span></td></tr>'
+                 % (step, size, track, face, use, cls))
+    o.append('</tbody></table>')
+
+    o.append('<div class="rules">')
+    for n, b, t in [
+        ("01", "One serif moment per screen.", "Instrument Serif carries the headline. It never appears twice in the same block."),
+        ("02", "Mono earns its place by being information.", "If a mono line is not a number, a label, a code or a category, it should be Archivo."),
+        ("03", "Never track body copy.", "Tracking is reserved for Data and Micro. Tracked body copy reads as a wellness brand."),
+        ("04", "Measure: 62–72 characters.", "Wider and the Archivo loses its rhythm."),
+        ("05", "Numbers in Martian Mono, always.", "Prices, volumes, batch numbers, dates, stock counts. Give them their own face."),
+    ]:
+        o.append('<div class="rule"><span class="data">%s</span><p><b>%s</b> %s</p></div>' % (n, b, t))
+    o.append('</div></div></section>')
+
+    # ---------------------------------------------------------------- 09
+    o.append(sec("09", "Identity", "The Half — the wordmark’s O, redrawn on a square em"))
+    o.append('<p class="lede" style="margin-bottom:28px">The mark is the letter O from the wordmark, cut on a '
+             'square em and half-filled: a cucumber in cross-section, and the name spelled as a shape. A hairline '
+             'of ground separates the fill from the ring, which is the craft at large sizes and disappears '
+             'gracefully below 24px — which is why the favicon is a <b>separately drawn cut</b> with a heavier '
+             'ring, a larger fill and no hairline at all.</p>')
+    o.append('<div class="grid g3" style="margin-bottom:18px">')
+    o.append('<div><div class="lock">%s</div><span class="capn">Stacked lockup — primary</span></div>'
+             % asset("lockup-stacked.svg", cur=True))
+    o.append('<div><div class="lock inv">%s</div><span class="capn">Reversed — Bone on Ink</span></div>'
+             % asset("lockup-horizontal.svg", cur=True))
+    o.append('<div><div class="lock acc">%s</div><span class="capn">Masthead — Ink on Brine</span></div>'
+             % asset("lockup-masthead.svg", cur=True))
+    o.append('</div>')
+
+    o.append('<div class="grid g2" style="margin-bottom:18px">')
+    o.append('<div><div class="lock" style="min-height:190px">%s</div>'
+             '<span class="capn">The Half — 120 unit em, ring 21, hairline 3.5</span></div>'
+             % asset("mark.svg", cur=True))
+    o.append('<div><div class="favs" style="min-height:190px;justify-content:space-around">'
+             '<figure><img src="assets/favicon.svg" width="16" height="16" alt="favicon at 16 pixels">'
+             '<figcaption>16 px</figcaption></figure>'
+             '<figure><img src="assets/favicon.svg" width="24" height="24" alt="favicon at 24 pixels">'
+             '<figcaption>24 px</figcaption></figure>'
+             '<figure><img src="assets/favicon.svg" width="32" height="32" alt="favicon at 32 pixels">'
+             '<figcaption>32 px</figcaption></figure>'
+             '<figure><img src="assets/favicon.svg" width="48" height="48" alt="favicon at 48 pixels">'
+             '<figcaption>48 px</figcaption></figure>'
+             '<figure><img src="assets/avatar.svg" width="88" height="88" alt="social avatar" '
+             'style="border-radius:50%"><figcaption>Avatar 512</figcaption></figure>'
+             '</div><span class="capn">Favicon cut — the hairline is removed below 24px because it vanishes</span></div>')
+    o.append('</div>')
+
+    o.append('<div class="rules">')
+    for n, b, t in [
+        ("01", "Clear space = one cap height.", "On all four sides of the wordmark. Nothing enters it."),
+        ("02", "Minimums.", "Wordmark 96px / 24mm. Mark 16px — use the favicon cut below 24px. Stacked lockup 120px."),
+        ("03", "The Half never rotates.", "The fill is always the left half. It is a cut cucumber, not a moon phase."),
+        ("04", "Six approved colourways.", "Ink on Bone, Ink on Paper, Ink on Brine, Bone on Ink, Bone on Dill, Brine 600 on Night. Nothing else."),
+        ("05", "Never recreate it in a font.", "No stretching, outlining, keylines, shadows, or placing on a photograph without a solid field behind it."),
+    ]:
+        o.append('<div class="rule"><span class="data">%s</span><p><b>%s</b> %s</p></div>' % (n, b, t))
+    o.append('</div></div></section>')
+    return o

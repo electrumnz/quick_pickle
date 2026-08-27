@@ -95,7 +95,7 @@ export function mapImage(raw: unknown): ImageRow {
   };
 }
 
-function toImage(row: ImageRow): Image {
+export function toImage(row: ImageRow): Image {
   return {
     id: row.id,
     url: row.url,
@@ -110,7 +110,7 @@ function toImage(row: ImageRow): Image {
  * Shopify-native way to say "the 750 ml one". The interface does not carry a
  * bare `sizeMl` field for the same reason.
  */
-function selectedOptionsFor(
+export function selectedOptionsFor(
   sizeMl: number | null,
   packCount: number,
 ): SelectedOption[] {
@@ -128,7 +128,7 @@ function selectedOptionsFor(
  * Shelf-label unit pricing, per 100 ml — the reference quantity NZ grocery
  * unit pricing uses for liquids. Null when the variant has no stated volume.
  */
-function unitPricingFor(
+export function unitPricingFor(
   priceCents: number,
   sizeMl: number | null,
   packCount: number,
