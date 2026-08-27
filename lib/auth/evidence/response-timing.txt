@@ -1,0 +1,14 @@
+HALF SOUR — admin auth evidence
+Wall-clock response time by sign-in outcome, real handler, real clock
+Configured floor: 400 ms
+
+outcome          samples  min      median   max     (milliseconds)
+wrong_password   5        400      403      448
+locked_out       5        401      402      403
+csrf_failed      5        401      402      405
+
+spread between medians: 1.0 ms
+
+Internally these paths differ by ~85 ms of argon2id work: a wrong
+password hashes, a locked-out attempt refuses before hashing, and a CSRF
+failure does neither. The floor makes them indistinguishable from outside.

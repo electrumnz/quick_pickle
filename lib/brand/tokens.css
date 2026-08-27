@@ -238,6 +238,9 @@
   --motion-distance-lg: 48px;
   --motion-distance-parallax: 96px;
 
+  --motion-scale-emphasis: 1.04;
+  --motion-scale-press: 0.98;
+
   /* --- Z layers -------------------------------------------------------- */
   --z-base: 0;
   --z-raised: 10;
@@ -454,6 +457,77 @@
     --motion-distance-md: 0px;
     --motion-distance-lg: 0px;
     --motion-distance-parallax: 0px;
+
+    /* Scale is displacement too. The emphasis beat survives as the accent ring
+       in @keyframes hs-emphasis, which is why it is written with a variable
+       rather than a literal. */
+    --motion-scale-emphasis: 1;
+    --motion-scale-press: 1;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   3c. MOTION — the shared keyframes
+   ---------------------------------------------------------------------- */
+/* Every keyframe is written in terms of the --motion-* properties, so the ONE
+   animation is both designs: under prefers-reduced-motion the travel and the
+   scale go to zero and what remains — the fade, the accent ring, the order of
+   arrival — is the reduced-motion design. No component needs a second path
+   and nothing is switched off. */
+@keyframes hs-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--motion-distance-md), 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hs-enter-sm {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--motion-distance-sm), 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hs-exit {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, calc(var(--motion-distance-sm) * -1), 0);
+  }
+}
+
+@keyframes hs-emphasis {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 var(--accent);
+  }
+  40% {
+    transform: scale(var(--motion-scale-emphasis));
+    box-shadow: 0 0 0 4px var(--accent);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 var(--accent);
+  }
+}
+
+@keyframes hs-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

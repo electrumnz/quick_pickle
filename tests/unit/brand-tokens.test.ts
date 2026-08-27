@@ -24,7 +24,11 @@ import {
   REPO_ROOT,
   stripComments,
 } from "@/lib/brand/css-source";
-import { fullMotion, reducedMotion } from "@/lib/brand/motion";
+import {
+  fullMotion,
+  MOTION_KEYFRAMES,
+  reducedMotion,
+} from "@/lib/brand/motion";
 import { DARK_PIGMENTS, LIGHT_PIGMENTS } from "@/lib/brand/palette";
 import {
   PAIR_EXEMPT,
@@ -353,6 +357,9 @@ describe("motion is one vocabulary in two languages", () => {
     for (const [name, px] of Object.entries(fullMotion.distance)) {
       expect(theme.get(distanceVar(name)), name).toBe(`${px}px`);
     }
+    for (const [name, value] of Object.entries(fullMotion.scale)) {
+      expect(theme.get(`--motion-scale-${name}`), name).toBe(String(value));
+    }
   });
 
   it("publishes the reduced profile under prefers-reduced-motion", () => {
@@ -368,6 +375,9 @@ describe("motion is one vocabulary in two languages", () => {
     }
     for (const [name, px] of Object.entries(reducedMotion.distance)) {
       expect(reduced.get(distanceVar(name)), name).toBe(`${px}px`);
+    }
+    for (const [name, value] of Object.entries(reducedMotion.scale)) {
+      expect(reduced.get(`--motion-scale-${name}`), name).toBe(String(value));
     }
   });
 
@@ -390,6 +400,10 @@ describe("motion is one vocabulary in two languages", () => {
     expect(reducedMotion.scrub.mode).toBe("threshold");
     expect(fullMotion.scrub.mode).toBe("continuous");
     // No overshoot: a bounce is displacement whatever it is applied to.
+    // Scale is displacement: the emphasis beat survives as the accent ring.
+    expect(reducedMotion.scale.emphasis).toBe(1);
+    expect(reducedMotion.scale.press).toBe(1);
+    expect(fullMotion.scale.emphasis).toBeGreaterThan(1);
     expect(reducedMotion.easing.emphasis).toBe(reducedMotion.easing.standard);
     expect(fullMotion.easing.emphasis).not.toBe(fullMotion.easing.standard);
     // Exits are quicker than entrances in both profiles.
@@ -397,6 +411,16 @@ describe("motion is one vocabulary in two languages", () => {
       reducedMotion.duration.enter,
     );
     expect(fullMotion.duration.exit).toBeLessThan(fullMotion.duration.enter);
+  });
+
+  it("publishes every shared keyframe, written in --motion-* terms", () => {
+    for (const name of Object.values(MOTION_KEYFRAMES)) {
+      expect(raw, `@keyframes ${name}`).toContain(`@keyframes ${name}`);
+    }
+    // The keyframes must read the variables, or reduced motion cannot reshape
+    // them and would have to be a separate, switched-off code path.
+    expect(raw).toContain("translate3d(0, var(--motion-distance-md), 0)");
+    expect(raw).toContain("scale(var(--motion-scale-emphasis))");
   });
 
   it("exposes touch and reduced-motion variants for other units", () => {

@@ -873,10 +873,13 @@ select a.id, r.trigger::public.agent_run_trigger, r.status::public.agent_run_sta
      'Three new reviews. Two are five stars and were replied to from the approved template. One is three stars about the smoke heat level — a reply is drafted and waiting on approval.',
      null, interval '52 minutes', interval '52 minutes', interval '49 minutes', 21440, 2180, 168400, 9,
      '{"reviews_seen":3,"replies_drafted":1,"escalations":0}'),
-    ('brine-ops', 'schedule', 'awaiting_approval', 'Nightly stock sweep against reorder points and the forward production plan.',
+    -- These two are inserted as 'running' and flipped to 'awaiting_approval'
+    -- below, once the approval they are blocked on exists: the check constraint
+    -- will not let a blocked run exist without one, which is the point of it.
+    ('brine-ops', 'schedule', 'running', 'Nightly stock sweep against reorder points and the forward production plan.',
      null, null, interval '4 hours', interval '4 hours', null, 18900, 3410, 214600, 7,
      '{"below_reorder":["BOTTLE_500"],"batches_expiring_60d":1,"po_drafted":"bottles"}'),
-    ('social', 'schedule', 'awaiting_approval', 'Draft this fortnight''s content calendar and schedule against the brand rules.',
+    ('social', 'schedule', 'running', 'Draft this fortnight''s content calendar and schedule against the brand rules.',
      null, null, interval '19 hours', interval '19 hours', null, 32100, 5640, 402800, 11,
      '{"drafts":4,"brand_rule_failures":1,"failed_rule":"no-health-claims"}'),
     ('ledger', 'schedule', 'succeeded', 'Recalculate unit cost from the last three batches per SKU and check margin.',
@@ -936,7 +939,7 @@ from (values
    '{"action":"schedule","platform":"instagram","scheduled_for":"+2 days 17:00 Pacific/Auckland","caption_length":214}',
    '{"caption":"No 03 SMOKE is back on Thursday. Chipotle and manzano, manuka-smoked salt, the heat arrives about three seconds late. Batch D, bottled Tuesday.","asset":"three-up.jpg"}',
    'low', null, 'pending', 'social', 'Draft this fortnight''s content calendar and schedule against the brand rules.',
-   interval '19 hours', interval '-29 hours', null, null, null, null, null),
+   interval '19 hours', interval '-29 hours', null, null, null, null),
 
   ('purchase_order', 'purchase_orders',
    'Reorder 2,400 x 500ml bottles from Onehunga Glass and Closures',
@@ -945,7 +948,7 @@ from (values
    '{"action":"create_purchase_order","supplier":"GLASSCO","lines":[{"ingredient":"BOTTLE_500","quantity":2400,"unit_cost_cents":118}],"freight_cents":8500}',
    '{"supplier":"Onehunga Glass and Closures","total":"NZ$2,917.00","expected":"14 days","cover_after":"about 8 weeks"}',
    'high', 291700, 'pending', 'brine-ops', 'Nightly stock sweep against reorder points and the forward production plan.',
-   interval '4 hours', interval '-44 hours', null, null, null, null, null),
+   interval '4 hours', interval '-44 hours', null, null, null, null),
 
   ('price_change', 'product_variants',
    'Lift No 03 SMOKE from NZ$22.00 to NZ$23.50',
@@ -954,7 +957,7 @@ from (values
    '{"action":"update_variant_price","sku":"HS-03-500","from_cents":2200,"to_cents":2350,"push_to_shopify":true}',
    '{"sku":"HS-03-500","current":"NZ$22.00","proposed":"NZ$23.50","margin_before":"58.2%","margin_after":"60.9%"}',
    'medium', 150, 'pending', 'ledger', 'Recalculate unit cost from the last three batches per SKU and check margin.',
-   interval '2 days 2 hours', interval '-22 hours', null, null, null, null, null),
+   interval '2 days 2 hours', interval '-22 hours', null, null, null, null),
 
   ('review_reply', 'reviews',
    'Reply to a three-star review about the No 03 heat level',
@@ -963,7 +966,7 @@ from (values
    '{"action":"publish_review_reply","review_rating":3,"reply_length":186}',
    '{"reply":"That batch did run hot — the manzano pick was hotter than the one before it, which is the honest answer. If you want the same brine without the heat, No 01 HOUSE is the same base. Email us and we will sort you out."}',
    'low', null, 'pending', 'concierge', 'Sweep new reviews and unanswered customer email since the last run.',
-   interval '49 minutes', interval '-47 hours', null, null, null, null, null),
+   interval '49 minutes', interval '-47 hours', null, null, null, null),
 
   ('social_post', 'social_posts',
    'Instagram: the Dirty Martini build at Brass and Bitters',
@@ -1015,13 +1018,15 @@ join lateral (
 ) run on true
 cross join lateral (select id from public.operators where email = 'nadia@halfsour.co.nz') op;
 
--- The two runs that stopped and asked now point at what they are waiting on.
+-- The two runs that stopped and asked now point at what they are waiting on,
+-- and only now can legally say they are awaiting approval.
 update public.agent_runs r
-   set blocking_approval_id = ap.id
+   set status = 'awaiting_approval', blocking_approval_id = ap.id
   from public.approvals ap
- where r.status = 'awaiting_approval'
-   and ap.requested_by_run_id = r.id
-   and ap.status = 'pending';
+ where ap.requested_by_run_id = r.id
+   and ap.status = 'pending'
+   and r.status = 'running'
+   and r.finished_at is null;
 
 -- =============================================================================
 -- PRODUCTION — suppliers and ingredients
@@ -1469,12 +1474,14 @@ select v.id, l.id, x.delta, x.reason::public.inventory_reason, null, null, x.not
 -- =============================================================================
 insert into public.subscriptions
   (customer_id, status, interval_unit, interval_count, discount_bp, shipping_address_id,
-   delivery_price_cents, started_at, next_billing_at, last_billed_at, cycles_completed,
+   delivery_price_cents, started_at, next_billing_at, last_billed_at, paused_at, cycles_completed,
    provider, shopify_gid, shopify_updated_at, sync_status, synced_at)
 select c.id, s.status::public.subscription_status, s.unit::public.subscription_interval, 1, s.disc, a.id, 0,
        now() - s.started,
        case when s.status = 'active' then now() + s.next else null end,
-       now() - s.last_billed, s.cycles,
+       now() - s.last_billed,
+       case when s.status = 'paused' then now() - interval '12 days' else null end,
+       s.cycles,
        'shopify', 'gid://shopify/SubscriptionContract/3344000000' || s.n, now() - s.last_billed,
        'synced', now() - interval '14 minutes'
   from (values
@@ -1484,8 +1491,6 @@ select c.id, s.status::public.subscription_status, s.unit::public.subscription_i
   ) as s(email, status, unit, disc, started, next, last_billed, cycles, n)
   join public.customers c on c.email = s.email
   join public.addresses a on a.customer_id = c.id and a.address_type = 'shipping' and a.is_default;
-
-update public.subscriptions set paused_at = now() - interval '12 days' where status = 'paused';
 
 insert into public.subscription_items (subscription_id, currency, product_id, variant_id, quantity, unit_price_cents)
 select s.id, 'NZD', v.product_id, v.id, si.qty, si.price
@@ -1985,7 +1990,7 @@ insert into public.agent_costs
   (agent_id, run_id, incurred_on, incurred_at, provider, model, kind,
    input_tokens, output_tokens, cost_micros, note)
 select a.id, null,
-       (now() - x.ago at time zone 'Pacific/Auckland')::date, now() - x.ago,
+       ((now() - x.ago) at time zone 'Pacific/Auckland')::date, now() - x.ago,
        x.provider, x.model, x.kind, 0, 0, x.micros, x.note
   from (values
     ('social',    'openai',    'text-embedding-3-small', 'embedding',   84000, interval '3 days',  'Re-embedded the caption archive after the brand rules changed.'),

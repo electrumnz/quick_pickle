@@ -1,0 +1,156 @@
+==============================================================================
+M26 — COST CAPS DELIBERATELY TRIPPED
+==============================================================================
+Four ceilings, each tripped on purpose. In every case the run stops, the reason
+lands on agent_runs.error and agent_runs.context.halt, and a structured log line
+records which cap, the limit, and what had already been spent.
+generated: 2026-08-27T13:18:50.657Z (npx vitest run tests/agents/evidence.test.ts)
+model: SCRIPTED (lib/agents/model/mock.ts). Everything below the model is the real runtime.
+
+------------------------------------------------------------------------------
+PER-RUN CAP (1c)
+------------------------------------------------------------------------------
+run status        failed
+agent_runs.error  cost_cap_exceeded: Run cap of $0.01 would be exceeded: $0.00 already spent, next call projected at $0.17.
+model calls made  0
+spend on the run  $0.00
+agent_runs.context.halt:
+{
+  "code": "cost_cap_exceeded",
+  "reason": "Run cap of $0.01 would be exceeded: $0.00 already spent, next call projected at $0.17.",
+  "at": "2026-08-27T09:00:00.000Z",
+  "extra": {
+    "cap": "run",
+    "limitMicros": 10000,
+    "spentMicros": 0,
+    "projectedMicros": 170701
+  }
+}
+structured log line:
+{
+  "level": "error",
+  "event": "agent.run.halted",
+  "at": "2026-08-27T09:00:00.000Z",
+  "runId": "e3b11760-1b71-4b4a-8b68-cdd500eec715",
+  "agentSlug": "test-role",
+  "fields": {
+    "code": "cost_cap_exceeded",
+    "reason": "Run cap of $0.01 would be exceeded: $0.00 already spent, next call projected at $0.17.",
+    "status": "failed",
+    "cap": "run",
+    "limitMicros": 10000,
+    "spentMicros": 0,
+    "projectedMicros": 170701
+  }
+}
+
+------------------------------------------------------------------------------
+PER-AGENT DAILY CAP (50c, already spent today)
+------------------------------------------------------------------------------
+run status        failed
+agent_runs.error  cost_cap_exceeded: Daily cap of $0.50 for "test-role" would be exceeded: $0.50 spent today.
+model calls made  0
+spend on the run  $0.00
+agent_runs.context.halt:
+{
+  "code": "cost_cap_exceeded",
+  "reason": "Daily cap of $0.50 for \"test-role\" would be exceeded: $0.50 spent today.",
+  "at": "2026-08-27T09:00:00.000Z",
+  "extra": {
+    "cap": "agent_daily",
+    "limitMicros": 500000,
+    "spentMicros": 500000,
+    "projectedMicros": 170701
+  }
+}
+structured log line:
+{
+  "level": "error",
+  "event": "agent.run.halted",
+  "at": "2026-08-27T09:00:00.000Z",
+  "runId": "ca56c851-fe86-40fd-a72b-a21bda928ae8",
+  "agentSlug": "test-role",
+  "fields": {
+    "code": "cost_cap_exceeded",
+    "reason": "Daily cap of $0.50 for \"test-role\" would be exceeded: $0.50 spent today.",
+    "status": "failed",
+    "cap": "agent_daily",
+    "limitMicros": 500000,
+    "spentMicros": 500000,
+    "projectedMicros": 170701
+  }
+}
+
+------------------------------------------------------------------------------
+PER-AGENT MONTHLY CAP (40c, already spent this month)
+------------------------------------------------------------------------------
+run status        failed
+agent_runs.error  cost_cap_exceeded: Monthly cap of $0.40 for "test-role" would be exceeded: $0.40 spent this month.
+model calls made  0
+spend on the run  $0.00
+agent_runs.context.halt:
+{
+  "code": "cost_cap_exceeded",
+  "reason": "Monthly cap of $0.40 for \"test-role\" would be exceeded: $0.40 spent this month.",
+  "at": "2026-08-27T09:00:00.000Z",
+  "extra": {
+    "cap": "agent_monthly",
+    "limitMicros": 400000,
+    "spentMicros": 400000,
+    "projectedMicros": 170701
+  }
+}
+structured log line:
+{
+  "level": "error",
+  "event": "agent.run.halted",
+  "at": "2026-08-27T09:00:00.000Z",
+  "runId": "b0a62eae-b94c-4e35-ab51-875be52610e2",
+  "agentSlug": "test-role",
+  "fields": {
+    "code": "cost_cap_exceeded",
+    "reason": "Monthly cap of $0.40 for \"test-role\" would be exceeded: $0.40 spent this month.",
+    "status": "failed",
+    "cap": "agent_monthly",
+    "limitMicros": 400000,
+    "spentMicros": 400000,
+    "projectedMicros": 170701
+  }
+}
+
+------------------------------------------------------------------------------
+COMPANY-WIDE MONTHLY CAP (1c across every agent)
+------------------------------------------------------------------------------
+run status        failed
+agent_runs.error  cost_cap_exceeded: Company-wide monthly cap of $0.01 would be exceeded: $0.00 spent across all agents this month.
+model calls made  0
+spend on the run  $0.00
+agent_runs.context.halt:
+{
+  "code": "cost_cap_exceeded",
+  "reason": "Company-wide monthly cap of $0.01 would be exceeded: $0.00 spent across all agents this month.",
+  "at": "2026-08-27T09:00:00.000Z",
+  "extra": {
+    "cap": "global_monthly",
+    "limitMicros": 10000,
+    "spentMicros": 0,
+    "projectedMicros": 170701
+  }
+}
+structured log line:
+{
+  "level": "error",
+  "event": "agent.run.halted",
+  "at": "2026-08-27T09:00:00.000Z",
+  "runId": "6746a7e0-300c-481e-91d1-fce4092bdc35",
+  "agentSlug": "test-role",
+  "fields": {
+    "code": "cost_cap_exceeded",
+    "reason": "Company-wide monthly cap of $0.01 would be exceeded: $0.00 spent across all agents this month.",
+    "status": "failed",
+    "cap": "global_monthly",
+    "limitMicros": 10000,
+    "spentMicros": 0,
+    "projectedMicros": 170701
+  }
+}
