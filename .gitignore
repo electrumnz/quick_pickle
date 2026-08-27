@@ -49,3 +49,6 @@ next-env.d.ts
 
 # agent run evidence (large, machine-generated)
 .claude/god-of-war/runs/*/evidence/
+
+# agent scratch
+.tmpbench/
