@@ -10,8 +10,13 @@ Updated 2026-08-27. Honest status, not a summary.
       `.claude/god-of-war/runs/20260827-121931/decisions.md`. Paste both tokens into the
       Vercel project env vars, then set `COMMERCE_PROVIDER=shopify`.
 - [ ] **Vercel production branch → `main`.** Settings → Environments → Production →
-      Branch Tracking. Currently tracks the working branch. Not urgent; every commit is
-      pushed to both refs.
+      Branch Tracking. Still tracks `claude/pickle-juice-brand-site-qu6jrr`. **This is now
+      the single thing standing between the built homepage and the live site**: `main`
+      carries it and deploys green, but `half-sour.vercel.app` serves whatever the tracked
+      branch last built, which is still the scaffold. Flip it, then redeploy `main` from
+      the dashboard. Neither Vercel token in the environment is valid, so an agent cannot
+      do this — the API rejects both with `invalidToken`. Once flipped, drop the
+      dual-pushing paragraph from CLAUDE.md.
 - [ ] **Trademark filing.** HALF SOUR is clear in NZ class 32 (checked via TMview, 27 Aug
       2026 — IPONZ blocks non-browser clients). Two conditions from that search:
       file the **composite** mark (drawn wordmark + device) rather than the plain words,
@@ -50,11 +55,19 @@ Updated 2026-08-27. Honest status, not a summary.
 - [x] CI — typecheck, lint, test, build, Playwright e2e, and a Lighthouse budget **proven
       to bite** (deliberately breached at CLS 0.194 against a 0.02 budget, then removed)
 - [x] Vercel project, live and public
+- [x] **Homepage** — hero, the range as a back-bar spec sheet, the four serves, the
+      kitchen band and the four-step process. Renders `components/home/data.ts` and
+      `content/brines.ts`; carries no copy of its own. Checked in Chromium at 1440 and
+      390, light and dark, and with reduced motion forced: no horizontal overflow, no
+      console errors, no failed requests. Built and on `main` — **not yet on the live
+      domain**, see the branch-tracking item above.
+      Two things it is honest about rather than faking: the hero drops the label texture,
+      because the shipped one is a UV registration card that renders the words
+      "PLACEHOLDER LABEL", and `components/home/routes.ts` filters out the eight nav
+      destinations whose routes do not exist yet rather than linking to 404s.
 
 ## In progress
 
-- [ ] **Homepage** — the most visible gap. `half-sour.vercel.app` still shows the scaffold
-      placeholder. The 3D system exists; the page that consumes it is being built.
 - [ ] Content — 20+ cocktail and food recipes, supplier stories, wholesale front door
 - [ ] Commerce adapter — conformance suite runs against both providers
 - [ ] Agent runtime — durable runs, cost caps, replayable transcripts, approval gate
