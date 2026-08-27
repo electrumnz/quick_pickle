@@ -52,3 +52,7 @@ next-env.d.ts
 
 # agent scratch
 .tmpbench/
+
+# python bytecode
+__pycache__/
+*.pyc
