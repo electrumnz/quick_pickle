@@ -407,3 +407,236 @@ function productOrderBy(
       return `p.title ${direction}, p.id asc`;
   }
 }
+
+// ---------------------------------------------------------------------------
+// The provider
+// ---------------------------------------------------------------------------
+
+export class MockProvider implements CommerceProvider, CheckoutSimulator {
+  readonly name = "mock" as const;
+  readonly currencyCode: CurrencyCode;
+  readonly capabilities: ProviderCapabilities;
+
+  private readonly sql: SqlExecutor;
+  private readonly siteUrl: string;
+  private readonly now: () => Date;
+  private readonly cartTtlDays: number;
+
+  constructor(options: MockProviderOptions) {
+    this.sql = options.sql;
+    this.siteUrl = options.siteUrl.replace(/\/+$/, "");
+    this.currencyCode = options.currencyCode ?? DEFAULT_CURRENCY;
+    this.now = options.now ?? (() => new Date());
+    this.cartTtlDays = options.cartTtlDays ?? 30;
+    this.capabilities = {
+      cartTtlDays: this.cartTtlDays,
+      maxCartLines: MAX_CART_LINES,
+      maxPageSize: MAX_PAGE_SIZE,
+      exposesInventoryQuantities: true,
+      simulatesCheckout: true,
+    };
+  }
+
+  get checkoutSimulator(): CheckoutSimulator {
+    return this;
+  }
+
+  async close(): Promise<void> {
+    await this.sql.close();
+  }
+
+  // -- helpers -------------------------------------------------------------
+
+  private async count(
+    sql: SqlExecutor,
+    text: string,
+    params: readonly unknown[],
+  ): Promise<number> {
+    const row = await queryOne<{ total: unknown }>(sql, text, params);
+    return row === null ? 0 : int(row.total, "count");
+  }
+
+  private checkoutUrlFor(id: string, token: string): string {
+    return `${this.siteUrl}/checkout/mock/${id}?key=${token}`;
+  }
+
+  // -- Catalogue -----------------------------------------------------------
+
+  async listProducts(query: ProductListQuery = {}): Promise<Connection<Product>> {
+    const scope = "products";
+    const countParams = new Params();
+    const countWhere = productConditions(query.filter, countParams).join(" and ");
+    const total = await this.count(
+      this.sql,
+      `${CATALOGUE_CTES}
+       select count(*)::int as total ${PRODUCT_FROM} where ${countWhere}`,
+      countParams.values,
+    );
+
+    const window = resolvePageWindow(scope, query, total);
+    if (window.limit === 0 || window.offset >= total) {
+      return buildConnection<Product>(scope, [], window, total);
+    }
+
+    const params = new Params();
+    const where = productConditions(query.filter, params).join(" and ");
+    const order = productOrderBy(
+      query.sortKey,
+      query.reverse ?? false,
+      query.filter?.search,
+      params,
+    );
+    const limit = params.add(window.limit);
+    const offset = params.add(window.offset);
+    const result = await this.sql.query<SqlRow>(
+      `${CATALOGUE_CTES}
+       select ${PRODUCT_COLUMNS} ${PRODUCT_FROM}
+        where ${where}
+        order by ${order}
+        limit ${limit} offset ${offset}`,
+      params.values,
+    );
+    return buildConnection(scope, result.rows.map(mapProduct), window, total);
+  }
+
+  async getProductByHandle(handle: string): Promise<Product | null> {
+    return this.getProductWhere("p.handle = $1", [handle]);
+  }
+
+  async getProductById(id: string): Promise<Product | null> {
+    if (!isUuid(id)) return null;
+    return this.getProductWhere("p.id = $1", [id]);
+  }
+
+  private async getProductWhere(
+    predicate: string,
+    params: readonly unknown[],
+  ): Promise<Product | null> {
+    const row = await queryOne<SqlRow>(
+      this.sql,
+      `${CATALOGUE_CTES}
+       select ${PRODUCT_COLUMNS} ${PRODUCT_FROM}
+        where ${predicate} and p.deleted_at is null
+        limit 1`,
+      params,
+    );
+    return row === null ? null : mapProduct(row);
+  }
+
+  async getVariantsById(
+    ids: readonly string[],
+  ): Promise<readonly ProductVariant[]> {
+    const wanted = ids.filter(isUuid);
+    if (wanted.length === 0) return [];
+    const result = await this.sql.query<SqlRow>(
+      `${CATALOGUE_CTES}
+       select ${PRODUCT_COLUMNS} ${PRODUCT_FROM}
+        where p.deleted_at is null
+          and exists (select 1 from live_variant lv
+                       where lv.product_id = p.id and lv.id = any($1::uuid[]))`,
+      [[...wanted]],
+    );
+    const byId = new Map<string, ProductVariant>();
+    for (const row of result.rows) {
+      for (const variant of mapProduct(row).variants) {
+        byId.set(variant.id, variant);
+      }
+    }
+    return wanted
+      .map((id) => byId.get(id))
+      .filter((variant): variant is ProductVariant => variant !== undefined);
+  }
+
+  async listCollections(
+    query: CollectionListQuery = {},
+  ): Promise<Connection<Collection>> {
+    const scope = "collections";
+    const publishedOnly = query.publishedOnly ?? true;
+    const where = publishedOnly ? "c.is_published" : "true";
+    const total = await this.count(
+      this.sql,
+      `select count(*)::int as total from public.collections c where ${where}`,
+      [],
+    );
+    const window = resolvePageWindow(scope, query, total);
+    if (window.limit === 0 || window.offset >= total) {
+      return buildConnection<Collection>(scope, [], window, total);
+    }
+    const direction = query.reverse === true ? "desc" : "asc";
+    const order =
+      query.sortKey === "UPDATED_AT"
+        ? `c.updated_at ${direction}, c.id asc`
+        : query.sortKey === "TITLE"
+          ? `c.title ${direction}, c.id asc`
+          : `c.position ${direction}, c.title asc, c.id asc`;
+    const result = await this.sql.query<SqlRow>(
+      `select c.* from public.collections c
+        where ${where}
+        order by ${order}
+        limit $1 offset $2`,
+      [window.limit, window.offset],
+    );
+    return buildConnection(scope, result.rows.map(mapCollection), window, total);
+  }
+
+  async getCollectionByHandle(
+    handle: string,
+    query: CollectionProductsQuery = {},
+  ): Promise<CollectionWithProducts | null> {
+    const collectionRow = await queryOne<SqlRow>(
+      this.sql,
+      `select c.* from public.collections c where c.handle = $1 and c.is_published`,
+      [handle],
+    );
+    if (collectionRow === null) return null;
+    const collection = mapCollection(collectionRow);
+
+    const scope = `collection:${collection.id}`;
+    const joinClause = `join public.collection_products cp
+        on cp.product_id = p.id and cp.collection_id = $COLLECTION`;
+
+    const countParams = new Params();
+    const collectionParam = countParams.add(collection.id);
+    const countWhere = productConditions(query.filter, countParams).join(" and ");
+    const total = await this.count(
+      this.sql,
+      `${CATALOGUE_CTES}
+       select count(*)::int as total ${PRODUCT_FROM}
+       ${joinClause.replace("$COLLECTION", collectionParam)}
+        where ${countWhere}`,
+      countParams.values,
+    );
+
+    const window = resolvePageWindow(scope, query, total);
+    if (window.limit === 0 || window.offset >= total) {
+      return {
+        collection,
+        products: buildConnection<Product>(scope, [], window, total),
+      };
+    }
+
+    const params = new Params();
+    const collectionParam2 = params.add(collection.id);
+    const where = productConditions(query.filter, params).join(" and ");
+    const order = productOrderBy(
+      query.sortKey ?? "MANUAL",
+      query.reverse ?? false,
+      query.filter?.search,
+      params,
+    );
+    const limit = params.add(window.limit);
+    const offset = params.add(window.offset);
+    const result = await this.sql.query<SqlRow>(
+      `${CATALOGUE_CTES}
+       select ${PRODUCT_COLUMNS} ${PRODUCT_FROM}
+       ${joinClause.replace("$COLLECTION", collectionParam2)}
+        where ${where}
+        order by ${order}
+        limit ${limit} offset ${offset}`,
+      params.values,
+    );
+    return {
+      collection,
+      products: buildConnection(scope, result.rows.map(mapProduct), window, total),
+    };
+  }
