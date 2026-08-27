@@ -36,6 +36,50 @@ comment on table public.operators is
 comment on column public.operators.user_id is
   'Null until first sign-in. link_operator_on_signup() fills it by matching the email.';
 
+-- -----------------------------------------------------------------------------
+-- Access predicates
+--
+-- Half Sour is a single-operator business. Authentication comes from Supabase
+-- auth; authorisation comes from the `operators` table (created in the platform
+-- migration). These helpers are SECURITY DEFINER so that a policy on `operators`
+-- itself can call them without recursing into that table's own RLS.
+-- -----------------------------------------------------------------------------
+create or replace function public.is_operator()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select coalesce(
+    (select o.is_active and o.role in ('owner', 'operator', 'agent_service')
+       from public.operators o
+      where o.user_id = auth.uid()
+      limit 1),
+    false);
+$$;
+
+comment on function public.is_operator() is
+  'True when the current JWT belongs to an active operator. The single gate used by every admin RLS policy.';
+
+create or replace function public.is_owner()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select coalesce(
+    (select o.is_active and o.role = 'owner'
+       from public.operators o
+      where o.user_id = auth.uid()
+      limit 1),
+    false);
+$$;
+
+comment on function public.is_owner() is
+  'True only for the founder. Gates operator-account management and destructive platform settings.';
+
 -- First sign-in with a seeded operator email claims that operator row. This is
 -- what makes "seed the founder, then sign up" work without a manual UPDATE.
 create or replace function public.link_operator_on_signup()

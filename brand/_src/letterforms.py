@@ -6,8 +6,8 @@ stem 19, flat radial terminals, low crossbars. No font is traced.
 import math
 
 CAP   = 120.0     # cap height
-STEM  = 19.0      # stem weight
-BAR   = 17.0      # horizontal bar weight (optically lighter than the stem)
+STEM  = 21.0      # stem weight
+BAR   = 19.0      # horizontal bar weight (optically lighter than the stem)
 OS    = 1.5       # overshoot on round forms
 
 def _pt(cx, cy, r, deg):
@@ -83,8 +83,8 @@ def g_S():
     R, w_ = 26.0, 71.0
     cx = 35.5
     c1y, c2y = 34.0, 86.0
-    top = band(cx, c1y, R, STEM, 25, -270)     # right terminal, over the top, down the left
-    bot = band(cx, c2y, R, STEM, -90, -335)    # tangent join, round the bottom, out right
+    top = band(cx, c1y, R, STEM, -52, -270)    # terminal at 2 o'clock, over the top, down the left
+    bot = band(cx, c2y, R, STEM, -90, 128)     # tangent join, round the bottom, out to 8 o'clock
     return w_, [top, bot]
 
 def _O_geom():
@@ -95,7 +95,7 @@ def _O_geom():
     bot_c = CAP + OS - ro
     return w, ro, r, top_c, bot_c
 
-def g_O(half=True):
+def g_O(half=False):
     """The O. Condensed stadium ring; the counter's left half is filled — the
     'half sour' device. Also the brand mark, redrawn on a square em."""
     w, ro, r, top_c, bot_c = _O_geom()
@@ -134,7 +134,75 @@ def g_R():
         poly([(33,58), (54,58), (w,CAP), (w-21,CAP)]),
     ]
 
-GLYPHS = {'H':g_H, 'A':g_A, 'L':g_L, 'F':g_F, 'S':g_S, 'O':g_O, 'U':g_U, 'R':g_R}
+
+def g_P():
+    w  = 79.0
+    bc = (48.0, 31.0)
+    ro = 31.0
+    r  = ro - STEM/2.0
+    return w, [
+        rect(0, 0, STEM, CAP),
+        rect(STEM, 0, bc[0]-STEM, STEM),
+        rect(STEM, 2*bc[1]-STEM, bc[0]-STEM, STEM),
+        band(bc[0], bc[1], r, STEM, -90, 90),
+    ]
+
+def g_I():
+    return STEM, [rect(0, 0, STEM, CAP)]
+
+def g_C():
+    w, ro, r, top_c, bot_c = _O_geom()
+    cx = w/2.0
+    return w, [
+        rect(0, top_c, STEM, bot_c-top_c),
+        band(cx, top_c, r, STEM, 180, 333),
+        band(cx, bot_c, r, STEM, 27, 180),
+    ]
+
+def g_K():
+    w = 92.0
+    return w, [
+        rect(0, 0, STEM, CAP),
+        poly([(70,0), (w,0), (STEM,74), (STEM,52)]),
+        poly([(STEM,46), (STEM,68), (w,CAP), (70,CAP)]),
+    ]
+
+def g_E():
+    w = 74.0
+    return w, [
+        rect(0, 0, STEM, CAP),
+        rect(0, 0, w, BAR),
+        rect(0, 50.5, 58, BAR-2),
+        rect(0, CAP-BAR, w, BAR),
+    ]
+
+def g_B():
+    w = 74.0
+    r1 = 29.0 - STEM/2.0
+    r2 = 30.0 - STEM/2.0
+    return w, [
+        rect(0, 0, STEM, CAP),
+        rect(STEM, 0, 44.0-STEM, STEM),
+        band(44.0, 29.0, r1, STEM, -90, 90),
+        rect(STEM, 49.5, 44.0-STEM, STEM),
+        band(44.0, 90.0, r2, STEM, -90, 90),
+        rect(STEM, CAP-STEM, 44.0-STEM, STEM),
+    ]
+
+def g_N():
+    w = 100.0
+    return w, [
+        rect(0, 0, STEM, CAP),
+        rect(w-STEM, 0, STEM, CAP),
+        poly([(0,0), (STEM,0), (w,CAP), (w-STEM,CAP)]),
+    ]
+
+def g_dot():
+    """Interpunct used between descriptor phrases."""
+    return 21.0, [band(10.5, 60.0, 5.25, 10.5, 0, 180), band(10.5, 60.0, 5.25, 10.5, 180, 360)]
+
+GLYPHS = {'H':g_H, 'A':g_A, 'L':g_L, 'F':g_F, 'S':g_S, 'O':g_O, 'U':g_U, 'R':g_R,
+          'P':g_P, 'I':g_I, 'C':g_C, 'K':g_K, 'E':g_E, 'B':g_B, 'N':g_N, '.':g_dot}
 
 # Fitted side bearings. Diagonal and round forms are tucked in; flat-to-flat is opened.
 KERN = {('H','A'):-7, ('A','L'):-9, ('L','F'):0, ('S','O'):-2, ('O','U'):-2, ('U','R'):-2}
@@ -157,6 +225,29 @@ def set_paths(text, x0=0.0):
 
 def render(text, x0=0.0):
     total, items = set_paths(text, x0)
+    frags = []
+    for ch, x, ps in items:
+        inner = "".join('<path d="%s"/>' % p for p in ps)
+        frags.append('<g transform="translate(%s 0)" data-g="%s">%s</g>' % (_f(x), ch, inner))
+    return total, "".join(frags)
+
+
+def set_paths_tracked(text, track):
+    """Layout with an explicit tracking value (used for the outlined descriptor)."""
+    out, x, prev = [], 0.0, None
+    for ch in text:
+        if ch == ' ':
+            x += track + SPACE*0.9; prev = None; continue
+        if prev is not None:
+            x += track
+        w, ps = GLYPHS[ch]()
+        out.append((ch, x, ps))
+        x += w
+        prev = ch
+    return x, out
+
+def render_tracked(text, track):
+    total, items = set_paths_tracked(text, track)
     frags = []
     for ch, x, ps in items:
         inner = "".join('<path d="%s"/>' % p for p in ps)

@@ -106,3 +106,14 @@ HARD CONSTRAINTS while unattended:
 
 Reversible decisions may be made alone. Log every one to decisions.md with the reasoning and
 the alternative not taken, and surface the list at hand-back.
+
+### 2026-08-27 — Production-first, public demo
+User: "go live freely, this is a demo site at the moment. better to just go to prod directly
+cz im only gna send her the live link not previews".
+
+Consequences:
+- half-sour.vercel.app is THE deliverable surface. Previews are secondary.
+- Vercel's production branch must follow the working branch so every push goes live.
+- The critic's finding that production is served by a CLI upload with no githubCommitSha is
+  therefore promoted from an adversarial note to the highest-priority defect in the build.
+- Deployment protection stays OFF deliberately; public access is intended.
