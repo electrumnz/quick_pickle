@@ -1709,3 +1709,287 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
     }
     return id;
   }
+
+  // -- Orders --------------------------------------------------------------
+
+  async listOrders(query: OrderListQuery = {}): Promise<Connection<Order>> {
+    const scope = "orders";
+    const countParams = new Params();
+    const countWhere = orderConditions(query.filter, countParams).join(" and ");
+    const total = await this.count(
+      this.sql,
+      `select count(*)::int as total from public.orders o where ${countWhere}`,
+      countParams.values,
+    );
+    const window = resolvePageWindow(scope, query, total);
+    if (window.limit === 0 || window.offset >= total) {
+      return buildConnection<Order>(scope, [], window, total);
+    }
+    const params = new Params();
+    const where = orderConditions(query.filter, params).join(" and ");
+    const order = orderOrderBy(query.sortKey, query.reverse ?? false);
+    const limit = params.add(window.limit);
+    const offset = params.add(window.offset);
+    const result = await this.sql.query<SqlRow>(
+      `select ${ORDER_COLUMNS} from public.orders o
+        where ${where}
+        order by ${order}
+        limit ${limit} offset ${offset}`,
+      params.values,
+    );
+    return buildConnection(scope, result.rows.map(mapOrder), window, total);
+  }
+
+  async getOrder(orderId: string): Promise<Order | null> {
+    if (!isUuid(orderId)) return null;
+    return this.readOrder(this.sql, "o.id = $1", [orderId]);
+  }
+
+  async getOrderByNumber(orderNumber: string): Promise<Order | null> {
+    return this.readOrder(this.sql, "o.order_number = $1", [orderNumber]);
+  }
+
+  private async readOrder(
+    sql: SqlExecutor,
+    predicate: string,
+    params: readonly unknown[],
+  ): Promise<Order | null> {
+    const row = await queryOne<SqlRow>(
+      sql,
+      `select ${ORDER_COLUMNS} from public.orders o where ${predicate} limit 1`,
+      params,
+    );
+    return row === null ? null : mapOrder(row);
+  }
+
+  async updateOrder(orderId: string, patch: OrderPatch): Promise<Order> {
+    return this.sql.transaction(async (tx) => {
+      const current = await this.lockOrder(tx, orderId);
+      if (current.status === "cancelled") {
+        throw commerceErrors.orderNotEditable(orderId, "it is cancelled");
+      }
+      const params = new Params();
+      const sets: string[] = [];
+      if (patch.email !== undefined) sets.push(`email = ${params.add(patch.email)}`);
+      if (patch.phone !== undefined) sets.push(`phone = ${params.add(patch.phone)}`);
+      if (patch.note !== undefined) sets.push(`note = ${params.add(patch.note)}`);
+      if (patch.customerNote !== undefined) {
+        sets.push(`customer_note = ${params.add(patch.customerNote)}`);
+      }
+      if (patch.tags !== undefined) {
+        sets.push(`tags = ${params.add([...patch.tags])}::text[]`);
+      }
+      if (patch.shippingMethod !== undefined) {
+        sets.push(`shipping_method = ${params.add(patch.shippingMethod)}`);
+      }
+      if (sets.length > 0) {
+        const id = params.add(orderId);
+        await tx.query(
+          `update public.orders set ${sets.join(", ")} where id = ${id}`,
+          params.values,
+        );
+      }
+      return this.requireOrder(tx, orderId);
+    });
+  }
+
+  async markOrderPaid(orderId: string): Promise<Order> {
+    return this.sql.transaction(async (tx) => {
+      const current = await this.lockOrder(tx, orderId);
+      if (current.status === "cancelled") {
+        throw commerceErrors.orderNotEditable(orderId, "it is cancelled");
+      }
+      if (current.financialStatus === "paid") return this.requireOrder(tx, orderId);
+      await tx.query(
+        `update public.orders
+            set financial_status = 'paid', paid_at = coalesce(paid_at, $2)
+          where id = $1`,
+        [orderId, this.now().toISOString()],
+      );
+      return this.requireOrder(tx, orderId);
+    });
+  }
+
+  async fulfillOrder(
+    orderId: string,
+    input: OrderFulfillmentInput,
+  ): Promise<Order> {
+    return this.sql.transaction(async (tx) => {
+      const current = await this.lockOrder(tx, orderId);
+      if (current.status === "cancelled") {
+        throw commerceErrors.orderNotEditable(orderId, "it is cancelled");
+      }
+      const items = await tx.query<SqlRow>(
+        `select id, quantity, quantity_fulfilled from public.order_items
+          where order_id = $1 for update`,
+        [orderId],
+      );
+      const outstanding = new Map(
+        items.rows.map((row) => [
+          str(row.id, "order_items.id"),
+          int(row.quantity, "order_items.quantity") -
+            int(row.quantity_fulfilled, "order_items.quantity_fulfilled"),
+        ]),
+      );
+      const requested =
+        input.lineItems ??
+        [...outstanding.entries()].map(([lineItemId, quantity]) => ({
+          lineItemId,
+          quantity,
+        }));
+
+      for (const line of requested) {
+        const available = outstanding.get(line.lineItemId);
+        if (available === undefined) {
+          throw commerceErrors.invalidInput(
+            `Order line ${line.lineItemId} is not on order ${orderId}`,
+            ["lineItems"],
+          );
+        }
+        if (!Number.isSafeInteger(line.quantity) || line.quantity < 0) {
+          throw commerceErrors.invalidQuantity(line.quantity);
+        }
+        if (line.quantity > available) {
+          throw commerceErrors.invalidInput(
+            `Only ${String(available)} of order line ${line.lineItemId} is outstanding`,
+            ["lineItems", "quantity"],
+          );
+        }
+        if (line.quantity === 0) continue;
+        await tx.query(
+          `update public.order_items
+              set quantity_fulfilled = quantity_fulfilled + $2
+            where id = $1`,
+          [line.lineItemId, line.quantity],
+        );
+      }
+
+      const remaining = await this.count(
+        tx,
+        `select coalesce(sum(quantity - quantity_fulfilled), 0)::int as total
+           from public.order_items where order_id = $1`,
+        [orderId],
+      );
+      const fulfilledSoFar = await this.count(
+        tx,
+        `select coalesce(sum(quantity_fulfilled), 0)::int as total
+           from public.order_items where order_id = $1`,
+        [orderId],
+      );
+      const status =
+        remaining === 0
+          ? "fulfilled"
+          : fulfilledSoFar > 0
+            ? "partially_fulfilled"
+            : "unfulfilled";
+
+      await tx.query(
+        `update public.orders
+            set fulfillment_status = $2,
+                fulfilled_at = case when $2 in ('fulfilled', 'delivered')
+                                    then coalesce(fulfilled_at, $3) else fulfilled_at end,
+                tracking_carrier = $4, tracking_number = $5, tracking_url = $6
+          where id = $1`,
+        [
+          orderId,
+          status,
+          this.now().toISOString(),
+          input.carrier,
+          input.trackingNumber,
+          input.trackingUrl ?? null,
+        ],
+      );
+      return this.requireOrder(tx, orderId);
+    });
+  }
+
+  async cancelOrder(orderId: string, input: OrderCancelInput): Promise<Order> {
+    return this.sql.transaction(async (tx) => {
+      const current = await this.lockOrder(tx, orderId);
+      if (current.status === "cancelled") {
+        throw commerceErrors.orderAlreadyCancelled(orderId);
+      }
+
+      if (input.restock === true) {
+        const movements = await tx.query<SqlRow>(
+          `select ia.variant_id, ia.location_id, sum(-ia.delta)::int as quantity,
+                  oi.id as order_item_id
+             from public.inventory_adjustments ia
+             join public.order_items oi on oi.id = ia.order_item_id
+            where oi.order_id = $1 and ia.reason = 'sale'
+            group by ia.variant_id, ia.location_id, oi.id`,
+          [orderId],
+        );
+        for (const row of movements.rows) {
+          const quantity = int(row.quantity, "inventory_adjustments.delta");
+          if (quantity <= 0) continue;
+          await tx.query(
+            `update public.inventory_levels
+                set on_hand = on_hand + $3
+              where variant_id = $1 and location_id = $2`,
+            [row.variant_id, row.location_id, quantity],
+          );
+          await tx.query(
+            `insert into public.inventory_adjustments
+               (variant_id, location_id, delta, reason, order_item_id, actor_type, note)
+             values ($1, $2, $3, 'return', $4, 'operator', 'Order cancelled')`,
+            [row.variant_id, row.location_id, quantity, row.order_item_id],
+          );
+        }
+      }
+
+      const refund = input.refund === true && current.paidAt !== null;
+      await tx.query(
+        `update public.orders
+            set status = 'cancelled',
+                cancelled_at = $2,
+                cancel_reason = $3,
+                financial_status = $4,
+                refunded_cents = $5
+          where id = $1`,
+        [
+          orderId,
+          this.now().toISOString(),
+          input.reason,
+          refund
+            ? "refunded"
+            : current.financialStatus === "paid"
+              ? "paid"
+              : "voided",
+          refund ? current.totalCents : 0,
+        ],
+      );
+      return this.requireOrder(tx, orderId);
+    });
+  }
+
+  private async lockOrder(
+    tx: SqlExecutor,
+    orderId: string,
+  ): Promise<{
+    status: string;
+    financialStatus: string;
+    paidAt: string | null;
+    totalCents: number;
+  }> {
+    if (!isUuid(orderId)) throw commerceErrors.orderNotFound(orderId);
+    const row = await queryOne<SqlRow>(
+      tx,
+      `select status, financial_status, paid_at, total_cents
+         from public.orders where id = $1 for update`,
+      [orderId],
+    );
+    if (row === null) throw commerceErrors.orderNotFound(orderId);
+    return {
+      status: str(row.status, "orders.status"),
+      financialStatus: str(row.financial_status, "orders.financial_status"),
+      paidAt: isoOrNull(row.paid_at, "orders.paid_at"),
+      totalCents: int(row.total_cents, "orders.total_cents"),
+    };
+  }
+
+  private async requireOrder(tx: SqlExecutor, orderId: string): Promise<Order> {
+    const order = await this.readOrder(tx, "o.id = $1", [orderId]);
+    if (order === null) throw commerceErrors.orderNotFound(orderId);
+    return order;
+  }
