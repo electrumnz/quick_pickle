@@ -83,19 +83,47 @@ function useScrollerHeight(ref: React.RefObject<HTMLDivElement | null>) {
   return h;
 }
 
-/** Deterministic overrides for automated capture: ?tier=high&pour=0.55&still=1 */
-function useUrlOverrides() {
-  const [o, setO] = useState<{ tier?: string; pour?: number; still?: boolean }>(
-    {},
-  );
+/**
+ * Deterministic overrides for automated capture and for sharing a specific
+ * look as a link:
+ * `?tier=high&pour=0.55&still=1&cam=0.9&dist=1.4&fov=32&label=0&bg=0`
+ */
+type Overrides = {
+  tier?: string;
+  pour?: number;
+  still?: boolean;
+  cam?: number;
+  dist?: number;
+  fov?: number;
+  label?: boolean;
+  bg?: boolean;
+  chrome?: boolean;
+};
+
+function useUrlOverrides(): Overrides {
+  const [o, setO] = useState<Overrides>({});
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
+    const num = (k: string) => {
+      const v = q.get(k);
+      return v == null || v === "" || Number.isNaN(Number(v))
+        ? undefined
+        : Number(v);
+    };
+    const bool = (k: string) =>
+      q.get(k) == null ? undefined : q.get(k) !== "0";
     const tier = q.get("tier") ?? undefined;
-    const pour = q.get("pour");
+    const pour = num("pour");
     setO({
       tier: tier && ["low", "medium", "high"].includes(tier) ? tier : undefined,
-      pour: pour == null ? undefined : Math.min(1, Math.max(0, Number(pour))),
+      pour: pour == null ? undefined : Math.min(1, Math.max(0, pour)),
       still: q.get("still") === "1",
+      cam: num("cam"),
+      dist: num("dist"),
+      fov: num("fov"),
+      label: bool("label"),
+      bg: bool("bg"),
+      chrome: bool("chrome"),
     });
   }, []);
   return o;
@@ -134,7 +162,7 @@ export function BottleLab() {
         exposure: { value: 1.05, min: 0.3, max: 2.2, step: 0.01 },
         cameraFov: { value: 26, min: 14, max: 60, step: 1 },
         cameraDistance: { value: 1, min: 0.6, max: 2.4, step: 0.01 },
-        cameraHeight: { value: 0.16, min: -0.5, max: 0.9, step: 0.01 },
+        cameraHeight: { value: 0.34, min: -0.5, max: 1.6, step: 0.01 },
         cameraOffset: { value: 0.34, min: -1.5, max: 1.5, step: 0.01 },
         idleMotion: { value: 1, min: 0, max: 3, step: 0.05 },
         autoRotate: { value: 0, min: -0.6, max: 0.6, step: 0.01 },
@@ -660,9 +688,9 @@ export function BottleLab() {
                 : (effectiveTier as QualityTier)
             }
             exposure={scene.exposure}
-            cameraFov={scene.cameraFov}
-            cameraDistance={scene.cameraDistance}
-            cameraHeight={scene.cameraHeight}
+            cameraFov={url.fov ?? scene.cameraFov}
+            cameraDistance={url.dist ?? scene.cameraDistance}
+            cameraHeight={url.cam ?? scene.cameraHeight}
             cameraOffset={scene.cameraOffset}
             idleMotion={scene.idleMotion}
             autoRotate={scene.autoRotate}
@@ -679,11 +707,14 @@ export function BottleLab() {
             glass={glassProps}
             liquid={liquidProps}
             particulate={particulateProps}
-            label={labelProps}
+            label={{ ...labelProps, enabled: url.label ?? labelProps.enabled }}
             cap={capProps}
             pour={pourProps}
             studio={studioProps}
-            backdrop={backdropProps}
+            backdrop={{
+              ...backdropProps,
+              enabled: url.bg ?? backdropProps.enabled,
+            }}
           >
             <FpsProbe onSample={onSample} />
           </BottleScene>

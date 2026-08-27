@@ -42,7 +42,7 @@ import {
 import { SEMANTIC_COLORS, SEMANTIC_PAIRS } from "@/lib/brand/semantics";
 
 const css = stripComments(readTokensCss());
-const themeDecls = declarations(blockBody(css, /@theme\s*(?=\{)/));
+const themeDecls = declarations(blockBody(css, /@theme static\s*(?=\{)/));
 
 /** `ink` -> `--color-ink`; the dark Brine is published as `--color-brine-600`. */
 function cssVarFor(scheme: "light" | "dark", name: string): string {

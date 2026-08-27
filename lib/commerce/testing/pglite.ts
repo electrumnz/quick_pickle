@@ -55,7 +55,12 @@ class PgliteExecutor implements SqlExecutor {
     params: readonly unknown[] = [],
   ): Promise<SqlResult<R>> {
     const result = await this.db.query<R>(text, [...params]);
-    return { rows: result.rows, rowCount: result.rows.length };
+    // PGlite reports UPDATE/DELETE counts on `affectedRows`; `rows` is empty
+    // for a statement with no RETURNING clause.
+    return {
+      rows: result.rows,
+      rowCount: result.affectedRows ?? result.rows.length,
+    };
   }
 
   async transaction<T>(fn: (tx: SqlExecutor) => Promise<T>): Promise<T> {

@@ -40,7 +40,7 @@ import { FLUID_SPACE, TYPE_SCALE } from "@/lib/brand/type-scale";
 
 const raw = readTokensCss();
 const css = stripComments(raw);
-const theme = declarations(blockBody(css, /@theme\s*(?=\{)/));
+const theme = declarations(blockBody(css, /@theme static\s*(?=\{)/));
 const themeInline = declarations(blockBody(css, /@theme inline\s*(?=\{)/));
 const light = declarations(blockBody(css, /(^|\n):root\s*(?=\{)/));
 const dark = declarations(

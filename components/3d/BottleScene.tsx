@@ -92,7 +92,7 @@ export function BottleScene({
   studio,
   backdrop,
   cameraDistance = 1,
-  cameraHeight = 0.16,
+  cameraHeight = 0.34,
   cameraOffset = 0.34,
   cameraFov = 26,
   exposure = 1.05,

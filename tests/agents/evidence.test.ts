@@ -71,7 +71,11 @@ describe("evidence artefacts", () => {
     const harness = await createHarness({
       autonomy: "autonomous",
       script: [
-        toolTurn("send_external_message", ORDER, "Stock is low, so I am reordering."),
+        toolTurn(
+          "send_external_message",
+          ORDER,
+          "Stock is low, so I am reordering.",
+        ),
         { kind: "text", text: "Done." },
       ],
     });
@@ -90,7 +94,10 @@ describe("evidence artefacts", () => {
     };
 
     const attempts: { name: string; outcome: string }[] = [];
-    const record = async (name: string, attempt: () => Promise<unknown>): Promise<void> => {
+    const record = async (
+      name: string,
+      attempt: () => Promise<unknown>,
+    ): Promise<void> => {
       try {
         await attempt();
         attempts.push({ name, outcome: "!!! SUCCEEDED — THE GATE FAILED !!!" });
@@ -117,7 +124,11 @@ describe("evidence artefacts", () => {
       runId: started.runId,
       tool: harness.tools.sendExternalMessage,
       input: ORDER,
-      presentation: { title: "Restock", summary: "Twelve cases", amountCents: 42_000 },
+      presentation: {
+        title: "Restock",
+        summary: "Twelve cases",
+        amountCents: 42_000,
+      },
       rationale: "Stock is low.",
     });
     await record("2. mint a grant from a PENDING approval", () =>
@@ -171,8 +182,12 @@ describe("evidence artefacts", () => {
       trigger: "schedule",
     });
     const turn = await second.runtime.modelStep(secondRun.runId);
-    const toolCallId = turn.type === "tool_calls" ? (turn.toolCallIds[0] ?? "") : "";
-    const skipped = await second.runtime.executeToolCall(secondRun.runId, toolCallId);
+    const toolCallId =
+      turn.type === "tool_calls" ? (turn.toolCallIds[0] ?? "") : "";
+    const skipped = await second.runtime.executeToolCall(
+      secondRun.runId,
+      toolCallId,
+    );
     attempts.push({
       name: "6. skip the gate and execute the proposed call directly",
       outcome: `REFUSED  tool call recorded as "${skipped.status}" — ${skipped.error ?? ""}`,
@@ -180,7 +195,10 @@ describe("evidence artefacts", () => {
 
     const rejectedHarness = await createHarness({
       autonomy: "autonomous",
-      script: [toolTurn("send_external_message", ORDER, "Reordering."), { kind: "text", text: "OK." }],
+      script: [
+        toolTurn("send_external_message", ORDER, "Reordering."),
+        { kind: "text", text: "OK." },
+      ],
     });
     const rejectedRun = await rejectedHarness.runtime.startRun({
       agentSlug: "test-role",
@@ -212,16 +230,26 @@ describe("evidence artefacts", () => {
     lines.push(
       `  harness 1 (one legitimately approved send in attempt 5): ${harness.effects.externalMessages.length}`,
     );
-    lines.push(`  harness 2 (gate skipped):                                ${second.effects.externalMessages.length}`);
-    lines.push(`  harness 3 (approval rejected):                           ${rejectedHarness.effects.externalMessages.length}`);
+    lines.push(
+      `  harness 2 (gate skipped):                                ${second.effects.externalMessages.length}`,
+    );
+    lines.push(
+      `  harness 3 (approval rejected):                           ${rejectedHarness.effects.externalMessages.length}`,
+    );
     lines.push("");
-    lines.push("Every refusal above is a different route to the same effect. The only path that");
-    lines.push("worked was the legitimate one: an approvals row in status 'approved', raised by");
+    lines.push(
+      "Every refusal above is a different route to the same effect. The only path that",
+    );
+    lines.push(
+      "worked was the legitimate one: an approvals row in status 'approved', raised by",
+    );
     lines.push("this run, covering these exact arguments.");
 
     const path = write("01-approval-gate-bypass.txt", lines.join("\n"));
     expect(path).toContain("01-approval-gate-bypass.txt");
-    expect(attempts.every((attempt) => attempt.outcome.startsWith("REFUSED"))).toBe(true);
+    expect(
+      attempts.every((attempt) => attempt.outcome.startsWith("REFUSED")),
+    ).toBe(true);
     expect(second.effects.externalMessages).toHaveLength(0);
     expect(rejectedHarness.effects.externalMessages).toHaveLength(0);
   });
@@ -230,7 +258,11 @@ describe("evidence artefacts", () => {
     const harness = await createHarness({
       autonomy: "act_with_limits",
       script: [
-        toolTurn("read_catalogue", { handle: "no-01-house" }, "I need the current price first."),
+        toolTurn(
+          "read_catalogue",
+          { handle: "no-01-house" },
+          "I need the current price first.",
+        ),
         toolTurn(
           "save_internal_draft",
           {
@@ -239,7 +271,10 @@ describe("evidence artefacts", () => {
           },
           "Writing down what I found so the founder can read it later.",
         ),
-        { kind: "text", text: "No 01 HOUSE is $18.00 and active. Noted internally." },
+        {
+          kind: "text",
+          text: "No 01 HOUSE is $18.00 and active. Noted internally.",
+        },
       ],
     });
     const started = await harness.runtime.startRun({
@@ -274,9 +309,21 @@ describe("evidence artefacts", () => {
 
   it("03 — a cost cap is tripped and the halt is recorded", async () => {
     const chatty = [
-      toolTurn("read_catalogue", { handle: "no-01-house" }, "Checking No 01 HOUSE."),
-      toolTurn("read_catalogue", { handle: "no-02-dirty" }, "Checking No 02 DIRTY."),
-      toolTurn("read_catalogue", { handle: "no-03-smoke" }, "Checking No 03 SMOKE."),
+      toolTurn(
+        "read_catalogue",
+        { handle: "no-01-house" },
+        "Checking No 01 HOUSE.",
+      ),
+      toolTurn(
+        "read_catalogue",
+        { handle: "no-02-dirty" },
+        "Checking No 02 DIRTY.",
+      ),
+      toolTurn(
+        "read_catalogue",
+        { handle: "no-03-smoke" },
+        "Checking No 03 SMOKE.",
+      ),
       { kind: "text" as const, text: "All three checked." },
     ];
 
@@ -291,7 +338,9 @@ describe("evidence artefacts", () => {
 
     const scenarios: {
       name: string;
-      setUp: (harness: Awaited<ReturnType<typeof createHarness>>) => Promise<void>;
+      setUp: (
+        harness: Awaited<ReturnType<typeof createHarness>>,
+      ) => Promise<void>;
       options: Parameters<typeof createHarness>[0];
     }[] = [
       {
@@ -301,7 +350,12 @@ describe("evidence artefacts", () => {
       },
       {
         name: "PER-AGENT DAILY CAP (50c, already spent today)",
-        options: { script: chatty, perRunCents: 50, dailyCents: 50, monthlyCents: 5_000 },
+        options: {
+          script: chatty,
+          perRunCents: 50,
+          dailyCents: 50,
+          monthlyCents: 5_000,
+        },
         setUp: async (harness) => {
           await harness.store.recordCost({
             agentId: harness.agentId,
@@ -324,7 +378,12 @@ describe("evidence artefacts", () => {
       },
       {
         name: "PER-AGENT MONTHLY CAP (40c, already spent this month)",
-        options: { script: chatty, perRunCents: 40, dailyCents: 40, monthlyCents: 40 },
+        options: {
+          script: chatty,
+          perRunCents: 40,
+          dailyCents: 40,
+          monthlyCents: 40,
+        },
         setUp: async (harness) => {
           await harness.store.recordCost({
             agentId: harness.agentId,
@@ -354,7 +413,11 @@ describe("evidence artefacts", () => {
           monthlyCents: 100_000,
         },
         setUp: async (harness) => {
-          await harness.store.setSetting(GLOBAL_MONTHLY_CAP_SETTING_KEY, 1, "company-wide cap");
+          await harness.store.setSetting(
+            GLOBAL_MONTHLY_CAP_SETTING_KEY,
+            1,
+            "company-wide cap",
+          );
         },
       },
     ];
@@ -396,7 +459,11 @@ describe("evidence artefacts", () => {
     const harness = await createHarness({
       autonomy: "autonomous",
       script: [
-        toolTurn("send_external_message", ORDER, "Stock is down to two cases, so I am reordering."),
+        toolTurn(
+          "send_external_message",
+          ORDER,
+          "Stock is down to two cases, so I am reordering.",
+        ),
         { kind: "text", text: "Order placed with the grower." },
       ],
     });
@@ -405,7 +472,11 @@ describe("evidence artefacts", () => {
       runAgentWorkflow({
         step,
         platform: harness.platform,
-        input: { agentSlug: "test-role", goal: "Reorder cucumbers", trigger: "schedule" },
+        input: {
+          agentSlug: "test-role",
+          goal: "Reorder cucumbers",
+          trigger: "schedule",
+        },
       });
 
     const lines: string[] = [
@@ -429,7 +500,9 @@ describe("evidence artefacts", () => {
       }
     }
 
-    const parkedRun = (await harness.store.listRuns({ status: ["awaiting_approval"] }))[0];
+    const parkedRun = (
+      await harness.store.listRuns({ status: ["awaiting_approval"] })
+    )[0];
     const pending = (await harness.platform.approvals.pending())[0];
 
     lines.push("ATTEMPT 1");
@@ -438,7 +511,9 @@ describe("evidence artefacts", () => {
     lines.push(`  timeout             ${parked?.waiting.timeout ?? "-"}`);
     lines.push(`  match predicate     ${parked?.waiting.if ?? "-"}`);
     lines.push(`  model calls so far  ${harness.model.consumed}`);
-    lines.push(`  external sends      ${harness.effects.externalMessages.length}`);
+    lines.push(
+      `  external sends      ${harness.effects.externalMessages.length}`,
+    );
     lines.push(`  agent_runs.status   ${parkedRun?.status ?? "-"}`);
     lines.push(`  blocking approval   ${parkedRun?.blockingApprovalId ?? "-"}`);
     lines.push("  approvals row raised:");
@@ -470,7 +545,11 @@ describe("evidence artefacts", () => {
     });
     step.deliver({
       name: EVENT_NAMES.approvalDecided,
-      data: { approvalId: pending?.id ?? "", status: "approved", decidedBy: "founder" },
+      data: {
+        approvalId: pending?.id ?? "",
+        status: "approved",
+        decidedBy: "founder",
+      },
     });
 
     step.beginAttempt();
@@ -483,10 +562,16 @@ describe("evidence artefacts", () => {
     lines.push("ATTEMPT 2 (re-invoked, as Inngest re-invokes after a park)");
     lines.push(`  result status       ${result.status}`);
     lines.push(`  run id              ${result.runId}`);
-    lines.push(`  model calls total   ${harness.model.consumed}  (one more than attempt 1)`);
-    lines.push(`  external sends      ${harness.effects.externalMessages.length}`);
+    lines.push(
+      `  model calls total   ${harness.model.consumed}  (one more than attempt 1)`,
+    );
+    lines.push(
+      `  external sends      ${harness.effects.externalMessages.length}`,
+    );
     lines.push("");
-    lines.push("STEP TRACE (attempt, step, outcome) — memoised steps were not re-run");
+    lines.push(
+      "STEP TRACE (attempt, step, outcome) — memoised steps were not re-run",
+    );
     for (const entry of step.trace) {
       lines.push(
         `  attempt ${entry.attempt}  ${entry.stepId.padEnd(18)} ${entry.kind.padEnd(13)} ${entry.outcome}`,
@@ -525,7 +610,10 @@ describe("evidence artefacts", () => {
     }
     const during = await harness.store.getRun(started.runId);
     const engagedAt = Date.now();
-    await harness.platform.control.engageKillSwitch("smoke in the kitchen", "founder");
+    await harness.platform.control.engageKillSwitch(
+      "smoke in the kitchen",
+      "founder",
+    );
     const outcome = await inFlight;
     const stoppedAfterMs = Date.now() - engagedAt;
 

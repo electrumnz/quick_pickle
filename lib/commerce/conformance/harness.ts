@@ -37,6 +37,8 @@ export type ConformanceFixtures = {
   readonly searchTerm: string;
   /** A tag every catalogue product carries. */
   readonly commonTag: string;
+  /** A tag only some products carry, so `excludeTags` has something to bite on. */
+  readonly exclusiveTag: string;
   readonly collectionHandle: string;
   /** An order-scoped percentage code, active, with a subtotal minimum. */
   readonly percentageCode: string;

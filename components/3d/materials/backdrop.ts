@@ -171,9 +171,12 @@ export function createFloorMaterial(
 ): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(color),
-    roughness: 0.34,
-    metalness: 0.28,
-    envMapIntensity: 0.42,
+    // Deliberately close to matte. A polished studio floor mirrors the
+    // ceiling straight back into frame as a big pale wash, which flattens
+    // everything standing on it.
+    roughness: 0.62,
+    metalness: 0.06,
+    envMapIntensity: 0.2,
   });
   const uniforms = {
     uHorizon: { value: new THREE.Color(horizon) },
@@ -209,7 +212,7 @@ uniform float uFadeEnd;`,
         `#include <roughnessmap_fragment>
   // Polish the floor close in and let it go matte with distance, which is
   // what kills the tell-tale mirrored ring around the subject.
-  roughnessFactor = mix(roughnessFactor, 0.95, smoothstep(uFadeStart * 0.35, uFadeEnd, length(vHsFloor.xz)));`,
+  roughnessFactor = mix(roughnessFactor, 0.98, smoothstep(uFadeStart * 0.3, uFadeEnd * 0.5, length(vHsFloor.xz)));`,
       );
   };
   mat.customProgramCacheKey = () => "hs-floor";

@@ -360,11 +360,16 @@ const catalogueCases: readonly ConformanceCase[] = [
 
       const excluded = await provider.listProducts({
         first: 50,
-        filter: { excludeTags: [fixtures.commonTag] },
+        filter: { excludeTags: [fixtures.exclusiveTag] },
       });
+      assert.ok(
+        excluded.nodes.length > 0 &&
+          excluded.nodes.length < tagged.nodes.length,
+        "excludeTags removed nothing or everything, so it proved nothing",
+      );
       for (const product of excluded.nodes) {
         assert.ok(
-          !product.tags.includes(fixtures.commonTag),
+          !product.tags.includes(fixtures.exclusiveTag),
           `${product.handle} carries an excluded tag`,
         );
       }

@@ -39,7 +39,7 @@ export const DEFAULT_LIQUID: LiquidParams = {
   shallowColor: "#d6d47c",
   cloudColor: "#e9edc4",
   scatterColor: "#e2d766",
-  cloudiness: 0.34,
+  cloudiness: 0.46,
   cloudScale: 7.5,
   cloudSpeed: 0.055,
   absorption: 3.1,

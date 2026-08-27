@@ -34,8 +34,13 @@
 /* -------------------------------------------------------------------------
    1. PIGMENTS + 2. SCALES
    ---------------------------------------------------------------------- */
-@theme {
-  /* Tailwind's stock palette is cleared. There is no `bg-emerald-600` and no
+@theme static {
+  /* `static` emits every variable below to :root whether or not a utility
+     happens to use it, because other units read them directly through var()
+     — `var(--spacing-gutter)`, `var(--motion-ease-enter)` — and a pruned
+     token is a silent failure at runtime rather than a build error.
+
+     Tailwind's stock palette is cleared. There is no `bg-emerald-600` and no
      `text-slate-400` in this build to reach for by accident — the only colour
      utilities that exist are the brand's own and the achromatic primitives
      below. Making the unsanctioned hard is half of what a token layer is for. */
