@@ -494,3 +494,11 @@
     @slot;
   }
 }
+
+/* Variants other units need so a hover effect can have a DESIGNED touch
+   equivalent rather than a disabled one, and so reduced motion can be styled
+   rather than switched off. */
+@custom-variant touch (@media (hover: none) and (pointer: coarse));
+@custom-variant fine (@media (hover: hover) and (pointer: fine));
+@custom-variant reduce-motion (@media (prefers-reduced-motion: reduce));
+@custom-variant full-motion (@media (prefers-reduced-motion: no-preference));

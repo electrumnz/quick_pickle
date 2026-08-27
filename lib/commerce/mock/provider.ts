@@ -2397,3 +2397,314 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
     });
   }
 }
+
+// ---------------------------------------------------------------------------
+// SQL used by the cart and order paths
+// ---------------------------------------------------------------------------
+
+const CART_STOCK_CTES = `
+with shipping_location as (
+  select id from public.inventory_locations where is_active and ships_orders
+),
+variant_stock as (
+  select il.variant_id, sum(il.available)::int as available
+    from public.inventory_levels il
+    join shipping_location sl on sl.id = il.location_id
+   group by il.variant_id
+)`;
+
+const CART_LINE_COLUMNS = `
+  v.id as variant_id, v.product_id, v.sku, v.barcode,
+  v.title as variant_title, v.price_cents, v.compare_at_price_cents, v.currency,
+  v.size_ml, v.pack_count, v.weight_grams, v.track_inventory,
+  v.inventory_policy, v.position,
+  (v.deleted_at is not null) as variant_deleted,
+  p.handle as product_handle, p.title as product_title,
+  (p.status = 'active' and p.published_at is not null and p.deleted_at is null)
+    as product_sellable,
+  p.requires_shipping, p.hero_image_url,
+  coalesce(vs.available, 0)::int as stock_available,
+  coalesce((select array_agg(cp.collection_id::text)
+              from public.collection_products cp where cp.product_id = p.id),
+           '{}'::text[]) as collection_ids,
+  (select json_build_object('id', pi.id, 'url', pi.url, 'alt_text', pi.alt_text,
+                            'width_px', pi.width_px, 'height_px', pi.height_px,
+                            'position', pi.position, 'variant_id', pi.variant_id)
+     from public.product_images pi
+    where pi.variant_id = v.id
+    order by pi.position, pi.id limit 1) as variant_image`;
+
+const CART_LINES_SQL = `${CART_STOCK_CTES}
+select ci.id as line_id, ci.quantity, ci.properties,
+       ci.unit_price_cents as stored_unit_price_cents,
+       ${CART_LINE_COLUMNS}
+  from public.cart_items ci
+  join public.product_variants v on v.id = ci.variant_id
+  join public.products p on p.id = v.product_id
+  left join variant_stock vs on vs.variant_id = v.id
+ where ci.cart_id = $1
+ order by ci.created_at asc, ci.id asc`;
+
+const VARIANT_FOR_CART_SQL = `${CART_STOCK_CTES}
+select null::uuid as line_id, 0 as quantity, '{}'::jsonb as properties,
+       v.price_cents as stored_unit_price_cents,
+       ${CART_LINE_COLUMNS}
+  from public.product_variants v
+  join public.products p on p.id = v.product_id
+  left join variant_stock vs on vs.variant_id = v.id
+ where v.id = any($1::uuid[]) and v.deleted_at is null and p.deleted_at is null`;
+
+const ADDRESS_JSON = `json_build_object(
+  'id', a.id, 'first_name', a.first_name, 'last_name', a.last_name,
+  'company', a.company, 'line1', a.line1, 'line2', a.line2, 'suburb', a.suburb,
+  'city', a.city, 'region', a.region, 'postcode', a.postcode,
+  'country_code', a.country_code, 'phone', a.phone,
+  'delivery_instructions', a.delivery_instructions
+)`;
+
+const ORDER_COLUMNS = `
+  o.*,
+  (select coalesce(json_agg(json_build_object(
+      'id', oi.id, 'variant_id', oi.variant_id, 'product_id', oi.product_id,
+      'sku', oi.sku, 'title', oi.title, 'variant_title', oi.variant_title,
+      'quantity', oi.quantity, 'quantity_fulfilled', oi.quantity_fulfilled,
+      'quantity_refunded', oi.quantity_refunded,
+      'unit_price_cents', oi.unit_price_cents, 'discount_cents', oi.discount_cents,
+      'tax_cents', oi.tax_cents, 'line_total_cents', oi.line_total_cents,
+      'position', oi.position) order by oi.position, oi.id), '[]'::json)
+     from public.order_items oi where oi.order_id = o.id) as line_items,
+  (select json_build_object('id', cu.id, 'email', cu.email,
+                            'display_name', cu.full_name)
+     from public.customers cu where cu.id = o.customer_id) as customer_summary,
+  (select ${ADDRESS_JSON} from public.addresses a
+    where a.id = o.shipping_address_id) as shipping_address,
+  (select ${ADDRESS_JSON} from public.addresses a
+    where a.id = o.billing_address_id) as billing_address`;
+
+const CUSTOMER_COLUMNS = `
+  c.*,
+  (select coalesce(json_agg(${ADDRESS_JSON} order by a.address_type, a.created_at),
+                   '[]'::json)
+     from public.addresses a where a.customer_id = c.id) as addresses`;
+
+// ---------------------------------------------------------------------------
+// Row mapping and small helpers
+// ---------------------------------------------------------------------------
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string): boolean {
+  return UUID_PATTERN.test(value);
+}
+
+function attributesToJson(
+  attributes: readonly Attribute[],
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const attribute of attributes) out[attribute.key] = attribute.value;
+  return out;
+}
+
+function jsonToAttributes(value: Record<string, unknown>): Attribute[] {
+  return Object.entries(value)
+    .filter(([key]) => !RESERVED_ATTRIBUTE_KEYS.has(key))
+    .map(([key, raw]) => ({
+      key,
+      value: typeof raw === "string" ? raw : JSON.stringify(raw),
+    }));
+}
+
+function mapCartRow(row: SqlRow): CartRow {
+  return {
+    id: str(row.id, "carts.id"),
+    token: str(row.token, "carts.token"),
+    currencyCode: str(row.currency, "carts.currency"),
+    customerId: strOrNull(row.customer_id, "carts.customer_id"),
+    email: strOrNull(row.email, "carts.email"),
+    status: oneOf(
+      row.status,
+      ["active", "abandoned", "converted", "expired"] as const,
+      "carts.status",
+    ),
+    note: strOrNull(row.note, "carts.note"),
+    attributes: jsonObject(row.attributes, "carts.attributes"),
+    discountId: strOrNull(row.discount_id, "carts.discount_id"),
+    discountCode: strOrNull(row.discount_code, "carts.discount_code"),
+    convertedOrderId: strOrNull(
+      row.converted_order_id,
+      "carts.converted_order_id",
+    ),
+    expiresAt: iso(row.expires_at, "carts.expires_at"),
+    createdAt: iso(row.created_at, "carts.created_at"),
+    updatedAt: iso(row.updated_at, "carts.updated_at"),
+  };
+}
+
+function mapCartLineRow(row: SqlRow): CartLineRow {
+  return {
+    lineId: strOrNull(row.line_id, "cart_items.id") ?? "",
+    quantity: int(row.quantity, "cart_items.quantity"),
+    attributes: jsonToAttributes(
+      jsonObject(row.properties, "cart_items.properties"),
+    ),
+    storedUnitPriceCents: int(
+      row.stored_unit_price_cents,
+      "cart_items.unit_price_cents",
+    ),
+    variantId: str(row.variant_id, "product_variants.id"),
+    productId: str(row.product_id, "product_variants.product_id"),
+    sku: str(row.sku, "product_variants.sku"),
+    barcode: strOrNull(row.barcode, "product_variants.barcode"),
+    variantTitle: str(row.variant_title, "product_variants.title"),
+    priceCents: int(row.price_cents, "product_variants.price_cents"),
+    compareAtPriceCents: intOrNull(
+      row.compare_at_price_cents,
+      "product_variants.compare_at_price_cents",
+    ),
+    currencyCode: str(row.currency, "product_variants.currency"),
+    sizeMl: intOrNull(row.size_ml, "product_variants.size_ml"),
+    packCount: int(row.pack_count, "product_variants.pack_count"),
+    weightGrams: intOrNull(row.weight_grams, "product_variants.weight_grams"),
+    trackInventory: bool(
+      row.track_inventory,
+      "product_variants.track_inventory",
+    ),
+    inventoryPolicy: oneOf(
+      row.inventory_policy,
+      ["deny", "continue"] as const,
+      "product_variants.inventory_policy",
+    ),
+    position: int(row.position, "product_variants.position"),
+    variantDeleted: bool(row.variant_deleted, "product_variants.deleted_at"),
+    productHandle: str(row.product_handle, "products.handle"),
+    productTitle: str(row.product_title, "products.title"),
+    productSellable: bool(row.product_sellable, "products.status"),
+    requiresShipping: bool(row.requires_shipping, "products.requires_shipping"),
+    heroImageUrl: strOrNull(row.hero_image_url, "products.hero_image_url"),
+    stockAvailable: int(row.stock_available, "variant_stock.available"),
+    collectionIds: strArray(
+      row.collection_ids,
+      "collection_products.collection_id",
+    ),
+    variantImage:
+      row.variant_image == null ? null : mapImageJson(row.variant_image),
+  };
+}
+
+function mapImageJson(raw: unknown): {
+  id: string;
+  url: string;
+  altText: string | null;
+  width: number | null;
+  height: number | null;
+} {
+  const row = jsonObject(raw, "product_images");
+  return {
+    id: str(row.id, "product_images.id"),
+    url: str(row.url, "product_images.url"),
+    altText: strOrNull(row.alt_text, "product_images.alt_text"),
+    width: intOrNull(row.width_px, "product_images.width_px"),
+    height: intOrNull(row.height_px, "product_images.height_px"),
+  };
+}
+
+function toPricedLines(lines: readonly CartLineRow[]): PricedLineInput[] {
+  return lines.map((line) => ({
+    lineId: line.lineId,
+    variantId: line.variantId,
+    productId: line.productId,
+    quantity: line.quantity,
+    // The catalogue price, not `cart_items.unit_price_cents`. This is the
+    // single line that makes price tampering pointless.
+    catalogueUnitPriceCents: line.priceCents,
+    collectionIds: line.collectionIds,
+  }));
+}
+
+function assertPurchasable(lines: readonly CartLineRow[]): void {
+  for (const line of lines) {
+    if (line.variantDeleted)
+      throw commerceErrors.variantNotFound(line.variantId);
+    if (!line.productSellable) {
+      throw commerceErrors.variantUnavailable(
+        line.variantId,
+        "the product is not published",
+      );
+    }
+    if (!line.trackInventory || line.inventoryPolicy === "continue") continue;
+    if (line.stockAvailable <= 0) {
+      throw commerceErrors.outOfStock(line.variantId, line.sku);
+    }
+    if (line.quantity > line.stockAvailable) {
+      throw commerceErrors.insufficientStock(
+        line.variantId,
+        line.sku,
+        line.quantity,
+        line.stockAvailable,
+      );
+    }
+  }
+}
+
+function mapDiscountRule(row: SqlRow): DiscountRule {
+  const restriction = strOrNull(
+    row.customer_type_restriction,
+    "discounts.customer_type_restriction",
+  );
+  return {
+    id: str(row.id, "discounts.id"),
+    code: str(row.code, "discounts.code"),
+    title: str(row.title, "discounts.title"),
+    valueType: oneOf(
+      row.value_type,
+      ["percentage", "fixed_amount", "free_shipping"] as const,
+      "discounts.value_type",
+    ),
+    valueBasisPoints: intOrNull(row.value_bp, "discounts.value_bp"),
+    valueCents: intOrNull(row.value_cents, "discounts.value_cents"),
+    appliesTo: oneOf(
+      row.applies_to,
+      ["order", "product", "collection", "shipping"] as const,
+      "discounts.applies_to",
+    ),
+    targetProductId: strOrNull(
+      row.target_product_id,
+      "discounts.target_product_id",
+    ),
+    targetCollectionId: strOrNull(
+      row.target_collection_id,
+      "discounts.target_collection_id",
+    ),
+    minimumSubtotalCents: intOrNull(
+      row.minimum_subtotal_cents,
+      "discounts.minimum_subtotal_cents",
+    ),
+    minimumQuantity: intOrNull(
+      row.minimum_quantity,
+      "discounts.minimum_quantity",
+    ),
+    customerTypeRestriction:
+      restriction === null
+        ? null
+        : oneOf(
+            restriction,
+            ["retail", "trade", "wholesale", "staff", "press"] as const,
+            "discounts.customer_type_restriction",
+          ),
+    oncePerCustomer: bool(row.once_per_customer, "discounts.once_per_customer"),
+    usageLimit: intOrNull(row.usage_limit, "discounts.usage_limit"),
+    usageLimitPerCustomer: intOrNull(
+      row.usage_limit_per_customer,
+      "discounts.usage_limit_per_customer",
+    ),
+    usedCount: int(row.used_count, "discounts.used_count"),
+    status: oneOf(
+      row.status,
+      ["draft", "scheduled", "active", "expired", "disabled"] as const,
+      "discounts.status",
+    ),
+    startsAt: iso(row.starts_at, "discounts.starts_at"),
+    endsAt: isoOrNull(row.ends_at, "discounts.ends_at"),
+  };
+}

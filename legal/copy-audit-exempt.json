@@ -1,0 +1,51 @@
+{
+  "$schema": "internal — see legal/scripts/audit-copy.mjs and legal/COPY-RULES.md §8",
+  "$comment": [
+    "Registered exemptions for META-DOCUMENTS: files whose job is to enumerate the",
+    "forbidden words. Scanning a prohibition list with the marketing ruleset produces",
+    "noise, and noise trains people to ignore the scanner — which is the real failure",
+    "mode. Every entry must carry a written reason and a review date.",
+    "",
+    "scope: 'file'      — skip the whole file.",
+    "scope: 'sections'  — markdown only: skip everything under the named headings,",
+    "                     until the next heading of the same or higher level.",
+    "linePatterns       — literal substrings; any line containing one is skipped.",
+    "",
+    "Paths are relative to the repository root and use forward slashes.",
+    "Prefer inline copy-audit-ignore-start / copy-audit-ignore-end markers in the file",
+    "itself where the file's owner can add them; this registry exists for files owned",
+    "by another unit. Delete an entry as soon as the file carries its own markers."
+  ],
+  "exemptions": [
+    {
+      "path": "legal/COPY-RULES.md",
+      "scope": "file",
+      "reason": "This IS the ruleset. It must quote every banned term to define it.",
+      "reviewed": "2026-08-27"
+    },
+    {
+      "path": "legal/README.md",
+      "scope": "file",
+      "reason": "Index to the ruleset; summarises the prohibitions in plain English.",
+      "reviewed": "2026-08-27"
+    },
+    {
+      "path": "legal/test-fixtures/dirty-copy.md",
+      "scope": "file",
+      "reason": "Deliberately non-compliant fixture. The self-test scans it with --include-legal --no-exemptions and REQUIRES it to fail.",
+      "reviewed": "2026-08-27"
+    },
+    {
+      "path": "brand/brand-guide.md",
+      "scope": "sections",
+      "sections": ["What HALF SOUR never says", "What it is never"],
+      "linePatterns": [
+        "What we are not, and will not become",
+        "Two makes it a sports drink",
+        "reads as a wellness brand"
+      ],
+      "reason": "The brand guide's own prohibition lists. These lines forbid the terms rather than claim them; flagging them is a false positive. Scoped to named sections and three named lines so the REST of the guide is still scanned in full. Owned by the brand unit — replace with inline copy-audit-ignore-start / -end markers when they next edit it, then delete this entry.",
+      "reviewed": "2026-08-27"
+    }
+  ]
+}

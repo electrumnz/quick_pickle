@@ -16,7 +16,8 @@
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, resolve, extname, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+import { join, relative, resolve, extname, sep, dirname } from "node:path";
 
 const BANNED = "banned";
 const RESTRICTED = "restricted";
@@ -148,8 +149,8 @@ const RULES = [
   r(
     "TH-02",
     BANNED,
-    /\bcure[sd]?\b|\bcurative\b|\bremed(?:y|ies)\b|\bheals?\b|\bhealing\b|\btreatments?\b|\btreats?\b(?=\s+(?:your|the|a|an|any|symptom|illness|condition|cramp|hangover))/i,
-    'Therapeutic claim. (Plain "treats" as in snacks is not matched.)',
+    /\bcure[\s-]?all\b|\bcure\s+for\b|\bcures?\s+(?:your|you|the\s+body)\b|\bcures?\s+(?:for\s+)?(?:your|the|a|an|any)?\s*(?:hangover|cramp|nausea|headache|ailment|illness|sickness|symptom|bloat|indigestion|heartburn|cold|flu|soreness)\w*\b|\bcurative\b|\bremed(?:y|ies)\b|\bheals?\b|\bhealing\b|\btreatments?\b|\btreats?\b(?=\s+(?:your|the|a|an|any|symptom|illness|condition|cramp|hangover))/i,
+    "Therapeutic claim - the MEDICAL sense of cure/heal/remedy only. The FOOD-PROCESS sense ('cured in brine', 'a three-week cure', 'cure time', 'curing salt') is approved brand vocabulary and is deliberately NOT matched.",
     "FSC Std 1.2.7-8(a)",
   ),
   r(
@@ -660,6 +661,8 @@ const SKIP_DIRS = new Set([
   "build",
   "out",
   "coverage",
+  "test-results",
+  "playwright-report",
   ".pnpm-store",
   "vendor",
   ".venv",
@@ -667,9 +670,37 @@ const SKIP_DIRS = new Set([
 ]);
 
 const IGNORE_FILE = "copy-audit-ignore-file";
+const IGNORE_START = "copy-audit-ignore-start";
+const IGNORE_END = "copy-audit-ignore-end";
 const IGNORE_LINE = "copy-audit-ignore";
 const APPROVE_RE = /copy-audit-approved:\s*([A-Za-z0-9_\-,\s]+)/i;
 const NUL = String.fromCharCode(0);
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolve(HERE, "..", "..");
+const EXEMPT_FILE = join(HERE, "..", "copy-audit-exempt.json");
+
+/**
+ * Registered exemptions for META-DOCUMENTS: files whose job is to enumerate the
+ * forbidden words (this ruleset, the brand guide's prohibition lists, the test
+ * fixtures). Scanning those with the marketing ruleset produces noise that
+ * trains people to ignore the scanner, which is the real failure mode.
+ * Registered in legal/copy-audit-exempt.json so every exemption has a written
+ * reason and a review date. `--no-exemptions` ignores the registry.
+ */
+function loadExemptions() {
+  try {
+    const raw = JSON.parse(readFileSync(EXEMPT_FILE, "utf8"));
+    return Array.isArray(raw.exemptions) ? raw.exemptions : [];
+  } catch {
+    return [];
+  }
+}
+
+function exemptionFor(file, exemptions) {
+  const rel = relative(REPO_ROOT, resolve(file)).split(sep).join("/");
+  return exemptions.find((e) => e.path === rel) || null;
+}
 
 function isLegalPath(p) {
   return resolve(p).split(sep).includes("legal");
@@ -713,28 +744,89 @@ function approvedIds(line) {
   return ids.length ? new Set(ids) : null;
 }
 
-function scanFile(file, findings) {
+/** Nearest preceding non-blank line — markdown formatters insert blank lines
+ *  between an HTML-comment marker and the text it governs. */
+function precedingSignificantLine(lines, i) {
+  for (let j = i - 1; j >= 0 && j >= i - 4; j--) {
+    if (lines[j].trim() !== "") return lines[j];
+  }
+  return "";
+}
+
+/** Lines suppressed because they sit under an exempted markdown heading. */
+function headingExemptedLines(lines, headings) {
+  const skip = new Set();
+  if (!headings || headings.length === 0) return skip;
+  const wanted = headings.map((h) => h.toLowerCase());
+  let activeLevel = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^(#{1,6})\s+(.*)$/);
+    if (m) {
+      const level = m[1].length;
+      const text = m[2]
+        .replace(/[*_`#]/g, "")
+        .trim()
+        .toLowerCase();
+      if (activeLevel && level <= activeLevel) activeLevel = 0;
+      if (!activeLevel && wanted.some((w) => text.includes(w))) {
+        activeLevel = level;
+        skip.add(i);
+        continue;
+      }
+    }
+    if (activeLevel) skip.add(i);
+  }
+  return skip;
+}
+
+function scanFile(file, findings, exemptions, opts) {
   let text;
   try {
     text = readFileSync(file, "utf8");
   } catch {
-    return;
+    return { skipped: false };
   }
-  if (text.indexOf(NUL) !== -1) return; // binary
+  if (text.indexOf(NUL) !== -1) return { skipped: false }; // binary
+
+  const ex = opts.noExemptions ? null : exemptionFor(file, exemptions);
+  if (ex && (ex.scope === "file" || !ex.scope))
+    return { skipped: true, reason: ex.reason };
+
   const lines = text.split(/\r?\n/);
-  if (lines.slice(0, 20).some((l) => l.includes(IGNORE_FILE))) return;
+  if (lines.slice(0, 20).some((l) => l.includes(IGNORE_FILE)))
+    return { skipped: true, reason: "copy-audit-ignore-file marker" };
+
+  const headingSkip =
+    ex && ex.sections ? headingExemptedLines(lines, ex.sections) : new Set();
+  const literalSkips = (ex && ex.linePatterns) || [];
+
+  let inIgnoreBlock = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const prev = i > 0 ? lines[i - 1] : "";
-    const skipThis =
-      (line.includes(IGNORE_LINE) &&
-        !line.includes(IGNORE_FILE) &&
-        !APPROVE_RE.test(line)) ||
-      (prev.includes(IGNORE_LINE) &&
-        !prev.includes(IGNORE_FILE) &&
-        !APPROVE_RE.test(prev));
-    if (skipThis) continue;
+
+    if (line.includes(IGNORE_START)) {
+      inIgnoreBlock = true;
+      continue;
+    }
+    if (line.includes(IGNORE_END)) {
+      inIgnoreBlock = false;
+      continue;
+    }
+    if (inIgnoreBlock) continue;
+    if (headingSkip.has(i)) continue;
+    if (literalSkips.some((p) => line.includes(p))) continue;
+
+    const prev = precedingSignificantLine(lines, i);
+    const lineIgnored =
+      line.includes(IGNORE_LINE) &&
+      !line.includes(IGNORE_FILE) &&
+      !APPROVE_RE.test(line);
+    const prevIgnored =
+      prev.includes(IGNORE_LINE) &&
+      !prev.includes(IGNORE_FILE) &&
+      !APPROVE_RE.test(prev);
+    if (lineIgnored || prevIgnored) continue;
 
     const approvals = approvedIds(line) || approvedIds(prev);
 
@@ -762,12 +854,12 @@ function scanFile(file, findings) {
       }
     }
   }
+  return { skipped: false };
 }
 
 /* ------------------------------------------------------------------- main */
 
-function usage(code) {
-  process.stdout.write(`HALF SOUR copy auditor
+const USAGE = `HALF SOUR copy auditor
 
   node legal/scripts/audit-copy.mjs <path> [<path>...]   scan files or directories
   node legal/scripts/audit-copy.mjs --list               print every rule
@@ -776,18 +868,22 @@ function usage(code) {
 Options
   --json            emit JSON instead of human-readable text
   --include-legal   also scan files under legal/ (excluded by default)
+  --no-exemptions   ignore legal/copy-audit-exempt.json (see everything)
   --quiet           print only the summary line
 
 Inline markers
   copy-audit-ignore-file            skip the whole file (must appear in the first 20 lines)
+  copy-audit-ignore-start / -end    skip everything between the two markers
   copy-audit-ignore                 skip this line (or the line immediately below it)
   copy-audit-approved: <RULE-ID>    clear a RESTRICTED finding on this line (or the line below)
 
+Meta-documents that must enumerate the banned words (this ruleset, the brand
+guide's prohibition lists, the test fixtures) are registered with a written
+reason in legal/copy-audit-exempt.json.
+
 Exit: 0 clean, 1 findings, 2 usage error.
 Rules and reasoning: legal/COPY-RULES.md
-`);
-  process.exit(code);
-}
+`;
 
 function list() {
   for (const rule of RULES) {
@@ -799,25 +895,36 @@ function list() {
   process.stdout.write(
     `${RULES.length} rules (${banned} banned, ${RULES.length - banned} restricted).\n`,
   );
+  return 0;
 }
 
 function main(argv) {
-  const opts = { json: false, includeLegal: false, quiet: false };
+  const opts = {
+    json: false,
+    includeLegal: false,
+    quiet: false,
+    noExemptions: false,
+  };
   const paths = [];
   for (const a of argv) {
     if (a === "--json") opts.json = true;
     else if (a === "--include-legal") opts.includeLegal = true;
+    else if (a === "--no-exemptions") opts.noExemptions = true;
     else if (a === "--quiet") opts.quiet = true;
-    else if (a === "--list") {
-      list();
+    else if (a === "--list") return list();
+    else if (a === "-h" || a === "--help") {
+      process.stdout.write(USAGE);
       return 0;
-    } else if (a === "-h" || a === "--help") usage(0);
-    else if (a.startsWith("-")) {
+    } else if (a.startsWith("-")) {
       process.stderr.write(`unknown option: ${a}\n`);
-      usage(2);
+      process.stdout.write(USAGE);
+      return 2;
     } else paths.push(a);
   }
-  if (paths.length === 0) usage(2);
+  if (paths.length === 0) {
+    process.stdout.write(USAGE);
+    return 2;
+  }
 
   let files = [];
   try {
@@ -828,8 +935,13 @@ function main(argv) {
   }
   files = [...new Set(files)].sort();
 
+  const exemptions = loadExemptions();
   const findings = [];
-  for (const f of files) scanFile(f, findings);
+  const exempted = [];
+  for (const f of files) {
+    const res = scanFile(f, findings, exemptions, opts);
+    if (res && res.skipped) exempted.push({ file: f, reason: res.reason });
+  }
 
   const banned = findings.filter((f) => f.severity === BANNED).length;
   const restricted = findings.length - banned;
@@ -841,8 +953,13 @@ function main(argv) {
         {
           ok: findings.length === 0,
           filesScanned: files.length,
+          filesExempted: exempted.length,
           banned,
           restricted,
+          exempted: exempted.map((e) => ({
+            file: relative(cwd, e.file),
+            reason: e.reason,
+          })),
           findings: findings.map((f) => ({
             ...f,
             file: relative(cwd, f.file),
@@ -866,8 +983,8 @@ function main(argv) {
     }
     const verdict = findings.length === 0 ? "PASS" : "FAIL";
     process.stdout.write(
-      `${verdict}  ${files.length} file(s) scanned, ${findings.length} finding(s) ` +
-        `(${banned} banned, ${restricted} restricted).\n`,
+      `${verdict}  ${files.length} file(s) scanned, ${exempted.length} exempted, ` +
+        `${findings.length} finding(s) (${banned} banned, ${restricted} restricted).\n`,
     );
     if (findings.length) {
       process.stdout.write(
@@ -879,4 +996,4 @@ function main(argv) {
   return findings.length ? 1 : 0;
 }
 
-process.exit(main(process.argv.slice(2)));
+process.exitCode = main(process.argv.slice(2));
