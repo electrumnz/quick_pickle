@@ -40,14 +40,14 @@ export const SEAL_TONE: Readonly<Record<BrineId, SealTone>> = {
   "no-04-wild": "secondary",
 };
 
-/** The four-bottle box, which commerce carries as its own product. */
+/** The three-bottle box (01–03), which commerce carries as its own product. */
 export const FULL_SET = {
   handle: "the-full-set",
   name: "THE FULL SET",
   descriptor: "One of each",
   priceNzd: 54,
   // copy-audit-approved: R-04 (no scarcity framing; this is a pack description)
-  line: "Four bottles, one box, no decision required.",
+  line: "Three bottles, one box, no decision required.",
 } as const;
 
 export function fullSetHref(): string {
