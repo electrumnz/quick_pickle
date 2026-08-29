@@ -173,3 +173,34 @@ The answer key asked for both, which saved it. But the general lesson belongs in
 guidance on evidence: **name the exact command whose output counts, and prefer the one that runs
 the real production path.** A builder told to "make sure it typechecks" will do exactly that and
 no more.
+
+---
+
+## 10. `git add -A` under concurrent agents destroys attribution
+
+Two separate builders reported this independently, in near-identical words: *"concurrent
+agents swept my in-progress work into their commits"* and *"one of them titled as if it were
+this work"*.
+
+The orchestrator was checkpointing with `git add -A` on a stop-hook cadence while six agents
+wrote to one tree. Every checkpoint therefore captured whatever every other agent happened to
+have on disk, under a message describing only one unit. The copy-scanner rewrite — a 200-line
+parser change with its own fixtures — is committed under *"Fix the commerce enum divergence
+and the 3D lint rules"*. `git log -- legal/scripts/audit-copy.mjs` now tells a reader something
+false.
+
+The cost is not tidiness. It is that the two things git history is for — finding when a
+behaviour changed, and knowing what a change was *for* — both stop working precisely when the
+build is at its most parallel and a reader most needs them.
+
+The skill's git discipline section says to commit each unit as it passes, which is right and
+which this violated. What it does not say, and should:
+
+> **When several agents share one working tree, never `git add -A`.** Stage the directories the
+> completing unit owns. A checkpoint that sweeps the tree is not a checkpoint of anything — it
+> is a snapshot of a race. If a stop-hook or similar forces a whole-tree commit, say in the
+> message that it is a sweep rather than naming one unit's work.
+
+Corollary worth stating: unit briefs should name the directories a unit owns, which these did,
+and the orchestrator should then *stage by those same directories*. The ownership map already
+existed; it simply was not used at commit time.
