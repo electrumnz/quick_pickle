@@ -653,33 +653,6 @@
   }
 }
 
-/* ---------------------------------------------------------------- skeleton */
-
-/* The loading state is the finished layout with its content withheld, so the
-   page does not jump when the data lands. The shimmer is the only motion, and
-   under prefers-reduced-motion it becomes a still tint rather than nothing —
-   a designed alternative, not a switch. */
-.skeleton {
-  background-color: var(--surface-sunken);
-  border-radius: var(--radius-xs);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .skeleton {
-    animation: shopPulse 1.6s var(--motion-ease-standard) infinite;
-  }
-}
-
-@keyframes shopPulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.45;
-  }
-}
-
 /* -------------------------------------------------------------------- mark */
 
 /* The mark as a mask, so one file serves Ink on Bone and Bone on Ink and takes
@@ -746,10 +719,6 @@
 .deep {
   background-color: var(--surface-deep);
   color: var(--text-on-deep);
-}
-
-.deepRule {
-  border-color: color-mix(in oklab, var(--text-on-deep) 24%, transparent);
 }
 
 /* -------------------------------------------------------------- pending */
