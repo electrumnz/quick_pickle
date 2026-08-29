@@ -20,6 +20,12 @@ export const metadata: Metadata = {
     // "./" resolves against the current route, so every page is self-canonical.
     canonical: "./",
   },
+  // Served from public/ rather than app/icon.svg on purpose: the brand's
+  // favicon cut carries its own Brine ground, so the file holds raw hex, and
+  // tests/unit/brand-tokens.test.ts forbids that anywhere under app/.
+  icons: {
+    icon: [{ url: "/brand/favicon.svg", type: "image/svg+xml" }],
+  },
   openGraph: {
     type: "website",
     siteName: "Half Sour",
