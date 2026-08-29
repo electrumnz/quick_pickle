@@ -18,8 +18,9 @@ COMMERCE_PROVIDER=mock
 SUPABASE_DB_URL=postgresql://…              # migrations + supabase/seed.sql applied
 ```
 
-Without one the pages still render — that is the designed `degraded` state — and
-`shop-*.png` will show it. With one they show live prices and live stock.
+Without one the pages still render — that is the designed `degraded` state, and
+it has a capture script of its own below. With one they show live prices and
+live stock.
 
 ## What is measured, not just shown
 
@@ -31,8 +32,12 @@ Without one the pages still render — that is the designed `degraded` state —
 - `buyControls` — submit buttons present. With JavaScript disabled this must
   still be non-zero, because the buy path is a plain `<form>` posting to a
   Server Action.
-- `jsonLd` — the parsed structured data, so the Product/Offer payload and its
-  NZD price can be read back rather than taken on trust.
+- `structuredData` — the four fields a Product rich result stands or falls on,
+  read back out of the rendered JSON-LD: name, sku, price, currency and
+  availability. The price must be an NZD decimal string derived from integer
+  minor units, and the availability must match what the page shows.
+- `availabilityText` — what the page actually says about stock, so the chip and
+  the JSON-LD can be checked against each other.
 
 The run prints one line per capture and a pass/fail count at the end.
 

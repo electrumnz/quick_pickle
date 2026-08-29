@@ -1422,6 +1422,9 @@ const orderCases: readonly ConformanceCase[] = [
       assert.equal(cancelled.status, "cancelled");
       assert.equal(cancelled.cancelReason, "customer");
       assert.ok(cancelled.cancelledAt !== null);
+      // Nothing had shipped, so the goods were never out: this is a
+      // cancellation, not a return, and it must not read as still to pack.
+      assert.equal(cancelled.fulfillmentStatus, "cancelled");
       assert.equal(
         cancelled.refundedTotal.amountInMinorUnits,
         order.total.amountInMinorUnits,
@@ -1448,6 +1451,25 @@ const orderCases: readonly ConformanceCase[] = [
         "ORDER_NOT_EDITABLE",
         "edit a cancelled order",
       );
+    },
+  },
+  {
+    group: "orders",
+    name: "cancelling after dispatch, with the stock counted back in, is a return",
+    async run(context) {
+      const order = await placeOrder(context);
+      await context.provider.fulfillOrder(order.id, {
+        carrier: "NZ Post",
+        trackingNumber: "NZ0000000002NZ",
+      });
+      const cancelled = await context.provider.cancelOrder(order.id, {
+        reason: "customer",
+        restock: true,
+      });
+      // `returned` and `cancelled` are different events to a shopkeeper: one
+      // has bottles back on a shelf to sell again, the other never left.
+      assert.equal(cancelled.fulfillmentStatus, "returned");
+      assert.equal(cancelled.status, "cancelled");
     },
   },
   {

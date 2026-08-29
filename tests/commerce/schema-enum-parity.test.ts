@@ -106,8 +106,8 @@ describe("domain enums match the database", () => {
         `public.${sqlType} is not created by any migration`,
       ).toBeDefined();
 
-      const inSchema = [...schema!].sort();
-      const inCode = [...tuple].sort();
+      const inSchema: string[] = [...schema!].sort();
+      const inCode: string[] = [...tuple].sort();
 
       expect(
         inCode.filter((member) => !inSchema.includes(member)),
