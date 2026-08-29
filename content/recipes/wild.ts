@@ -258,7 +258,7 @@ export const WILD_RECIPES: readonly Recipe[] = [
           },
           {
             amount: "3 tbsp",
-            item: "Extra virgin olive oil, the best you have open",
+            item: "Extra virgin olive oil, the good bottle rather than the cooking one",
           },
           { amount: "1", item: "Small green chilli, sliced into rings" },
           { amount: "1 tbsp", item: "Chives, sliced fine" },
