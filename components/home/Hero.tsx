@@ -110,6 +110,8 @@ export function Hero() {
               // cut: the stage runs the full viewport width until the page
               // reaches its own maximum.
               priority
+              fetchPriority="high"
+              quality={58}
               sizes="(max-width: 80rem) 100vw, 1280px"
               className={cx(styles.heroArt)}
             />

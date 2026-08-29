@@ -130,7 +130,8 @@ export default async function IdentityPage() {
                   />
                 </div>
                 <figcaption className="text-caption text-muted">
-                  The launch line — all four bottles, each carrying its own label.
+                  The launch line — all four bottles, each carrying its own
+                  label.
                 </figcaption>
               </figure>
             </CardBody>
