@@ -44,43 +44,61 @@ async function measure(page) {
         });
       }
     }
-    const ld = [
-      ...document.querySelectorAll('script[type="application/ld+json"]'),
-    ].map((s) => {
+    // The structured data, reduced to the four fields a rich result stands or
+    // falls on. The whole payload would be a megabyte of evidence nobody reads;
+    // this is the part that has to be right.
+    const offers = [];
+    for (const tag of document.querySelectorAll(
+      'script[type="application/ld+json"]',
+    )) {
+      let parsed;
       try {
-        return JSON.parse(s.textContent ?? "null");
+        parsed = JSON.parse(tag.textContent ?? "null");
       } catch {
-        return "UNPARSEABLE";
+        offers.push({ type: "UNPARSEABLE" });
+        continue;
       }
-    });
+      const nodes = Array.isArray(parsed) ? parsed : [parsed];
+      for (const node of nodes) {
+        if (node?.["@type"] !== "Product") {
+          offers.push({ type: node?.["@type"] ?? "?" });
+          continue;
+        }
+        const offer = node.offers ?? {};
+        offers.push({
+          type: "Product",
+          name: node.name,
+          sku: node.sku,
+          price: offer.price ?? offer.lowPrice,
+          priceCurrency: offer.priceCurrency,
+          availability: offer.availability,
+        });
+      }
+    }
     return {
       scrollWidth: doc.scrollWidth,
       clientWidth: doc.clientWidth,
       overflows: doc.scrollWidth > doc.clientWidth + 1,
       documentHeight: doc.scrollHeight,
-      headings: [...document.querySelectorAll("h1,h2,h3")].map(
+      headings: [...document.querySelectorAll("h1,h2")].map(
         (h) => `${h.tagName}: ${(h.textContent ?? "").trim().slice(0, 44)}`,
       ),
       smallTargets: small,
       // A route to buy: a submit that adds to cart, or a link to a page with one.
       buyControls: document.querySelectorAll('form button[type="submit"]')
         .length,
-      productLinks: [...document.querySelectorAll('a[href^="/products/"]')]
-        .length,
+      productLinks: document.querySelectorAll('a[href^="/products/"]').length,
       canvases: document.querySelectorAll("canvas").length,
-      jsonLdTypes: ld.map((n) =>
-        n === "UNPARSEABLE"
-          ? n
-          : Array.isArray(n)
-            ? n.map((x) => x["@type"]).join("+")
-            : n?.["@type"],
-      ),
-      jsonLd: ld,
-      soldOutText: [...document.querySelectorAll("*")]
+      structuredData: offers,
+      availabilityText: [...document.querySelectorAll("p, span")]
         .filter((el) => el.children.length === 0)
         .map((el) => (el.textContent ?? "").trim())
-        .filter((t) => /sold out|not available|unavailable/i.test(t))
-        .slice(0, 4),
+        .filter((t) =>
+          /^(in stock|sold out|unavailable|not available|\d+ in stock)/i.test(
+            t,
+          ),
+        )
+        .slice(0, 6),
     };
   }, TARGET_SELECTOR);
 }
@@ -354,7 +372,23 @@ await browser.close();
 const auditName = process.env.HS_AUDIT ?? "audit.json";
 writeFileSync(
   join(HERE, auditName),
-  `${JSON.stringify(report, null, 2)}\n`,
+  `${JSON.stringify(
+    {
+      // A registered exemption carried by the file itself rather than by an
+      // entry in legal/copy-audit-exempt.json. This is generated MEASUREMENT
+      // output: the words in it are quotations of pages whose source is scanned
+      // in full, so scanning the echo as if it were new marketing copy produces
+      // nothing but noise — and noise is what teaches people to stop reading
+      // the scanner. See legal/COPY-RULES.md section 8.
+      $note:
+        "copy-audit-ignore-file — generated evidence, quoting pages that are scanned at source",
+      generated: new Date().toISOString(),
+      base: BASE,
+      captures: report,
+    },
+    null,
+    2,
+  )}\n`,
   "utf8",
 );
 

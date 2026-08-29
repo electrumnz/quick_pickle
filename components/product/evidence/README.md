@@ -95,6 +95,23 @@ to whichever variant sorted first rather than the merchandiser's. Both are
 fixed — cards now read "From $18" when a product has a range, and the page opens
 on the first sellable variant in position order, as Shopify does.
 
+## The degraded state
+
+`state-degraded-*.png` is the shop with no commerce provider behind it — the
+state a deploy is in before `SUPABASE_DB_URL` (or the Shopify pair) exists.
+Produce it by starting the app with `COMMERCE_PROVIDER` set and the credentials
+absent:
+
+```bash
+npm run build
+COMMERCE_PROVIDER=mock npx next start --port 3500      # no SUPABASE_DB_URL
+node components/product/evidence/capture-degraded.mjs  # or point capture.mjs at :3500
+```
+
+The pages still render, the words are still true, every price falls back to the
+figure `content/brines.ts` publishes, and every buy control is withdrawn rather
+than offered at a number the catalogue did not confirm.
+
 ## A note on the full-page captures
 
 `*-full.png` is a full-page screenshot, and the mobile buy bar is

@@ -9,24 +9,32 @@
  */
 
 import { money, type Money } from "../money";
-import type {
-  Address,
-  Collection,
-  Customer,
-  CustomerType,
-  Discount,
-  DiscountScope,
-  DiscountStatus,
-  DiscountValueType,
-  Image,
-  InventoryLevel,
-  InventoryLocation,
-  LocationKind,
-  Product,
-  ProductStatus,
-  ProductVariant,
-  SelectedOption,
-  UnitPriceMeasurement,
+// The member lists these coercions validate against are the domain tuples
+// themselves, not copies. A copy is what let the fulfilment statuses drift
+// away from the schema in the first place.
+import {
+  CUSTOMER_TYPES,
+  DISCOUNT_SCOPES,
+  DISCOUNT_STATUSES,
+  DISCOUNT_VALUE_TYPES,
+  LOCATION_KINDS,
+  PRODUCT_STATUSES,
+  type Address,
+  type Collection,
+  type Customer,
+  type CustomerType,
+  type Discount,
+  type DiscountScope,
+  type DiscountStatus,
+  type DiscountValueType,
+  type Image,
+  type InventoryLevel,
+  type InventoryLocation,
+  type LocationKind,
+  type Product,
+  type ProductVariant,
+  type SelectedOption,
+  type UnitPriceMeasurement,
 } from "../types";
 import {
   bool,
@@ -41,36 +49,6 @@ import {
   strArray,
   strOrNull,
 } from "./coerce";
-
-const PRODUCT_STATUSES = ["draft", "active", "archived"] as const;
-const LOCATION_KINDS = [
-  "kitchen",
-  "coolstore",
-  "warehouse",
-  "retail",
-  "third_party",
-  "market_stall",
-] as const;
-const CUSTOMER_TYPES = [
-  "retail",
-  "trade",
-  "wholesale",
-  "staff",
-  "press",
-] as const;
-const DISCOUNT_VALUE_TYPES = [
-  "percentage",
-  "fixed_amount",
-  "free_shipping",
-] as const;
-const DISCOUNT_SCOPES = ["order", "product", "collection", "shipping"] as const;
-const DISCOUNT_STATUSES = [
-  "draft",
-  "scheduled",
-  "active",
-  "expired",
-  "disabled",
-] as const;
 
 export type ImageRow = {
   readonly id: string;

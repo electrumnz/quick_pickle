@@ -94,6 +94,21 @@ export const SET_JOB = FULL_SET.descriptor;
 /** The one line the box has. Written and audited in the homepage view model. */
 export const SET_LINE = FULL_SET.line;
 
+/**
+ * What the box is, when commerce cannot say.
+ *
+ * The four bottles have a record in `content/brines.ts` to fall back on; the box
+ * does not, because it is not a brine. Without these three the degraded page
+ * printed the raw handle as a title and a price of zero — a shop with a $0
+ * product on it, which is worse than a shop with no prices. The catalogue is
+ * still the authority whenever it answers; this is only what is said when it
+ * does not.
+ */
+export const SET_TITLE = "The Full Set";
+export const SET_DESCRIPTOR = "All three, boxed.";
+export const SET_PRICE_NZD = FULL_SET.priceNzd;
+export const SET_BOTTLE_COUNT = 3;
+
 /* ------------------------------------------------------- collection page */
 
 export const SHOP = {

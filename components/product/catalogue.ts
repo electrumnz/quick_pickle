@@ -15,7 +15,16 @@ import {
 import { ALL_BRINES, BRINES, brineLabel } from "@/content/brines";
 import type { Brine, BrineId } from "@/content/types";
 
-import { FULL_SET_HANDLE, JOB, SET_JOB, SET_LINE } from "./copy";
+import {
+  FULL_SET_HANDLE,
+  JOB,
+  SET_BOTTLE_COUNT,
+  SET_DESCRIPTOR,
+  SET_JOB,
+  SET_LINE,
+  SET_PRICE_NZD,
+  SET_TITLE,
+} from "./copy";
 
 /**
  * The shop's read model.
@@ -190,6 +199,7 @@ function bottleCountFor(variant: ProductVariant | null): number {
 function volumeOf(
   brine: Brine | null,
   variant: ProductVariant | null,
+  kind: EntryKind,
 ): number | null {
   const size = variant?.selectedOptions.find(
     (option) => option.name.toLowerCase() === "size",
@@ -198,7 +208,8 @@ function volumeOf(
     const digits = /(\d+)/.exec(size.value);
     if (digits !== null) return Number(digits[1]);
   }
-  return brine?.volumeMl ?? null;
+  // Every bottle in the range is 500 ml, box or no box.
+  return brine?.volumeMl ?? (kind === "set" ? 500 : null);
 }
 
 function kindOf(handle: string, brine: Brine | null): EntryKind {
@@ -219,12 +230,15 @@ function entryFor(
   // layer's price is the published shelf price and stands in only when
   // commerce is unreachable — never alongside it, so the two cannot disagree
   // on screen.
+  const fallbackDollars =
+    brine !== null ? brine.priceNzd : kind === "set" ? SET_PRICE_NZD : null;
+
   const price =
     variant?.price ??
     product?.priceRange.min ??
-    (brine === null
+    (fallbackDollars === null
       ? money(0, currencyCode)
-      : money(brine.priceNzd * 100, currencyCode));
+      : money(fallbackDollars * 100, currencyCode));
 
   const range = product?.priceRange ?? null;
   const hasRange =
@@ -238,8 +252,14 @@ function entryFor(
     product,
     variants,
     variant,
-    title: brine === null ? (product?.title ?? handle) : brineLabel(brine.id),
-    descriptor: brine?.descriptor ?? product?.subtitle ?? null,
+    title:
+      brine !== null
+        ? brineLabel(brine.id)
+        : (product?.title ?? (kind === "set" ? SET_TITLE : handle)),
+    descriptor:
+      brine?.descriptor ??
+      product?.subtitle ??
+      (kind === "set" ? SET_DESCRIPTOR : null),
     job: brine === null ? SET_JOB : JOB[brine.id],
     // The box has no record in `content/brines.ts` — it is not a brine — so its
     // one line comes from the homepage's view model, which is where it was
@@ -249,8 +269,13 @@ function entryFor(
     priceFrom: hasRange && range !== null ? range.min : null,
     unitPrice: variant?.unitPrice ?? null,
     unitPriceLabel: unitPriceLabelFor(variant),
-    volumeMl: volumeOf(brine, variant),
-    bottleCount: kind === "set" ? bottleCountFor(variant) : 1,
+    volumeMl: volumeOf(brine, variant, kind),
+    bottleCount:
+      kind === "set"
+        ? variant === null
+          ? SET_BOTTLE_COUNT
+          : bottleCountFor(variant)
+        : 1,
     availability: availabilityOf(product, variant),
     quantityAvailable: variant?.quantityAvailable ?? null,
     supplyLimited: brine?.supplyLimited ?? false,

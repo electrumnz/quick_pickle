@@ -61,7 +61,19 @@ export const MAX_CART_LINES = 500;
 // Catalogue
 // ---------------------------------------------------------------------------
 
-export type ProductStatus = "draft" | "active" | "archived";
+/**
+ * Mirrors `public.product_status`.
+ *
+ * Every enumeration in this file that names a Postgres type is declared as a
+ * tuple with the union derived from it, rather than as a hand-written union.
+ * The tuple exists at runtime, so `tests/commerce/schema-enum-parity.test.ts`
+ * can read the `create type` out of the migration and prove the two still
+ * agree. A hand-written union cannot be checked that way, which is how
+ * `OrderFulfillmentStatus` came to invent a member the database has never had.
+ * The database is the source of truth; these follow it, in its order.
+ */
+export const PRODUCT_STATUSES = ["draft", "active", "archived"] as const;
+export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
 
 export type Image = {
   readonly id: string;
@@ -410,26 +422,54 @@ export type CheckoutHandoff = {
 // Orders
 // ---------------------------------------------------------------------------
 
-export type OrderStatus = "open" | "archived" | "cancelled";
+/** Mirrors `public.order_status`. */
+export const ORDER_STATUSES = ["open", "archived", "cancelled"] as const;
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
-export type OrderFinancialStatus =
-  | "pending"
-  | "authorized"
-  | "partially_paid"
-  | "paid"
-  | "partially_refunded"
-  | "refunded"
-  | "voided";
+/** Mirrors `public.order_financial_status`. */
+export const ORDER_FINANCIAL_STATUSES = [
+  "pending",
+  "authorized",
+  "paid",
+  "partially_refunded",
+  "refunded",
+  "voided",
+] as const;
+export type OrderFinancialStatus = (typeof ORDER_FINANCIAL_STATUSES)[number];
 
+/**
+ * Mirrors `public.order_fulfillment_status`.
+ *
+ * The last two are not synonyms and the admin must not treat them as one.
+ * `returned` is stock that went out and came back — the goods exist, they are
+ * on a shelf, and they were counted back in. `cancelled` is an order whose
+ * goods never completed the trip: called off before dispatch, or written off
+ * in transit. Both can carry a refund; only one of them restocks.
+ *
+ * `restocked` is Shopify's word, not this schema's, and it used to be in this
+ * union by mistake. Translating it belongs in `../shopify`, not here.
+ */
+export const ORDER_FULFILLMENT_STATUSES = [
+  "unfulfilled",
+  "partially_fulfilled",
+  "fulfilled",
+  "delivered",
+  "returned",
+  "cancelled",
+] as const;
 export type OrderFulfillmentStatus =
-  | "unfulfilled"
-  | "partially_fulfilled"
-  | "fulfilled"
-  | "delivered"
-  | "restocked";
+  (typeof ORDER_FULFILLMENT_STATUSES)[number];
 
-export type SalesChannel =
-  "online" | "wholesale" | "market" | "phone" | "retail" | "subscription";
+/** Mirrors `public.sales_channel`. */
+export const SALES_CHANNELS = [
+  "online",
+  "wholesale",
+  "market",
+  "phone",
+  "retail",
+  "subscription",
+] as const;
+export type SalesChannel = (typeof SALES_CHANNELS)[number];
 
 export type Address = {
   readonly id: string;
@@ -580,7 +620,15 @@ export type OrderCancelInput = {
 // Customers
 // ---------------------------------------------------------------------------
 
-export type CustomerType = "retail" | "trade" | "wholesale" | "staff" | "press";
+/** Mirrors `public.customer_type`. */
+export const CUSTOMER_TYPES = [
+  "retail",
+  "trade",
+  "wholesale",
+  "staff",
+  "press",
+] as const;
+export type CustomerType = (typeof CUSTOMER_TYPES)[number];
 
 export type Customer = {
   readonly id: string;
@@ -616,13 +664,16 @@ export type CustomerListQuery = PageArgs & {
 // Inventory
 // ---------------------------------------------------------------------------
 
-export type LocationKind =
-  | "kitchen"
-  | "coolstore"
-  | "warehouse"
-  | "retail"
-  | "third_party"
-  | "market_stall";
+/** Mirrors `public.location_kind`. */
+export const LOCATION_KINDS = [
+  "kitchen",
+  "coolstore",
+  "warehouse",
+  "retail",
+  "third_party",
+  "market_stall",
+] as const;
+export type LocationKind = (typeof LOCATION_KINDS)[number];
 
 export type InventoryLocation = {
   readonly id: string;
@@ -733,10 +784,32 @@ export type InventoryAdjustResult = {
 // Discounts
 // ---------------------------------------------------------------------------
 
-export type DiscountValueType = "percentage" | "fixed_amount" | "free_shipping";
-export type DiscountScope = "order" | "product" | "collection" | "shipping";
-export type DiscountStatus =
-  "draft" | "scheduled" | "active" | "expired" | "disabled";
+/** Mirrors `public.discount_type`. */
+export const DISCOUNT_VALUE_TYPES = [
+  "percentage",
+  "fixed_amount",
+  "free_shipping",
+] as const;
+export type DiscountValueType = (typeof DISCOUNT_VALUE_TYPES)[number];
+
+/** Mirrors `public.discount_scope`. */
+export const DISCOUNT_SCOPES = [
+  "order",
+  "product",
+  "collection",
+  "shipping",
+] as const;
+export type DiscountScope = (typeof DISCOUNT_SCOPES)[number];
+
+/** Mirrors `public.discount_status`. */
+export const DISCOUNT_STATUSES = [
+  "draft",
+  "scheduled",
+  "active",
+  "expired",
+  "disabled",
+] as const;
+export type DiscountStatus = (typeof DISCOUNT_STATUSES)[number];
 
 export type Discount = {
   readonly id: string;

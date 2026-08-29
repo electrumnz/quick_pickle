@@ -28,14 +28,9 @@
 
 import { randomBytes } from "node:crypto";
 
-import {
-  commerceErrors,
-  CommerceError,
-  type CommerceErrorCode,
-} from "../errors";
+import { commerceErrors, type CommerceErrorCode } from "../errors";
 import {
   money,
-  taxIncludedInTotal,
   zeroMoney,
   DEFAULT_CURRENCY,
   NZ_GST_BASIS_POINTS,
@@ -49,8 +44,16 @@ import type {
   SimulatedCheckoutInput,
 } from "../provider";
 import {
+  CUSTOMER_TYPES,
+  DISCOUNT_SCOPES,
+  DISCOUNT_STATUSES,
+  DISCOUNT_VALUE_TYPES,
   MAX_CART_LINES,
   MAX_PAGE_SIZE,
+  ORDER_FINANCIAL_STATUSES,
+  ORDER_FULFILLMENT_STATUSES,
+  ORDER_STATUSES,
+  SALES_CHANNELS,
   type Attribute,
   type BuyerIdentityInput,
   type Cart,
@@ -81,6 +84,7 @@ import {
   type Order,
   type OrderCancelInput,
   type OrderFulfillmentInput,
+  type OrderFulfillmentStatus,
   type OrderLineItem,
   type OrderListQuery,
   type OrderPatch,
@@ -102,12 +106,7 @@ import {
   strArray,
   strOrNull,
 } from "./coerce";
-import {
-  buildConnection,
-  emptyConnection,
-  resolvePageWindow,
-  type PageWindow,
-} from "./cursor";
+import { buildConnection, resolvePageWindow } from "./cursor";
 import {
   mapAddress,
   mapCollection,
@@ -1093,7 +1092,7 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
       if (customerRow !== null) {
         customerType = oneOf(
           customerRow.customer_type,
-          ["retail", "trade", "wholesale", "staff", "press"] as const,
+          CUSTOMER_TYPES,
           "customers.customer_type",
         );
       }
@@ -2015,13 +2014,36 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
       }
 
       const refund = input.refund === true && current.paidAt !== null;
+
+      // Cancelling settles the goods as well as the money, and the schema has
+      // two different words for how. `returned` is stock that left and came
+      // back — it only applies when something had actually shipped and the
+      // restock counted it in. `cancelled` is an order whose goods never
+      // completed the trip. Leaving this at `unfulfilled` would put a voided
+      // order in the shopkeeper's to-pack pile.
+      const shipped =
+        current.fulfillmentStatus === "fulfilled" ||
+        current.fulfillmentStatus === "partially_fulfilled" ||
+        current.fulfillmentStatus === "delivered";
+      const fulfillment: OrderFulfillmentStatus =
+        current.deliveredAt !== null
+          ? // `orders_delivered_stamped` ties `delivered` to `delivered_at`, so
+            // moving a delivered order off that value means erasing the date it
+            // was delivered. The delivery happened; `status = 'cancelled'` and
+            // the refund carry the rest of the story.
+            "delivered"
+          : shipped && input.restock === true
+            ? "returned"
+            : "cancelled";
+
       await tx.query(
         `update public.orders
             set status = 'cancelled',
                 cancelled_at = $2,
                 cancel_reason = $3,
                 financial_status = $4,
-                refunded_cents = $5
+                refunded_cents = $5,
+                fulfillment_status = $6::public.order_fulfillment_status
           where id = $1`,
         [
           orderId,
@@ -2033,6 +2055,7 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
               ? "paid"
               : "voided",
           refund ? current.totalCents : 0,
+          fulfillment,
         ],
       );
       return this.requireOrder(tx, orderId);
@@ -2045,13 +2068,16 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
   ): Promise<{
     status: string;
     financialStatus: string;
+    fulfillmentStatus: string;
     paidAt: string | null;
+    deliveredAt: string | null;
     totalCents: number;
   }> {
     if (!isUuid(orderId)) throw commerceErrors.orderNotFound(orderId);
     const row = await queryOne<SqlRow>(
       tx,
-      `select status, financial_status, paid_at, total_cents
+      `select status, financial_status, fulfillment_status,
+              paid_at, delivered_at, total_cents
          from public.orders where id = $1 for update`,
       [orderId],
     );
@@ -2059,7 +2085,12 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
     return {
       status: str(row.status, "orders.status"),
       financialStatus: str(row.financial_status, "orders.financial_status"),
+      fulfillmentStatus: str(
+        row.fulfillment_status,
+        "orders.fulfillment_status",
+      ),
       paidAt: isoOrNull(row.paid_at, "orders.paid_at"),
+      deliveredAt: isoOrNull(row.delivered_at, "orders.delivered_at"),
       totalCents: int(row.total_cents, "orders.total_cents"),
     };
   }
@@ -2666,16 +2697,12 @@ function mapDiscountRule(row: SqlRow): DiscountRule {
     title: str(row.title, "discounts.title"),
     valueType: oneOf(
       row.value_type,
-      ["percentage", "fixed_amount", "free_shipping"] as const,
+      DISCOUNT_VALUE_TYPES,
       "discounts.value_type",
     ),
     valueBasisPoints: intOrNull(row.value_bp, "discounts.value_bp"),
     valueCents: intOrNull(row.value_cents, "discounts.value_cents"),
-    appliesTo: oneOf(
-      row.applies_to,
-      ["order", "product", "collection", "shipping"] as const,
-      "discounts.applies_to",
-    ),
+    appliesTo: oneOf(row.applies_to, DISCOUNT_SCOPES, "discounts.applies_to"),
     targetProductId: strOrNull(
       row.target_product_id,
       "discounts.target_product_id",
@@ -2697,7 +2724,7 @@ function mapDiscountRule(row: SqlRow): DiscountRule {
         ? null
         : oneOf(
             restriction,
-            ["retail", "trade", "wholesale", "staff", "press"] as const,
+            CUSTOMER_TYPES,
             "discounts.customer_type_restriction",
           ),
     oncePerCustomer: bool(row.once_per_customer, "discounts.once_per_customer"),
@@ -2707,11 +2734,7 @@ function mapDiscountRule(row: SqlRow): DiscountRule {
       "discounts.usage_limit_per_customer",
     ),
     usedCount: int(row.used_count, "discounts.used_count"),
-    status: oneOf(
-      row.status,
-      ["draft", "scheduled", "active", "expired", "disabled"] as const,
-      "discounts.status",
-    ),
+    status: oneOf(row.status, DISCOUNT_STATUSES, "discounts.status"),
     startsAt: iso(row.starts_at, "discounts.starts_at"),
     endsAt: isoOrNull(row.ends_at, "discounts.ends_at"),
   };
@@ -2982,47 +3005,18 @@ function mapOrder(row: SqlRow): Order {
     orderNumber: str(row.order_number, "orders.order_number"),
     email: str(row.email, "orders.email"),
     phone: strOrNull(row.phone, "orders.phone"),
-    status: oneOf(
-      row.status,
-      ["open", "archived", "cancelled"] as const,
-      "orders.status",
-    ),
+    status: oneOf(row.status, ORDER_STATUSES, "orders.status"),
     financialStatus: oneOf(
       row.financial_status,
-      [
-        "pending",
-        "authorized",
-        "partially_paid",
-        "paid",
-        "partially_refunded",
-        "refunded",
-        "voided",
-      ] as const,
+      ORDER_FINANCIAL_STATUSES,
       "orders.financial_status",
     ),
     fulfillmentStatus: oneOf(
       row.fulfillment_status,
-      [
-        "unfulfilled",
-        "partially_fulfilled",
-        "fulfilled",
-        "delivered",
-        "restocked",
-      ] as const,
+      ORDER_FULFILLMENT_STATUSES,
       "orders.fulfillment_status",
     ),
-    channel: oneOf(
-      row.channel,
-      [
-        "online",
-        "wholesale",
-        "market",
-        "phone",
-        "retail",
-        "subscription",
-      ] as const,
-      "orders.channel",
-    ),
+    channel: oneOf(row.channel, SALES_CHANNELS, "orders.channel"),
     currencyCode: currency,
     subtotal: money(int(row.subtotal_cents, "orders.subtotal_cents"), currency),
     discountTotal: money(
