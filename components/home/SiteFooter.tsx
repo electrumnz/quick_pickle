@@ -1,6 +1,6 @@
 import { FooterAdminLink } from "@/components/auth/footer-admin-link";
 
-import { FOOTER_NAV } from "./data";
+import { BUY, FOOTER_NAV } from "./data";
 import { cx } from "./cx";
 import styles from "./home.module.css";
 import { liveNav } from "./routes";
@@ -33,6 +33,25 @@ export function SiteFooter() {
           aria-label="Half Sour"
         />
 
+        <div className="gap-stack mt-block flex flex-wrap items-center">
+          <a
+            href="#buy"
+            className={cx(styles.button, styles.buttonOnDeep)}
+            data-cursor="link"
+            data-cursor-label="How to buy"
+          >
+            How to buy
+          </a>
+          <a
+            href={BUY.trade.href}
+            className={cx(styles.button, styles.buttonOnDeep)}
+            data-cursor="link"
+            data-cursor-label="To a person"
+          >
+            {BUY.trade.label}
+          </a>
+        </div>
+
         {columns.length > 0 ? (
           <nav
             aria-label="Footer"
@@ -48,9 +67,13 @@ export function SiteFooter() {
                     <li key={item.href}>
                       <a
                         href={item.href}
-                        className={cx(styles.drawLink, "text-body-sm")}
+                        className={cx(styles.tap, "text-body-sm")}
+                        data-cursor="link"
+                        data-cursor-label={item.label}
                       >
-                        {item.label}
+                        <span className={cx(styles.drawLink)}>
+                          {item.label}
+                        </span>
                       </a>
                     </li>
                   ))}
@@ -61,14 +84,18 @@ export function SiteFooter() {
         ) : null}
 
         <div className="mt-section gap-stack text-caption flex flex-wrap items-center justify-between">
-          <span>&copy; {new Date().getFullYear()} Half Sour</span>
+          <span className={cx(styles.tap)}>
+            &copy; {new Date().getFullYear()} Half Sour
+          </span>
           {/*
             Deliberately quiet, deliberately not hidden: the staff way in sits
             at the end of the footer row rather than announcing itself, but it
             is a real link with real contrast and a real focus ring. See
             components/auth/footer-admin-link.tsx.
           */}
-          <FooterAdminLink />
+          <FooterAdminLink
+            className={cx(styles.tap, styles.tapSquare, "px-2")}
+          />
         </div>
       </div>
     </footer>

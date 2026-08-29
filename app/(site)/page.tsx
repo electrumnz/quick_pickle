@@ -1,3 +1,5 @@
+import { Buy } from "@/components/home/Buy";
+import { Cursor } from "@/components/home/Cursor";
 import { Hero } from "@/components/home/Hero";
 import { MotionRoot } from "@/components/home/MotionRoot";
 import { SiteFooter } from "@/components/home/SiteFooter";
@@ -10,11 +12,13 @@ import {
   PROCESS,
   price,
   SEAL_TONE,
+  productHref,
   SERVES,
   SPEC_FIGURES,
   volume,
   type SealTone,
 } from "@/components/home/data";
+import { isLive } from "@/components/home/routes";
 import { cx } from "@/components/home/cx";
 import styles from "@/components/home/home.module.css";
 
@@ -25,10 +29,10 @@ import styles from "@/components/home/home.module.css";
  * else: no page in this build carries copy of its own, so the copy auditor
  * scans the data layer once and the founder edits it in one place.
  *
- * The sections are the four the nav names — the hero, the range, what it is
- * for, and how it is made. Everything under [data-reveal] starts visible and
- * is hidden by MotionRoot in JavaScript on the way in, which is what keeps the
- * page whole with scripting switched off.
+ * The sections are the five the nav names — the hero, the range, what it is
+ * for, how it is made, and the route to buy. Everything under [data-reveal]
+ * starts visible and is hidden by MotionRoot in JavaScript on the way in,
+ * which is what keeps the page whole with scripting switched off.
  */
 
 const SEAL_CLASS: Readonly<Record<SealTone, string | undefined>> = {
@@ -42,6 +46,10 @@ export default function HomePage() {
   return (
     <>
       <MotionRoot />
+      {/* Mounts nothing on a coarse pointer: see components/home/Cursor.tsx.
+          Every word it shows is also in the markup, so a phone loses a
+          flourish and no information. */}
+      <Cursor />
       <SiteHeader />
 
       <main id="top">
@@ -129,6 +137,32 @@ export default function HomePage() {
                       <p className="text-caption text-muted mt-stack">
                         Limited by leaf supply.
                       </p>
+                    ) : null}
+                    {/* The product page is linked the moment it exists and
+                        not a day before — routes.ts is the single place that
+                        knows. Until then the row still states the price and
+                        the Buy section below states how to get one. */}
+                    {isLive({ href: productHref(b.id), label: b.name }) ? (
+                      <a
+                        href={productHref(b.id)}
+                        className={cx(
+                          styles.tap,
+                          "text-body-sm text-primary mt-stack md:justify-end",
+                        )}
+                        data-cursor="link"
+                        data-cursor-label={brineLabel(b.id)}
+                      >
+                        <span className={cx(styles.drawLink)}>
+                          Buy {brineLabel(b.id)}
+                        </span>
+                        {/* The drawn underline only exists on a fine pointer,
+                            where it is a hover state. The arrow is the
+                            affordance everything else reads: it is there at
+                            rest, on touch, and under reduced motion. */}
+                        <span aria-hidden="true" className="ml-2">
+                          &rarr;
+                        </span>
+                      </a>
                     ) : null}
                   </div>
                 </article>
@@ -338,6 +372,7 @@ export default function HomePage() {
             </dl>
           </div>
         </section>
+        <Buy />
       </main>
 
       <SiteFooter />

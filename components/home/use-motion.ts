@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import {
   fullMotion,
@@ -16,16 +16,29 @@ import {
  * Server-renders as `full` to match the CSS, then corrects on mount and again
  * whenever the preference changes — the user should not have to reload the
  * page after flipping the switch in their OS.
+ *
+ * `useSyncExternalStore` rather than an effect that calls setState: the media
+ * query IS an external store, the server snapshot is pinned to `false` so the
+ * first paint agrees with the CSS, and React reads the real value as part of
+ * the commit instead of scheduling a second render behind it.
  */
 export function useMotionProfile(): MotionProfile {
-  const [reduced, setReduced] = useState(false);
-
-  useEffect(() => {
-    setReduced(prefersReducedMotion());
-    return watchReducedMotion(setReduced);
-  }, []);
+  const reduced = useSyncExternalStore(
+    watchMotionPreference,
+    prefersReducedMotion,
+    serverSnapshot,
+  );
 
   return motionFor(reduced);
+}
+
+function watchMotionPreference(onStoreChange: () => void): () => void {
+  return watchReducedMotion(onStoreChange);
+}
+
+/** The server has no preference to read, and the CSS default is full motion. */
+function serverSnapshot(): boolean {
+  return false;
 }
 
 /** True once we know the visitor asked for reduced motion. */

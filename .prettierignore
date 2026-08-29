@@ -10,6 +10,12 @@ playwright-report/
 blob-report/
 test-results/
 
+# Machine-written evidence. components/home/evidence/capture.mjs rewrites this
+# file on every run with JSON.stringify, which does not agree with Prettier on
+# when a short array collapses onto one line. The script is formatted; its
+# output is not something a human edits.
+components/home/evidence/audit.json
+
 # Dependencies and generated files.
 node_modules/
 package-lock.json

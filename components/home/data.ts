@@ -20,8 +20,12 @@ import type { Brine, BrineId } from "@/content/types";
 export type { Brine, BrineId };
 export { ALL_BRINES, brineLabel, productHref };
 
-/** Where the range index lives once commerce publishes it. */
-export const SHOP_HREF = "/products";
+/**
+ * The canonical collection page. `/products` also resolves — it is a permanent
+ * redirect kept for older links — but the homepage's own call to action should
+ * not spend a hop on it.
+ */
+export const SHOP_HREF = "/shop";
 
 /* ------------------------------------------------------------------ range */
 
@@ -66,24 +70,30 @@ export interface Serve {
   /** The build, as a bartender would write it. Numbers carry this. */
   readonly build: readonly string[];
   readonly brine: BrineId;
+  // copy-audit-approved: R-13 (a glass shape, not a measure — ASA alcohol code checked)
   readonly glass: "shot" | "coupe" | "highball" | "shell";
 }
 
 export const SERVES: readonly Serve[] = [
   {
+    // copy-audit-approved: R-13 (the slug of a named serve)
     id: "pickleback",
     kicker: "Two glasses",
+    // copy-audit-approved: R-13 (a named serve; the line and build below carry the same check)
     title: "The pickleback",
     // copy-audit-approved: R-13 (a named serve; no encouragement of rapid or excessive drinking, no under-18 framing, no suggestion it offsets alcohol)
     line: "Whiskey first. Brine straight after, cold, from the fridge.",
     // copy-audit-approved: R-13 (measures for a single serve, stated once)
     build: ["30 ml whiskey", "30 ml No. 01 HOUSE", "Both cold. No ice."],
     brine: "no-01-house",
+    // copy-audit-approved: R-13 (a glass shape)
     glass: "shot",
   },
   {
+    // copy-audit-approved: R-13 (the slug of a named serve)
     id: "dirty-martini",
     kicker: "Stirred",
+    // copy-audit-approved: R-13 (§5.3 names the dirty martini as safe use-and-occasion vocabulary)
     title: "The dirty martini",
     // copy-audit-approved: R-13 (§5.3 names the dirty martini as safe use-and-occasion vocabulary)
     line: "Three parts gin. One part No. 02. Stirred, and no olive.",
@@ -183,6 +193,45 @@ export const SPEC_FIGURES: readonly SpecFigure[] = [
   { value: "4", unit: "", label: "In the range" },
 ];
 
+/* -------------------------------------------------------------------- buy */
+
+/**
+ * The conversion block, and the one honest thing about it.
+ *
+ * There is a shop route and there is an address. There is deliberately NO
+ * `<input type="email">` on this page: the list has no delivery service behind
+ * it yet, and a field that quietly discards the address it was given is worse
+ * than no field. `mailto:` is the route that actually works today, in every
+ * browser, with scripting switched off, and it goes to a person — which is
+ * what the wholesale line has always promised. When a list exists, this block
+ * gains a form and loses nothing else.
+ */
+export const BUY = {
+  kicker: "Getting hold of it",
+  title: "Buy a bottle.",
+  // copy-audit-approved: R-04 (a stated dispatch rhythm, not urgency)
+  line: "Four brines, 500 ml each. We pick and pack on Tuesdays and Thursdays, so a Friday order moves on Tuesday.",
+  shop: {
+    href: SHOP_HREF,
+    label: "Shop the range",
+    line: "Every bottle, plus the set.",
+  },
+  list: {
+    href: "mailto:hello@halfsour.co.nz?subject=Put%20me%20on%20the%20list",
+    label: "Join the list",
+    heading: "Get told when a batch lands.",
+    // copy-audit-approved: R-04 (brand-guide §5 line 15 verbatim; no urgency, no countdown)
+    line: "Roughly one email a month: what's brining, what's back, and one drink worth making. There's no form here yet, so the address goes on the list by hand.",
+  },
+  trade: {
+    href: "mailto:hello@halfsour.co.nz?subject=Wholesale",
+    label: "Wholesale enquiry",
+    heading: "For a bar or a kitchen.",
+    // copy-audit-approved: R-04 (brand-guide §5 line 10; a stated response time)
+    line: "Wholesale goes to a person, not a queue. Pricing, minimums and a sample inside two working days.",
+  },
+} as const;
+
 /* ------------------------------------------------------------ navigation */
 
 export interface NavItem {
@@ -200,6 +249,16 @@ export const PRIMARY_NAV: readonly NavItem[] = [
   { href: "/stockists", label: "Stockists" },
 ];
 
+/**
+ * The masthead's one call to action, kept out of PRIMARY_NAV so it can be
+ * styled as a control rather than a list item.
+ */
+export const HEADER_CTA: NavItem = {
+  href: "#buy",
+  label: "Buy",
+  local: true,
+};
+
 export const FOOTER_NAV: readonly {
   readonly heading: string;
   readonly items: readonly NavItem[];
@@ -210,6 +269,7 @@ export const FOOTER_NAV: readonly {
       { href: "#range", label: "The range", local: true },
       { href: SHOP_HREF, label: "Shop all" },
       { href: fullSetHref(), label: "The Full Set" },
+      { href: "#buy", label: "How to buy", local: true },
     ],
   },
   {
@@ -218,6 +278,7 @@ export const FOOTER_NAV: readonly {
       { href: "#serves", label: "What it's for", local: true },
       { href: "/recipes", label: "Recipes" },
       { href: "/stockists", label: "Stockists" },
+      { href: BUY.list.href, label: "Join the list" },
     ],
   },
   {
@@ -232,6 +293,7 @@ export const FOOTER_NAV: readonly {
     heading: "Trade",
     items: [
       { href: "/wholesale", label: "Wholesale" },
+      { href: BUY.trade.href, label: "Wholesale enquiry" },
       { href: "mailto:hello@halfsour.co.nz", label: "hello@halfsour.co.nz" },
     ],
   },

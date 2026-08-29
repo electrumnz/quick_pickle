@@ -1,10 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import {
   fullMotion,
   motionFor,
+  prefersReducedMotion,
   reducedMotion,
   staggerDelay,
   watchReducedMotion,
@@ -51,17 +58,27 @@ const ANIMATION: Record<Sample, string> = {
  * what you see under `prefers-reduced-motion: reduce` is the reduced design
  * itself — not this component branching on a flag.
  */
+function watchMotionPreference(onStoreChange: () => void): () => void {
+  return watchReducedMotion(onStoreChange);
+}
+
+/** The server has no preference to read, and the CSS default is full motion. */
+function serverSnapshot(): boolean {
+  return false;
+}
+
 export function MotionSpecimen() {
-  const [prefersReduced, setPrefersReduced] = useState(false);
   const [run, setRun] = useState(0);
   const [sample, setSample] = useState<Sample>("enter");
 
-  useEffect(() => {
-    setPrefersReduced(
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    );
-    return watchReducedMotion(setPrefersReduced);
-  }, []);
+  // The media query is an external store, so it is read as one rather than
+  // mirrored into state by an effect: the server snapshot is pinned to the
+  // CSS default and React reads the real value during the commit.
+  const prefersReduced = useSyncExternalStore(
+    watchMotionPreference,
+    prefersReducedMotion,
+    serverSnapshot,
+  );
 
   const profile: MotionProfile = motionFor(prefersReduced);
   const play = useCallback((next: Sample) => {
@@ -180,8 +197,8 @@ function ScrubSpecimen({ profile }: { profile: MotionProfile }) {
       const viewport = window.innerHeight || 1;
       const start = viewport * (1 - profile.scrub.start);
       const end = viewport * (1 - profile.scrub.end);
-      const raw = (start - rect.top) / Math.max(start - end, 1);
-      setProgress(Math.min(1, Math.max(0, raw)));
+      const ratio = (start - rect.top) / Math.max(start - end, 1);
+      setProgress(Math.min(1, Math.max(0, ratio)));
     };
     update();
     window.addEventListener("scroll", update, { passive: true });

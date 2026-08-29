@@ -16,11 +16,23 @@
 import type { NavItem } from "./data";
 
 /**
- * Off-page routes that resolve today. Empty on purpose: the storefront
- * currently consists of this page. `app/(site)` has no /products, /recipes,
- * /stockists, /story, /suppliers or /wholesale segment yet.
+ * Off-page routes that resolve today, checked against `app/(site)` on
+ * 2026-08-29: the collection page, the legacy redirect that points at it, and
+ * every product page under it. Still missing, and so still filtered out:
+ * /recipes, /stockists, /story, /suppliers and /wholesale.
  */
-const LIVE_ROUTES: ReadonlySet<string> = new Set<string>();
+const LIVE_ROUTES: ReadonlySet<string> = new Set<string>([
+  "/shop",
+  "/products",
+]);
+
+/**
+ * Route prefixes where every child resolves. `/products/[handle]` is a dynamic
+ * segment backed by the commerce provider, so the individual bottles cannot be
+ * enumerated here without this file importing the catalogue — which is exactly
+ * the coupling it exists to avoid.
+ */
+const LIVE_PREFIXES: readonly string[] = ["/products/"];
 
 /** True when following this link lands somewhere real. */
 export function isLive(item: NavItem): boolean {
@@ -28,7 +40,8 @@ export function isLive(item: NavItem): boolean {
   if (item.local) return true;
   // A mailto needs no route.
   if (item.href.startsWith("mailto:")) return true;
-  return LIVE_ROUTES.has(item.href);
+  if (LIVE_ROUTES.has(item.href)) return true;
+  return LIVE_PREFIXES.some((prefix) => item.href.startsWith(prefix));
 }
 
 /** The subset of a nav list that can actually be followed. */

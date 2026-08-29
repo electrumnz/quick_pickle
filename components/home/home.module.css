@@ -71,16 +71,28 @@
    difference between a pinned hero that survives touch momentum and iOS
    elastic overscroll and one that detaches: sticky is resolved by the
    compositor on the same frame as the scroll, whereas a JS pin re-parents the
-   element and has to chase the scroll position a frame late. */
+   element and has to chase the scroll position a frame late.
+
+   The track is only TALL while something is actually scrubbing it. HeroScrub
+   sets [data-scrub="on"] once GSAP has attached; until then — and forever,
+   with scripting switched off — the hero is one screen and the range is the
+   next thing you scroll to. Two and a half screens of sticky nothing is what
+   a scrub track degrades into otherwise, and that is a worse page, not a
+   plainer one. */
 .heroTrack {
-  --hero-track: 320svh;
+  --hero-track: 100svh;
+  --masthead-height: calc(var(--size-touch-comfortable) + 1rem + 1px);
   position: relative;
   height: var(--hero-track);
 }
 
+.heroTrack[data-scrub="on"] {
+  --hero-track: 260svh;
+}
+
 @media (max-width: 47.999rem) {
-  .heroTrack {
-    --hero-track: 260svh;
+  .heroTrack[data-scrub="on"] {
+    --hero-track: 200svh;
   }
 }
 
@@ -89,7 +101,8 @@
    not the same page with the animation switched off — the copy that the scrub
    would have revealed is laid out in full underneath instead. */
 @media (prefers-reduced-motion: reduce) {
-  .heroTrack {
+  .heroTrack,
+  .heroTrack[data-scrub="on"] {
     --hero-track: auto;
     height: auto;
   }
@@ -105,6 +118,7 @@
   position: sticky;
   top: 0;
   height: 100svh;
+  padding-block-start: var(--masthead-height);
   overflow: hidden;
 }
 
@@ -112,6 +126,124 @@
   position: absolute;
   inset: 0;
   z-index: 0;
+}
+
+/* --------------------------------------------------------------- masthead */
+
+/* The masthead is out of flow, so its height is a number the hero has to know
+   rather than one the layout gives it for free. It is derived, not measured:
+   one 48px control plus the 8px padding either side plus the hairline. */
+.masthead {
+  --masthead-height: calc(var(--size-touch-comfortable) + 1rem + 1px);
+  min-block-size: var(--masthead-height);
+}
+
+/* --------------------------------------------------------------- hit area */
+
+/* 44px in both axes for anything you tap, without inflating the type.
+   app/globals.css already does this for buttons and summaries under a coarse
+   pointer; anchors are not in that list and a nav made of 19px-tall links is
+   the single most common touch-target failure on a site like this. Applied to
+   the anchor, with the drawn underline moved to an inner span so it still
+   hugs the text rather than sitting at the bottom of the enlarged box. */
+.tap {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-touch-min);
+}
+
+.tapSquare {
+  justify-content: center;
+  min-width: var(--size-touch-min);
+}
+
+/* ------------------------------------------------------------------ hero */
+
+/* The wordmark is the page's masthead: it runs the width of the stage rather
+   than sitting in a column, which is what stops the composition floating in
+   the middle of a 1920 viewport. */
+.heroWordmark {
+  width: min(88vw, 68rem);
+}
+
+@media (min-width: 80rem) {
+  .heroWordmark {
+    width: min(78vw, 72rem);
+  }
+}
+
+/* The artwork fills the middle row of the stage and is centred in it. Anchored
+   to the bottom it left a 290px hole under the masthead at 375, where the
+   line-up is width-constrained and the row is not. */
+.heroArt {
+  object-fit: contain;
+  object-position: center;
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+/* One control, two weights. Both are 48px tall on every device — this is the
+   thing a thumb is aiming at — and both carry their affordance in fill and
+   edge rather than in a hover state, so touch loses nothing. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-inline);
+  min-height: var(--size-touch-comfortable);
+  padding-inline: var(--spacing-block);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  text-align: center;
+  transition:
+    background-color var(--motion-duration-quick) var(--motion-ease-standard),
+    color var(--motion-duration-quick) var(--motion-ease-standard),
+    border-color var(--motion-duration-quick) var(--motion-ease-standard),
+    transform var(--motion-duration-quick) var(--motion-ease-standard);
+}
+
+.buttonPrimary {
+  background-color: var(--surface-accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent-edge);
+}
+
+.buttonSecondary {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+/* On a fine pointer the control lifts; on touch it presses. Neither is the
+   only way to know it is a control — the fill and the edge already say so. */
+@media (hover: hover) and (pointer: fine) {
+  .button:hover {
+    transform: translateY(-2px);
+  }
+
+  .buttonSecondary:hover {
+    border-color: var(--text-primary);
+  }
+}
+
+.button:active {
+  transform: scale(var(--motion-scale-press));
+}
+
+/* A control on the deep footer ground, where --text-primary is not sanctioned. */
+.buttonOnDeep {
+  color: var(--text-on-deep);
+  border-color: var(--text-on-deep);
+}
+
+/* -------------------------------------------------------------- hero copy */
+
+/* SplitText writes its line wrappers into this element on the client. With no
+   JavaScript it is simply a paragraph, which is why the copy is written into
+   the markup rather than fed to the splitter as a string. */
+.splitLines {
+  display: block;
 }
 
 /* ------------------------------------------------------------------ cursor */
