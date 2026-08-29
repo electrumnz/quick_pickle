@@ -4,7 +4,7 @@ M26 — COST CAPS DELIBERATELY TRIPPED
 Four ceilings, each tripped on purpose. In every case the run stops, the reason
 lands on agent_runs.error and agent_runs.context.halt, and a structured log line
 records which cap, the limit, and what had already been spent.
-generated: 2026-08-27T13:23:22.169Z (npx vitest run tests/agents/evidence.test.ts)
+generated: 2026-08-27T13:24:26.950Z (npx vitest run tests/agents/evidence.test.ts)
 model: SCRIPTED (lib/agents/model/mock.ts). Everything below the model is the real runtime.
 
 ------------------------------------------------------------------------------
@@ -31,7 +31,7 @@ structured log line:
   "level": "error",
   "event": "agent.run.halted",
   "at": "2026-08-27T09:00:00.000Z",
-  "runId": "9d2db6fc-bfdb-4762-9bf8-4038766aceea",
+  "runId": "97ecc061-aa66-44d5-a6c0-983ee54a70cd",
   "agentSlug": "test-role",
   "fields": {
     "code": "cost_cap_exceeded",
@@ -68,7 +68,7 @@ structured log line:
   "level": "error",
   "event": "agent.run.halted",
   "at": "2026-08-27T09:00:00.000Z",
-  "runId": "b817129f-46e3-483d-955d-37c3dfb63f20",
+  "runId": "1f2da673-be99-4736-bbd6-1a1ce801a68c",
   "agentSlug": "test-role",
   "fields": {
     "code": "cost_cap_exceeded",
@@ -105,7 +105,7 @@ structured log line:
   "level": "error",
   "event": "agent.run.halted",
   "at": "2026-08-27T09:00:00.000Z",
-  "runId": "09dc3943-3af8-4669-89d8-d5290c0d649a",
+  "runId": "98b60523-e4c7-46a9-b76b-db3a511b1c46",
   "agentSlug": "test-role",
   "fields": {
     "code": "cost_cap_exceeded",
@@ -142,7 +142,7 @@ structured log line:
   "level": "error",
   "event": "agent.run.halted",
   "at": "2026-08-27T09:00:00.000Z",
-  "runId": "3bea1864-ad44-4ca8-accd-100ab3066fbd",
+  "runId": "3de2bd01-d5b8-4e2d-93f5-abc95105f7e1",
   "agentSlug": "test-role",
   "fields": {
     "code": "cost_cap_exceeded",

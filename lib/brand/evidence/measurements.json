@@ -38,76 +38,29 @@
       "--motion-scale-emphasis": "1.04",
       "--motion-stagger-base": "60ms"
     },
-    "overflowing": [
-      {
-        "tag": "table",
-        "cls": "text-body-sm w-full border-collapse text-left",
-        "left": 25,
-        "right": 818
-      },
-      {
-        "tag": "thead",
-        "cls": "bg-surface-sunken text-eyebrow uppercase",
-        "left": 25,
-        "right": 818
-      },
-      {
-        "tag": "tr",
-        "cls": "",
-        "left": 25,
-        "right": 818
-      },
-      {
-        "tag": "th",
-        "cls": "px-3 py-2",
-        "left": 252,
-        "right": 431
-      },
-      {
-        "tag": "th",
-        "cls": "px-3 py-2",
-        "left": 431,
-        "right": 542
-      },
-      {
-        "tag": "th",
-        "cls": "px-3 py-2",
-        "left": 542,
-        "right": 643
-      },
-      {
-        "tag": "th",
-        "cls": "px-3 py-2",
-        "left": 643,
-        "right": 728
-      },
-      {
-        "tag": "th",
-        "cls": "px-3 py-2",
-        "left": 728,
-        "right": 818
-      },
-      {
-        "tag": "tbody",
-        "cls": "",
-        "left": 25,
-        "right": 818
-      },
-      {
-        "tag": "tr",
-        "cls": "border-hairline border-t",
-        "left": 25,
-        "right": 818
-      }
-    ],
-    "smallTargets": [
-      {
-        "tag": "a",
-        "text": "Staff",
-        "w": 26,
-        "h": 16
-      }
-    ]
+    "overflowing": [],
+    "smallTargets": [],
+    "typeSteps": {
+      "display-1": 44,
+      "display-2": 34,
+      "display-3": 28,
+      "heading-1": 25,
+      "heading-2": 21,
+      "heading-3": 18,
+      "lede": 18,
+      "body": 16,
+      "body-sm": 15,
+      "caption": 13.5,
+      "eyebrow": 12,
+      "mono": 14
+    },
+    "spaceSteps": {
+      "gutter": 20,
+      "section": 56,
+      "block": 32,
+      "stack": 16,
+      "inline": 8
+    }
   },
   {
     "scheme": "light",
@@ -148,76 +101,29 @@
       "--motion-scale-emphasis": "1.04",
       "--motion-stagger-base": "60ms"
     },
-    "overflowing": [
-      {
-        "tag": "table",
-        "cls": "text-body-sm w-full border-collapse text-left",
-        "left": 25,
-        "right": 823
-      },
-      {
-        "tag": "thead",
-        "cls": "bg-surface-sunken text-eyebrow uppercase",
-        "left": 25,
-        "right": 823
-      },
-      {
-        "tag": "tr",
-        "cls": "",
-        "left": 25,
-        "right": 823
-      },
-      {
-        "tag": "th",
-        "cls": "px-3 py-2",
-        "left": 733,
-        "right": 823
-      },
-      {
-        "tag": "tbody",
-        "cls": "",
-        "left": 25,
-        "right": 823
-      },
-      {
-        "tag": "tr",
-        "cls": "border-hairline border-t",
-        "left": 25,
-        "right": 823
-      },
-      {
-        "tag": "td",
-        "cls": "text-muted px-3 py-2",
-        "left": 733,
-        "right": 823
-      },
-      {
-        "tag": "tr",
-        "cls": "border-hairline border-t",
-        "left": 25,
-        "right": 823
-      },
-      {
-        "tag": "td",
-        "cls": "text-muted px-3 py-2",
-        "left": 733,
-        "right": 823
-      },
-      {
-        "tag": "tr",
-        "cls": "border-hairline border-t",
-        "left": 25,
-        "right": 823
-      }
-    ],
-    "smallTargets": [
-      {
-        "tag": "a",
-        "text": "Staff",
-        "w": 26,
-        "h": 16
-      }
-    ]
+    "overflowing": [],
+    "smallTargets": [],
+    "typeSteps": {
+      "display-1": 61.3,
+      "display-2": 43.67,
+      "display-3": 33.09,
+      "heading-1": 27.8,
+      "heading-2": 22.53,
+      "heading-3": 18.76,
+      "lede": 19.02,
+      "body": 16.25,
+      "body-sm": 15.13,
+      "caption": 13.63,
+      "eyebrow": 12.25,
+      "mono": 14.13
+    },
+    "spaceSteps": {
+      "gutter": 27.11,
+      "section": 82.45,
+      "block": 42.17,
+      "stack": 18.03,
+      "inline": 9.02
+    }
   },
   {
     "scheme": "light",
@@ -259,14 +165,28 @@
       "--motion-stagger-base": "60ms"
     },
     "overflowing": [],
-    "smallTargets": [
-      {
-        "tag": "a",
-        "text": "Staff",
-        "w": 26,
-        "h": 16
-      }
-    ]
+    "smallTargets": [],
+    "typeSteps": {
+      "display-1": 83.83,
+      "display-2": 56.26,
+      "display-3": 39.72,
+      "heading-1": 31.44,
+      "heading-2": 24.51,
+      "heading-3": 19.76,
+      "lede": 20.34,
+      "body": 16.59,
+      "body-sm": 15.29,
+      "caption": 13.79,
+      "eyebrow": 12.59,
+      "mono": 14.29
+    },
+    "spaceSteps": {
+      "gutter": 36.39,
+      "section": 116.91,
+      "block": 55.42,
+      "stack": 20.67,
+      "inline": 10.33
+    }
   },
   {
     "scheme": "light",
@@ -308,14 +228,28 @@
       "--motion-stagger-base": "60ms"
     },
     "overflowing": [],
-    "smallTargets": [
-      {
-        "tag": "a",
-        "text": "Staff",
-        "w": 26,
-        "h": 16
-      }
-    ]
+    "smallTargets": [],
+    "typeSteps": {
+      "display-1": 112,
+      "display-2": 72,
+      "display-3": 48,
+      "heading-1": 36,
+      "heading-2": 27,
+      "heading-3": 21,
+      "lede": 22,
+      "body": 17,
+      "body-sm": 15.5,
+      "caption": 14,
+      "eyebrow": 13,
+      "mono": 14.5
+    },
+    "spaceSteps": {
+      "gutter": 47.98,
+      "section": 159.98,
+      "block": 72,
+      "stack": 23.98,
+      "inline": 11.98
+    }
   },
   {
     "scheme": "dark",
@@ -356,76 +290,29 @@
       "--motion-scale-emphasis": "1.04",
       "--motion-stagger-base": "60ms"
     },
-    "overflowing": [
-      {
-        "tag": "table",
-        "cls": "text-body-sm w-full border-collapse text-left",
-        "left": 25,
-        "right": 818
-      },
-      {
-        "tag": "thead",
-        "cls": "bg-surface-sunken text-eyebrow uppercase",
-        "left": 25,
-        "right": 818
-      },
-      {
-        "tag": "tr",
-        "cls": "",
-        "left": 25,
-        "right": 818
-      },
-      {
-        "tag": "th",
-        "cls": "px-3 py-2",
-        "left": 252,
-        "right": 431
-      },
-      {
-        "tag": "th",
-        "cls": "px-3 py-2",
-        "left": 431,
-        "right": 542
-      },
-      {
-        "tag": "th",
-        "cls": "px-3 py-2",
-        "left": 542,
-        "right": 643
-      },
-      {
-        "tag": "th",
-        "cls": "px-3 py-2",
-        "left": 643,
-        "right": 728
-      },
-      {
-        "tag": "th",
-        "cls": "px-3 py-2",
-        "left": 728,
-        "right": 818
-      },
-      {
-        "tag": "tbody",
-        "cls": "",
-        "left": 25,
-        "right": 818
-      },
-      {
-        "tag": "tr",
-        "cls": "border-hairline border-t",
-        "left": 25,
-        "right": 818
-      }
-    ],
-    "smallTargets": [
-      {
-        "tag": "a",
-        "text": "Staff",
-        "w": 26,
-        "h": 16
-      }
-    ]
+    "overflowing": [],
+    "smallTargets": [],
+    "typeSteps": {
+      "display-1": 44,
+      "display-2": 34,
+      "display-3": 28,
+      "heading-1": 25,
+      "heading-2": 21,
+      "heading-3": 18,
+      "lede": 18,
+      "body": 16,
+      "body-sm": 15,
+      "caption": 13.5,
+      "eyebrow": 12,
+      "mono": 14
+    },
+    "spaceSteps": {
+      "gutter": 20,
+      "section": 56,
+      "block": 32,
+      "stack": 16,
+      "inline": 8
+    }
   },
   {
     "scheme": "dark",
@@ -466,76 +353,29 @@
       "--motion-scale-emphasis": "1.04",
       "--motion-stagger-base": "60ms"
     },
-    "overflowing": [
-      {
-        "tag": "table",
-        "cls": "text-body-sm w-full border-collapse text-left",
-        "left": 25,
-        "right": 823
-      },
-      {
-        "tag": "thead",
-        "cls": "bg-surface-sunken text-eyebrow uppercase",
-        "left": 25,
-        "right": 823
-      },
-      {
-        "tag": "tr",
-        "cls": "",
-        "left": 25,
-        "right": 823
-      },
-      {
-        "tag": "th",
-        "cls": "px-3 py-2",
-        "left": 733,
-        "right": 823
-      },
-      {
-        "tag": "tbody",
-        "cls": "",
-        "left": 25,
-        "right": 823
-      },
-      {
-        "tag": "tr",
-        "cls": "border-hairline border-t",
-        "left": 25,
-        "right": 823
-      },
-      {
-        "tag": "td",
-        "cls": "text-muted px-3 py-2",
-        "left": 733,
-        "right": 823
-      },
-      {
-        "tag": "tr",
-        "cls": "border-hairline border-t",
-        "left": 25,
-        "right": 823
-      },
-      {
-        "tag": "td",
-        "cls": "text-muted px-3 py-2",
-        "left": 733,
-        "right": 823
-      },
-      {
-        "tag": "tr",
-        "cls": "border-hairline border-t",
-        "left": 25,
-        "right": 823
-      }
-    ],
-    "smallTargets": [
-      {
-        "tag": "a",
-        "text": "Staff",
-        "w": 26,
-        "h": 16
-      }
-    ]
+    "overflowing": [],
+    "smallTargets": [],
+    "typeSteps": {
+      "display-1": 61.3,
+      "display-2": 43.67,
+      "display-3": 33.09,
+      "heading-1": 27.8,
+      "heading-2": 22.53,
+      "heading-3": 18.76,
+      "lede": 19.02,
+      "body": 16.25,
+      "body-sm": 15.13,
+      "caption": 13.63,
+      "eyebrow": 12.25,
+      "mono": 14.13
+    },
+    "spaceSteps": {
+      "gutter": 27.11,
+      "section": 82.45,
+      "block": 42.17,
+      "stack": 18.03,
+      "inline": 9.02
+    }
   },
   {
     "scheme": "dark",
@@ -577,14 +417,28 @@
       "--motion-stagger-base": "60ms"
     },
     "overflowing": [],
-    "smallTargets": [
-      {
-        "tag": "a",
-        "text": "Staff",
-        "w": 26,
-        "h": 16
-      }
-    ]
+    "smallTargets": [],
+    "typeSteps": {
+      "display-1": 83.83,
+      "display-2": 56.26,
+      "display-3": 39.72,
+      "heading-1": 31.44,
+      "heading-2": 24.51,
+      "heading-3": 19.76,
+      "lede": 20.34,
+      "body": 16.59,
+      "body-sm": 15.29,
+      "caption": 13.79,
+      "eyebrow": 12.59,
+      "mono": 14.29
+    },
+    "spaceSteps": {
+      "gutter": 36.39,
+      "section": 116.91,
+      "block": 55.42,
+      "stack": 20.67,
+      "inline": 10.33
+    }
   },
   {
     "scheme": "dark",
@@ -626,14 +480,28 @@
       "--motion-stagger-base": "60ms"
     },
     "overflowing": [],
-    "smallTargets": [
-      {
-        "tag": "a",
-        "text": "Staff",
-        "w": 26,
-        "h": 16
-      }
-    ]
+    "smallTargets": [],
+    "typeSteps": {
+      "display-1": 112,
+      "display-2": 72,
+      "display-3": 48,
+      "heading-1": 36,
+      "heading-2": 27,
+      "heading-3": 21,
+      "lede": 22,
+      "body": 17,
+      "body-sm": 15.5,
+      "caption": 14,
+      "eyebrow": 13,
+      "mono": 14.5
+    },
+    "spaceSteps": {
+      "gutter": 47.98,
+      "section": 159.98,
+      "block": 72,
+      "stack": 23.98,
+      "inline": 11.98
+    }
   },
   {
     "scheme": "light",
@@ -700,13 +568,27 @@
       "--motion-stagger-base": "60ms"
     },
     "overflowing": [],
-    "smallTargets": [
-      {
-        "tag": "a",
-        "text": "Staff",
-        "w": 26,
-        "h": 16
-      }
-    ]
+    "smallTargets": [],
+    "typeSteps": {
+      "display-1": 83.83,
+      "display-2": 56.26,
+      "display-3": 39.72,
+      "heading-1": 31.44,
+      "heading-2": 24.51,
+      "heading-3": 19.76,
+      "lede": 20.34,
+      "body": 16.59,
+      "body-sm": 15.29,
+      "caption": 13.79,
+      "eyebrow": 12.59,
+      "mono": 14.29
+    },
+    "spaceSteps": {
+      "gutter": 36.39,
+      "section": 116.91,
+      "block": 55.42,
+      "stack": 20.67,
+      "inline": 10.33
+    }
   }
 ]

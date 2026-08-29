@@ -41,7 +41,9 @@ function resolveFixturePath(): string {
     if (parent === directory) break;
     directory = parent;
   }
-  throw new Error(`Could not find ${FIXTURE_RELATIVE_PATH} from ${process.cwd()}`);
+  throw new Error(
+    `Could not find ${FIXTURE_RELATIVE_PATH} from ${process.cwd()}`,
+  );
 }
 
 /** Variant ids from the fixture, so callers do not have to look them up. */
