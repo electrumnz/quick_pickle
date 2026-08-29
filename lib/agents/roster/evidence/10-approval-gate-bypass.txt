@@ -1,0 +1,13 @@
+==============================================================================
+BYPASS ATTEMPTS ON A ROSTER AGENT'S EXTERNAL TOOL
+==============================================================================
+Vinnie's queue_social_post has effect "external". Each attempt below is a
+different route to making it fire without an approvals row in an approved
+state covering these exact arguments. All of them must fail, and the outbox
+must never see the call.
+model: PLANNER (tests/roster/support/planner-model.ts) — deterministic, and
+cannot write a number the tools did not return. Everything below the model is
+the real runtime, and every read is real SQL against the seeded business.
+
+1. let the run take its course with the founder declining the post
+    REFUSED  tool call status "rejected"; posts delivered: 0

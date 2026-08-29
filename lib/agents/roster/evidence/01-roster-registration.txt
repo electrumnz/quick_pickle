@@ -1,0 +1,147 @@
+==============================================================================
+THE ROSTER, AS REGISTERED
+==============================================================================
+Left: the role as declared in lib/agents/roster/definitions.ts.
+Right: the row in public.agents after supabase/migrations/20260103000000_agent_roster.sql.
+The admin's Team page reads the row; the runtime runs the declaration; this
+file is the two of them side by side.
+model: PLANNER (tests/roster/support/planner-model.ts) — deterministic, and
+cannot write a number the tools did not return. Everything below the model is
+the real runtime, and every read is real SQL against the seeded business.
+
+------------------------------------------------------------------------------
+Marlow — Head of Brine Ops (brine-ops)
+------------------------------------------------------------------------------
+  purpose      Watches stock against days of cover, plans what goes in the fermenter next, and drafts the orders that keep both moving.
+  audience     internal
+  model        claude-sonnet-5
+  autonomy     act_with_limits
+  tools        read_stock_cover, read_batch_plan, read_catalogue, save_internal_note, queue_supplier_order
+  always asks  purchase_order, inventory_adjustment, batch_release
+  budget       NZ$0.40/run, NZ$8.00/day, NZ$160.00/month, single action ceiling NZ$250.00
+  schedule     0 19 * * *
+  routine      read_stock_cover → read_batch_plan → save_internal_note → queue_supplier_order
+  measured on  No line ever runs out, and no order is placed later than its lead time allows.
+  memory       Nothing between runs. Every run reads stock, sales and the batch board fresh, because a stale reorder decision is worse than none.
+  database     MATCHES the declaration on every checked field
+
+------------------------------------------------------------------------------
+Dot — Customer Concierge (concierge)
+------------------------------------------------------------------------------
+  purpose      Reads what every waiting customer actually said, drafts the easy replies, and hands anything unhappy or unresolved straight to the founder.
+  audience     b2c
+  model        claude-opus-5
+  autonomy     propose
+  tools        read_open_conversations, read_customer_history, read_catalogue, save_internal_draft, queue_customer_reply
+  always asks  customer_message, review_reply, refund
+  budget       NZ$0.40/run, NZ$5.00/day, NZ$100.00/month, single action ceiling NZ$150.00
+  schedule     0 */4 * * *
+  routine      read_open_conversations → read_customer_history → save_internal_draft → queue_customer_reply
+  measured on  Nobody waits more than a working day, and no unhappy customer is ever answered by an agent.
+  memory       One customer at a time, and only on demand: it reads a person's order and review history before drafting, then forgets them.
+  database     MATCHES the declaration on every checked field
+
+------------------------------------------------------------------------------
+Teller — Finance and Pricing (ledger)
+------------------------------------------------------------------------------
+  purpose      Recomputes unit cost from the batches that actually ran, separates the GST out of every figure, and flags a margin before it becomes a problem.
+  audience     internal
+  model        claude-opus-5
+  autonomy     propose
+  tools        read_margins, read_takings, read_catalogue, save_internal_note, propose_price_change
+  always asks  price_change, discount, settings_change
+  budget       NZ$0.60/run, NZ$9.00/day, NZ$180.00/month
+  schedule     0 8 * * 1
+  routine      read_margins → read_takings → save_internal_note → propose_price_change
+  measured on  Every line above the 60 percent floor, and GST never once counted as income.
+  memory       Nothing between runs. Cost is recomputed from the last three released batches every time, so a stale number cannot survive.
+  database     MATCHES the declaration on every checked field
+
+------------------------------------------------------------------------------
+Vinnie — Social and Content Lead (social)
+------------------------------------------------------------------------------
+  purpose      Writes the feed from the BrandScript and from what actually landed last fortnight, and never publishes anything the founder has not seen.
+  audience     b2c
+  model        claude-opus-5
+  autonomy     propose
+  tools        read_content_performance, read_sales_by_sku, read_catalogue, save_internal_draft, queue_social_post
+  always asks  social_post, content_asset
+  budget       NZ$0.40/run, NZ$6.00/day, NZ$120.00/month
+  schedule     0 20 * * 1,4
+  routine      read_content_performance → read_sales_by_sku → save_internal_draft → queue_social_post
+  measured on  Engagement rate on published posts against the running median, and no post that breaks a brand rule.
+  memory       The performance of everything already published. It does not remember individual people: to this role a customer is an audience, not a name.
+  database     MATCHES the declaration on every checked field
+
+------------------------------------------------------------------------------
+Ari — Marketing (marketing)
+------------------------------------------------------------------------------
+  purpose      Writes every customer-facing word from the BrandScript, and never from its own idea of what the brand is.
+  audience     b2c
+  model        claude-opus-5
+  autonomy     propose
+  tools        read_sales_by_sku, read_catalogue, save_internal_draft, queue_campaign_email
+  always asks  social_post, content_asset, email_campaign
+  budget       NZ$0.40/run, NZ$3.00/day, NZ$60.00/month
+  schedule     (on demand)
+  routine      read_sales_by_sku → read_catalogue → save_internal_draft → queue_campaign_email
+  measured on  Repeat purchase rate and revenue per campaign. It is not measured on volume of output.
+  memory       None, deliberately. The consumer cycle is anonymous and impulse-driven, so this role reads aggregates and never a named person.
+  database     MATCHES the declaration on every checked field
+
+------------------------------------------------------------------------------
+Vic — Trade (trade)
+------------------------------------------------------------------------------
+  purpose      Builds the venue list the market model implies, and drafts the approach to each one.
+  audience     b2b
+  model        claude-opus-5
+  autonomy     propose
+  tools        read_trade_accounts, read_account_memory, read_catalogue, save_account_note, queue_trade_outreach
+  always asks  email_outreach, content_asset
+  budget       NZ$0.40/run, NZ$3.00/day, NZ$60.00/month
+  schedule     (on demand)
+  routine      read_trade_accounts → read_account_memory → queue_trade_outreach
+  measured on  Accounts reordering inside their own cadence, and no account approached twice with the same line.
+  memory       Everything, per account. Its first act on every run is to read one account's whole file — orders, every message already sent, whether it was opened, and every decision made about them — because a trade cycle runs for weeks and starting again each time is how a venue gets pestered.
+  database     MATCHES the declaration on every checked field
+
+------------------------------------------------------------------------------
+Pip — Product Development (product)
+------------------------------------------------------------------------------
+  purpose      Turns real sales and real reviews into the next thing worth making, and says plainly what would have to be true for it to work.
+  audience     internal
+  model        claude-opus-5
+  autonomy     propose
+  tools        read_range_signals, read_catalogue, save_product_concept
+  always asks  recipe_change, content_asset
+  budget       NZ$0.50/run, NZ$4.00/day, NZ$80.00/month
+  schedule     0 9 1 * *
+  routine      read_range_signals → save_product_concept
+  measured on  Ideas that survive contact with the founder. One good concept a month beats ten.
+  memory       Nothing between runs. Every idea is rebuilt from current sales and current reviews, so a concept cannot outlive the evidence for it.
+  database     MATCHES the declaration on every checked field
+
+------------------------------------------------------------------------------
+Cass — Analyst (analyst)
+------------------------------------------------------------------------------
+  purpose      Writes the weekly briefing in plain English, including the sentence the admin opens with on a Monday morning.
+  audience     internal
+  model        claude-sonnet-5
+  autonomy     act_with_limits
+  tools        read_weekly_pulse, read_takings, read_sales_by_sku, save_internal_note
+  always asks  (nothing)
+  budget       NZ$0.40/run, NZ$4.00/day, NZ$80.00/month
+  schedule     0 6 * * 1
+  routine      read_weekly_pulse → read_sales_by_sku → save_internal_note
+  measured on  The founder can answer 'how was last week' from one paragraph, and nothing that failed goes unmentioned.
+  memory       Only through what it files. Each briefing is written from the current week's numbers and the one before it.
+  database     MATCHES the declaration on every checked field
+
+------------------------------------------------------------------------------
+ROWS IN public.agents THAT ARE NOT ROLES IN THE ROSTER
+------------------------------------------------------------------------------
+  Mirror (mirror) — active, enabled: Keeps the local mirror honest against Shopify: drains the webhook queue, reconciles drift nightly, and reports anything the mirror and the store disagree about.
+  Bex (scout) — retired, disabled: Builds the trade prospect list from bar and bottle-shop data, writes the first approach, and keeps the follow-up cadence honest. Retired: this work is now Vic's
+
+  The Team page shows these separately and says they are not registered from
+  code, rather than hiding them.

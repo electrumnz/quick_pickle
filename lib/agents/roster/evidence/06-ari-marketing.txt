@@ -1,0 +1,114 @@
+==============================================================================
+ARI — Marketing (marketing)
+==============================================================================
+Plans and drafts the campaigns that go to the customer list, working only from the brand script and what is selling.
+Audience: b2c. Measured on: Repeat purchase rate and revenue per campaign. It is not measured on volume of output.
+model: PLANNER (tests/roster/support/planner-model.ts) — deterministic, and
+cannot write a number the tools did not return. Everything below the model is
+the real runtime, and every read is real SQL against the seeded business.
+
+GOAL          Read what is selling and draft the next campaign to the customer list.
+AUTONOMY      propose — Drafts and asks. An email to the list is an external send and cannot happen without your yes.
+TOOLS GRANTED read_sales_by_sku, read_catalogue, save_internal_draft, queue_campaign_email
+ALWAYS ASKS   social_post, content_asset, email_campaign
+BRAND RULES   no-health-claims, alcohol-adjacent, name-two-words, sku-numerals, voice-dry-not-zany, nz-spelling, gst-inclusive, photo-no-stock, batch-code-visible, trade-tone, reply-within-day
+MEMORY        None, deliberately. The consumer cycle is anonymous and impulse-driven, so this role reads aggregates and never a named person.
+
+------------------------------------------------------------------------------
+WHAT IT DID, STEP BY STEP
+------------------------------------------------------------------------------
+1. reasoning: See which bottle the campaign should be about, and what moved since the window before.
+   tool: read_sales_by_sku {"windowDays":28}
+   status: succeeded
+      NZ$8880.60 across 493 bottles in 28 days.
+        - No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before.
+        - No 01 HOUSE: 172 bottles, NZ$2685.60, up 201.8% on the 28 days before.
+        - No 03 SMOKE: 99 bottles, NZ$1909.00, up 482.4% on the 28 days before.
+        - The Full Set: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
+        proposal: {"slug":"campaign-hs-set-3","subject":"The Full Set","body":"The Full Set sold 11 bottles in the last 28 days.","audience":"lapsed","reason":"The Full Set is down 31.2% on the 28 days before, so the campaign goes to customers who have stopped ordering."}
+
+2. reasoning: Quote the range and the prices as they actually stand.
+   tool: read_catalogue {}
+   status: succeeded
+      5 products in the range, 5 of them live.
+        - No 01 HOUSE (HS-01-500) sells at NZ$18.00, recorded unit cost NZ$6.20.
+        - No 02 DIRTY (HS-02-500) sells at NZ$20.00, recorded unit cost NZ$7.80.
+        - No 03 SMOKE (HS-03-500) sells at NZ$22.00, recorded unit cost NZ$8.90.
+        - No 04 WILD (HS-04-500) sells at NZ$26.00, recorded unit cost NZ$10.15.
+        - The Full Set (HS-SET-3) sells at NZ$54.00, recorded unit cost NZ$21.80.
+
+3. reasoning: Write the campaign brief from the BrandScript before writing a word of the email.
+   tool: save_internal_draft {"slug":"campaign-brief","title":"NZ$8880.60 across 493 bottles in 28 days.","body":"NZ$8880.60 across 493 bottles in 28 days.\n5 products in the range, 5 of them live.\n\n- No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before.\n- No 01 HOUSE:
+   status: succeeded (behind approval id#1)
+      recorded="campaign-brief" delivered=false
+      Recorded, not sent. This deployment has no live outbound channel wired: the approved action is written down so it can be carried out by a person, or by a channel adapter that does not exist yet.
+
+4. reasoning: Put the campaign in front of the founder. An email to the list leaves the company and can never be sent without an approval.
+   tool: queue_campaign_email {"slug":"campaign-hs-set-3","subject":"The Full Set: Order a bottle","body":"They feel like an amateur in their own kitchen. The drink is nearly right and they cannot say what is missing, which is worse than it being obviously wrong.\n\nMost home martinis are 
+   status: succeeded (behind approval id#2)
+      recorded="campaign-hs-set-3" delivered=false
+      Recorded, not sent. This deployment has no live outbound channel wired: the approved action is written down so it can be carried out by a person, or by a channel adapter that does not exist yet.
+
+5. reasoning: NZ$8880.60 across 493 bottles in 28 days. 5 products in the range, 5 of them live.
+
+What I found
+- No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before.
+- No 01 HOUSE: 172 bottles, NZ$2685.60, up 201.8% on the 28 days before.
+- No 03 SMOKE: 99 bottles, NZ$1909.00, up 482.4% on the 28 days before.
+- The Full Set: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
+- No 01 HOUSE (HS-01-500) sells at NZ$18.00, recorded unit cost NZ$6.20.
+- No 02 DIRTY (HS-02-500) sells at NZ$20.00, recorded unit cost NZ$7.80.
+- No 03 SMOKE (HS-03-500) sells at NZ$22.00, recorded unit cost NZ$8.90.
+- No 04 WILD (HS-04-500) sells at NZ$26.00, recorded unit cost NZ$10.15.
+- The Full Set (HS-SET-3) sells at NZ$54.00, recorded unit cost NZ$21.80.
+
+What I did
+- save_internal_draft: recorded (campaign-brief), not delivered — this deployment has no live outbound channel.
+- queue_campaign_email: recorded (campaign-hs-set-3), not delivered — this deployment has no live outbound channel.
+
+[written under: Brine is a bar ingredient, and the person pouring it is the hero of every sentence we write.]
+------------------------------------------------------------------------------
+DECISIONS PUT TO THE FOUNDER
+------------------------------------------------------------------------------
+   [approved] content_asset: Draft: NZ$8880.60 across 493 bottles in 28 days.
+      summary: NZ$8880.60 across 493 bottles in 28 days. 5 products in the range, 5 of them live.  - No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before. - No 01 HOUSE: 172 bottles, NZ$2685.60, up 
+      why:     Write the campaign brief from the BrandScript before writing a word of the email.
+      decided: founder — Approved.
+   [approved] email_campaign: Campaign: The Full Set: Order a bottle
+      summary: They feel like an amateur in their own kitchen. The drink is nearly right and they cannot say what is missing, which is worse than it being obviously wrong.  Most home martinis are let down by whateve
+      why:     Put the campaign in front of the founder. An email to the list leaves the company and can never be sent without an approval.
+      decided: founder — Approved.
+
+------------------------------------------------------------------------------
+WHAT ACTUALLY LEFT THE COMPANY
+------------------------------------------------------------------------------
+   external actions delivered: 0 (this build has no outbound channel)
+   actions recorded in the outbox: 2
+      draft: NZ$8880.60 across 493 bottles in 28 days.
+      campaign_email: The Full Set: Order a bottle
+
+------------------------------------------------------------------------------
+WHAT IT REPORTED
+------------------------------------------------------------------------------
+   NZ$8880.60 across 493 bottles in 28 days. 5 products in the range, 5 of them live.
+   
+   What I found
+   - No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before.
+   - No 01 HOUSE: 172 bottles, NZ$2685.60, up 201.8% on the 28 days before.
+   - No 03 SMOKE: 99 bottles, NZ$1909.00, up 482.4% on the 28 days before.
+   - The Full Set: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
+   - No 01 HOUSE (HS-01-500) sells at NZ$18.00, recorded unit cost NZ$6.20.
+   - No 02 DIRTY (HS-02-500) sells at NZ$20.00, recorded unit cost NZ$7.80.
+   - No 03 SMOKE (HS-03-500) sells at NZ$22.00, recorded unit cost NZ$8.90.
+   - No 04 WILD (HS-04-500) sells at NZ$26.00, recorded unit cost NZ$10.15.
+   - The Full Set (HS-SET-3) sells at NZ$54.00, recorded unit cost NZ$21.80.
+   
+   What I did
+   - save_internal_draft: recorded (campaign-brief), not delivered — this deployment has no live outbound channel.
+   - queue_campaign_email: recorded (campaign-hs-set-3), not delivered — this deployment has no live outbound channel.
+   
+   [written under: Brine is a bar ingredient, and the person pouring it is the hero of every sentence we write.]
+
+------------------------------------------------------------------------------
+COST $0.18 across 5 model calls and 4 tool calls.
+Run status: succeeded.

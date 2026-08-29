@@ -110,6 +110,55 @@ function iso(row: RosterSqlRow, key: string): string | null {
   return null;
 }
 
+/**
+ * A Postgres array column as a string array.
+ *
+ * `pg` parses `text[]` into a JavaScript array, but it does **not** parse an
+ * array of an enum type: enum OIDs are assigned per database, so the driver has
+ * no type parser for them and hands back the raw literal
+ * `{purchase_order,inventory_adjustment}`. `agents.requires_approval_for` is
+ * exactly that column, so anything reading it has to cope with both shapes or
+ * silently render an empty list.
+ */
+export function pgTextArray(value: unknown): readonly string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === "string");
+  }
+  if (typeof value !== "string") return [];
+  const body = value.trim();
+  if (!body.startsWith("{") || !body.endsWith("}")) return [];
+  const inner = body.slice(1, -1);
+  if (inner === "") return [];
+
+  const items: string[] = [];
+  let current = "";
+  let quoted = false;
+  let escaped = false;
+  for (const character of inner) {
+    if (escaped) {
+      current += character;
+      escaped = false;
+      continue;
+    }
+    if (character === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (character === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (character === "," && !quoted) {
+      items.push(current);
+      current = "";
+      continue;
+    }
+    current += character;
+  }
+  items.push(current);
+  return items.map((item) => item.trim()).filter((item) => item !== "");
+}
+
 /* ------------------------------------------------------------ formatting */
 
 /** Integer cents to the shape a New Zealander reads. Display only. */
@@ -345,7 +394,7 @@ export class SqlBusinessReads implements BusinessReads {
     const nextToBrew =
       first === undefined
         ? null
-        : { sku: first.sku, daysOfCover: first.daysOfCover };
+        : { sku: first.sku, title: first.title, daysOfCover: first.daysOfCover };
 
     const findings = [
       ...inFlight.map(
@@ -358,7 +407,7 @@ export class SqlBusinessReads implements BusinessReads {
       ),
       nextToBrew === null
         ? "No line has enough sales history to rank what should be brewed next."
-        : `${nextToBrew.sku} has the least cover at ${String(nextToBrew.daysOfCover ?? 0)} days, so it is the one to schedule.`,
+        : `${nextToBrew.title} has the least cover at ${String(nextToBrew.daysOfCover ?? 0)} days, so it is the one to schedule.`,
     ];
 
     return {
@@ -533,14 +582,20 @@ export class SqlBusinessReads implements BusinessReads {
   /* -------------------------------------------------------- conversations */
 
   async openConversations(): Promise<ConversationReport> {
+    // A review's `created_at` is when the row was written, which for an imported
+    // review is not when the customer wrote it. `published_at` is, so the wait
+    // is measured from there and falls back only when it is missing.
     const reviewRows = await this.rows(
       `select r.id, r.author_name, r.author_email, r.rating, r.title, r.body,
-              v.sku, (now()::date - r.created_at::date)::int as waiting_days
+              coalesce(p.title, v.sku) as product,
+              (now()::date - coalesce(r.published_at, r.created_at)::date)::int
+                as waiting_days
          from public.reviews r
          left join public.product_variants v on v.id = r.variant_id
+         left join public.products p on p.id = coalesce(r.product_id, v.product_id)
         where r.reply_body is null
           and r.status in ('published', 'pending')
-        order by r.rating, r.created_at`,
+        order by r.rating, coalesce(r.published_at, r.created_at)`,
     );
     const deliveryRows = await this.rows(
       `select o.id, o.order_number, o.email, coalesce(c.full_name, o.email) as who,
@@ -569,7 +624,7 @@ export class SqlBusinessReads implements BusinessReads {
           kind: "review",
           id: str(row, "id"),
           who: str(row, "author_name"),
-          sku: strOrNull(row, "sku"),
+          sku: strOrNull(row, "product"),
           rating,
           title: strOrNull(row, "title"),
           body: str(row, "body"),
@@ -702,6 +757,8 @@ export class SqlBusinessReads implements BusinessReads {
 
   async contentPerformance(windowDays: number): Promise<ContentReport> {
     const rows = await this.rows(
+      // Windowed on when a post went out, not on when its row was written: an
+      // imported post carries a `created_at` of the import.
       `select sp.id, sp.platform, sp.status, sp.caption, sp.published_at,
               coalesce(sp.impressions, 0)     as impressions,
               coalesce(sp.likes, 0)           as likes,
@@ -710,8 +767,9 @@ export class SqlBusinessReads implements BusinessReads {
               coalesce(sp.shares, 0)          as shares,
               sp.brand_check_passed
          from public.social_posts sp
-        where sp.created_at > now() - ($1::int * interval '1 day')
-           or sp.status in ('draft', 'pending_approval', 'failed')
+        where sp.published_at > now() - ($1::int * interval '1 day')
+           or (sp.published_at is null
+               and sp.status in ('draft', 'pending_approval', 'failed'))
         order by sp.published_at desc nulls last, sp.created_at desc`,
       [windowDays],
     );
@@ -1103,17 +1161,44 @@ export class SqlBusinessReads implements BusinessReads {
 
     const leader = sales.lines[0];
     const laggard = sales.lines[sales.lines.length - 1];
+    // The concept is built on a recipe that already exists, so its ingredient
+    // list is that recipe's, not a guess at what a new brine might contain.
+    const recipeIngredientRows =
+      leader === undefined
+        ? []
+        : await this.rows(
+            `select i.name, ri.quantity, ri.unit
+               from public.recipe_ingredients ri
+               join public.ingredients i on i.id = ri.ingredient_id
+               join public.recipes r on r.id = ri.recipe_id
+               join public.product_variants v on v.product_id = r.product_id
+              where v.sku = $1 and r.is_current
+              order by ri.quantity desc nulls last`,
+            [leader.sku],
+          );
+    const weakestRated = themes[0];
     const proposal =
       leader === undefined
         ? null
         : {
             workingName: `${leader.title} at trade strength`,
             basedOnSku: leader.sku,
-            rationale: `${leader.title} is the range's best seller at ${String(leader.units)} bottles in ${String(windowDays)} days${laggard === undefined || laggard.sku === leader.sku ? "" : `, against ${String(laggard.units)} for ${laggard.title}`}. A concentrate of the same brine is the cheapest new SKU to try, because the recipe, the supplier list and the bottle are already in the system.`,
-            ingredients: ingredientRows
-              .slice(0, 6)
-              .map((row) => str(row, "name"))
-              .join(", "),
+            rationale: [
+              `${leader.title} is the range's best seller at ${String(leader.units)} bottles in ${String(windowDays)} days${laggard === undefined || laggard.sku === leader.sku ? "" : `, against ${String(laggard.units)} for ${laggard.title}`}.`,
+              `A concentrate of the same brine is the cheapest new line to try: the recipe, the suppliers and the bottle are already in the system, so nothing new has to be sourced.`,
+              weakestRated === undefined || weakestRated.averageRating === null
+                ? "No review pattern argues against it."
+                : `What would kill it: ${weakestRated.title} already averages ${String(weakestRated.averageRating)} on ${String(weakestRated.reviews)} reviews, and a stronger brine is the same risk in a smaller bottle.`,
+            ].join(" "),
+            ingredients:
+              recipeIngredientRows.length === 0
+                ? "No current recipe on file for this line — the concept cannot state its ingredients."
+                : recipeIngredientRows
+                    .map(
+                      (row) =>
+                        `${str(row, "name")} ${String(round(num(row, "quantity"), 2))}${str(row, "unit")}`,
+                    )
+                    .join(", "),
           };
 
     return {
@@ -1207,11 +1292,15 @@ export class SqlBusinessReads implements BusinessReads {
       best === undefined
         ? ""
         : ` ${best.title} carried it at ${String(best.units)} bottles.`,
-      decisions === 0 ? "" : ` ${String(decisions)} decisions are waiting on you.`,
-      failures === 0 ? "" : ` ${String(failures)} agent runs failed this week.`,
+      decisions === 0
+        ? ""
+        : ` ${String(decisions)} decision${decisions === 1 ? " is" : "s are"} waiting on you.`,
+      failures === 0
+        ? ""
+        : ` ${String(failures)} agent run${failures === 1 ? "" : "s"} failed this week.`,
       lowest === undefined || lowest.daysOfCover === null
         ? ""
-        : ` ${lowest.sku} is the thinnest at ${String(lowest.daysOfCover)} days of cover.`,
+        : ` ${lowest.title} is the thinnest at ${String(lowest.daysOfCover)} days of cover.`,
     ].join("");
 
     return {
@@ -1224,18 +1313,24 @@ export class SqlBusinessReads implements BusinessReads {
       newCustomers: int(newRows[0] ?? {}, "n"),
       repeatCustomerPct: sales.repeatCustomerPct,
       bestSku:
-        best === undefined ? null : { sku: best.sku, units: best.units },
+        best === undefined
+          ? null
+          : { sku: best.sku, title: best.title, units: best.units },
       weakestSku:
         weakest === undefined
           ? null
-          : { sku: weakest.sku, units: weakest.units },
+          : { sku: weakest.sku, title: weakest.title, units: weakest.units },
       decisionsWaiting: decisions,
       failedRuns: failures,
       unfulfilledOrders: int(row, "unfulfilled"),
       lowestCover:
         lowest === undefined
           ? null
-          : { sku: lowest.sku, daysOfCover: lowest.daysOfCover },
+          : {
+              sku: lowest.sku,
+              title: lowest.title,
+              daysOfCover: lowest.daysOfCover,
+            },
       openingSentence: opening,
       headline: opening,
       findings: [
@@ -1243,7 +1338,7 @@ export class SqlBusinessReads implements BusinessReads {
         `Orders: ${String(int(row, "orders"))} this week against ${String(int(row, "orders_prior"))} last week.`,
         `${String(int(newRows[0] ?? {}, "n"))} customers ordered for the first time.`,
         ...sales.findings,
-        `${String(decisions)} decisions are waiting, ${String(failures)} agent runs failed, ${String(int(row, "unfulfilled"))} paid orders are still to pack.`,
+        `${String(decisions)} decision${decisions === 1 ? "" : "s"} waiting on the founder, ${String(failures)} agent run${failures === 1 ? "" : "s"} failed, ${String(int(row, "unfulfilled"))} paid order${int(row, "unfulfilled") === 1 ? "" : "s"} still to pack.`,
       ],
     };
   }

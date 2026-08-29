@@ -1,0 +1,93 @@
+==============================================================================
+PIP — Product Development (product)
+==============================================================================
+Reads what sold and what reviewers said, and writes up the next flavour worth trying — with the evidence attached.
+Audience: internal. Measured on: Ideas that survive contact with the founder. One good concept a month beats ten.
+model: PLANNER (tests/roster/support/planner-model.ts) — deterministic, and
+cannot write a number the tools did not return. Everything below the model is
+the real runtime, and every read is real SQL against the seeded business.
+
+GOAL          Read the range signals and write up one product idea worth the founder's ten seconds.
+AUTONOMY      propose — Proposes and waits. Ideas are written into our own records; nothing reaches the shop without your yes.
+TOOLS GRANTED read_range_signals, read_catalogue, save_product_concept
+ALWAYS ASKS   recipe_change, content_asset
+BRAND RULES   no-health-claims, alcohol-adjacent, name-two-words, sku-numerals, voice-dry-not-zany, nz-spelling, gst-inclusive, photo-no-stock, batch-code-visible, reply-within-day
+MEMORY        Nothing between runs. Every idea is rebuilt from current sales and current reviews, so a concept cannot outlive the evidence for it.
+
+------------------------------------------------------------------------------
+WHAT IT DID, STEP BY STEP
+------------------------------------------------------------------------------
+1. reasoning: Put sales, review ratings, the recipes on file and the ingredients on hand next to each other.
+   tool: read_range_signals {"windowDays":90}
+   status: succeeded
+      No 02 DIRTY leads the range at 330 bottles in 90 days; No 03 SMOKE carries the lowest average rating at 3.5.
+        - No 02 DIRTY: 330 bottles, NZ$5854.34, up 522.6% on the 90 days before.
+        - No 01 HOUSE: 259 bottles, NZ$4120.50, up 979.2% on the 90 days before.
+        - No 03 SMOKE: 160 bottles, NZ$3168.51, up 344.4% on the 90 days before.
+        - The Full Set: 38 bottles, NZ$2043.45, up 375.0% on the 90 days before.
+        - No 03 SMOKE: 2 reviews, average 3.5, lowest 2. Said: The barbecue bottle; Arrived cracked
+        - No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: It does not cloud the glass; Finally; Very good, wish the bottle were bigger
+        - No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: Bought it for a pickleback, kept it for cooking; The one I keep buying; Good, arrived fast; Genuinely good
+        - The Full Set: 1 reviews, average 5, lowest 5. Said: Best gift I have sent all year
+        proposal: {"workingName":"No 02 DIRTY at trade strength","basedOnSku":"HS-02-500","rationale":"No 02 DIRTY is the range's best seller at 330 bottles in 90 days, against 38 for The Full Set. A concentrate of the same brine is the cheapest new line to try: the recipe, the suppliers and the bottle are already in the system, so nothing new has to be sourced. What would kill it: No 03 SMOKE already averages 3.5 on 2 reviews, and a stronger brine is the same risk in a smaller bottle.","ingredients":"Filtered water 209l, Cornichon cucumbers 70kg, Spanish manzanilla olives 24kg, Marlborough sea salt 11.44kg, Preserved lemon peel 2.2kg, White peppercorn 0.44kg, Coriander seed 0.33kg, Citric acid 0.11kg"}
+
+2. reasoning: Write up the one idea the evidence supports, with what would have to be true for it to work.
+   tool: save_product_concept {"workingName":"No 02 DIRTY at trade strength","basedOnSku":"HS-02-500","rationale":"No 02 DIRTY is the range's best seller at 330 bottles in 90 days, against 38 for The Full Set. A concentrate of the same brine is the cheapest new line to try: the recipe, the
+   status: succeeded (behind approval id#1)
+      recorded="No 02 DIRTY at trade strength" delivered=false
+      Recorded, not sent. This deployment has no live outbound channel wired: the approved action is written down so it can be carried out by a person, or by a channel adapter that does not exist yet.
+
+3. reasoning: No 02 DIRTY leads the range at 330 bottles in 90 days; No 03 SMOKE carries the lowest average rating at 3.5.
+
+What I found
+- No 02 DIRTY: 330 bottles, NZ$5854.34, up 522.6% on the 90 days before.
+- No 01 HOUSE: 259 bottles, NZ$4120.50, up 979.2% on the 90 days before.
+- No 03 SMOKE: 160 bottles, NZ$3168.51, up 344.4% on the 90 days before.
+- The Full Set: 38 bottles, NZ$2043.45, up 375.0% on the 90 days before.
+- No 03 SMOKE: 2 reviews, average 3.5, lowest 2. Said: The barbecue bottle; Arrived cracked
+- No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: It does not cloud the glass; Finally; Very good, wish the bottle were bigger
+- No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: Bought it for a pickleback, kept it for cooking; The one I keep buying; Good, arrived fast; Genuinely good
+- The Full Set: 1 reviews, average 5, lowest 5. Said: Best gift I have sent all year
+
+What I did
+- save_product_concept: recorded (No 02 DIRTY at trade strength), not delivered — this deployment has no live outbound channel.
+
+[written under: Brine is a bar ingredient, and the person pouring it is the hero of every sentence we write.]
+------------------------------------------------------------------------------
+DECISIONS PUT TO THE FOUNDER
+------------------------------------------------------------------------------
+   [approved] recipe_change: Product idea: No 02 DIRTY at trade strength
+      summary: No 02 DIRTY is the range's best seller at 330 bottles in 90 days, against 38 for The Full Set. A concentrate of the same brine is the cheapest new line to try: the recipe, the suppliers and the bottle
+      why:     Write up the one idea the evidence supports, with what would have to be true for it to work.
+      decided: founder — Approved.
+
+------------------------------------------------------------------------------
+WHAT ACTUALLY LEFT THE COMPANY
+------------------------------------------------------------------------------
+   external actions delivered: 0 (this build has no outbound channel)
+   actions recorded in the outbox: 1
+      product_concept: Product idea from HS-02-500
+
+------------------------------------------------------------------------------
+WHAT IT REPORTED
+------------------------------------------------------------------------------
+   No 02 DIRTY leads the range at 330 bottles in 90 days; No 03 SMOKE carries the lowest average rating at 3.5.
+   
+   What I found
+   - No 02 DIRTY: 330 bottles, NZ$5854.34, up 522.6% on the 90 days before.
+   - No 01 HOUSE: 259 bottles, NZ$4120.50, up 979.2% on the 90 days before.
+   - No 03 SMOKE: 160 bottles, NZ$3168.51, up 344.4% on the 90 days before.
+   - The Full Set: 38 bottles, NZ$2043.45, up 375.0% on the 90 days before.
+   - No 03 SMOKE: 2 reviews, average 3.5, lowest 2. Said: The barbecue bottle; Arrived cracked
+   - No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: It does not cloud the glass; Finally; Very good, wish the bottle were bigger
+   - No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: Bought it for a pickleback, kept it for cooking; The one I keep buying; Good, arrived fast; Genuinely good
+   - The Full Set: 1 reviews, average 5, lowest 5. Said: Best gift I have sent all year
+   
+   What I did
+   - save_product_concept: recorded (No 02 DIRTY at trade strength), not delivered — this deployment has no live outbound channel.
+   
+   [written under: Brine is a bar ingredient, and the person pouring it is the hero of every sentence we write.]
+
+------------------------------------------------------------------------------
+COST $0.12 across 3 model calls and 2 tool calls.
+Run status: succeeded.

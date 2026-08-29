@@ -83,7 +83,17 @@ export function createRosterTools(ports: RosterToolPorts): RosterTools {
       "Every product with its price, unit cost and whether it is trade-only. Read-only.",
     effect: "read",
     inputSchema: z.object({}).describe("No arguments."),
-    execute: async () => ({ products: await reads.catalogue() }),
+    execute: async () => {
+      const products = await reads.catalogue();
+      return {
+        headline: `${String(products.length)} products in the range, ${String(products.filter((line) => line.status === "active").length)} of them live.`,
+        findings: products.map(
+          (line) =>
+            `${line.title} (${line.sku}) sells at ${nzd(line.priceCents)}${line.tradeOnly ? ", trade only" : ""}${line.unitCostCents === null ? "" : `, recorded unit cost ${nzd(line.unitCostCents)}`}.`,
+        ),
+        products,
+      };
+    },
   });
 
   const readStockCover = defineTool({

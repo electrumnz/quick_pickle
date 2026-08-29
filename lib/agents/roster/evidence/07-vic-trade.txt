@@ -1,0 +1,80 @@
+==============================================================================
+VIC — Trade (trade)
+==============================================================================
+Works the list of bars, restaurants and shops: who is due a restock, who has gone quiet, and what was already said to them.
+Audience: b2b. Measured on: Accounts reordering inside their own cadence, and no account approached twice with the same line.
+model: PLANNER (tests/roster/support/planner-model.ts) — deterministic, and
+cannot write a number the tools did not return. Everything below the model is
+the real runtime, and every read is real SQL against the seeded business.
+
+GOAL          Work the trade list: find who is overdue, remember what has already been said, and draft the approach.
+AUTONOMY      propose — Drafts and asks. Every approach to a venue is an external send and waits for your yes.
+TOOLS GRANTED read_trade_accounts, read_account_memory, read_catalogue, save_account_note, queue_trade_outreach
+ALWAYS ASKS   email_outreach, content_asset
+BRAND RULES   no-health-claims, name-two-words, sku-numerals, voice-dry-not-zany, nz-spelling, gst-inclusive, photo-no-stock, trade-tone
+MEMORY        Everything, per account. Its first act on every run is to read one account's whole file — orders, every message already sent, whether it was opened, and every decision made about them — because a trade cycle runs for weeks and starting again each time is how a venue gets pestered.
+
+------------------------------------------------------------------------------
+WHAT IT DID, STEP BY STEP
+------------------------------------------------------------------------------
+1. reasoning: Rank the accounts by how far past their own reorder pattern they are.
+   tool: read_trade_accounts {}
+   status: succeeded
+      1 wholesale account, 1 past their own reorder pattern.
+        - Moxie Provisions Limited (Auckland): 2 orders, NZ$2822.40 all up, last ordered 16 days ago against a 4-day pattern — overdue.
+        proposal: {"customerId":"id#1","account":"Moxie Provisions Limited","to":"accounts@moxieprovisions.co.nz","subject":"Moxie Provisions Limited — restock before the next service","body":"Wiremu Paterson,\n\nYour last order was 16 days ago, against your usual 4 days between orders.\nA case is six bottles and trade pricing is the one published number.\nSay how many cases and I will get them on the next run.","reason":"Moxie Provisions Limited is past its own reorder cadence."}
+
+2. reasoning: Read that account's whole file before writing, so the approach follows the last conversation instead of repeating it.
+   tool: read_account_memory {"customerId":"id#1"}
+   status: succeeded
+      Moxie Provisions Limited: 2 orders and 0 prior messages on file.
+        - Standing note: Distributes to grocers across Auckland and Waikato. Net 30.
+
+3. reasoning: Draft the approach to the account that is furthest past its pattern, for the founder to send or bin.
+   tool: queue_trade_outreach {"customerId":"id#1","account":"Moxie Provisions Limited","to":"accounts@moxieprovisions.co.nz","subject":"Moxie Provisions Limited — restock before the next service","body":"Wiremu Paterson,\n\nYour last order was 16 days ago, 
+   status: succeeded (behind approval id#2)
+      recorded="id#1" delivered=false
+      Recorded, not sent. This deployment has no live outbound channel wired: the approved action is written down so it can be carried out by a person, or by a channel adapter that does not exist yet.
+
+4. reasoning: 1 wholesale account, 1 past their own reorder pattern. Moxie Provisions Limited: 2 orders and 0 prior messages on file.
+
+What I found
+- Moxie Provisions Limited (Auckland): 2 orders, NZ$2822.40 all up, last ordered 16 days ago against a 4-day pattern — overdue.
+- Standing note: Distributes to grocers across Auckland and Waikato. Net 30.
+
+What I did
+- queue_trade_outreach: recorded (id#1), not delivered — this deployment has no live outbound channel.
+
+[written under: Brine is a bar ingredient, and the person pouring it is the hero of every sentence we write.]
+------------------------------------------------------------------------------
+DECISIONS PUT TO THE FOUNDER
+------------------------------------------------------------------------------
+   [approved] email_outreach: Email to Moxie Provisions Limited
+      summary: Moxie Provisions Limited — restock before the next service — Wiremu Paterson,  Your last order was 16 days ago, against your usual 4 days between orders. A case is six bottles and trade pricing is the
+      why:     Draft the approach to the account that is furthest past its pattern, for the founder to send or bin.
+      decided: founder — Approved.
+
+------------------------------------------------------------------------------
+WHAT ACTUALLY LEFT THE COMPANY
+------------------------------------------------------------------------------
+   external actions delivered: 0 (this build has no outbound channel)
+   actions recorded in the outbox: 1
+      trade_outreach: Moxie Provisions Limited: Moxie Provisions Limited — restock before the next service
+
+------------------------------------------------------------------------------
+WHAT IT REPORTED
+------------------------------------------------------------------------------
+   1 wholesale account, 1 past their own reorder pattern. Moxie Provisions Limited: 2 orders and 0 prior messages on file.
+   
+   What I found
+   - Moxie Provisions Limited (Auckland): 2 orders, NZ$2822.40 all up, last ordered 16 days ago against a 4-day pattern — overdue.
+   - Standing note: Distributes to grocers across Auckland and Waikato. Net 30.
+   
+   What I did
+   - queue_trade_outreach: recorded (id#1), not delivered — this deployment has no live outbound channel.
+   
+   [written under: Brine is a bar ingredient, and the person pouring it is the hero of every sentence we write.]
+
+------------------------------------------------------------------------------
+COST $0.15 across 4 model calls and 3 tool calls.
+Run status: succeeded.

@@ -334,7 +334,13 @@ export class PlannerModel implements LanguageModelV4 {
       };
     }
     if (step.tool === "queue_campaign_email") {
-      return { ...proposal, body: composeCaption(strategy) };
+      // Subject and body both come from the BrandScript; which product the
+      // campaign is about came from the sales read.
+      return {
+        ...proposal,
+        subject: `${String(proposal["subject"] ?? "")}: ${strategy.directCall}`,
+        body: composeCaption(strategy),
+      };
     }
     return proposal;
   }
@@ -360,8 +366,14 @@ export class PlannerModel implements LanguageModelV4 {
     return lines;
   }
 
+  /** A note's title has to fit the column, so it is the first sentence of it. */
   private noteTitle(results: readonly ToolResult[]): string {
-    return this.headlines(results)[0] ?? `${this.role.definition.name}: nothing to report`;
+    const headline =
+      this.headlines(results)[0] ??
+      `${this.role.definition.name}: nothing to report`;
+    const sentence = headline.split(". ")[0] ?? headline;
+    const trimmed = sentence.length > 160 ? `${sentence.slice(0, 157)}…` : sentence;
+    return trimmed.endsWith(".") ? trimmed : `${trimmed}.`;
   }
 
   private noteBody(results: readonly ToolResult[]): string {

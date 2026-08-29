@@ -105,8 +105,12 @@ export interface BatchPlanReport extends Findings {
   readonly released: readonly BatchLine[];
   /** Released stock inside 120 days of its best-before date. */
   readonly expiringSoon: readonly BatchLine[];
-  /** The SKU with the least cover, which is what should go in the fermenter next. */
-  readonly nextToBrew: { readonly sku: string; readonly daysOfCover: number | null } | null;
+  /** The line with the least cover, which is what should go in the fermenter next. */
+  readonly nextToBrew: {
+    readonly sku: string;
+    readonly title: string;
+    readonly daysOfCover: number | null;
+  } | null;
 }
 
 /* --------------------------------------------------------------- money */
@@ -388,13 +392,22 @@ export interface WeeklyPulse extends Findings {
   readonly ordersPrior: number;
   readonly newCustomers: number;
   readonly repeatCustomerPct: number | null;
-  readonly bestSku: { readonly sku: string; readonly units: number } | null;
-  readonly weakestSku: { readonly sku: string; readonly units: number } | null;
+  readonly bestSku: {
+    readonly sku: string;
+    readonly title: string;
+    readonly units: number;
+  } | null;
+  readonly weakestSku: {
+    readonly sku: string;
+    readonly title: string;
+    readonly units: number;
+  } | null;
   readonly decisionsWaiting: number;
   readonly failedRuns: number;
   readonly unfulfilledOrders: number;
   readonly lowestCover: {
     readonly sku: string;
+    readonly title: string;
     readonly daysOfCover: number | null;
   } | null;
   /** The sentence the admin's Today page can open with. */

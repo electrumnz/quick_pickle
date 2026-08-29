@@ -72,6 +72,7 @@ export {
   MARGIN_FLOOR_PCT,
   SqlBusinessReads,
   nzd,
+  pgTextArray,
   type RosterSqlClient,
   type RosterSqlRow,
 } from "./sql-reads";

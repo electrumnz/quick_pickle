@@ -469,7 +469,7 @@ export function socialRole(strategy: Strategy): RosterRole {
       {
         kind: "read",
         tool: "read_content_performance",
-        input: { windowDays: 14 },
+        input: { windowDays: DEFAULT_WINDOW_DAYS },
         why: "Find what earned attention, what is still waiting on a decision, and what failed to go out at all.",
       },
       {
@@ -742,6 +742,12 @@ export function analystRole(strategy: Strategy): RosterRole {
         tool: "read_sales_by_sku",
         input: { windowDays: 7 },
         why: "See which bottle carried the week.",
+      },
+      {
+        kind: "read",
+        tool: "read_takings",
+        input: { windowDays: DEFAULT_WINDOW_DAYS },
+        why: "Put the week inside the month, and keep the GST separate from the takings.",
       },
       {
         kind: "note",
