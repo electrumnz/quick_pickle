@@ -36,6 +36,24 @@
       "reviewed": "2026-08-27"
     },
     {
+      "path": "legal/test-fixtures/consumer/must-fail-superiority.tsx",
+      "scope": "file",
+      "reason": "Deliberately non-compliant fixture proving FTA-04 still catches a genuine superiority claim on a consumer surface after the 'Best before' term-of-art carve-out. The self-test scans it with --include-legal --no-exemptions and REQUIRES it to fail.",
+      "reviewed": "2026-08-29"
+    },
+    {
+      "path": "legal/test-fixtures/consumer/must-fail-health-claim.tsx",
+      "scope": "file",
+      "reason": "Deliberately non-compliant fixture proving parsing did not become leniency: a health claim in a string literal, a template literal and JSX text must all still fail. The self-test scans it with --include-legal --no-exemptions and REQUIRES it to fail.",
+      "reviewed": "2026-08-29"
+    },
+    {
+      "path": "legal/test-fixtures/internal/must-fail-health-claim.tsx",
+      "scope": "file",
+      "reason": "Deliberately non-compliant fixture proving the internal surface is NOT a blanket skip: health, therapeutic and hydration rules still fire on admin surfaces. The self-test scans it with --include-legal --no-exemptions and REQUIRES it to fail.",
+      "reviewed": "2026-08-29"
+    },
+    {
       "path": "brand/brand-guide.md",
       "scope": "sections",
       "sections": ["What HALF SOUR never says", "What it is never"],

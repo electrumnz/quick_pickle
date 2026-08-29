@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { QualityTier } from "../types";
 
 const ORDER: QualityTier[] = ["low", "medium", "high"];
@@ -118,14 +124,26 @@ export function detectDevice(): DeviceReport {
   return cached;
 }
 
+/**
+ * Answered once per page.
+ *
+ * The probe builds a canvas and asks it for a context, which is far too
+ * expensive to repeat — and `useBrowserValue` below calls it during render.
+ * The answer cannot change without a reload. The server's answer is not
+ * cached, because the module outlives a request there.
+ */
+let webglAnswer: boolean | null = null;
+
 export function hasWebGL(): boolean {
+  if (webglAnswer !== null) return webglAnswer;
   if (typeof window === "undefined") return false;
   try {
     const c = document.createElement("canvas");
-    return Boolean(c.getContext("webgl2") ?? c.getContext("webgl"));
+    webglAnswer = Boolean(c.getContext("webgl2") ?? c.getContext("webgl"));
   } catch {
-    return false;
+    webglAnswer = false;
   }
+  return webglAnswer;
 }
 
 export function prefersReducedMotion(): boolean {
@@ -135,49 +153,86 @@ export function prefersReducedMotion(): boolean {
   );
 }
 
+/** A capability that cannot change without a reload has nothing to subscribe to. */
+const noSubscription = () => () => {};
+
+/**
+ * Read a browser-only fact without a `setState` in an effect.
+ *
+ * The server has no canvas and no media queries, so these answers can only be
+ * had after mount. Detecting in an effect and calling `setState` works, but it
+ * renders once with a value nobody meant and then again with the real one, and
+ * React's compiler is right to flag it. `useSyncExternalStore` says the same
+ * thing properly: `serverValue` is what the server and the hydration pass
+ * render, `read` is what the browser renders from immediately afterwards.
+ *
+ * `read` must return a stable value for an unchanged browser state — a
+ * primitive, or a cached object. A fresh object every call re-renders forever.
+ */
+export function useBrowserValue<T>(read: () => T, serverValue: T): T {
+  return useSyncExternalStore(noSubscription, read, () => serverValue);
+}
+
+function subscribeToMotionPreference(onChange: () => void): () => void {
+  if (typeof window === "undefined" || !window.matchMedia) return () => {};
+  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mq.addEventListener?.("change", onChange);
+  return () => mq.removeEventListener?.("change", onChange);
+}
+
+/**
+ * The live motion preference. Follows a change made while the page is open,
+ * which is the one case a plain read at mount gets wrong.
+ */
+export function useReducedMotion(): boolean {
+  return useSyncExternalStore(
+    subscribeToMotionPreference,
+    prefersReducedMotion,
+    () => false,
+  );
+}
+
 /**
  * Live tier with hysteresis. Downgrades quickly when frames slip, upgrades
  * grudgingly and never past where the device was first judged capable.
  */
 export function useQualityTier(force?: QualityTier) {
-  const [detected] = useState<DeviceReport>(() =>
-    force
-      ? { ...detectDevice(), tier: force, reason: "forced" }
-      : typeof window === "undefined"
-        ? { ...detectDevice() }
-        : detectDevice(),
-  );
-  const [tier, setTier] = useState<QualityTier>(force ?? detected.tier);
-  const ceiling = useRef<QualityTier>(force ?? detected.tier);
-  const locked = useRef(Boolean(force));
+  const [base] = useState<DeviceReport>(() => detectDevice());
+  /**
+   * What the frame-rate monitor has settled on. A forced tier is deliberately
+   * not copied in here: it is a prop, so it is applied on the way out. Copying
+   * it into state needed an effect to keep the two in step, and that effect
+   * only ever ran in one direction — dropping `force` again left the forced
+   * tier latched on for the life of the component.
+   */
+  const [measured, setMeasured] = useState<QualityTier>(base.tier);
+  const ceiling = useRef<QualityTier>(base.tier);
 
-  useEffect(() => {
-    if (force) {
-      locked.current = true;
-      ceiling.current = force;
-      setTier(force);
-    }
-  }, [force]);
+  const detected = useMemo<DeviceReport>(
+    () =>
+      force === undefined ? base : { ...base, tier: force, reason: "forced" },
+    [base, force],
+  );
 
   const decline = useCallback(() => {
-    if (locked.current) return;
-    setTier((t) => {
+    if (force !== undefined) return;
+    setMeasured((t) => {
       const i = ORDER.indexOf(t);
       const next = ORDER[Math.max(0, i - 1)]!;
       // Once we have had to drop, do not climb back above the new level.
       ceiling.current = next;
       return next;
     });
-  }, []);
+  }, [force]);
 
   const incline = useCallback(() => {
-    if (locked.current) return;
-    setTier((t) => {
+    if (force !== undefined) return;
+    setMeasured((t) => {
       const i = ORDER.indexOf(t);
       const cap = ORDER.indexOf(ceiling.current);
       return ORDER[Math.min(cap, i + 1)]!;
     });
-  }, []);
+  }, [force]);
 
-  return { tier, detected, decline, incline };
+  return { tier: force ?? measured, detected, decline, incline };
 }

@@ -1,0 +1,1089 @@
+{
+  "$note": "copy-audit-ignore-file — generated evidence, quoting pages that are scanned at source",
+  "generated": "2026-08-29T22:10:23.413Z",
+  "base": "http://localhost:3000",
+  "captures": [
+    {
+      "name": "shop-375",
+      "path": "/shop",
+      "width": 375,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "overflows": false,
+      "documentHeight": 4317,
+      "headings": [
+        "H1: Four brines and a box.",
+        "H2: The bottles",
+        "H2: The Full Set",
+        "H2: Start with the drink.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 4,
+      "productLinks": 17,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "CollectionPage"
+        }
+      ],
+      "availabilityText": ["Not available to order"]
+    },
+    {
+      "name": "shop-375-full",
+      "path": "/shop",
+      "width": 375,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "overflows": false,
+      "documentHeight": 4317,
+      "headings": [
+        "H1: Four brines and a box.",
+        "H2: The bottles",
+        "H2: The Full Set",
+        "H2: Start with the drink.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 4,
+      "productLinks": 17,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "CollectionPage"
+        }
+      ],
+      "availabilityText": ["Not available to order"]
+    },
+    {
+      "name": "shop-768",
+      "path": "/shop",
+      "width": 768,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 753,
+      "clientWidth": 768,
+      "overflows": false,
+      "documentHeight": 4310,
+      "headings": [
+        "H1: Four brines and a box.",
+        "H2: The bottles",
+        "H2: The Full Set",
+        "H2: Start with the drink.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 4,
+      "productLinks": 17,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "CollectionPage"
+        }
+      ],
+      "availabilityText": ["Not available to order"]
+    },
+    {
+      "name": "shop-768-full",
+      "path": "/shop",
+      "width": 768,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 753,
+      "clientWidth": 768,
+      "overflows": false,
+      "documentHeight": 4310,
+      "headings": [
+        "H1: Four brines and a box.",
+        "H2: The bottles",
+        "H2: The Full Set",
+        "H2: Start with the drink.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 4,
+      "productLinks": 17,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "CollectionPage"
+        }
+      ],
+      "availabilityText": ["Not available to order"]
+    },
+    {
+      "name": "shop-1280",
+      "path": "/shop",
+      "width": 1280,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1265,
+      "clientWidth": 1280,
+      "overflows": false,
+      "documentHeight": 3803,
+      "headings": [
+        "H1: Four brines and a box.",
+        "H2: The bottles",
+        "H2: The Full Set",
+        "H2: Start with the drink.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 4,
+      "productLinks": 17,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "CollectionPage"
+        }
+      ],
+      "availabilityText": ["Not available to order"]
+    },
+    {
+      "name": "shop-1280-full",
+      "path": "/shop",
+      "width": 1280,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1265,
+      "clientWidth": 1280,
+      "overflows": false,
+      "documentHeight": 3803,
+      "headings": [
+        "H1: Four brines and a box.",
+        "H2: The bottles",
+        "H2: The Full Set",
+        "H2: Start with the drink.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 4,
+      "productLinks": 17,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "CollectionPage"
+        }
+      ],
+      "availabilityText": ["Not available to order"]
+    },
+    {
+      "name": "shop-1920",
+      "path": "/shop",
+      "width": 1920,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1905,
+      "clientWidth": 1920,
+      "overflows": false,
+      "documentHeight": 4455,
+      "headings": [
+        "H1: Four brines and a box.",
+        "H2: The bottles",
+        "H2: The Full Set",
+        "H2: Start with the drink.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 4,
+      "productLinks": 17,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "CollectionPage"
+        }
+      ],
+      "availabilityText": ["Not available to order"]
+    },
+    {
+      "name": "shop-1920-full",
+      "path": "/shop",
+      "width": 1920,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1905,
+      "clientWidth": 1920,
+      "overflows": false,
+      "documentHeight": 4455,
+      "headings": [
+        "H1: Four brines and a box.",
+        "H2: The bottles",
+        "H2: The Full Set",
+        "H2: Start with the drink.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 4,
+      "productLinks": 17,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "CollectionPage"
+        }
+      ],
+      "availabilityText": ["Not available to order"]
+    },
+    {
+      "name": "product-house-375",
+      "path": "/products/no-01-house",
+      "width": 375,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "overflows": false,
+      "documentHeight": 5120,
+      "headings": [
+        "H1: HOUSE",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 3,
+      "productLinks": 5,
+      "canvases": 1,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 01 HOUSE",
+          "sku": "HS-01-500",
+          "price": "18.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "product-house-375-full",
+      "path": "/products/no-01-house",
+      "width": 375,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "overflows": false,
+      "documentHeight": 5120,
+      "headings": [
+        "H1: HOUSE",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 3,
+      "productLinks": 5,
+      "canvases": 1,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 01 HOUSE",
+          "sku": "HS-01-500",
+          "price": "18.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "product-house-1440",
+      "path": "/products/no-01-house",
+      "width": 1440,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "overflows": false,
+      "documentHeight": 5484,
+      "headings": [
+        "H1: HOUSE",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 2,
+      "productLinks": 5,
+      "canvases": 1,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 01 HOUSE",
+          "sku": "HS-01-500",
+          "price": "18.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "product-house-1440-full",
+      "path": "/products/no-01-house",
+      "width": 1440,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "overflows": false,
+      "documentHeight": 5484,
+      "headings": [
+        "H1: HOUSE",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 2,
+      "productLinks": 5,
+      "canvases": 1,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 01 HOUSE",
+          "sku": "HS-01-500",
+          "price": "18.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "product-smoke-375",
+      "path": "/products/no-03-smoke",
+      "width": 375,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "overflows": false,
+      "documentHeight": 5108,
+      "headings": [
+        "H1: SMOKE",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 3,
+      "productLinks": 5,
+      "canvases": 1,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 03 SMOKE",
+          "sku": "HS-03-500",
+          "price": "22.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "product-smoke-375-full",
+      "path": "/products/no-03-smoke",
+      "width": 375,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "overflows": false,
+      "documentHeight": 5108,
+      "headings": [
+        "H1: SMOKE",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 3,
+      "productLinks": 5,
+      "canvases": 1,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 03 SMOKE",
+          "sku": "HS-03-500",
+          "price": "22.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "product-smoke-1440",
+      "path": "/products/no-03-smoke",
+      "width": 1440,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "overflows": false,
+      "documentHeight": 5542,
+      "headings": [
+        "H1: SMOKE",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 2,
+      "productLinks": 5,
+      "canvases": 1,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 03 SMOKE",
+          "sku": "HS-03-500",
+          "price": "22.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "product-smoke-1440-full",
+      "path": "/products/no-03-smoke",
+      "width": 1440,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "overflows": false,
+      "documentHeight": 5542,
+      "headings": [
+        "H1: SMOKE",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 2,
+      "productLinks": 5,
+      "canvases": 1,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 03 SMOKE",
+          "sku": "HS-03-500",
+          "price": "22.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "product-set-375",
+      "path": "/products/the-full-set",
+      "width": 375,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "overflows": false,
+      "documentHeight": 2700,
+      "headings": [
+        "H1: The Full Set",
+        "H2: Three bottles, named.",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 2,
+      "productLinks": 5,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "The Full Set",
+          "sku": "HS-SET-3",
+          "price": "54.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "product-set-375-full",
+      "path": "/products/the-full-set",
+      "width": 375,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "overflows": false,
+      "documentHeight": 2700,
+      "headings": [
+        "H1: The Full Set",
+        "H2: Three bottles, named.",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 2,
+      "productLinks": 5,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "The Full Set",
+          "sku": "HS-SET-3",
+          "price": "54.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "product-set-1440",
+      "path": "/products/the-full-set",
+      "width": 1440,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "overflows": false,
+      "documentHeight": 2669,
+      "headings": [
+        "H1: The Full Set",
+        "H2: Three bottles, named.",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 1,
+      "productLinks": 5,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "The Full Set",
+          "sku": "HS-SET-3",
+          "price": "54.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "product-set-1440-full",
+      "path": "/products/the-full-set",
+      "width": 1440,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "overflows": false,
+      "documentHeight": 2669,
+      "headings": [
+        "H1: The Full Set",
+        "H2: Three bottles, named.",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 1,
+      "productLinks": 5,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "The Full Set",
+          "sku": "HS-SET-3",
+          "price": "54.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "state-unlisted-1440",
+      "path": "/products/no-04-wild",
+      "width": 1440,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "overflows": false,
+      "documentHeight": 5353,
+      "headings": [
+        "H1: WILD",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 1,
+      "productLinks": 5,
+      "canvases": 1,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 04 WILD",
+          "price": "26.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/OutOfStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": ["Not available to order"]
+    },
+    {
+      "name": "state-unlisted-375",
+      "path": "/products/no-04-wild",
+      "width": 375,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 360,
+      "clientWidth": 375,
+      "overflows": false,
+      "documentHeight": 4932,
+      "headings": [
+        "H1: WILD",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 1,
+      "productLinks": 5,
+      "canvases": 1,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 04 WILD",
+          "price": "26.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/OutOfStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": ["Not available to order", "Not available to order"]
+    },
+    {
+      "name": "state-404-1440",
+      "path": "/products/no-99-invented",
+      "width": 1440,
+      "httpStatus": 404,
+      "expectedStatus": 404,
+      "scrollWidth": 1425,
+      "clientWidth": 1440,
+      "overflows": false,
+      "documentHeight": 1674,
+      "headings": [
+        "H1: No such bottle",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 0,
+      "productLinks": 6,
+      "canvases": 0,
+      "structuredData": [],
+      "availabilityText": []
+    },
+    {
+      "name": "state-404-375",
+      "path": "/products/no-99-invented",
+      "width": 375,
+      "httpStatus": 404,
+      "expectedStatus": 404,
+      "scrollWidth": 360,
+      "clientWidth": 375,
+      "overflows": false,
+      "documentHeight": 1397,
+      "headings": [
+        "H1: No such bottle",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 0,
+      "productLinks": 6,
+      "canvases": 0,
+      "structuredData": [],
+      "availabilityText": []
+    },
+    {
+      "name": "shop-1280-dark",
+      "path": "/shop",
+      "width": 1280,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1265,
+      "clientWidth": 1280,
+      "overflows": false,
+      "documentHeight": 3803,
+      "headings": [
+        "H1: Four brines and a box.",
+        "H2: The bottles",
+        "H2: The Full Set",
+        "H2: Start with the drink.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 4,
+      "productLinks": 17,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "CollectionPage"
+        }
+      ],
+      "availabilityText": ["Not available to order"]
+    },
+    {
+      "name": "product-1280-dark",
+      "path": "/products/no-02-dirty",
+      "width": 1280,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1265,
+      "clientWidth": 1280,
+      "overflows": false,
+      "documentHeight": 5302,
+      "headings": [
+        "H1: DIRTY",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 2,
+      "productLinks": 5,
+      "canvases": 1,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 02 DIRTY",
+          "sku": "HS-02-500",
+          "price": "20.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "product-1280-reduced-motion",
+      "path": "/products/no-02-dirty",
+      "width": 1280,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1265,
+      "clientWidth": 1280,
+      "overflows": false,
+      "documentHeight": 5302,
+      "headings": [
+        "H1: DIRTY",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 2,
+      "productLinks": 5,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 02 DIRTY",
+          "sku": "HS-02-500",
+          "price": "20.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "shop-375-reduced-motion",
+      "path": "/shop",
+      "width": 375,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 360,
+      "clientWidth": 375,
+      "overflows": false,
+      "documentHeight": 4466,
+      "headings": [
+        "H1: Four brines and a box.",
+        "H2: The bottles",
+        "H2: The Full Set",
+        "H2: Start with the drink.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 4,
+      "productLinks": 17,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "CollectionPage"
+        }
+      ],
+      "availabilityText": ["Not available to order"]
+    },
+    {
+      "name": "product-1280-no-js",
+      "path": "/products/no-01-house",
+      "width": 1280,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1265,
+      "clientWidth": 1280,
+      "overflows": false,
+      "documentHeight": 5264,
+      "headings": [
+        "H1: HOUSE",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 2,
+      "productLinks": 5,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 01 HOUSE",
+          "sku": "HS-01-500",
+          "price": "18.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "product-375-no-js",
+      "path": "/products/no-01-house",
+      "width": 375,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 360,
+      "clientWidth": 375,
+      "overflows": false,
+      "documentHeight": 4993,
+      "headings": [
+        "H1: HOUSE",
+        "H2: In the order it arrives.",
+        "H2: What goes in the tank.",
+        "H2: Name the drink.",
+        "H2: The Full Set",
+        "H2: The rest of the shelf.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 2,
+      "productLinks": 5,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "Product",
+          "name": "No. 01 HOUSE",
+          "sku": "HS-01-500",
+          "price": "18.00",
+          "priceCurrency": "NZD",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "type": "BreadcrumbList"
+        }
+      ],
+      "availabilityText": []
+    },
+    {
+      "name": "shop-1280-no-js",
+      "path": "/shop",
+      "width": 1280,
+      "httpStatus": 200,
+      "expectedStatus": 200,
+      "scrollWidth": 1265,
+      "clientWidth": 1280,
+      "overflows": false,
+      "documentHeight": 3803,
+      "headings": [
+        "H1: Four brines and a box.",
+        "H2: The bottles",
+        "H2: The Full Set",
+        "H2: Start with the drink.",
+        "H2: Bottles",
+        "H2: The house",
+        "H2: Trade"
+      ],
+      "smallTargets": [],
+      "buyControls": 4,
+      "productLinks": 17,
+      "canvases": 0,
+      "structuredData": [
+        {
+          "type": "CollectionPage"
+        }
+      ],
+      "availabilityText": ["Not available to order"]
+    }
+  ]
+}

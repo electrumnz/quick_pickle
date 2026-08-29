@@ -260,7 +260,7 @@ steps we took beforehand.
 | FTA-01 | `clean`, `clean label`, `clean eating`, `no nasties`, `nothing artificial`                                                                                          | Undefined, unverifiable, and reads as a health/composition claim. FTA ss 9, 12A, 13(a).                                                                                                                                                                                           |
 | FTA-02 | `pure`, `purest`, `100% natural`, `all natural`, `natural` (as a virtue claim about the product)                                                                    | Unsubstantiated composition claim. FTA ss 12A, 13(a). Describing an _ingredient_ factually ("dill", "garlic") is fine.                                                                                                                                                            |
 | FTA-03 | `chemical free`, `no chemicals`, `preservative free`, `no preservatives`, `additive free`, `no additives`                                                           | Unverifiable absolutes; salt and acetic acid _are_ preservatives. FTA ss 9, 12A.                                                                                                                                                                                                  |
-| FTA-04 | `best`, `the best`, `world's best`, `number one`, `#1`, `award-winning`, `voted best`                                                                               | Superiority claims need proof. FTA ss 12A, 13(a), 13(e). ("Award-winning" is usable only after an actual award — see §4.)                                                                                                                                                         |
+| FTA-04 | `best`, `the best`, `world's best`, `number one`, `#1`, `award-winning`, `voted best`                                                                               | Superiority claims need proof. FTA ss 12A, 13(a), 13(e). ("Award-winning" is usable only after an actual award — see §4.) **Consumer surfaces only, and the `best before` date mark and `best practice` are excused as terms of art — see §8A.**                                  |
 | FTA-08 | `sustainable`, `eco-friendly`, `carbon neutral`, `carbon negative`, `plastic free`, `zero waste`, `climate positive`, `environmentally friendly`, `planet friendly` | Environmental claims require evidence. FTA ss 9, 12A, 13(a). Bare `green` is deliberately **not** scanned — it collides with colour words — so a human must catch it.                                                                                                             |
 | FTA-09 | `organic`, `certified organic`, `biodynamic`, `spray free`                                                                                                          | In New Zealand, organic claims are being brought under the **Organic Products and Production Act 2023**; until certification is held and current this is unsubstantiated under FTA s 12A and a false endorsement risk under s 13(e)–(f).                                          |
 | FTA-10 | `kosher`, `certified kosher`, `hechsher`, `pareve`, `parve`                                                                                                         | Certification/endorsement claim. FTA s 13(e)–(f). **"Kosher dill" is a style of pickle, not a certification** — but a consumer can reasonably read it as one, so it is banned until a certifying authority is engaged. Use `deli-style`, `garlic-dill`, `full-sour`, `half-sour`. |
@@ -544,14 +544,17 @@ lawful only as written — do not extend it into "…but you know what they say.
 
 ```
 node legal/scripts/audit-copy.mjs <path> [<path>...]
-node legal/scripts/audit-copy.mjs --list              # print every rule and its regex
+node legal/scripts/audit-copy.mjs --list              # print every rule, its regex and its surface scope
+node legal/scripts/audit-copy.mjs --surfaces          # print the surface model (§8A)
 node legal/scripts/audit-copy.mjs --json app/         # machine-readable output for CI
 node legal/scripts/audit-copy.mjs --no-exemptions .   # ignore the registry, see everything
-node legal/scripts/test-audit.mjs                     # self-test: 35 assertions
+node legal/scripts/audit-copy.mjs --show-suppressed . # list what was NOT raised, and why
+node legal/scripts/test-audit.mjs                     # self-test
 ```
 
 Exit codes: **0** = clean, **1** = at least one finding, **2** = usage error.
-Output is `file:line:column  SEVERITY  [RULE-ID]  "match"` followed by the reason and the source.
+Output is `file:line:column  SEVERITY  [RULE-ID]  "match"` followed by the surface the text sits on,
+why the rule reaches that surface, the reason and the source.
 
 **Two severities.** `banned` never passes. `restricted` fails the build until a human records that
 the condition was checked. Both fail; only one is clearable.
@@ -575,16 +578,129 @@ to named literal lines, so that the rest of the document is still scanned in ful
 shows everything. Prefer inline `copy-audit-ignore-start` / `-end` markers where the file's owner can
 add them, and delete the registry entry once they have.
 
-**Code files are treated differently from copy files.** In `.ts/.tsx/.js/.jsx/.mjs/.cjs/.svelte/.vue/
-.astro`, comments are masked and identifier-shaped matches (`params.absorption`, `absorption:`,
-`sha.digest()`) are skipped before the rules run. A shader uniform named `absorption` and a SHA
-`digest` are not claims about food. Markdown, MDX, HTML, JSON, YAML and plain text are scanned
-verbatim, because that is where copy lives.
+**The scanner reads text, not code.** `.ts/.tsx/.js/.jsx/.mjs/.cjs` are **parsed**, and only string
+literals, template-literal text and JSX text are scanned. Identifiers, property keys, import paths
+and comments are not scanned at all, because they are not language addressed to a reader: a shader
+uniform named `absorption`, a SHA `digest`, a reduce accumulator named `best`. Renaming those to
+satisfy the scanner would make the code worse for no compliance gain, and every false finding teaches
+a reader to skim the output — which is how a real one gets missed.
+
+The remaining formats follow the same principle:
+
+| Format                               | Scanned                                                                            |
+| ------------------------------------ | ---------------------------------------------------------------------------------- |
+| `.ts .tsx .js .jsx .mjs .cjs`        | string literals, template text, JSX text. Parsed with TypeScript.                  |
+| `.json .jsonc`                       | string **values**. Object keys are identifiers (`"raw-body"`, `"best-practices"`). |
+| `.md .mdx .markdown`                 | prose. A fenced code block is a code sample, not copy.                             |
+| `.html .svg .xml .txt .csv .yml` &c. | the whole file.                                                                    |
+| `.svelte .vue .astro`                | lexical fallback — comments masked, identifier-shaped matches skipped.             |
+
+Two consequences worth knowing, because they are boundaries rather than accidents:
+
+- **Copy inside a fenced code block is not scanned.** If you need an example line of customer-facing
+  copy audited, quote it as prose or as a blockquote, not inside triple backticks.
+- **A string used as an object key is not scanned.** `{ "gut health": … }` is read as an identifier.
+  Copy does not live in keys; if it ever does, the fix is to move it, not to loosen the parser.
+
+The parse needs `typescript`, which is already a devDependency. If it is missing the scanner says so
+on stderr and falls back to the lexical mask — it never silently changes what it reads.
 
 **A `copy-audit-approved` marker is a record that a human checked the condition.** Writing one
 without checking is worse than the original problem, because it converts an accident into a knowing
 misrepresentation under FTA s 12A. The same is true of adding a registry entry to silence a finding
 you have not read.
+
+## 8A. Surfaces — where a sentence is published, and which rules therefore reach it
+
+This section is the authority for the surface model. `legal/scripts/audit-copy.mjs` implements it and
+`node legal/scripts/audit-copy.mjs --surfaces` prints it; if the two ever disagree, this file wins.
+
+### Why there is a distinction at all
+
+Almost every rule in §3 and §4 exists because of a statute that regulates **a representation made in
+trade to a consumer**. Fair Trading Act s 9 catches misleading conduct _in trade_; ss 12A, 13(a) and
+13(e) catch false or unsubstantiated representations about goods; the ASA codes govern
+_advertisements_. A password-gated production dashboard that only the founder ever opens is none of
+those things. "Best customers" as a panel heading above a table sorted by lifetime spend is a factual
+sort order, not a claim that a product is superior to a competitor's, and there is no consumer in the
+room to mislead.
+
+Applying the advertising rules there is not merely noisy. It is actively harmful in two ways. It
+pushes an engineer to rename a reduce accumulator or a table column to appease a linter, which makes
+the code worse and the compliance no better. And **noise is the real failure mode**: a scanner that
+cries wolf on `const best = …` is a scanner people stop reading, and then the health claim goes out.
+
+### The two surfaces
+
+| Surface      | What it is                                                                                                         | Rules that reach it                          |
+| ------------ | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| **consumer** | Anything a customer can read: the storefront, product pages, the copy library, brand voice, anything in `public/`. | **All of them.** This is the strict surface. |
+| **internal** | Password-gated admin, libraries, adapters, tests, background jobs, schema docs, this scanner.                      | Only the rules marked _every-surface_ below. |
+
+The classification lives as **data** in `SURFACE_MAP` in the script — a list of path prefixes, longest
+match wins — so a misclassification is corrected by editing one line of that list, never by editing
+the scanner's logic. **Anything unlisted is treated as consumer.** A new directory is policed
+strictly until somebody decides, in writing, that it is not advertising.
+
+### Which rules still apply internally, and why
+
+A rule applies on **every surface** when the matched phrase is a claim about **what the product is or
+does** — health, therapeutic, hydration and sport, nutrition content, certification, absolute
+composition. Such a sentence is a regulated claim the moment anything lifts it out of the admin and
+into a caption, and §9 of this file exists precisely because this company runs agents that draft
+copy from what they read on internal screens. "Probiotics for gut health" typed into an admin
+textarea is one copy-paste away from being published, and it is unlawful on arrival. That risk is
+real, so those rules stay on everywhere:
+
+> **Every surface** — Group A (`HC-01`…`HC-16`), Group B (`TH-01`…`TH-08`), Group C claims
+> (`EL-01`…`EL-05`), Group D in full (`NCC-01`…`NCC-19`), `FTA-01` clean label, `FTA-02` pure /
+> 100% natural, `FTA-03` chemical free, `FTA-08` environmental, `FTA-09` organic, `FTA-10` kosher,
+> `END-04` Health Star Rating, `WILD-01` rongoā, `R-02` vegan / allergen-free. **57 of 82 rules.**
+
+A rule is **consumer-only** when it judges _how a product, an offer, a price, a right, a provenance
+story or a process is presented to a customer_. The rule is not about a word; it is about a
+representation, and a private tool makes no representation to anybody:
+
+> **Consumer surfaces only** — `FTA-04` superiority, `FTA-05` guarantees, `FTA-06` free shipping,
+> `FTA-07` reference pricing, `FTA-11` traditional / authentic, `FTA-12` handmade / artisan,
+> `FTA-14` endorsement and acceptance, `PROV-01`…`PROV-05` provenance, `WILD-02` native botanical
+> naming, `EL-06` sodium as a selling point, and the §4 context checks `R-03`, `R-04`, `R-07`,
+> `R-10`, `R-11`, `R-13`, `R-15`, `R-16`, `R-17`, `R-18`, `R-19`. **25 of 82 rules.**
+
+Two worked examples, both of which are in the fixtures:
+
+- `legal/test-fixtures/internal/must-fail-health-claim.tsx` puts "Probiotics for gut health" in an
+  admin textarea. It **fails**, on an internal surface, because of the leak risk above.
+- `legal/test-fixtures/internal/must-pass-admin-labels.tsx` puts "Best customers" above a sorted
+  table. It **passes**, because a private dashboard is not advertising.
+
+Nothing is dropped silently. Every hit that a surface did not enforce is counted in the summary line
+and listed by `--show-suppressed`, so the scope decision is auditable rather than invisible.
+
+### Terms of art — "Best before"
+
+**"Best before" is the date mark that Standard 1.2.5 requires on packaged food.** A scanner that
+reports it as a superiority claim is telling a writer to delete vocabulary the law mandates, which is
+the opposite of what a compliance tool is for. It is excused by name in a `TERMS_OF_ART` table that is
+scoped to `FTA-04` alone.
+
+The exemption is deliberately **narrow**, because "best" next to a product is exactly what FTA-04
+exists to catch:
+
+- `best-before` **hyphenated** is excused outright. It is a compound noun; there is no grammar in
+  which "the best-before brine" reads as a superiority claim.
+- `best before` **spaced** is excused only in the shape a date mark actually takes — followed by a
+  date, by `date` or `end`, by punctuation, or by nothing at all (a table heading, a label row).
+- Anything else still fails. **"The best before you open it" is a superiority claim and is reported.**
+- `best practice` / `best-practices` is excused as an engineering term of art (it is also the name of
+  a Lighthouse category); it says nothing about the product.
+
+This carve-out previously lived as a negative lookahead inside FTA-04's own regex and **did not
+work**: it tolerated exactly one separator character and could not see across a line break, so
+`Best  before` (two spaces), a `Best` / `before` pair split by JSX wrapping, and `best-practices`
+(hyphenated) all reported as superiority claims. Prose in this file claimed an exemption the code did
+not implement. A rule's carve-out now lives in the terms-of-art table, where it can be stated as a
+phrase, tested, and printed by `--surfaces`.
 
 ## 9. Rules for AI agents writing on HALF SOUR's behalf
 
@@ -620,9 +736,15 @@ answers questions in a chat widget is bound by this file **in full**. In additio
 
 - Any addition to the banned or restricted lists must be made in **both** this file and
   `legal/scripts/audit-copy.mjs`. The script is the enforcement; this file is the reasoning.
+- Every new rule must declare a surface scope (`EVERY_SURFACE` or `CONSUMER_ONLY`) and be listed
+  in §8A with the reasoning. Default to `EVERY_SURFACE` and argue your way down, never the reverse.
 - Any change to a regex must keep `node legal/scripts/test-audit.mjs` green. The culinary
   "cure" carve-out in §3A Group B is covered by those tests specifically because it is the
-  rule most likely to be re-broadened by someone who has not read this file.
+  rule most likely to be re-broadened by someone who has not read this file. The same is now true
+  of the `best before` date mark in §8A: the fixture that guards it is the one proving a genuine
+  superiority claim **still fails**, because that is the way this carve-out would be broken.
+- A false positive is fixed by narrowing the SCOPE — the surface map, the parse, a named term of
+  art — never by deleting a term from a rule's list. The terms are the law; the scope is ours.
 - Any new entry in `legal/copy-audit-exempt.json` needs a written reason and a review date.
 - Any _removal_ from the banned list requires the evidence that makes it lawful to be filed first.
 - Sources current as at **27 August 2026**: Australia New Zealand Food Standards Code compilation

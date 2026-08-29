@@ -15,7 +15,7 @@ import {
   DEFAULT_POUR,
   DEFAULT_STUDIO,
 } from "../defaults";
-import { detectDevice } from "../lib/quality";
+import { detectDevice, useBrowserValue } from "../lib/quality";
 import type { QualityTier } from "../types";
 
 type Sample = { fps: number; calls: number; triangles: number; dpr: number };
@@ -100,33 +100,49 @@ type Overrides = {
   chrome?: boolean;
 };
 
+const NO_OVERRIDES: Overrides = {};
+
+/**
+ * Parsed at most once per query string.
+ *
+ * `useBrowserValue` reads during render, so this has to hand back the same
+ * object every time or the render never settles. The query string is the whole
+ * input, which makes it the cache key.
+ */
+let parsedOverrides: { search: string; value: Overrides } | null = null;
+
+function readUrlOverrides(): Overrides {
+  const search = window.location.search;
+  if (parsedOverrides?.search === search) return parsedOverrides.value;
+  const q = new URLSearchParams(search);
+  const num = (k: string) => {
+    const v = q.get(k);
+    return v == null || v === "" || Number.isNaN(Number(v))
+      ? undefined
+      : Number(v);
+  };
+  const bool = (k: string) => (q.get(k) == null ? undefined : q.get(k) !== "0");
+  const tier = q.get("tier") ?? undefined;
+  const pour = num("pour");
+  const value: Overrides = {
+    tier: tier && ["low", "medium", "high"].includes(tier) ? tier : undefined,
+    pour: pour == null ? undefined : Math.min(1, Math.max(0, pour)),
+    still: q.get("still") === "1",
+    cam: num("cam"),
+    dist: num("dist"),
+    fov: num("fov"),
+    label: bool("label"),
+    bg: bool("bg"),
+    chrome: bool("chrome"),
+  };
+  parsedOverrides = { search, value };
+  return value;
+}
+
 function useUrlOverrides(): Overrides {
-  const [o, setO] = useState<Overrides>({});
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    const num = (k: string) => {
-      const v = q.get(k);
-      return v == null || v === "" || Number.isNaN(Number(v))
-        ? undefined
-        : Number(v);
-    };
-    const bool = (k: string) =>
-      q.get(k) == null ? undefined : q.get(k) !== "0";
-    const tier = q.get("tier") ?? undefined;
-    const pour = num("pour");
-    setO({
-      tier: tier && ["low", "medium", "high"].includes(tier) ? tier : undefined,
-      pour: pour == null ? undefined : Math.min(1, Math.max(0, pour)),
-      still: q.get("still") === "1",
-      cam: num("cam"),
-      dist: num("dist"),
-      fov: num("fov"),
-      label: bool("label"),
-      bg: bool("bg"),
-      chrome: bool("chrome"),
-    });
-  }, []);
-  return o;
+  // The server has no query string to read, so the first pass renders the
+  // lab's defaults and the browser's answer arrives immediately after.
+  return useBrowserValue(readUrlOverrides, NO_OVERRIDES);
 }
 
 export function BottleLab() {
@@ -134,7 +150,6 @@ export function BottleLab() {
   const trackRef = useRef<HTMLDivElement>(null);
   const url = useUrlOverrides();
   const viewH = useScrollerHeight(scrollRef);
-  const [manual, setManual] = useState<number | null>(null);
   const [sample, setSample] = useState<Sample>({
     fps: 0,
     calls: 0,
@@ -142,13 +157,12 @@ export function BottleLab() {
     dpr: 1,
   });
   const [panelOpen, setPanelOpen] = useState(false);
-  const [device, setDevice] = useState<ReturnType<typeof detectDevice> | null>(
+  // `detectDevice` caches its report, so the same object comes back on every
+  // render and this settles after one pass.
+  const device = useBrowserValue<ReturnType<typeof detectDevice> | null>(
+    detectDevice,
     null,
   );
-  useEffect(() => setDevice(detectDevice()), []);
-
-  const scrollP = useScrollProgress(scrollRef, trackRef, manual === null);
-  const progress = manual ?? scrollP;
 
   const scene = useControls({
     Scene: folder(
@@ -584,13 +598,19 @@ export function BottleLab() {
   );
   const backdropProps = useMemo(() => ({ ...backdrop }), [backdrop]);
 
+  // While the pour slider is driving, the scroll listener is switched off.
+  // This used to be mirrored into state by an effect, which showed one frame
+  // of the previous value on every change and, because the effect wrote the
+  // slider's number rather than the fact that the slider was in charge, kept
+  // the reading it left behind.
+  const scrollProgress = useScrollProgress(
+    scrollRef,
+    trackRef,
+    !scene.usePourSlider,
+  );
   const effectiveProgress =
-    url.pour ?? (scene.usePourSlider ? scene.pourProgress : progress);
+    url.pour ?? (scene.usePourSlider ? scene.pourProgress : scrollProgress);
   const effectiveTier = url.tier ?? scene.forceTier;
-
-  useEffect(() => {
-    setManual(scene.usePourSlider ? scene.pourProgress : null);
-  }, [scene.usePourSlider, scene.pourProgress]);
 
   return (
     <div

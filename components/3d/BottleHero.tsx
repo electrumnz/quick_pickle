@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
-import { hasWebGL, prefersReducedMotion } from "./lib/quality";
+import { hasWebGL, useBrowserValue, useReducedMotion } from "./lib/quality";
 import type { BottleHeroProps } from "./types";
 
 /**
@@ -22,6 +22,10 @@ const LazyScene = dynamic(
 );
 
 export const DEFAULT_FALLBACK_SRC = "/3d/fallback/bottle-hero.png";
+
+const inBrowser = () => true;
+const supportsIntersectionObserver = () =>
+  typeof IntersectionObserver !== "undefined";
 
 function StaticPlate({
   src,
@@ -72,44 +76,44 @@ export function BottleHero({
   ...scene
 }: BottleHeroProps) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const [mode, setMode] = useState<"pending" | "scene" | "plate">("pending");
+
+  // What the browser will admit to. Each of these is `false` on the server and
+  // through hydration, so the first paint commits to neither the scene nor the
+  // plate — a capable device must not be made to download the fallback image,
+  // and a device without WebGL must not be made to download the scene chunk.
+  const decided = useBrowserValue(inBrowser, false);
+  const webgl = useBrowserValue(hasWebGL, false);
+  const canObserve = useBrowserValue(supportsIntersectionObserver, false);
+  // Read live rather than at mount: a preference changed with the page open
+  // takes effect without a reload, and — unlike the listener this replaces —
+  // turning it off again cannot start a scene on a device that has no WebGL.
+  const reducedMotion = useReducedMotion();
+  const [onScreen, setOnScreen] = useState(false);
+
+  const plate =
+    decided &&
+    (forceFallback || !webgl || (respectReducedMotion && reducedMotion));
+  // Without an IntersectionObserver there is nothing to wait for.
+  const mode = plate
+    ? "plate"
+    : decided && (onScreen || !canObserve)
+      ? "scene"
+      : "pending";
 
   useEffect(() => {
-    if (forceFallback) {
-      setMode("plate");
-      return;
-    }
-    if (!hasWebGL() || (respectReducedMotion && prefersReducedMotion())) {
-      setMode("plate");
-      return;
-    }
+    if (!decided || plate || onScreen || !canObserve) return;
     const el = hostRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") {
-      setMode("scene");
-      return;
-    }
+    if (el === null) return;
     // Do not pay for the scene until it is about to be looked at.
     const io = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setMode("scene");
-          io.disconnect();
-        }
+        if (entries.some((e) => e.isIntersecting)) setOnScreen(true);
       },
       { rootMargin: "200px" },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [forceFallback, respectReducedMotion]);
-
-  // React to a live change of the motion preference without a reload.
-  useEffect(() => {
-    if (!respectReducedMotion || typeof window === "undefined") return;
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const on = () => setMode(mq.matches ? "plate" : "scene");
-    mq.addEventListener?.("change", on);
-    return () => mq.removeEventListener?.("change", on);
-  }, [respectReducedMotion]);
+  }, [decided, plate, onScreen, canObserve]);
 
   return (
     <div

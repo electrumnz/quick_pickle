@@ -14,7 +14,7 @@
  * PNGs, and any failure is printed loudly rather than buried.
  */
 import { chromium } from "@playwright/test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -370,8 +370,9 @@ if (wants("nojs")) {
 await browser.close();
 
 const auditName = process.env.HS_AUDIT ?? "audit.json";
+const auditPath = join(HERE, auditName);
 writeFileSync(
-  join(HERE, auditName),
+  auditPath,
   `${JSON.stringify(
     {
       // A registered exemption carried by the file itself rather than by an
@@ -391,6 +392,23 @@ writeFileSync(
   )}\n`,
   "utf8",
 );
+
+// `npm run lint` runs `prettier --check .` over the whole repository, and
+// JSON.stringify does not agree with Prettier about when a short array fits on
+// one line. Rather than leave a generated file that fails the repo's own lint
+// the moment it is regenerated, hand it to the Prettier that is already
+// installed here. If it is somehow absent the file is still valid JSON.
+try {
+  const prettier = await import("prettier");
+  const raw = readFileSync(auditPath, "utf8");
+  writeFileSync(
+    auditPath,
+    await prettier.format(raw, { filepath: auditPath }),
+    "utf8",
+  );
+} catch {
+  // Nothing to do: formatting is a courtesy, not part of the measurement.
+}
 
 let failures = 0;
 for (const row of report) {

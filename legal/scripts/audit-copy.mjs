@@ -166,11 +166,16 @@ const TERMS_OF_ART = [
   {
     id: "best-before-date-mark",
     rules: ["FTA-04"],
-    // "Best before" in the shape a date mark actually takes: followed by a date, the
-    // word date/end, punctuation, or nothing (a table heading, a label line). The
-    // hyphenated compound "best-before" is never a superiority claim in any grammar,
-    // so it is excused outright. "The best before you open it" is NOT excused.
-    re: /\bbest-+before\b|\bbest[\s]+before\b(?=\s*(?:$|[:;,.)\]}<>"'`|]|\d|dates?\b|end\b|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))/im,
+    // "Best before" in the shape a date mark actually takes: followed by a date, by
+    // the word date/end, by punctuation, or by nothing at all — the end of the text
+    // segment (\u0001 is the mask, so the JSX cell <th>Best before</th>
+    // qualifies), the end of a line, a table heading, a label row.
+    //
+    // The hyphenated compound "best-before" is excused outright: it is a noun, and
+    // there is no grammar in which "the best-before brine" reads as a superiority
+    // claim. The spaced form is excused only in the shapes above, so "the best
+    // before you open it" is NOT excused and still fails as a superiority claim.
+    re: /\bbest-+before\b|\bbest[\s]+before\b(?=\s*(?:$|[:;,.)\]}<>"'`|\u0001]|\d|dates?\b|end\b|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))/im,
     why: "Mandatory date mark on packaged food — FSC Standard 1.2.5-4. Flagging it pushes a writer toward deleting vocabulary the law requires.",
   },
   {
@@ -1513,6 +1518,12 @@ function scanFile(file, out, exemptions, opts, ts) {
   const { suppressed, approvals } = markerPass(lines, ex);
   const termCache = new Map();
 
+  // Only the lexical fallback needs the identifier heuristic. A parsed file has
+  // already had its identifiers removed, and guessing at them again there would
+  // start hiding real copy that happens to sit next to a colon or a bracket.
+  const lexical = mode.startsWith("lexical");
+  const maskedLines = lexical ? masked.split(/\r?\n/) : null;
+
   for (const rule of RULES) {
     const enforced = surface.enforces.has(rule.applies);
     rule.re.lastIndex = 0;
@@ -1525,6 +1536,11 @@ function scanFile(file, out, exemptions, opts, ts) {
       const { line, column } = locate(m.index);
       const i = line - 1;
       if (suppressed.has(i)) continue;
+      if (
+        lexical &&
+        looksLikeIdentifier(maskedLines[i] ?? "", column - 1, m[0])
+      )
+        continue;
 
       const finding = {
         file,
@@ -1724,6 +1740,16 @@ async function main(argv) {
     if (res && res.skipped) exempted.push({ file: f, reason: res.reason });
     else if (res && res.surface) scannedBySurface[res.surface] += 1;
   }
+
+  // Rules are evaluated one at a time over the whole file, so report in reading
+  // order rather than rule order — a reader fixes a file top to bottom.
+  const inReadingOrder = (a, b) =>
+    a.file.localeCompare(b.file) ||
+    a.line - b.line ||
+    a.column - b.column ||
+    a.id.localeCompare(b.id);
+  out.findings.sort(inReadingOrder);
+  out.suppressed.sort(inReadingOrder);
 
   const { findings, suppressed } = out;
   const banned = findings.filter((f) => f.severity === BANNED).length;

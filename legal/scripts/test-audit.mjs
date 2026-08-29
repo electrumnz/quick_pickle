@@ -12,6 +12,12 @@
  *   4. an inline copy-audit-approved marker clears a restricted finding
  *   5. a banned finding is NOT clearable by an approval marker
  *   6. bad usage exits 2
+ *   7. the culinary sense of "cure" passes and the therapeutic sense fails
+ *   8. block markers and the exemption registry work
+ *   9. SCOPE — the surface model, the parse and the FTA-04 terms of art:
+ *      identifiers and internal admin labels do not fire; "Best before" (the
+ *      Standard 1.2.5 date mark) does not fire; and a genuine superiority claim
+ *      and a genuine health claim still do, on consumer AND internal surfaces.
  *
  * Exit: 0 all assertions pass, 1 otherwise.
  */
@@ -221,6 +227,173 @@ try {
 } catch (e) {
   check("registered exemption skips the dirty fixture", false, e.message);
 }
+
+/* ------------------------------------------------------------------------ *
+ * 9 — the surface model, the parse, and the FTA-04 terms of art
+ *
+ * Four fixtures, run with --include-legal --no-exemptions so the registry cannot
+ * hide them. Each one is a claim about the scanner's SCOPE rather than its terms:
+ * the terms are right, and none of these tests weakens one.
+ * ------------------------------------------------------------------------ */
+
+function scanFixture(...parts) {
+  const res = run([
+    "--include-legal",
+    "--no-exemptions",
+    "--json",
+    join(FIXTURES, ...parts),
+  ]);
+  let json = null;
+  try {
+    json = JSON.parse(res.out);
+  } catch {
+    /* reported by the caller */
+  }
+  return { ...res, json };
+}
+
+const ids = (json) => new Set((json?.findings ?? []).map((f) => f.id));
+
+// 9a — an internal admin screen: identifiers, panel headings, chart captions and
+//      the mandatory date mark. None of it is advertising.
+const adminLabels = scanFixture("internal", "must-pass-admin-labels.tsx");
+check(
+  'internal admin labels pass (identifier `best`, "Best customers", "Best day", "Best before")',
+  adminLabels.code === 0,
+  adminLabels.out,
+);
+check(
+  "internal fixture is classified as an internal surface",
+  adminLabels.json?.filesBySurface?.internal === 1,
+  JSON.stringify(adminLabels.json?.filesBySurface),
+);
+check(
+  "the identifier hits are recorded as not-raised, not silently dropped",
+  (adminLabels.json?.notRaised?.surface ?? 0) > 0,
+  JSON.stringify(adminLabels.json?.notRaised),
+);
+
+// 9b — the same words on a CONSUMER surface: still zero, but for a different
+//      reason. "Best before" is the Standard 1.2.5 date mark everywhere.
+const termsOfArt = scanFixture("consumer", "must-pass-terms-of-art.tsx");
+check(
+  'consumer date mark passes ("Best before", "Best-before", "Best before 12/2026")',
+  termsOfArt.code === 0,
+  termsOfArt.out,
+);
+check(
+  "the date mark is recorded as a term of art, not as an absent match",
+  (termsOfArt.json?.notRaised?.termOfArt ?? 0) >= 4,
+  JSON.stringify(termsOfArt.json?.notRaised),
+);
+
+// 9c — THE test that matters. The carve-out above must not have made FTA-04 soft.
+const superiority = scanFixture("consumer", "must-fail-superiority.tsx");
+check(
+  "consumer superiority claim still FAILS",
+  superiority.code === 1,
+  superiority.out,
+);
+check(
+  "consumer superiority claim trips FTA-04",
+  ids(superiority.json).has("FTA-04"),
+);
+check(
+  '"the best before you open it" is NOT excused by the date-mark carve-out',
+  (superiority.json?.findings ?? []).some(
+    (f) => f.id === "FTA-04" && /before you open it/.test(f.excerpt),
+  ),
+  superiority.out,
+);
+check(
+  "a superiority finding names the surface it was found on",
+  (superiority.json?.findings ?? []).every((f) => f.surface === "consumer"),
+);
+
+// 9d — parsing must not have become leniency: a health claim in a string literal,
+//      a template literal and JSX text all still fail on a consumer surface.
+const consumerHealth = scanFixture("consumer", "must-fail-health-claim.tsx");
+check(
+  "consumer health claim still FAILS",
+  consumerHealth.code === 1,
+  consumerHealth.out,
+);
+for (const id of [
+  "HC-01",
+  "HC-02",
+  "HC-06",
+  "TH-01",
+  "TH-04",
+  "EL-01",
+  "EL-02",
+  "EL-04",
+]) {
+  check(
+    `consumer health-claim fixture trips ${id}`,
+    ids(consumerHealth.json).has(id),
+  );
+}
+// Matched on the excerpt rather than a line number: reformatting the fixture must
+// not be able to quietly retire an assertion.
+check(
+  "the claim inside a STRING LITERAL is caught",
+  (consumerHealth.json?.findings ?? []).some(
+    (f) => f.id === "HC-01" && /Gut health in a bottle/.test(f.excerpt),
+  ),
+  consumerHealth.out,
+);
+check(
+  "the claim inside a TEMPLATE LITERAL is caught",
+  (consumerHealth.json?.findings ?? []).some(
+    (f) => f.id === "EL-01" && /\$\{ml\} ml of electrolytes/.test(f.excerpt),
+  ),
+  consumerHealth.out,
+);
+check(
+  "the claim inside JSX TEXT is caught",
+  (consumerHealth.json?.findings ?? []).some(
+    (f) => f.id === "TH-01" && /natural hangover cure/.test(f.excerpt),
+  ),
+  consumerHealth.out,
+);
+
+// 9e — the internal surface is a SCOPE, not a skip. Health claims still fire there.
+const internalHealth = scanFixture("internal", "must-fail-health-claim.tsx");
+check(
+  "internal health claim still FAILS",
+  internalHealth.code === 1,
+  internalHealth.out,
+);
+for (const id of ["HC-01", "HC-02", "EL-01", "EL-02", "EL-04"]) {
+  check(
+    `internal health-claim fixture trips ${id}`,
+    ids(internalHealth.json).has(id),
+  );
+}
+check(
+  "an internal finding names the surface it was found on",
+  (internalHealth.json?.findings ?? []).every((f) => f.surface === "internal"),
+);
+
+// 9f — every rule declares which surfaces it reaches, and the split is real.
+const listed = run(["--list"]);
+check(
+  "--list prints each rule's surface scope",
+  /applies: /.test(listed.out),
+  listed.out.slice(0, 200),
+);
+check(
+  "the rule set is split, not wholesale-exempted",
+  /(\d+) every-surface, (\d+) consumer-only/.test(listed.out) &&
+    Number(RegExp.$1) > 0 &&
+    Number(RegExp.$2) > 0,
+  listed.out.slice(-200),
+);
+const surfaces = run(["--surfaces"]);
+check(
+  "--surfaces prints the classification",
+  surfaces.code === 0 && /INTERNAL/.test(surfaces.out),
+);
 
 // 6 — usage
 const usage = run([]);

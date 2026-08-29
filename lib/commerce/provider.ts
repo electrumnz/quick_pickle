@@ -24,11 +24,11 @@
  *
  * **Reads may return null; writes throw.** A missing product is `null`. A
  * mutation against a missing, expired or already-converted cart throws a typed
- * {@link CommerceError}. This mirrors Shopify, where a query for a dead cart
- * returns null and a mutation returns a `userError`.
+ * `CommerceError` — see `./errors`, which is also where the codes named by the
+ * `@throws` tags below are defined. This mirrors Shopify, where a query for a
+ * dead cart returns null and a mutation returns a `userError`.
  */
 
-import type { CommerceError } from "./errors";
 import type { CurrencyCode } from "./money";
 import type {
   Cart,

@@ -55,15 +55,25 @@ function ramp(p: number, [a, b]: [number, number]) {
 }
 const ease = (t: number) => t * t * (3 - 2 * t);
 
+/**
+ * The texture is held with the URL it was loaded from, and handed back only
+ * while that is still the URL being asked for.
+ *
+ * That does two things. A label swapped for another one no longer shows the
+ * previous bottle's paper for the frames between the change and the new image
+ * arriving — the old texture is disposed by the cleanup, and rendering a
+ * disposed texture is how a label goes black. And dropping the URL entirely
+ * needs no state write at all, so nothing here sets state from an effect body.
+ */
 function useOptionalTexture(url: string | undefined, repeat: number) {
-  const [tex, setTex] = useState<THREE.Texture | null>(null);
+  const [loaded, setLoaded] = useState<{
+    url: string;
+    texture: THREE.Texture;
+  } | null>(null);
   useEffect(() => {
-    if (!url) {
-      setTex(null);
-      return;
-    }
+    if (!url) return;
     let dead = false;
-    let loaded: THREE.Texture | null = null;
+    let texture: THREE.Texture | null = null;
     new THREE.TextureLoader().load(
       url,
       (t) => {
@@ -76,18 +86,20 @@ function useOptionalTexture(url: string | undefined, repeat: number) {
         t.wrapT = THREE.ClampToEdgeWrapping;
         t.anisotropy = 8;
         t.repeat.set(repeat, 1);
-        loaded = t;
-        setTex(t);
+        texture = t;
+        setLoaded({ url, texture: t });
       },
       undefined,
-      () => setTex(null),
+      () => {
+        if (!dead) setLoaded(null);
+      },
     );
     return () => {
       dead = true;
-      loaded?.dispose();
+      texture?.dispose();
     };
   }, [url, repeat]);
-  return tex;
+  return loaded !== null && loaded.url === url ? loaded.texture : null;
 }
 
 export function BottleModel({

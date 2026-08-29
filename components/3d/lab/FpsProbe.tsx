@@ -30,10 +30,19 @@ export function FpsProbe({
   }, [scene, gl, camera]);
   const dpr = useThree((s) => s.viewport.dpr);
   const frames = useRef(0);
-  const last = useRef(performance.now());
+  // Zero, not `performance.now()`: reading the clock while rendering is an
+  // impure render, and the useRef initialiser is evaluated on every render
+  // even though only the first one is kept. The window opens on the first
+  // frame instead, which is also the honest place to start it — it keeps
+  // mount cost out of the first sample.
+  const last = useRef(0);
   useFrame(() => {
-    frames.current++;
     const now = performance.now();
+    if (last.current === 0) {
+      last.current = now;
+      return;
+    }
+    frames.current++;
     if (now - last.current >= 500) {
       onSample({
         fps: (frames.current * 1000) / (now - last.current),
