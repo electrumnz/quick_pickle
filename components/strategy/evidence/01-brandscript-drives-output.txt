@@ -7,7 +7,7 @@ The marketing agent is run twice through the real AgentRuntime. Between the
 two runs exactly one field changes: brandScript.derived.oneLiner. Nothing
 else — not the role prompt, not the tools, not the brand rules, not the goal.
 
-generated: 2026-08-29T22:18:54.909Z (npx vitest run tests/strategy/agent-wiring.test.ts)
+generated: 2026-08-29T22:23:47.090Z (npx vitest run tests/strategy/agent-wiring.test.ts)
 model: BriefingModel — deterministic, composes only from the system prompt.
 Everything below the model is the real runtime and the real strategy tables.
 

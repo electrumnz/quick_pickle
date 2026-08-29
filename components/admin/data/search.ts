@@ -64,7 +64,7 @@ const FULFILMENT_WORDS: Readonly<Record<string, string>> = {
   partially_fulfilled: "part sent",
   fulfilled: "on its way",
   delivered: "delivered",
-  restocked: "put back on the shelf",
+  returned: "came back",
   cancelled: "cancelled",
 };
 
