@@ -163,9 +163,11 @@ for (const shot of SHOTS) {
     timeout: 180000,
   });
   // The dev server's own build indicator sits in the corner of every frame.
-  await page.addStyleTag({
-    content: "nextjs-portal,[data-nextjs-toast]{display:none!important}",
-  }).catch(() => {});
+  await page
+    .addStyleTag({
+      content: "nextjs-portal,[data-nextjs-toast]{display:none!important}",
+    })
+    .catch(() => {});
   await page.waitForTimeout(SETTLE);
   const probe = await page
     .evaluate(() => window.__hsStats ?? null)

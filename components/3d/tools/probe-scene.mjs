@@ -1,3 +1,16 @@
+#!/usr/bin/env node
+/**
+ * Dumps the live scene graph and every material's state out of the lab.
+ *
+ *   node components/3d/tools/probe-scene.mjs "http://localhost:3000/lab/bottle?tier=high&still=1"
+ *
+ * Worth reaching for before tuning anything by eye. It is how the glass was
+ * caught running at ior 1.66 instead of 1.52: three backs `reflectivity` with
+ * `ior`, so passing both to the same material leaves whichever React applied
+ * last in charge, and nothing in the render says so.
+ *
+ * Reads `window.__hs`, which `lab/FpsProbe` publishes. Lab only.
+ */
 import { chromium } from "@playwright/test";
 const url = process.argv[2];
 const browser = await chromium.launch({
