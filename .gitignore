@@ -64,3 +64,6 @@ _shot.mjs
 
 # agent scratch space
 .scratch/
+
+# generation working files
+.gen/
