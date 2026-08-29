@@ -10,10 +10,11 @@ import {
   DEFAULT_STUDIO,
   TIER_SETTINGS,
 } from "./defaults";
+import { buildCycloramaGeometry } from "./lib/geometry";
 import {
   createCausticMaterial,
-  createFloorMaterial,
-  createSweepMaterial,
+  createCycloramaMaterial,
+  createStripLightMaterial,
 } from "./materials/backdrop";
 import type { BackdropParams, QualityTier, StudioParams } from "./types";
 
@@ -240,25 +241,57 @@ export function StudioEnvironment({
   );
   const q = TIER_SETTINGS[tier];
 
-  const sweep = useMemo(
+  // One continuous sweep: floor, cove and wall, with the strip softboxes and
+  // the backlight pool painted into it. It is deliberately near enough to the
+  // subject to matter — a screen-space refraction can only bend what is
+  // actually on screen behind the bottle, so a backdrop that is a long way off
+  // and featureless gives the glass nothing to prove itself with.
+  const cycGeo = useMemo(
     () =>
-      createSweepMaterial(
-        backdrop.topColor as string,
-        backdrop.bottomColor as string,
+      buildCycloramaGeometry(
+        height * 9,
+        height * 3.2,
+        height * 5.2,
+        height * 1.35,
+        tier === "low" ? 48 : 96,
+        tier === "low" ? 36 : 72,
       ),
-    [backdrop.topColor, backdrop.bottomColor],
+    [height, tier],
   );
-  const floor = useMemo(
+  useEffect(() => () => cycGeo.dispose(), [cycGeo]);
+
+  const cyc = useMemo(
     () =>
-      createFloorMaterial(
+      createCycloramaMaterial(
         backdrop.floorColor as string,
         backdrop.bottomColor as string,
-        height * 2.2,
-        height * 9,
+        backdrop.topColor as string,
+        backdrop.lightColor as string,
+        backdrop.lightIntensity,
+        backdrop.lightSpread,
+        height,
       ),
-    [backdrop.floorColor, backdrop.bottomColor, height],
+    [
+      backdrop.floorColor,
+      backdrop.bottomColor,
+      backdrop.topColor,
+      backdrop.lightColor,
+      backdrop.lightIntensity,
+      backdrop.lightSpread,
+      height,
+    ],
   );
-  useEffect(() => () => floor.dispose(), [floor]);
+  useEffect(() => () => cyc.dispose(), [cyc]);
+
+  const strip = useMemo(
+    () =>
+      createStripLightMaterial(
+        backdrop.lightColor as string,
+        backdrop.lightIntensity * 5.2,
+      ),
+    [backdrop.lightColor, backdrop.lightIntensity],
+  );
+  useEffect(() => () => strip.dispose(), [strip]);
 
   const tint = useMemo(
     () => liquidTint ?? new THREE.Color(DEFAULT_LIQUID.shallowColor as string),
@@ -282,17 +315,30 @@ export function StudioEnvironment({
 
       {backdrop.enabled ? (
         <>
-          <mesh material={sweep} renderOrder={-10}>
-            <sphereGeometry args={[height * 26, 32, 24]} />
-          </mesh>
-          <mesh
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, 0, 0]}
-            material={floor}
-            renderOrder={-9}
-          >
-            <circleGeometry args={[height * 16, 96]} />
-          </mesh>
+          <mesh geometry={cycGeo} material={cyc} renderOrder={-10} />
+
+          {/* The two transmitted strips. Their x is inside the bottle's own
+              silhouette on purpose: from the camera they are completely
+              hidden, and the only place they are ever seen is through the
+              glass, gathered into the vertical core down the shoulder. */}
+          {[-1, 1].map((sign) => (
+            <mesh
+              key={sign}
+              material={strip}
+              // Kept close in z as well as in x. Further back and the
+              // camera's own off-axis offset slides them sideways out from
+              // behind the bottle, which is how a hidden light becomes a
+              // white rectangle standing in the frame.
+              position={[
+                sign * height * backdrop.lightSpread * 0.088,
+                height * 0.34,
+                -height * 0.22,
+              ]}
+              renderOrder={-8}
+            >
+              <planeGeometry args={[height * 0.07, height * 0.6]} />
+            </mesh>
+          ))}
           {q.contactShadows ? (
             <ContactShadows
               position={[0, height * 0.0015, 0]}

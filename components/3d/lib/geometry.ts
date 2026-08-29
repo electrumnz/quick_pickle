@@ -241,3 +241,82 @@ export function buildParticulate(
   }
   return { offsets, shapes, seeds, species: speciesArr, count };
 }
+
+/**
+ * Studio cyclorama.
+ *
+ * One continuous surface running from the front of the floor, through a cove
+ * radius, up into a vertical wall — which is what a sweep actually is. The
+ * previous set was a flat disc intersecting a sphere, and the two met in a
+ * dead-straight horizon that crossed the frame behind the bottle. A hard line
+ * across an out-of-focus backdrop is a CG tell on its own, and it also gave
+ * the refraction nothing but a single edge to bend.
+ *
+ * `uv.x` runs -1..1 across the width, `uv.y` 0..1 along the profile from the
+ * front of the floor to the top of the wall, so the material can address the
+ * floor, the cove and the wall separately without knowing the world scale.
+ */
+export function buildCycloramaGeometry(
+  width: number,
+  floorDepth: number,
+  wallHeight: number,
+  cove: number,
+  segments = 96,
+  rings = 72,
+) {
+  // Profile in the y/z plane, from the near edge of the floor to the top of
+  // the wall, with a quarter-circle cove of radius `cove` at the join.
+  const pts: { y: number; z: number }[] = [];
+  const flat = Math.max(floorDepth - cove, 0);
+  const arcSteps = Math.max(8, Math.round(rings * 0.45));
+  const flatSteps = Math.max(4, Math.round(rings * 0.3));
+  const wallSteps = Math.max(4, rings - arcSteps - flatSteps);
+  for (let i = 0; i <= flatSteps; i++) {
+    pts.push({ y: 0, z: floorDepth - (flat * i) / flatSteps });
+  }
+  for (let i = 1; i <= arcSteps; i++) {
+    const a = (Math.PI / 2) * (i / arcSteps);
+    pts.push({ y: cove * (1 - Math.cos(a)), z: -cove * Math.sin(a) });
+  }
+  for (let i = 1; i <= wallSteps; i++) {
+    pts.push({ y: cove + (wallHeight * i) / wallSteps, z: -cove });
+  }
+
+  const positions: number[] = [];
+  const normals: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  const stride = segments + 1;
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i]!;
+    const prev = pts[Math.max(i - 1, 0)]!;
+    const next = pts[Math.min(i + 1, pts.length - 1)]!;
+    const dy = next.y - prev.y;
+    const dz = next.z - prev.z;
+    const len = Math.hypot(dy, dz) || 1;
+    // Inward normal of the profile, so the sweep faces the camera.
+    const ny = dz / len;
+    const nz = -dy / len;
+    for (let j = 0; j <= segments; j++) {
+      const u = (j / segments) * 2 - 1;
+      positions.push((u * width) / 2, p.y, p.z);
+      normals.push(0, ny > 0 ? ny : -ny, ny > 0 ? nz : -nz);
+      uvs.push(u, i / (pts.length - 1));
+    }
+  }
+  for (let i = 0; i < pts.length - 1; i++) {
+    for (let j = 0; j < segments; j++) {
+      const a = i * stride + j;
+      const b = a + stride;
+      indices.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  g.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+  g.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  g.setIndex(indices);
+  g.computeVertexNormals();
+  g.computeBoundingSphere();
+  return g;
+}

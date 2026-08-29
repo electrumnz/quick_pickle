@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { MeshTransmissionMaterial } from "@react-three/drei";
 import {
   DEFAULT_CAP,
   DEFAULT_GLASS,
@@ -24,7 +23,12 @@ import {
 } from "./lib/geometry";
 import { buildBottleProfile } from "./lib/profile";
 import { useParallax } from "./lib/parallax";
-import { createCapMaterial, createCheapGlassMaterial } from "./materials/glass";
+import {
+  createCapMaterial,
+  createCheapGlassMaterial,
+  createGlassMaterial,
+  createGlassUniforms,
+} from "./materials/glass";
 import { createPoolMaterial } from "./materials/backdrop";
 import {
   createLiquidMaterial,
@@ -306,6 +310,8 @@ export function BottleModel({
   }, [capMat, cap, profile]);
   useEffect(() => () => capMat.dispose(), [capMat]);
 
+  const refractive = q.transmission !== "reflective";
+
   const cheapGlass = useMemo(
     () => createCheapGlassMaterial(glass),
     [glass.color],
@@ -318,12 +324,59 @@ export function BottleModel({
   }, [cheapGlass, glass]);
   useEffect(() => () => cheapGlass.dispose(), [cheapGlass]);
 
+  // The refractive path. Built once per tier because the shader is compiled
+  // against the tier's octave count and dispersion flag; everything else is a
+  // uniform and is pushed by the effect below without a recompile.
+  const glassU = useMemo(
+    () => createGlassUniforms(liquidU, profile, glass),
+    [liquidU, profile],
+  );
+  const glassMat = useMemo(
+    () =>
+      createGlassMaterial(glassU, glass, liquid, {
+        dispersion: q.dispersion,
+        tier,
+      }),
+    [glassU, q.dispersion, tier],
+  );
+  useEffect(() => {
+    glassMat.color.set(glass.color as string);
+    glassMat.roughness = glass.roughness;
+    glassMat.ior = glass.ior;
+    glassMat.envMapIntensity = glass.envMapIntensity;
+    glassMat.dispersion = q.dispersion ? glass.chromaticAberration * 3.2 : 0;
+    glassU.uWallOptical!.value = profile.height * glass.thickness * 0.09;
+    glassU.uWaviness!.value = glass.distortion;
+    glassU.uSeam!.value = glass.distortionScale;
+    glassU.uRoughVary!.value = glass.anisotropicBlur;
+  }, [glassMat, glassU, glass, profile, q.dispersion]);
+  useEffect(() => () => glassMat.dispose(), [glassMat]);
+
+  /**
+   * The label, as paper stuck to glass.
+   *
+   * `transparent` with `depthWrite` on rather than an alpha test: the artwork
+   * is a wrap whose paper covers only part of the circumference, so the trim
+   * has to be a real edge with a feathered pixel or two on it. An alpha test
+   * would give the same silhouette with a staircase on the diagonal, and the
+   * one place a label is inspected is its edge.
+   *
+   * It stays in the opaque half of the frame as far as the transmission pass
+   * is concerned, which is what lets the far side of the label be refracted
+   * through the bottle along with everything else inside it.
+   */
   const labelMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
         roughness: DEFAULT_LABEL.roughness,
         metalness: 0,
         side: THREE.FrontSide,
+        transparent: true,
+        alphaTest: 0.02,
+        depthWrite: true,
+        // Uncoated stock scatters; it must not pick up the room the way the
+        // glass beside it does or it reads as a decal printed on the bottle.
+        envMapIntensity: 0.35,
       }),
     [],
   );
@@ -338,7 +391,13 @@ export function BottleModel({
     labelMat.color.set(label.paperColor as string);
     labelMat.roughness = label.roughness;
     labelMat.opacity = label.opacity;
-    labelMat.transparent = label.opacity < 0.999;
+    // Always transparent, whatever the opacity prop says. Two reasons, and the
+    // second one is the load-bearing one. The artwork's own alpha is what cuts
+    // the paper out of the wrap. And three renders only the OPAQUE draw list
+    // into the transmission buffer, so an opaque label is a label the bottle
+    // refracts — the front label reappearing smeared across the glass either
+    // side of itself, which is exactly what it looked like.
+    labelMat.transparent = true;
     // Swapping a map in or out changes the compiled program, so the material
     // has to be told. This is why a late-loading label silently stays blank.
     if (labelMat.map !== labelTex) {
@@ -454,6 +513,9 @@ export function BottleModel({
     }
     const surfaceY = yMin + Math.pow(fill, 0.82) * (yMax - yMin);
     liquidU.uSurfaceY!.value = surfaceY;
+    // The glass volume carries the brine, so an empty bottle has to be told
+    // to stop absorbing rather than left with a waterline on the floor.
+    glassU.uFilled!.value = THREE.MathUtils.clamp(fill * 14, 0, 1);
     M.copy(bottle.matrixWorld).invert();
     (liquidU.uInvBottleMatrix!.value as THREE.Matrix4).copy(M);
 
@@ -568,41 +630,23 @@ export function BottleModel({
     void state;
   });
 
-  const transmissionKey = `${tier}-${q.transmissionSamples}-${q.transmissionResolution}`;
-
   return (
     <group ref={rootRef} position={position}>
       <group ref={bottleRef}>
         <mesh geometry={geo.glass} renderOrder={4}>
-          {q.transmission === "sampled" ? (
-            <MeshTransmissionMaterial
-              key={transmissionKey}
-              samples={q.transmissionSamples}
-              resolution={q.transmissionResolution}
-              backside={q.backside}
-              backsideThickness={glass.thickness * 0.55}
-              transmission={1}
-              thickness={glass.thickness}
-              roughness={glass.roughness}
-              chromaticAberration={glass.chromaticAberration}
-              anisotropicBlur={glass.anisotropicBlur}
-              distortion={glass.distortion}
-              distortionScale={glass.distortionScale}
-              temporalDistortion={glass.temporalDistortion}
-              ior={glass.ior}
-              color={glass.color as string}
-              attenuationDistance={glass.attenuationDistance}
-              attenuationColor={glass.attenuationColor as string}
-              envMapIntensity={glass.envMapIntensity}
-              reflectivity={glass.reflectivity}
-              toneMapped
-            />
-          ) : (
-            <primitive object={cheapGlass} attach="material" />
-          )}
+          <primitive
+            object={refractive ? glassMat : cheapGlass}
+            attach="material"
+          />
         </mesh>
 
-        <mesh geometry={geo.liquid} material={bodyMat} renderOrder={1} />
+        {/* The brine body is only a mesh on the tier that cannot refract.
+            Above it the brine is the glass's own volume — see materials/glass —
+            and drawing an opaque wall inside the bottle would be the very
+            thing that stops the room showing through. */}
+        {refractive ? null : (
+          <mesh geometry={geo.liquid} material={bodyMat} renderOrder={1} />
+        )}
 
         {particulate.enabled && parts.count > 0 ? (
           <mesh

@@ -18,8 +18,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 /* ---------------------------------------------------------------- HDRI --- */
 
-const W = 512;
-const H = 256;
+const W = 1024;
+const H = 512;
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const smoothstep = (a, b, x) => {
@@ -27,7 +27,7 @@ const smoothstep = (a, b, x) => {
   return t * t * (3 - 2 * t);
 };
 
-/** Soft angular blob on the sphere, in degrees. */
+/** Soft angular blob on the sphere, in degrees. `soft` is the feather. */
 function blob(az, el, azC, elC, azR, elR, soft) {
   let d = az - azC;
   while (d > 180) d -= 360;
@@ -37,45 +37,68 @@ function blob(az, el, azC, elC, azR, elR, soft) {
   return a * b;
 }
 
+/**
+ * The room the glass is standing in.
+ *
+ * Glass has almost no colour of its own; what reads as expensive glass is the
+ * SHAPE of what it is reflecting. The previous map was an evenly lit grey
+ * room, which is the one thing that cannot produce that — every reflection
+ * came back the same brightness, so the bottle had no edges. This one is a
+ * dark studio with two tall, narrow strip softboxes standing either side and
+ * a broad ceiling: the strips draw the silhouette, the ceiling fills the
+ * shoulder, and everything between them stays dark so the drawn edges have
+ * something to be drawn against.
+ *
+ * The strips are the same two lights that stand in the scene as geometry, at
+ * matching angles. One set is what the bottle reflects, the other is what it
+ * transmits, and they have to agree or the bottle reads as two photographs.
+ */
 function radiance(az, el) {
-  // Deep neutral room. The crisp softbox reflections come from Lightformers
-  // in the scene, so the HDRI only has to supply the room the glass sits in
-  // — a hard source here would double up with the rig.
   const up = clamp((el + 90) / 180, 0, 1);
-  const base = 0.012 + 0.055 * Math.pow(up, 1.6);
-  let r = base * 0.98;
+  const base = 0.004 + 0.022 * Math.pow(up, 2.2);
+  let r = base * 0.96;
   let g = base;
-  let b = base * 1.16;
+  let b = base * 1.2;
 
-  // Broad overhead diffusion: the ceiling of the room.
-  const ceil = Math.pow(clamp((el - 20) / 70, 0, 1), 1.35) * 0.85;
-  r += ceil * 0.95;
-  g += ceil * 0.97;
+  // Ceiling: broad, soft, and the reason the shoulder has a top.
+  const ceil = Math.pow(clamp((el - 26) / 64, 0, 1), 1.5) * 1.35;
+  r += ceil * 0.98;
+  g += ceil * 0.99;
   b += ceil * 1.0;
 
-  // A gentle wash from the key side so the room is not symmetric — perfectly
-  // even lighting is the flattest, cheapest-looking thing you can do to glass.
-  r += blob(az, el, -58, 6, 78, 62, 0.9) * 0.16;
-  g += blob(az, el, -58, 6, 78, 62, 0.9) * 0.16;
-  b += blob(az, el, -58, 6, 78, 62, 0.9) * 0.17;
+  // Two tall strip softboxes, narrow in azimuth and long in elevation. These
+  // are the highlights that run the full height of the bottle.
+  for (const [azC, k, warm] of [
+    [-62, 26, 1.0],
+    [68, 15, 0.92],
+  ]) {
+    const s = blob(az, el, azC, 8, 7.5, 62, 0.55) * k;
+    r += s * (warm === 1 ? 1.0 : 0.9);
+    g += s * 0.985;
+    b += s * (warm === 1 ? 0.94 : 1.12);
+  }
 
-  // Cool bounce opposite.
-  const fill = blob(az, el, 74, 2, 62, 55, 0.95) * 0.075;
-  r += fill * 0.8;
-  g += fill * 0.92;
-  b += fill * 1.15;
-
-  // Warm haze low behind, which is what gives brine its glow from within.
-  const rim = blob(az, el, 178, 4, 44, 34, 0.85) * 0.5;
-  r += rim * 1.15;
+  // A wide, dim warm haze low behind: what gives a backlit brine its glow
+  // rather than a silhouette.
+  const rim = blob(az, el, 178, 2, 52, 30, 0.9) * 1.1;
+  r += rim * 1.2;
   g += rim * 1.0;
-  b += rim * 0.74;
+  b += rim * 0.7;
+
+  // Two faint negative-fill card positions, front left and front right, which
+  // is what puts the dark vertical lines either side of the bright ones.
+  const flag =
+    blob(az, el, -10, 0, 26, 46, 0.9) * 0.55 +
+    blob(az, el, 18, 0, 22, 42, 0.9) * 0.45;
+  r *= 1 - flag * 0.55;
+  g *= 1 - flag * 0.55;
+  b *= 1 - flag * 0.55;
 
   // Floor falloff.
-  const floor = 1 - smoothstep(-40, -8, el);
-  r *= 1 - floor * 0.72;
-  g *= 1 - floor * 0.72;
-  b *= 1 - floor * 0.72;
+  const floor = 1 - smoothstep(-46, -6, el);
+  r *= 1 - floor * 0.82;
+  g *= 1 - floor * 0.82;
+  b *= 1 - floor * 0.82;
 
   return [r, g, b];
 }

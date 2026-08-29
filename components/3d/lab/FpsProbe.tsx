@@ -44,12 +44,19 @@ export function FpsProbe({
     }
     frames.current++;
     if (now - last.current >= 500) {
-      onSample({
+      const sample = {
         fps: (frames.current * 1000) / (now - last.current),
         calls: gl.info.render.calls,
         triangles: gl.info.render.triangles,
         dpr,
-      });
+      };
+      onSample(sample);
+      // The evidence capture reads this rather than scraping the header, so a
+      // frame cost can be recorded from a run with the chrome switched off.
+      (window as unknown as { __hsStats?: unknown }).__hsStats = {
+        ...sample,
+        ms: 1000 / Math.max(sample.fps, 1e-3),
+      };
       frames.current = 0;
       last.current = now;
     }

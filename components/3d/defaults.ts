@@ -43,7 +43,7 @@ export const DEFAULT_LIQUID: LiquidParams = {
   cloudScale: 7.5,
   cloudSpeed: 0.055,
   absorption: 3.1,
-  scatterStrength: 0.85,
+  scatterStrength: 0.3,
   meniscusHeight: 0.011,
   meniscusWidth: 0.2,
   rippleAmplitude: 0.0016,
@@ -61,14 +61,18 @@ export const DEFAULT_PARTICULATE: ParticulateParams = {
   dillColor: "#9c8b4f",
   peppercornColor: "#2f271f",
   mustardColor: "#c8a24c",
-  size: 0.0105,
+  size: 0.0072,
   drift: 0.32,
   settle: 0.42,
 };
 
 export const DEFAULT_LABEL: LabelParams = {
   enabled: true,
-  textureUrl: "/3d/labels/placeholder-label.png",
+  // The brand unit's drawn artwork, laid into a wrap by
+  // `components/3d/tools/rasterise-labels.mjs`. The paper covers roughly a
+  // fifth of the circumference and the rest of the wrap is transparent, so
+  // the band has a real trim edge instead of a printed-on stripe.
+  textureUrl: "/3d/labels/label-01-house-wrap.png",
   start: 0.155,
   end: 0.5,
   paperColor: "#f2ede1",
@@ -127,12 +131,15 @@ export const DEFAULT_STUDIO: StudioParams = {
 
 export const DEFAULT_BACKDROP: BackdropParams = {
   enabled: true,
-  topColor: "#24262a",
-  bottomColor: "#0a0b0c",
-  floorColor: "#0b0c0e",
-  shadowOpacity: 0.62,
-  shadowBlur: 2.4,
-  causticIntensity: 0.5,
+  topColor: "#191c21",
+  bottomColor: "#0d0f12",
+  floorColor: "#050607",
+  lightColor: "#fff4e2",
+  lightIntensity: 0.72,
+  lightSpread: 1,
+  shadowOpacity: 0.7,
+  shadowBlur: 2.1,
+  causticIntensity: 0.34,
   causticScale: 4.6,
 };
 
@@ -140,8 +147,16 @@ export const DEFAULT_BACKDROP: BackdropParams = {
 export const TIER_SETTINGS: Record<
   QualityTier,
   {
-    /** Use drei's multi-sample transmission, or fall back to core physical. */
+    /**
+     * How the bottle refracts. `sampled` and `physical` both run three's own
+     * transmission pass — one extra render of the opaque scene, shared by
+     * every transmissive material in the frame — and differ only in what they
+     * spend on it. `reflective` has no refraction at all and is the phone
+     * fallback.
+     */
     transmission: "sampled" | "physical" | "reflective";
+    /** Screen-space dispersion. Three extra buffer samples per fragment. */
+    dispersion: boolean;
     transmissionSamples: number;
     transmissionResolution: number;
     backside: boolean;
@@ -161,6 +176,7 @@ export const TIER_SETTINGS: Record<
 > = {
   high: {
     transmission: "sampled",
+    dispersion: true,
     transmissionSamples: 8,
     transmissionResolution: 1024,
     backside: true,
@@ -176,7 +192,8 @@ export const TIER_SETTINGS: Record<
     envResolution: 256,
   },
   medium: {
-    transmission: "sampled",
+    transmission: "physical",
+    dispersion: false,
     transmissionSamples: 3,
     transmissionResolution: 512,
     backside: false,
@@ -193,6 +210,7 @@ export const TIER_SETTINGS: Record<
   },
   low: {
     transmission: "reflective",
+    dispersion: false,
     transmissionSamples: 0,
     transmissionResolution: 256,
     backside: false,

@@ -153,11 +153,21 @@ export interface StudioParams {
 
 export interface BackdropParams {
   enabled: boolean;
-  /** Colour at the horizon behind the bottle. */
+  /** Colour at the top of the sweep's wall. */
   topColor: ColorInput;
+  /** Colour where the sweep turns out of the cove. */
   bottomColor: ColorInput;
-  /** Ground plane colour. */
+  /** Ground plane colour, nearest the camera. */
   floorColor: ColorInput;
+  /**
+   * Colour of the strip softboxes and the pool painted into the sweep. These
+   * are real geometry, not environment lightformers, which is what lets them
+   * shine THROUGH the bottle rather than only reflect off it.
+   */
+  lightColor: ColorInput;
+  lightIntensity: number;
+  /** How far apart the two strips stand, 1 being the tuned separation. */
+  lightSpread: number;
   /** Contact shadow opacity. */
   shadowOpacity: number;
   shadowBlur: number;

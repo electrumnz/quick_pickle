@@ -158,6 +158,96 @@ export function createPoolMaterial(
   });
 }
 
+
+/**
+ * The studio sweep, and the lights that are actually in the room.
+ *
+ * This one surface is the whole set: floor, cove and wall in a single
+ * continuous mesh, with the light shapes painted into it rather than hung in
+ * front of it as rectangles. That matters more than it sounds, because the
+ * bottle refracts *what is on the screen behind it*. Softboxes that exist only
+ * as `Lightformer`s inside the environment map are reflections and nothing
+ * more — they never reach the transmission buffer, so they cannot shine
+ * through the glass. Painted into the sweep, the two strips become the bright
+ * vertical core you see inside every bottle ever photographed properly, and
+ * the pool behind the subject is what genuinely backlights the brine.
+ *
+ * The values run well above 1. They are meant to: the sweep is a light source,
+ * tone mapping is what brings it back, and the highlights only roll off like a
+ * photograph if they were over range to begin with.
+ */
+export function createCycloramaMaterial(
+  floorColor: THREE.ColorRepresentation,
+  bottomColor: THREE.ColorRepresentation,
+  topColor: THREE.ColorRepresentation,
+  lightColor: THREE.ColorRepresentation,
+  lightIntensity: number,
+  lightSpread: number,
+  /** Bottle height. Every shape below is placed as a fraction of it. */
+  scale: number,
+) {
+  return new THREE.ShaderMaterial({
+    side: THREE.DoubleSide,
+    depthWrite: true,
+    uniforms: {
+      uFloor: { value: new THREE.Color(floorColor) },
+      uBottom: { value: new THREE.Color(bottomColor) },
+      uTop: { value: new THREE.Color(topColor) },
+      uLight: { value: new THREE.Color(lightColor) },
+      uIntensity: { value: lightIntensity },
+      uSpread: { value: lightSpread },
+      uScale: { value: scale },
+    },
+    vertexShader: /* glsl */ `
+      varying vec3 vHsPos;
+      void main(){
+        vHsPos = (modelMatrix * vec4(position, 1.0)).xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    // Placed in world units rather than in the sweep's own uv, so a shape sits
+    // where it sits in the room no matter how the geometry is subdivided — and
+    // so the strips line up with the Lightformers in the environment map, which
+    // are the same two lights seen as reflections.
+    fragmentShader: /* glsl */ `
+      uniform vec3 uFloor;
+      uniform vec3 uBottom;
+      uniform vec3 uTop;
+      uniform vec3 uLight;
+      uniform float uIntensity;
+      uniform float uSpread;
+      uniform float uScale;
+      varying vec3 vHsPos;
+
+      void main(){
+        float x = vHsPos.x / uScale;
+        float y = vHsPos.y / uScale;
+
+        // Ground, then the wall lifting out of the cove.
+        float rise = clamp(y / 1.9, 0.0, 1.0);
+        vec3 c = mix(uFloor, uBottom, smoothstep(0.0, 0.34, y));
+        c = mix(c, uTop, pow(rise, 0.75));
+
+        // Spill: the soft pool the sweep picks up where it is nearest the
+        // subject. The strip softboxes are NOT painted here — they are real
+        // planes standing in the set, because a shape drawn on a curved sweep
+        // spreads across the screen in a way that cannot be aimed, and these
+        // two have to land exactly behind the bottle.
+        float pool = exp(-pow(x / (0.62 * uSpread), 2.0) - pow((y - 0.5) / 0.66, 2.0));
+        c += uLight * uIntensity * 0.42 * pool;
+
+        // Let the sweep fall away toward its own edges so it never shows one.
+        c *= 1.0 - 0.88 * smoothstep(0.5, 1.8, abs(x));
+        c *= 1.0 - 0.75 * smoothstep(1.5, 2.8, y);
+
+        gl_FragColor = vec4(c, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }
+    `,
+  });
+}
+
 /**
  * Studio floor. A finite disc with a hard rim reads as a prop; this one takes
  * real reflections near the subject and dissolves into the sweep colour long
@@ -217,4 +307,52 @@ uniform float uFadeEnd;`,
   };
   mat.customProgramCacheKey = () => "hs-floor";
   return mat;
+}
+
+/**
+ * A strip softbox, as an object in the room rather than an entry in the
+ * environment map.
+ *
+ * Both exist, and they are not the same light. The `Lightformer` versions
+ * inside `<Environment>` are what the glass REFLECTS — they draw the bright
+ * edges down the shoulder. These planes are what the glass TRANSMITS: they
+ * stand just behind the bottle, entirely hidden by it from the camera, and
+ * are seen only as the vertical core the refraction gathers them into. A
+ * screen-space transmission pass can bend nothing that is not on screen, so a
+ * softbox placed tastefully out of frame would simply not be there.
+ */
+export function createStripLightMaterial(
+  color: THREE.ColorRepresentation,
+  intensity: number,
+) {
+  return new THREE.ShaderMaterial({
+    side: THREE.DoubleSide,
+    depthWrite: true,
+    uniforms: {
+      uColor: { value: new THREE.Color(color) },
+      uIntensity: { value: intensity },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vHsUv;
+      void main(){
+        vHsUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uColor;
+      uniform float uIntensity;
+      varying vec2 vHsUv;
+      void main(){
+        vec2 p = vHsUv * 2.0 - 1.0;
+        // Wide and gentle across the strip, harder along it: a real softbox
+        // has ends, but it does not have corners.
+        float a = pow(max(0.0, 1.0 - pow(abs(p.x), 2.2)), 1.15);
+        float b = pow(max(0.0, 1.0 - pow(abs(p.y), 6.0)), 0.7);
+        gl_FragColor = vec4(uColor * uIntensity * a * b, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }
+    `,
+  });
 }

@@ -86,7 +86,7 @@ function useScrollerHeight(ref: React.RefObject<HTMLDivElement | null>) {
 /**
  * Deterministic overrides for automated capture and for sharing a specific
  * look as a link:
- * `?tier=high&pour=0.55&still=1&cam=0.9&dist=1.4&fov=32&label=0&bg=0`
+ * `?tier=high&pour=0.55&still=1&cam=0.9&dist=1.4&fov=32&rot=0.6&label=0&bg=0&chrome=0`
  */
 type Overrides = {
   tier?: string;
@@ -95,6 +95,7 @@ type Overrides = {
   cam?: number;
   dist?: number;
   fov?: number;
+  rot?: number;
   label?: boolean;
   bg?: boolean;
   chrome?: boolean;
@@ -631,6 +632,7 @@ export function BottleLab() {
     >
       <Leva collapsed hidden={!panelOpen} titleBar={{ title: "Bottle" }} />
 
+      {url.chrome === false ? null : (
       <header
         style={{
           position: "fixed",
@@ -683,6 +685,7 @@ export function BottleLab() {
           </button>
         </span>
       </header>
+      )}
 
       {/* A tall track with a pinned canvas: the pour is scrubbed by scroll,
           which is how the hero will drive it and the only way to see whether
@@ -714,7 +717,7 @@ export function BottleLab() {
             cameraOffset={scene.cameraOffset}
             idleMotion={scene.idleMotion}
             autoRotate={scene.autoRotate}
-            rotation={scene.rotation}
+            rotation={url.rot ?? scene.rotation}
             pointerParallax={scene.pointerParallax}
             parallaxMode={
               scene.parallaxMode as
@@ -740,6 +743,7 @@ export function BottleLab() {
           </BottleScene>
 
           <div
+            hidden={url.chrome === false}
             style={{
               position: "absolute",
               insetInline: 0,
