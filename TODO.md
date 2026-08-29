@@ -49,6 +49,16 @@ Updated 2026-08-27. Honest status, not a summary.
       pattern — a word, a year, a punctuation mark. It is the only thing between the
       internet and the whole business. `lib/auth/scripts/` generates a new argon2id hash.
 
+## Repo hygiene worth fixing
+
+- [ ] **Evidence files churn on every test run.** `lib/agents/evidence/*.txt`,
+      `lib/auth/evidence/*.txt` and `components/strategy/evidence/*.txt` embed a
+      wall-clock timestamp and a fresh run UUID, so running the suite dirties the
+      tree with ~20 lines of meaningless diff. The cost is not the noise: it is
+      that a real behavioural change is invisible inside it, which defeats the
+      point of committing evidence at all. Fix by seeding the run id and dropping
+      the timestamp — evidence should record what happened, not when.
+
 ## Built and verified
 
 - [x] Brand identity — 39 drawn glyphs, palette with 23/23 sanctioned pairs passing AA

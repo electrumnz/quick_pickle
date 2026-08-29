@@ -3,7 +3,7 @@ KILL SWITCH — STOPS A RUN THAT IS ALREADY IN FLIGHT
 ==============================================================================
 The model call is open and holding when the switch is thrown. The in-flight
 watcher aborts the request; the runtime then records why the run stopped.
-generated: 2026-08-29T22:17:34.996Z (npx vitest run tests/agents/evidence.test.ts)
+generated: 2026-08-29T22:19:00.462Z (npx vitest run tests/agents/evidence.test.ts)
 model: SCRIPTED (lib/agents/model/mock.ts). Everything below the model is the real runtime.
 
 BEFORE THE SWITCH
@@ -20,7 +20,7 @@ SWITCH THROWN
 }
 
 AFTER
-  in-flight call aborted after   10 ms
+  in-flight call aborted after   1 ms
   modelStep outcome              {"type":"halted","code":"kill_switch_engaged","reason":"Global kill switch engaged: smoke in the kitchen"}
   agent_runs.status              cancelled
   agent_runs.error               kill_switch_engaged: Global kill switch engaged: smoke in the kitchen
@@ -35,6 +35,6 @@ AFTER
 
 STRUCTURED LOG
   {"level":"warn","event":"agent.control.kill_switch_engaged","at":"2026-08-27T09:00:00.000Z","fields":{"reason":"smoke in the kitchen","engagedBy":"founder"}}
-  {"level":"error","event":"agent.run.halted","at":"2026-08-27T09:00:00.000Z","runId":"678479f7-913b-4224-93f0-07ef339dca89","agentSlug":"test-role","fields":{"code":"kill_switch_engaged","reason":"Global kill switch engaged: smoke in the kitchen","status":"cancelled"}}
+  {"level":"error","event":"agent.run.halted","at":"2026-08-27T09:00:00.000Z","runId":"4edc5152-7b94-4de9-b12a-e7133e01904b","agentSlug":"test-role","fields":{"code":"kill_switch_engaged","reason":"Global kill switch engaged: smoke in the kitchen","status":"cancelled"}}
 
 PER-AGENT PAUSE (the narrower control) is exercised in tests/agents/kill-switch.test.ts.
