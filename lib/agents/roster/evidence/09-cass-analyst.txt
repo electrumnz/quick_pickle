@@ -40,13 +40,23 @@ WHAT IT DID, STEP BY STEP
         - The Full Set: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
         proposal: {"slug":"campaign-hs-03-500","subject":"No 03 SMOKE","body":"No 03 SMOKE sold 18 bottles in the last 7 days.","audience":"lapsed","reason":"No 03 SMOKE is down 28.0% on the 7 days before, so the campaign goes to customers who have stopped ordering."}
 
-3. reasoning: File the briefing, including the opening sentence the admin uses on a Monday.
+3. reasoning: Put the week inside the month, and keep the GST separate from the takings.
+   tool: read_takings {"windowDays":28}
+   status: succeeded
+      NZ$9123.20 across 38 orders in 28 days, of which NZ$1189.99 is GST held for Inland Revenue.
+        - 38 orders totalling NZ$9123.20 in the last 28 days.
+        - NZ$1189.99 of that is GST collected, which is owed to Inland Revenue and is not takings.
+        - wholesale: 9 orders, NZ$7293.60.
+        - online: 29 orders, NZ$1829.60.
+        - Nothing was refunded in the window.
+
+4. reasoning: File the briefing, including the opening sentence the admin uses on a Monday.
    tool: save_internal_note {"slug":"weekly-briefing","title":"The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before.","body":"The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before. No 01 HOUSE carried it at 65 bottles. 4 decisions 
    status: succeeded
       recorded="weekly-briefing" delivered=false
       Recorded, not sent. This deployment has no live outbound channel wired: the approved action is written down so it can be carried out by a person, or by a channel adapter that does not exist yet.
 
-4. reasoning: The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before. No 01 HOUSE carried it at 65 bottles. 4 decisions are waiting on you. 1 agent run failed this week. No 01 HOUSE is the thinnest at 65 days of cover. NZ$2327.60 across 128 bottles in 7 days.
+5. reasoning: The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before. No 01 HOUSE carried it at 65 bottles. 4 decisions are waiting on you. 1 agent run failed this week. No 01 HOUSE is the thinnest at 65 days of cover. NZ$2327.60 across 128 bottles in 7 days. NZ$9123.20 across 38 orders in 28 days, of which NZ$1189.99 is GST held for Inland Revenue.
 
 What I found
 - Takings: NZ$2377.10 this week against NZ$1620.80 last week.
@@ -61,6 +71,11 @@ What I found
 - No 02 DIRTY: 43 bottles, NZ$788.00, down 14.0% on the 7 days before.
 - No 03 SMOKE: 18 bottles, NZ$369.60, down 28.0% on the 7 days before.
 - The Full Set: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
+- 38 orders totalling NZ$9123.20 in the last 28 days.
+- NZ$1189.99 of that is GST collected, which is owed to Inland Revenue and is not takings.
+- wholesale: 9 orders, NZ$7293.60.
+- online: 29 orders, NZ$1829.60.
+- Nothing was refunded in the window.
 
 What I did
 - save_internal_note: recorded (weekly-briefing), not delivered — this deployment has no live outbound channel.
@@ -81,7 +96,7 @@ WHAT ACTUALLY LEFT THE COMPANY
 ------------------------------------------------------------------------------
 WHAT IT REPORTED
 ------------------------------------------------------------------------------
-   The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before. No 01 HOUSE carried it at 65 bottles. 4 decisions are waiting on you. 1 agent run failed this week. No 01 HOUSE is the thinnest at 65 days of cover. NZ$2327.60 across 128 bottles in 7 days.
+   The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before. No 01 HOUSE carried it at 65 bottles. 4 decisions are waiting on you. 1 agent run failed this week. No 01 HOUSE is the thinnest at 65 days of cover. NZ$2327.60 across 128 bottles in 7 days. NZ$9123.20 across 38 orders in 28 days, of which NZ$1189.99 is GST held for Inland Revenue.
    
    What I found
    - Takings: NZ$2377.10 this week against NZ$1620.80 last week.
@@ -96,6 +111,11 @@ WHAT IT REPORTED
    - No 02 DIRTY: 43 bottles, NZ$788.00, down 14.0% on the 7 days before.
    - No 03 SMOKE: 18 bottles, NZ$369.60, down 28.0% on the 7 days before.
    - The Full Set: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
+   - 38 orders totalling NZ$9123.20 in the last 28 days.
+   - NZ$1189.99 of that is GST collected, which is owed to Inland Revenue and is not takings.
+   - wholesale: 9 orders, NZ$7293.60.
+   - online: 29 orders, NZ$1829.60.
+   - Nothing was refunded in the window.
    
    What I did
    - save_internal_note: recorded (weekly-briefing), not delivered — this deployment has no live outbound channel.
@@ -103,5 +123,5 @@ WHAT IT REPORTED
    [written under: Brine is a bar ingredient, and the person pouring it is the hero of every sentence we write.]
 
 ------------------------------------------------------------------------------
-COST $0.06 across 4 model calls and 3 tool calls.
+COST $0.08 across 5 model calls and 4 tool calls.
 Run status: succeeded.

@@ -132,7 +132,7 @@ Cass — Analyst (analyst)
   always asks  (nothing)
   budget       NZ$0.40/run, NZ$4.00/day, NZ$80.00/month
   schedule     0 6 * * 1
-  routine      read_weekly_pulse → read_sales_by_sku → save_internal_note
+  routine      read_weekly_pulse → read_sales_by_sku → read_takings → save_internal_note
   measured on  The founder can answer 'how was last week' from one paragraph, and nothing that failed goes unmentioned.
   memory       Only through what it files. Each briefing is written from the current week's numbers and the one before it.
   database     MATCHES the declaration on every checked field

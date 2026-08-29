@@ -973,7 +973,7 @@ export class SqlBusinessReads implements BusinessReads {
              from public.orders o
             where o.customer_id = c.id and o.status <> 'cancelled'
          ) cadence on true
-        where c.customer_type = 'wholesale' and c.deleted_at is null
+        where c.customer_type in ('trade', 'wholesale') and c.deleted_at is null
         order by c.total_spent_cents desc nulls last`,
     );
     return rows.map((row) => {
@@ -1004,7 +1004,16 @@ export class SqlBusinessReads implements BusinessReads {
 
   async tradeAccounts(): Promise<TradeReport> {
     const accounts = await this.accountLines();
-    const overdue = accounts.filter((account) => account.overdue);
+    // Ranked by how far past their OWN pattern they are, not by how long it has
+    // been: a venue that orders fortnightly and a venue that orders quarterly
+    // are not equally late at thirty days.
+    const lateness = (account: TradeAccountLine): number =>
+      account.daysSinceLastOrder === null || account.reorderCadenceDays === null
+        ? 0
+        : account.daysSinceLastOrder / Math.max(account.reorderCadenceDays, 1);
+    const overdue = accounts
+      .filter((account) => account.overdue)
+      .sort((a, b) => lateness(b) - lateness(a));
     const target =
       overdue[0] ??
       [...accounts]
@@ -1025,7 +1034,7 @@ export class SqlBusinessReads implements BusinessReads {
             body: [
               `${target.contact ?? "Hello"},`,
               "",
-              `Your last order was ${target.daysSinceLastOrder === null ? "not recorded" : `${String(target.daysSinceLastOrder)} days ago`}${target.reorderCadenceDays === null ? "" : `, against your usual ${String(target.reorderCadenceDays)} days between orders`}.`,
+              `Your last order was ${target.daysSinceLastOrder === null ? "not recorded" : `${String(target.daysSinceLastOrder)} day${target.daysSinceLastOrder === 1 ? "" : "s"} ago`}${target.reorderCadenceDays === null ? "" : `, against your usual ${String(target.reorderCadenceDays)} days between orders`}.`,
               "A case is six bottles and trade pricing is the one published number.",
               "Say how many cases and I will get them on the next run.",
             ].join("\n"),
@@ -1041,11 +1050,11 @@ export class SqlBusinessReads implements BusinessReads {
       proposal,
       headline:
         accounts.length === 0
-          ? "There are no wholesale accounts in the database yet."
-          : `${String(accounts.length)} wholesale account${accounts.length === 1 ? "" : "s"}, ${String(overdue.length)} past their own reorder pattern.`,
+          ? "There are no trade accounts in the database yet."
+          : `${String(accounts.length)} trade accounts, ${String(overdue.length)} of them past their own reorder pattern.`,
       findings: accounts.map(
         (account) =>
-          `${account.account}${account.city === null ? "" : ` (${account.city})`}: ${String(account.ordersCount)} orders, ${nzd(account.totalSpentCents)} all up, last ordered ${account.daysSinceLastOrder === null ? "never" : `${String(account.daysSinceLastOrder)} days ago`}${account.reorderCadenceDays === null ? "" : ` against a ${String(account.reorderCadenceDays)}-day pattern`}${account.overdue ? " — overdue" : ""}.`,
+          `${account.account}${account.city === null ? "" : ` (${account.city})`}: ${String(account.ordersCount)} orders, ${nzd(account.totalSpentCents)} all up, last ordered ${account.daysSinceLastOrder === null ? "never" : account.daysSinceLastOrder === 0 ? "today" : `${String(account.daysSinceLastOrder)} day${account.daysSinceLastOrder === 1 ? "" : "s"} ago`}${account.reorderCadenceDays === null ? "" : ` against a ${String(account.reorderCadenceDays)}-day pattern`}${account.overdue ? " — overdue" : ""}.`,
       ),
     };
   }
@@ -1108,7 +1117,7 @@ export class SqlBusinessReads implements BusinessReads {
       })),
       headline:
         account === null
-          ? `No wholesale account with id ${customerId}.`
+          ? `No trade account with id ${customerId}.`
           : `${account.account}: ${String(orderRows.length)} orders and ${String(conversations.length)} prior message${conversations.length === 1 ? "" : "s"} on file.`,
       findings: [
         ...(account?.note === null || account?.note === undefined
