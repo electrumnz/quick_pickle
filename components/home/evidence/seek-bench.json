@@ -1,0 +1,183 @@
+{
+  "$note": "copy-audit-ignore-file — generated evidence; see seek-bench.mjs",
+  "base": "http://localhost:3411",
+  "container": {
+    "note": "parsed from the mp4 stss box: one sync sample per clip, at frame 1",
+    "range.mp4": {
+      "durationS": 5.5,
+      "frames": 132,
+      "fps": 24,
+      "keyframes": 1
+    },
+    "no-01-house.mp4": {
+      "durationS": 6,
+      "frames": 144,
+      "fps": 24,
+      "keyframes": 1
+    },
+    "no-02-dirty.mp4": {
+      "durationS": 6,
+      "frames": 144,
+      "fps": 24,
+      "keyframes": 1
+    },
+    "no-03-smoke.mp4": {
+      "durationS": 7,
+      "frames": 168,
+      "fps": 24,
+      "keyframes": 1
+    },
+    "no-04-wild.mp4": {
+      "durationS": 6,
+      "frames": 144,
+      "fps": 24,
+      "keyframes": 1
+    }
+  },
+  "runs": [
+    {
+      "clip": "/media/film/range.webm",
+      "cpuThrottle": 1,
+      "duration": 5.5,
+      "videoWidth": 1152,
+      "videoHeight": 768,
+      "seekForward": {
+        "n": 41,
+        "median": 85.1,
+        "p95": 264.2,
+        "worst": 287.5
+      },
+      "seekBackward": {
+        "n": 41,
+        "median": 149.4,
+        "p95": 244.5,
+        "worst": 260.1
+      },
+      "play": {
+        "wallMs": 5490,
+        "totalFrames": 128,
+        "droppedFrames": 0
+      }
+    },
+    {
+      "clip": "/media/film/range.webm",
+      "cpuThrottle": 4,
+      "duration": 5.5,
+      "videoWidth": 1152,
+      "videoHeight": 768,
+      "seekForward": {
+        "n": 41,
+        "median": 132.8,
+        "p95": 231.9,
+        "worst": 237.9
+      },
+      "seekBackward": {
+        "n": 41,
+        "median": 108.6,
+        "p95": 261.5,
+        "worst": 304
+      },
+      "play": {
+        "wallMs": 5470,
+        "totalFrames": 128,
+        "droppedFrames": 0
+      }
+    },
+    {
+      "clip": "/media/film/range.webm",
+      "cpuThrottle": 6,
+      "duration": 5.5,
+      "videoWidth": 1152,
+      "videoHeight": 768,
+      "seekForward": {
+        "n": 41,
+        "median": 158.9,
+        "p95": 250.5,
+        "worst": 277
+      },
+      "seekBackward": {
+        "n": 41,
+        "median": 167,
+        "p95": 308.6,
+        "worst": 438.2
+      },
+      "play": {
+        "wallMs": 5498,
+        "totalFrames": 128,
+        "droppedFrames": 0
+      }
+    },
+    {
+      "clip": "/media/film/no-01-house.webm",
+      "cpuThrottle": 1,
+      "duration": 6,
+      "videoWidth": 720,
+      "videoHeight": 900,
+      "seekForward": {
+        "n": 41,
+        "median": 69.5,
+        "p95": 161.8,
+        "worst": 376.9
+      },
+      "seekBackward": {
+        "n": 41,
+        "median": 55.8,
+        "p95": 190.9,
+        "worst": 199.7
+      },
+      "play": {
+        "wallMs": 5964,
+        "totalFrames": 140,
+        "droppedFrames": 0
+      }
+    },
+    {
+      "clip": "/media/film/no-01-house.webm",
+      "cpuThrottle": 4,
+      "duration": 6,
+      "videoWidth": 720,
+      "videoHeight": 900,
+      "seekForward": {
+        "n": 41,
+        "median": 61.9,
+        "p95": 103.2,
+        "worst": 147.2
+      },
+      "seekBackward": {
+        "n": 41,
+        "median": 36.3,
+        "p95": 141.9,
+        "worst": 145.3
+      },
+      "play": {
+        "wallMs": 5965,
+        "totalFrames": 140,
+        "droppedFrames": 0
+      }
+    },
+    {
+      "clip": "/media/film/no-01-house.webm",
+      "cpuThrottle": 6,
+      "duration": 6,
+      "videoWidth": 720,
+      "videoHeight": 900,
+      "seekForward": {
+        "n": 41,
+        "median": 48.7,
+        "p95": 84.6,
+        "worst": 93.4
+      },
+      "seekBackward": {
+        "n": 41,
+        "median": 39.4,
+        "p95": 117.6,
+        "worst": 177.8
+      },
+      "play": {
+        "wallMs": 5980,
+        "totalFrames": 140,
+        "droppedFrames": 0
+      }
+    }
+  ]
+}
