@@ -139,7 +139,7 @@ export const DEFAULT_BACKDROP: BackdropParams = {
   lightSpread: 1,
   shadowOpacity: 0.7,
   shadowBlur: 2.1,
-  causticIntensity: 0.34,
+  causticIntensity: 0.12,
   causticScale: 4.6,
 };
 

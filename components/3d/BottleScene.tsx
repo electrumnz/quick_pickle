@@ -1,18 +1,14 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef } from "react";
+import { Suspense, useCallback, useEffect, useRef, type ReactNode } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import {
-  AdaptiveDpr,
-  AdaptiveEvents,
-  OrbitControls,
-  PerformanceMonitor,
-} from "@react-three/drei";
+import { AdaptiveDpr, AdaptiveEvents, PerformanceMonitor } from "@react-three/drei";
 import { BottleModel } from "./BottleModel";
 import { StudioEnvironment } from "./StudioEnvironment";
 import { DEFAULT_LIQUID, DEFAULT_STUDIO, TIER_SETTINGS } from "./defaults";
 import { useQualityTier } from "./lib/quality";
+import { useTurntable, type TurntableHandle } from "./lib/turntable";
 import type { BottleSceneProps } from "./types";
 
 /**
@@ -54,6 +50,31 @@ function FramingCamera({
     camera.updateProjectionMatrix();
   }, [camera, size.width, size.height, height, distance, offset, lift, fov]);
   return null;
+}
+
+/**
+ * Applies the turntable's yaw to the bottle.
+ *
+ * Written straight onto a group's matrix rather than fed back through a prop:
+ * a drag produces a new angle every frame, and a `setState` per frame would
+ * re-render the whole scene sixty times a second to move one number. Mounted
+ * before the model so its matrix is current when the model composes its own.
+ */
+function Turntable({
+  handle,
+  children,
+}: {
+  handle: TurntableHandle;
+  children: ReactNode;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame((_, delta) => {
+    const g = ref.current;
+    if (!g) return;
+    g.rotation.y = handle.step(Math.min(delta, 1 / 20));
+    g.updateMatrixWorld(true);
+  });
+  return <group ref={ref}>{children}</group>;
 }
 
 function Ready({ onReady }: { onReady?: () => void }) {
@@ -107,6 +128,7 @@ export function BottleScene({
   ...model
 }: BottleSceneProps) {
   const { tier, decline, incline } = useQualityTier(forceTier);
+  const turntable = useTurntable(interactive);
   const q = TIER_SETTINGS[tier];
   const dprCap = Math.min(maxDpr ?? q.maxDpr, q.maxDpr);
   const setDpr = useRef<((dpr: number) => void) | null>(null);
@@ -128,6 +150,11 @@ export function BottleScene({
   return (
     <div
       className={className}
+      ref={turntable.ref}
+      // `pan-y` even while interactive. The turntable only ever claims
+      // horizontal movement, so the browser keeps vertical swipes and the
+      // page still scrolls with a finger on the bottle — which `touch-action:
+      // none` would have taken away.
       // The canvas is the classic source of horizontal overflow: it is a
       // replaced element that will happily exceed its column.
       style={{
@@ -136,9 +163,18 @@ export function BottleScene({
         maxWidth: "100%",
         height: "100%",
         overflow: "hidden",
-        touchAction: interactive ? "none" : "pan-y",
+        touchAction: "pan-y",
+        cursor: interactive ? "ew-resize" : undefined,
         ...style,
       }}
+      {...(interactive
+        ? {
+            tabIndex: 0,
+            role: "img" as const,
+            "aria-label":
+              "A bottle of HALF SOUR brine. Drag sideways, or use the left and right arrow keys, to turn it.",
+          }
+        : {})}
     >
       <Canvas
         style={{ width: "100%", height: "100%", display: "block" }}
@@ -186,26 +222,15 @@ export function BottleScene({
             height={height}
             liquidTint={liquidTint}
           />
-          <BottleModel
-            {...model}
-            height={height}
-            tier={tier}
-            keyDirection={rim}
-          />
+          <Turntable handle={turntable.handle}>
+            <BottleModel
+              {...model}
+              height={height}
+              tier={tier}
+              keyDirection={rim}
+            />
+          </Turntable>
         </Suspense>
-        {interactive ? (
-          <OrbitControls
-            makeDefault
-            enablePan={false}
-            enableZoom={false}
-            minPolarAngle={Math.PI * 0.22}
-            maxPolarAngle={Math.PI * 0.62}
-            target={[0, height * 0.48, 0]}
-            rotateSpeed={0.55}
-            enableDamping
-            dampingFactor={0.08}
-          />
-        ) : null}
         <Ready onReady={onReady} />
         {children}
       </Canvas>

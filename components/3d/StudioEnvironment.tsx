@@ -339,14 +339,18 @@ export function StudioEnvironment({
               <planeGeometry args={[height * 0.07, height * 0.6]} />
             </mesh>
           ))}
+          {/* Tight. A contact shadow spread over four bottle heights is a
+              grey cloud the subject happens to be standing in; what grounds an
+              object is the dark, nearly sharp core within a centimetre of
+              where it touches. */}
           {q.contactShadows ? (
             <ContactShadows
               position={[0, height * 0.0015, 0]}
-              scale={height * 4}
+              scale={height * 1.9}
               blur={backdrop.shadowBlur}
               opacity={backdrop.shadowOpacity}
-              far={height * 1.4}
-              resolution={tier === "high" ? 512 : 256}
+              far={height * 0.55}
+              resolution={tier === "high" ? 1024 : 512}
               frames={Infinity}
             />
           ) : null}
@@ -354,8 +358,8 @@ export function StudioEnvironment({
             <Caustic
               backdrop={backdrop}
               tint={tint}
-              y={height * 0.003}
-              radius={height * 0.85}
+              y={height * 0.004}
+              radius={height * 0.62}
             />
           ) : null}
         </>

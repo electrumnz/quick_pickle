@@ -56,7 +56,6 @@ export function createCausticMaterial(
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
-    toneMapped: false,
     uniforms: {
       uTime: { value: 0 },
       uTint: { value: tint },
@@ -81,19 +80,29 @@ export function createCausticMaterial(
       ${SIMPLEX_3D}
       float caustic(vec2 p, float t){
         float n = hs_snoise(vec3(p * 2.1, t)) + 0.5 * hs_snoise(vec3(p * 4.3 + 3.0, t * 1.3));
-        return pow(clamp(1.0 - abs(n), 0.0, 1.0), 7.0);
+        return pow(clamp(1.0 - abs(n), 0.0, 1.0), 4.5);
       }
       void main(){
         vec2 p = (vUv - 0.5) * uScale;
-        float t = uTime * 0.11;
-        float d = length(p / uSpread);
-        float mask = exp(-d * d * 5.2);
-        // Split the channels slightly: dispersion through curved glass.
-        float r = caustic(p * 0.99, t);
-        float g = caustic(p, t + 0.07);
-        float b = caustic(p * 1.01, t + 0.14);
+        float t = uTime * 0.09;
+        // The light comes from behind, so the pattern it throws lands in FRONT
+        // of the bottle and stretches away from the source. A caustic centred
+        // under the subject is a caustic nobody lit.
+        vec2 m = (vUv - vec2(0.5, 0.365)) / vec2(0.2, 0.145);
+        // A hole where the bottle stands. Light that reaches the table under
+        // the glass is the light the glass just bent away from there, so the
+        // pattern rings the contact shadow rather than lying across it.
+        vec2 h = (vUv - vec2(0.5, 0.5)) / vec2(0.13, 0.1);
+        float mask = exp(-dot(m, m)) * smoothstep(0.55, 1.25, length(h));
+        // Split the channels very slightly: dispersion through curved glass is
+        // a hint of colour at the edge of a bright fringe, not a rainbow.
+        float g = caustic(p, t);
+        float r = caustic(p + vec2(0.004, 0.0), t + 0.02);
+        float b = caustic(p - vec2(0.004, 0.0), t + 0.04);
         vec3 c = vec3(r, g, b) * uTint * uIntensity * mask;
         gl_FragColor = vec4(c, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
       }
     `,
   });

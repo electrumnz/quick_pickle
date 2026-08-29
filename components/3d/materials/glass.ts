@@ -398,6 +398,35 @@ uniform float uBandHi;`,
     transformed.xz *= (hsR0 + hsK) / hsR0;
   }`,
       );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+varying vec3 vHsCap;
+uniform float uBandLo;
+uniform float uBandHi;`,
+      )
+      .replace(
+        "#include <roughnessmap_fragment>",
+        `#include <roughnessmap_fragment>
+  // Brushed aluminium: fine drawing marks around the skirt, and a spun finish
+  // on the crown. A closure with one uniform roughness reads as chrome pipe,
+  // which is the second thing anyone notices after the glass.
+  float hsSkirt = smoothstep(uBandHi, uBandLo, vHsCap.y);
+  float hsBrush = sin(atan(vHsCap.z, vHsCap.x) * 240.0) * 0.5 + 0.5;
+  float hsSpin = sin(length(vHsCap.xz) * 520.0) * 0.5 + 0.5;
+  roughnessFactor = clamp(
+    roughnessFactor
+      + mix(hsSpin, hsBrush, hsSkirt) * 0.15
+      - 0.045,
+    0.03, 1.0);`,
+      );
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", `#include <common>\nvarying vec3 vHsCap;`)
+      .replace(
+        "#include <project_vertex>",
+        `  vHsCap = transformed;\n#include <project_vertex>`,
+      );
   };
   mat.customProgramCacheKey = () => "hs-cap";
   return mat;

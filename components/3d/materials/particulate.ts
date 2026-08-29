@@ -80,7 +80,10 @@ export function createParticulateMaterial(
   params: ParticulateParams,
 ): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({
-    roughness: 0.62,
+    // Wet, not dusty. A seed that has been sitting in brine has a sheen on it,
+    // and the sheen is most of what makes it read as suspended rather than
+    // painted onto the inside of the glass.
+    roughness: 0.42,
     metalness: 0,
     color: 0xffffff,
   });
@@ -161,11 +164,14 @@ varying float vSeed;`,
         /* glsl */ `#include <color_fragment>
   vec3 hsSeedCol = vSpecies < 0.5 ? uDill : (vSpecies < 1.5 ? uPeppercorn : uMustard);
   hsSeedCol *= 0.82 + 0.36 * fract(vSeed * 41.7);
-  // Sitting in brine, not on top of it: the same absorption the volume uses,
-  // so a seed deep in the bottle goes green with the liquid around it.
-  float hsT = exp(-uAbsorption * vDepth * 1.35);
+  // A light touch only. The brine's absorption is applied by the GLASS now —
+  // the seeds are inside the refracted volume, so every one of them is already
+  // being tinted and dimmed by the full Beer-Lambert path on its way out. This
+  // used to carry the whole absorption itself and, stacked on top of the new
+  // volume, turned every seed into the same flat green pebble.
+  float hsT = exp(-uAbsorption * vDepth * 0.3);
   hsSeedCol = mix(uDeep * 0.9, hsSeedCol, hsT);
-  hsSeedCol = mix(hsSeedCol, uCloudColor, (1.0 - hsT) * 0.28);
+  hsSeedCol = mix(hsSeedCol, uCloudColor, (1.0 - hsT) * 0.15);
   diffuseColor.rgb = hsSeedCol;`,
       );
   };
