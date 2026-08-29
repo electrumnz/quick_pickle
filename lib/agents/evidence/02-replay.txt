@@ -4,11 +4,11 @@ M25 — replay(runId) RECONSTRUCTED FROM STORED TRANSCRIPT ONLY
 Nothing below came from memory. replay() reads agent_runs, agent_messages,
 agent_tool_calls, agent_costs and approvals, and rebuilds the run — including the
 prompt the model would be sent next.
-generated: 2026-08-29T23:32:57.721Z (npx vitest run tests/agents/evidence.test.ts)
+generated: 2026-08-29T23:42:23.102Z (npx vitest run tests/agents/evidence.test.ts)
 model: SCRIPTED (lib/agents/model/mock.ts). Everything below the model is the real runtime.
 
 ------------------------------------------------------------------------------
-RUN dc433026-34d8-43c0-95d7-0478d9300733
+RUN 9009c0d7-9f96-461a-9142-4b59f6826473
 agent      test-role   trigger schedule
 status     succeeded
 goal       Check the price of No 01 HOUSE and note it.

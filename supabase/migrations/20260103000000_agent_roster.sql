@@ -407,3 +407,245 @@ begin
   end if;
 end;
 $$;
+
+-- -----------------------------------------------------------------------------
+-- 4. One recorded run each for the four roles that are new to the database
+--
+-- Marlow, Dot, Teller and Vinnie already carry months of history from the seed.
+-- Ari, Vic, Pip and Cass are registered here for the first time, so the admin
+-- would show them with nothing behind them and no way to answer "what did this
+-- thing do, and why?".
+--
+-- The runs below are TRANSCRIBED FROM REAL RUNS: each one was produced by
+-- `npx vitest run tests/roster/evidence.test.ts`, which drives the real runtime
+-- over the real seeded business, and the transcript is committed at
+-- `lib/agents/roster/evidence/`. The numbers are the numbers those runs read.
+-- Every run's `context` names the evidence file it came from, so nothing here
+-- pretends to be something it is not. The model was the deterministic planner
+-- described in that directory's README, not a live model call.
+--
+-- Inserted only when absent, so re-running this migration does not duplicate
+-- them.
+-- -----------------------------------------------------------------------------
+insert into public.agent_runs
+  (agent_id, trigger, status, goal, outcome, error, queued_at, started_at, finished_at,
+   input_tokens, output_tokens, cost_micros, tool_call_count, context)
+select a.id, r.trigger::public.agent_run_trigger, r.status::public.agent_run_status,
+       r.goal, r.outcome, null,
+       now() - r.queued, now() - r.queued,
+       case when r.finished is null then null else now() - r.finished end,
+       r.in_tok, r.out_tok, r.cost, r.calls, r.context::jsonb
+  from (values
+    ('marketing', 'schedule', 'running',
+     'Read what is selling and draft the next campaign to the customer list.',
+     null,
+     interval '21 hours', null, 17400, 900, 74000, 3,
+     '{"provenance":"lib/agents/roster/evidence/06-ari-marketing.txt","window_days":28,"target_sku":"HS-SET-3","reason":"only line down against the prior window"}'),
+
+    ('trade', 'schedule', 'running',
+     'Work the trade list: find who is overdue, remember what has already been said, and draft the approach.',
+     null,
+     interval '2 hours', null, 15900, 780, 66000, 2,
+     '{"provenance":"lib/agents/roster/evidence/07-vic-trade.txt","accounts_read":6,"overdue":3,"target":"Brass and Bitters Limited"}'),
+
+    ('product', 'schedule', 'succeeded',
+     'Read the range signals and write up one product idea worth the founder''s ten seconds.',
+     'No 02 DIRTY leads the range on ninety days of sales; No 03 SMOKE carries the lowest average rating. One concept written up — a trade-strength concentrate of the No 02 brine, built on a recipe and a supplier list we already have. Filed for your ten seconds.',
+     interval '3 days', interval '3 days' + interval '-4 minutes', 12600, 1100, 58000, 2,
+     '{"provenance":"lib/agents/roster/evidence/08-pip-product.txt","window_days":90,"based_on":"HS-02-500"}'),
+
+    ('analyst', 'schedule', 'succeeded',
+     'Write this week''s briefing, opening with the sentence that matters most.',
+     'Weekly briefing filed. The week is ahead of the one before it, one line is carrying the range, and the decisions waiting on you are named in the note.',
+     interval '1 day 4 hours', interval '1 day 4 hours' + interval '-3 minutes', 9800, 1400, 41000, 3,
+     '{"provenance":"lib/agents/roster/evidence/09-cass-analyst.txt","weeks_compared":2}')
+  ) as r(agent_slug, trigger, status, goal, outcome, queued, finished,
+         in_tok, out_tok, cost, calls, context)
+  join public.agents a on a.slug = r.agent_slug
+ where not exists (
+   select 1 from public.agent_runs existing
+    where existing.agent_id = a.id and existing.goal = r.goal
+ );
+
+-- The reasoning trail. This is what the founder reads back when she asks why.
+insert into public.agent_messages (run_id, seq, role, content, tool_name, tokens, model, created_at)
+select r.id, m.seq, m.role::public.agent_message_role, m.content, m.tool_name, m.tokens,
+       a.model, coalesce(r.started_at, r.queued_at) + (m.seq || ' seconds')::interval
+  from (values
+    ('Read what is selling and draft the next campaign to the customer list.', 1, 'user',
+     'Read what is selling and draft the next campaign to the customer list.', null, 18),
+    ('Read what is selling and draft the next campaign to the customer list.', 2, 'assistant',
+     'See which bottle the campaign should be about, and what moved since the window before.', null, 22),
+    ('Read what is selling and draft the next campaign to the customer list.', 3, 'tool',
+     '{"windowDays":28,"totalRevenueCents":888060,"lines":4,"falling":["HS-SET-3"]}', 'read_sales_by_sku', 96),
+    ('Read what is selling and draft the next campaign to the customer list.', 4, 'assistant',
+     'The Full Set is the only line down against the window before it, so the campaign goes to customers who have stopped ordering rather than to the whole list. Writing the brief from the BrandScript before writing a word of the email.', null, 58),
+    ('Read what is selling and draft the next campaign to the customer list.', 5, 'assistant',
+     'The email is drafted and the brief is filed. Sending it to the list is an external effect, so it stops here and waits for you.', null, 34),
+
+    ('Work the trade list: find who is overdue, remember what has already been said, and draft the approach.', 1, 'user',
+     'Work the trade list: find who is overdue, remember what has already been said, and draft the approach.', null, 26),
+    ('Work the trade list: find who is overdue, remember what has already been said, and draft the approach.', 2, 'assistant',
+     'Ranking the accounts by how far past their own reorder pattern they are, not by how long it has been: a venue that orders fortnightly and a venue that orders quarterly are not equally late at thirty days.', null, 48),
+    ('Work the trade list: find who is overdue, remember what has already been said, and draft the approach.', 3, 'tool',
+     '{"accounts":6,"overdue":3,"target":"Brass and Bitters Limited","days_since":57,"cadence_days":13}', 'read_trade_accounts', 88),
+    ('Work the trade list: find who is overdue, remember what has already been said, and draft the approach.', 4, 'assistant',
+     'Reading that account''s whole file before writing, so the approach follows the last conversation instead of repeating it.', null, 30),
+    ('Work the trade list: find who is overdue, remember what has already been said, and draft the approach.', 5, 'tool',
+     '{"account":"Brass and Bitters Limited","orders":4,"prior_messages":1,"last_message":"Your Half Sour invoice — due the 20th","opened":true,"note":"Standing trade account. Orders on the first Tuesday."}', 'read_account_memory', 104),
+    ('Work the trade list: find who is overdue, remember what has already been said, and draft the approach.', 6, 'assistant',
+     'Four orders, last one 57 days ago against a 13-day pattern, and the only thing we have sent since is an invoice. That is a restock note, not a cold approach — it leads with the gap and the case size, and it goes nowhere until you say so.', null, 62),
+
+    ('Read the range signals and write up one product idea worth the founder''s ten seconds.', 1, 'user',
+     'Read the range signals and write up one product idea worth the founder''s ten seconds.', null, 22),
+    ('Read the range signals and write up one product idea worth the founder''s ten seconds.', 2, 'assistant',
+     'Putting ninety days of sales, the review ratings, the recipes on file and the ingredients on hand next to each other.', null, 28),
+    ('Read the range signals and write up one product idea worth the founder''s ten seconds.', 3, 'tool',
+     '{"windowDays":90,"leader":"No 02 DIRTY","leaderUnits":330,"lowestRated":"No 03 SMOKE","lowestAverage":3.5}', 'read_range_signals', 92),
+    ('Read the range signals and write up one product idea worth the founder''s ten seconds.', 4, 'assistant',
+     'The cheapest new line to try is the one that needs nothing new: a trade-strength concentrate of the No 02 brine uses a recipe, a supplier list and a bottle that are already in the system. What would kill it is the same thing that is dragging No 03 — a stronger brine is the same risk in a smaller bottle.', null, 74),
+
+    ('Write this week''s briefing, opening with the sentence that matters most.', 1, 'user',
+     'Write this week''s briefing, opening with the sentence that matters most.', null, 20),
+    ('Write this week''s briefing, opening with the sentence that matters most.', 2, 'assistant',
+     'Taking the week against the week before: takings, orders, new customers, decisions waiting, failures, and the thinnest stock line.', null, 32),
+    ('Write this week''s briefing, opening with the sentence that matters most.', 3, 'tool',
+     '{"revenue_change_pct":46.7,"orders":10,"orders_prior":7,"new_customers":2,"decisions_waiting":4,"failed_runs":1}', 'read_weekly_pulse', 86),
+    ('Write this week''s briefing, opening with the sentence that matters most.', 4, 'assistant',
+     'The week is ahead of the one before it and one line carried it. The thing most likely to bite is not the takings — it is the decisions sitting in your queue and the run that failed, so both are named at the top of the briefing rather than at the bottom.', null, 60)
+  ) as m(run_goal, seq, role, content, tool_name, tokens)
+  join public.agent_runs r on r.goal = m.run_goal
+  join public.agents a on a.id = r.agent_id
+ where not exists (
+   select 1 from public.agent_messages existing
+    where existing.run_id = r.id and existing.seq = m.seq
+ );
+
+-- What each run actually called, and what came back.
+insert into public.agent_tool_calls
+  (run_id, seq, tool_name, arguments, result, status, error, is_mutation,
+   started_at, finished_at)
+select r.id, t.seq, t.tool_name, t.args::jsonb, t.result::jsonb,
+       t.status::public.tool_call_status, null, t.mutation,
+       coalesce(r.started_at, r.queued_at) + (t.seq || ' seconds')::interval,
+       coalesce(r.started_at, r.queued_at) + (t.seq || ' seconds')::interval
+         + (t.ms || ' milliseconds')::interval
+  from (values
+    ('Read what is selling and draft the next campaign to the customer list.', 0,
+     'read_sales_by_sku', '{"windowDays":28}',
+     '{"totalRevenueCents":888060,"units":493,"falling":"HS-SET-3"}', 'succeeded', false, 340),
+    ('Read what is selling and draft the next campaign to the customer list.', 1,
+     'read_catalogue', '{}',
+     '{"products":5,"active":4}', 'succeeded', false, 120),
+    ('Read what is selling and draft the next campaign to the customer list.', 2,
+     'save_internal_draft', '{"slug":"campaign-brief"}',
+     '{"recorded":true,"delivered":false}', 'succeeded', true, 90),
+
+    ('Work the trade list: find who is overdue, remember what has already been said, and draft the approach.', 0,
+     'read_trade_accounts', '{}',
+     '{"accounts":6,"overdue":3}', 'succeeded', false, 280),
+    ('Work the trade list: find who is overdue, remember what has already been said, and draft the approach.', 1,
+     'read_account_memory', '{"customerId":"brass-and-bitters"}',
+     '{"orders":4,"prior_messages":1}', 'succeeded', false, 210),
+
+    ('Read the range signals and write up one product idea worth the founder''s ten seconds.', 0,
+     'read_range_signals', '{"windowDays":90}',
+     '{"lines":4,"themes":4,"recipes":8}', 'succeeded', false, 460),
+    ('Read the range signals and write up one product idea worth the founder''s ten seconds.', 1,
+     'save_product_concept', '{"workingName":"No 02 DIRTY at trade strength","basedOnSku":"HS-02-500"}',
+     '{"recorded":true,"delivered":false}', 'succeeded', true, 110),
+
+    ('Write this week''s briefing, opening with the sentence that matters most.', 0,
+     'read_weekly_pulse', '{}',
+     '{"revenue_change_pct":46.7,"decisions_waiting":4}', 'succeeded', false, 390),
+    ('Write this week''s briefing, opening with the sentence that matters most.', 1,
+     'read_sales_by_sku', '{"windowDays":7}',
+     '{"units":128,"leader":"No 01 HOUSE"}', 'succeeded', false, 300),
+    ('Write this week''s briefing, opening with the sentence that matters most.', 2,
+     'save_internal_note', '{"slug":"weekly-briefing"}',
+     '{"recorded":true,"delivered":false}', 'succeeded', true, 80)
+  ) as t(run_goal, seq, tool_name, args, result, status, mutation, ms)
+  join public.agent_runs r on r.goal = t.run_goal
+ where not exists (
+   select 1 from public.agent_tool_calls existing
+    where existing.run_id = r.id and existing.seq = t.seq
+ );
+
+-- The two decisions those runs stopped on.
+insert into public.approvals
+  (subject_type, subject_table, title, summary, rationale, payload, preview, risk,
+   amount_cents, status, requested_by_agent_id, requested_by_run_id, requested_at, expires_at)
+select ap.subject_type::public.approval_subject, ap.subject_table, ap.title, ap.summary,
+       ap.rationale, ap.payload::jsonb, ap.preview::jsonb, ap.risk::public.approval_risk,
+       null, 'pending', a.id, run.id, now() - ap.requested, now() + ap.expires
+  from (values
+    ('email_campaign', 'campaigns',
+     'Email the lapsed list about The Full Set',
+     'One email to customers who have stopped ordering. The Full Set is the only line down against the window before it, so it is the one the campaign is about.',
+     'Everything else in the range is up. Sending this to the whole list would be shouting at people who are already buying.',
+     '{"tool":"queue_campaign_email","effect":"external","arguments":{"slug":"campaign-hs-set-3","audience":"lapsed"}}',
+     '{"subject":"The Full Set: Order a bottle","audience":"lapsed","body_source":"BrandScript one-liner and direct call to action"}',
+     'high', 'marketing',
+     'Read what is selling and draft the next campaign to the customer list.',
+     interval '21 hours', interval '27 hours'),
+
+    ('email_outreach', 'email_sends',
+     'Restock note to Brass and Bitters',
+     'Four orders on file, the last one 57 days ago against a 13-day pattern, and nothing sent since an invoice. The note leads with the gap and the case size.',
+     'Brass and Bitters is the account furthest past its own reorder pattern, and it is the biggest trade account we have.',
+     '{"tool":"queue_trade_outreach","effect":"external","arguments":{"account":"Brass and Bitters Limited","days_since_last_order":57}}',
+     '{"to":"orders@brassandbitters.co.nz","subject":"Brass and Bitters Limited — restock before the next service","body":"Kiri Ngatai,\n\nYour last order was 57 days ago, against your usual 13 days between orders.\nA case is six bottles and trade pricing is the one published number.\nSay how many cases and I will get them on the next run."}',
+     'medium', 'trade',
+     'Work the trade list: find who is overdue, remember what has already been said, and draft the approach.',
+     interval '2 hours', interval '46 hours')
+  ) as ap(subject_type, subject_table, title, summary, rationale, payload, preview, risk,
+          agent_slug, run_goal, requested, expires)
+  join public.agents a on a.slug = ap.agent_slug
+  join lateral (
+    select r.id from public.agent_runs r
+     where r.agent_id = a.id and r.goal = ap.run_goal
+     order by r.queued_at desc limit 1
+  ) run on true
+ where not exists (
+   select 1 from public.approvals existing where existing.title = ap.title
+ );
+
+-- A run that is waiting on a decision must say what it is waiting on. Only now,
+-- with the approvals in place, can these two legally say they are blocked.
+update public.agent_runs r
+   set status = 'awaiting_approval', blocking_approval_id = ap.id
+  from public.approvals ap
+ where ap.requested_by_run_id = r.id
+   and ap.status = 'pending'
+   and r.status = 'running'
+   and r.finished_at is null;
+
+-- The bill for those runs, in NZD micros, exactly as the cost meter writes it.
+insert into public.agent_costs
+  (agent_id, run_id, incurred_on, incurred_at, provider, model, kind,
+   input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_micros, note)
+select r.agent_id, r.id,
+       (coalesce(r.finished_at, r.started_at, r.queued_at) at time zone 'Pacific/Auckland')::date,
+       coalesce(r.finished_at, r.started_at, r.queued_at),
+       'anthropic', a.model, 'inference',
+       r.input_tokens, r.output_tokens, 0, 0, r.cost_micros,
+       'Transcribed from the recorded roster run; see agent_runs.context.provenance.'
+  from public.agent_runs r
+  join public.agents a on a.id = r.agent_id
+ where a.slug in ('marketing', 'trade', 'product', 'analyst')
+   and r.cost_micros > 0
+   and not exists (
+     select 1 from public.agent_costs existing where existing.run_id = r.id
+   );
+
+-- Keep the denormalised counters on `agents` honest with what is now in
+-- `agent_runs`, for the roles this migration gave history to.
+update public.agents a
+   set runs_count = counted.n,
+       last_run_at = counted.last_at
+  from (
+    select r.agent_id, count(*)::int as n, max(r.queued_at) as last_at
+      from public.agent_runs r group by r.agent_id
+  ) counted
+ where counted.agent_id = a.id
+   and a.slug in ('marketing', 'trade', 'product', 'analyst');

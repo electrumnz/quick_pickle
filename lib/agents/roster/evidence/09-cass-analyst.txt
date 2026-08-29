@@ -20,7 +20,7 @@ WHAT IT DID, STEP BY STEP
 1. reasoning: Take the week against the week before: takings, orders, new customers, decisions waiting, failures, thinnest stock line.
    tool: read_weekly_pulse {}
    status: succeeded
-      The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before. No 01 HOUSE carried it at 65 bottles. 4 decisions are waiting on you. 1 agent run failed this week. No 01 HOUSE is the thinnest at 65 days of cover.
+      The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before. No 01 HOUSE carried it at 65 bottles. 6 decisions are waiting on you. 1 agent run failed this week. No 01 HOUSE is the thinnest at 65 days of cover.
         - Takings: NZ$2377.10 this week against NZ$1620.80 last week.
         - Orders: 10 this week against 7 last week.
         - 2 customers ordered for the first time.
@@ -28,7 +28,7 @@ WHAT IT DID, STEP BY STEP
         - No 02 DIRTY: 43 bottles, NZ$788.00, down 14.0% on the 7 days before.
         - No 03 SMOKE: 18 bottles, NZ$369.60, down 28.0% on the 7 days before.
         - The Full Set: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
-        - 4 decisions waiting on the founder, 1 agent run failed, 6 paid orders still to pack.
+        - 6 decisions waiting on the founder, 1 agent run failed, 6 paid orders still to pack.
 
 2. reasoning: See which bottle carried the week.
    tool: read_sales_by_sku {"windowDays":7}
@@ -51,12 +51,12 @@ WHAT IT DID, STEP BY STEP
         - Nothing was refunded in the window.
 
 4. reasoning: File the briefing, including the opening sentence the admin uses on a Monday.
-   tool: save_internal_note {"slug":"weekly-briefing","title":"The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before.","body":"The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before. No 01 HOUSE carried it at 65 bottles. 4 decisions 
+   tool: save_internal_note {"slug":"weekly-briefing","title":"The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before.","body":"The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before. No 01 HOUSE carried it at 65 bottles. 6 decisions 
    status: succeeded
       recorded="weekly-briefing" delivered=false
       Recorded, not sent. This deployment has no live outbound channel wired: the approved action is written down so it can be carried out by a person, or by a channel adapter that does not exist yet.
 
-5. reasoning: The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before. No 01 HOUSE carried it at 65 bottles. 4 decisions are waiting on you. 1 agent run failed this week. No 01 HOUSE is the thinnest at 65 days of cover. NZ$2327.60 across 128 bottles in 7 days. NZ$9123.20 across 38 orders in 28 days, of which NZ$1189.99 is GST held for Inland Revenue.
+5. reasoning: The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before. No 01 HOUSE carried it at 65 bottles. 6 decisions are waiting on you. 1 agent run failed this week. No 01 HOUSE is the thinnest at 65 days of cover. NZ$2327.60 across 128 bottles in 7 days. NZ$9123.20 across 38 orders in 28 days, of which NZ$1189.99 is GST held for Inland Revenue.
 
 What I found
 - Takings: NZ$2377.10 this week against NZ$1620.80 last week.
@@ -66,7 +66,7 @@ What I found
 - No 02 DIRTY: 43 bottles, NZ$788.00, down 14.0% on the 7 days before.
 - No 03 SMOKE: 18 bottles, NZ$369.60, down 28.0% on the 7 days before.
 - The Full Set: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
-- 4 decisions waiting on the founder, 1 agent run failed, 6 paid orders still to pack.
+- 6 decisions waiting on the founder, 1 agent run failed, 6 paid orders still to pack.
 - No 01 HOUSE: 65 bottles, NZ$1062.00, up 1525.0% on the 7 days before.
 - No 02 DIRTY: 43 bottles, NZ$788.00, down 14.0% on the 7 days before.
 - No 03 SMOKE: 18 bottles, NZ$369.60, down 28.0% on the 7 days before.
@@ -96,7 +96,7 @@ WHAT ACTUALLY LEFT THE COMPANY
 ------------------------------------------------------------------------------
 WHAT IT REPORTED
 ------------------------------------------------------------------------------
-   The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before. No 01 HOUSE carried it at 65 bottles. 4 decisions are waiting on you. 1 agent run failed this week. No 01 HOUSE is the thinnest at 65 days of cover. NZ$2327.60 across 128 bottles in 7 days. NZ$9123.20 across 38 orders in 28 days, of which NZ$1189.99 is GST held for Inland Revenue.
+   The last seven days took NZ$2377.10 across 10 orders, up 46.7% on the week before. No 01 HOUSE carried it at 65 bottles. 6 decisions are waiting on you. 1 agent run failed this week. No 01 HOUSE is the thinnest at 65 days of cover. NZ$2327.60 across 128 bottles in 7 days. NZ$9123.20 across 38 orders in 28 days, of which NZ$1189.99 is GST held for Inland Revenue.
    
    What I found
    - Takings: NZ$2377.10 this week against NZ$1620.80 last week.
@@ -106,7 +106,7 @@ WHAT IT REPORTED
    - No 02 DIRTY: 43 bottles, NZ$788.00, down 14.0% on the 7 days before.
    - No 03 SMOKE: 18 bottles, NZ$369.60, down 28.0% on the 7 days before.
    - The Full Set: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
-   - 4 decisions waiting on the founder, 1 agent run failed, 6 paid orders still to pack.
+   - 6 decisions waiting on the founder, 1 agent run failed, 6 paid orders still to pack.
    - No 01 HOUSE: 65 bottles, NZ$1062.00, up 1525.0% on the 7 days before.
    - No 02 DIRTY: 43 bottles, NZ$788.00, down 14.0% on the 7 days before.
    - No 03 SMOKE: 18 bottles, NZ$369.60, down 28.0% on the 7 days before.
