@@ -254,10 +254,11 @@ export function defineConciergeAgent(strategy: Strategy): AgentDefinition {
     ],
     autonomy: "propose",
     requiresApprovalFor: ["customer_message", "review_reply", "refund"],
+    // Six runs a day at the four-hourly schedule, so the day cap holds six.
     budget: {
       perRunCents: 140,
-      dailyCents: 500,
-      monthlyCents: 10_000,
+      dailyCents: 900,
+      monthlyCents: 18_000,
       singleActionCents: 15_000,
     },
     maxSteps: 8,
@@ -379,6 +380,8 @@ export function grantRosterTools(
      * actually run — sets a ceiling a run can finish inside.
      */
     readonly perRunCents: number;
+    /** Ceiling on a day, for the same reason: it has to hold a whole run. */
+    readonly dailyCents: number;
     /** A caption is not four thousand tokens. Lower is cheaper and truer. */
     readonly maxOutputTokens: number;
   },
@@ -393,7 +396,11 @@ export function grantRosterTools(
     tools: [...tools],
     autonomy: base.autonomy,
     requiresApprovalFor: [...base.requiresApprovalFor],
-    budget: { ...base.budget, perRunCents: limits.perRunCents },
+    budget: {
+      ...base.budget,
+      perRunCents: limits.perRunCents,
+      dailyCents: limits.dailyCents,
+    },
     maxSteps: base.maxSteps,
     maxOutputTokens: limits.maxOutputTokens,
     brandRuleScopes: [...base.brandRuleScopes],
@@ -614,6 +621,7 @@ export function marketingRole(base: AgentDefinition): RosterRole {
   return {
     definition: grantRosterTools(base, MARKETING_TOOLS, {
       perRunCents: 140,
+      dailyCents: 600,
       maxOutputTokens: 1_500,
     }),
     audience: "b2c",
@@ -664,6 +672,7 @@ export function tradeRole(base: AgentDefinition): RosterRole {
   return {
     definition: grantRosterTools(base, TRADE_TOOLS, {
       perRunCents: 140,
+      dailyCents: 600,
       maxOutputTokens: 1_500,
     }),
     audience: "b2b",

@@ -26,8 +26,8 @@ WHAT IT DID, STEP BY STEP
         - No 03 SMOKE: 160 bottles, NZ$3168.51, up 344.4% on the 90 days before.
         - The Full Set: 38 bottles, NZ$2043.45, up 375.0% on the 90 days before.
         - No 03 SMOKE: 2 reviews, average 3.5, lowest 2. Said: Arrived cracked; The barbecue bottle
-        - No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: Finally; It does not cloud the glass; Very good, wish the bottle were bigger
-        - No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: Bought it for a pickleback, kept it for cooking; Genuinely good; The one I keep buying; Good, arrived fast
+        - No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: Finally; Very good, wish the bottle were bigger; It does not cloud the glass
+        - No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: Bought it for a pickleback, kept it for cooking; The one I keep buying; Good, arrived fast; Genuinely good
         - The Full Set: 1 reviews, average 5, lowest 5. Said: Best gift I have sent all year
         proposal: {"workingName":"No 02 DIRTY at trade strength","basedOnSku":"HS-02-500","rationale":"No 02 DIRTY is the range's best seller at 330 bottles in 90 days, against 38 for The Full Set. A concentrate of the same brine is the cheapest new line to try: the recipe, the suppliers and the bottle are already in the system, so nothing new has to be sourced. What would kill it: No 03 SMOKE already averages 3.5 on 2 reviews, and a stronger brine is the same risk in a smaller bottle.","ingredients":"Filtered water 209l, Cornichon cucumbers 70kg, Spanish manzanilla olives 24kg, Marlborough sea salt 11.44kg, Preserved lemon peel 2.2kg, White peppercorn 0.44kg, Coriander seed 0.33kg, Citric acid 0.11kg"}
 
@@ -45,8 +45,8 @@ What I found
 - No 03 SMOKE: 160 bottles, NZ$3168.51, up 344.4% on the 90 days before.
 - The Full Set: 38 bottles, NZ$2043.45, up 375.0% on the 90 days before.
 - No 03 SMOKE: 2 reviews, average 3.5, lowest 2. Said: Arrived cracked; The barbecue bottle
-- No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: Finally; It does not cloud the glass; Very good, wish the bottle were bigger
-- No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: Bought it for a pickleback, kept it for cooking; Genuinely good; The one I keep buying; Good, arrived fast
+- No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: Finally; Very good, wish the bottle were bigger; It does not cloud the glass
+- No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: Bought it for a pickleback, kept it for cooking; The one I keep buying; Good, arrived fast; Genuinely good
 - The Full Set: 1 reviews, average 5, lowest 5. Said: Best gift I have sent all year
 
 What I did
@@ -79,8 +79,8 @@ WHAT IT REPORTED
    - No 03 SMOKE: 160 bottles, NZ$3168.51, up 344.4% on the 90 days before.
    - The Full Set: 38 bottles, NZ$2043.45, up 375.0% on the 90 days before.
    - No 03 SMOKE: 2 reviews, average 3.5, lowest 2. Said: Arrived cracked; The barbecue bottle
-   - No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: Finally; It does not cloud the glass; Very good, wish the bottle were bigger
-   - No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: Bought it for a pickleback, kept it for cooking; Genuinely good; The one I keep buying; Good, arrived fast
+   - No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: Finally; Very good, wish the bottle were bigger; It does not cloud the glass
+   - No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: Bought it for a pickleback, kept it for cooking; The one I keep buying; Good, arrived fast; Genuinely good
    - The Full Set: 1 reviews, average 5, lowest 5. Said: Best gift I have sent all year
    
    What I did

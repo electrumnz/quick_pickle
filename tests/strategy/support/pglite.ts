@@ -13,15 +13,17 @@ import type { StrategySqlClient, StrategySqlRow } from "@/lib/strategy";
  * it is the real one. The seeded rows the tests read back are the rows the
  * migration actually writes — not a fixture that agrees with it.
  *
- * Only three migrations are applied: `foundation` for `set_updated_at`,
+ * Only four migrations are applied: `foundation` for `set_updated_at`,
  * `platform` for `is_operator` and the operator tables the policies reference,
- * and the strategy migration itself. The strategy tables depend on nothing else.
+ * the strategy migration itself, and the avatars migration that extends it. The
+ * strategy tables depend on nothing else.
  */
 
 const MIGRATIONS = [
   "20260101000000_foundation.sql",
   "20260101000100_platform.sql",
   "20260102000000_strategy.sql",
+  "20260105000000_audience_avatars.sql",
 ];
 
 const SUPABASE_AUTH_STUB = `

@@ -301,35 +301,44 @@ const B2C_CHECKS: readonly AuditCheck[] = [
     id: "b2c-price-per-drink-before-the-ask",
     avatar: "b2c",
     question:
-      "Does the product page do the eighty-cents-a-drink arithmetic before it asks for the sale?",
+      "Before it asks for $20, does the product page show what to do with the bottle and how many times?",
     whyItMatters:
-      "The bottle is priced against a $24 bar drink, and the sentence that makes that comparison — how many pours are in it — currently sits below the buy button. She is asked for $20 before she has been given the number that makes $20 obvious.",
+      "She prices this against a $24 drink at a bar, and the two things that make $20 obvious — the pour count and one ratio she could follow tonight — both sit below the buy button. The button is asking her to decide before the page has given her anything to decide with.",
     severity: "serious",
     derivedFrom: "avatars.b2c.price.anchor",
-    fix: "Move the pours-per-bottle line above the buy control on every product page.",
+    fix: "Put the pour count and one build — the ratio — above the buy control on every product page.",
     paths: [LEAD_PRODUCT, "/products/no-01-house"],
     run(pages) {
       const problems: string[] = [];
       for (const path of [LEAD_PRODUCT, "/products/no-01-house"]) {
         const text = pages.text(path);
-        const serves = /about\s+\d+\s*×/i.exec(text);
         const buy = at(text, "add to cart");
-        if (serves === null) {
-          problems.push(`${path}: no pours-per-bottle line at all`);
-          continue;
-        }
         if (buy === -1) {
           problems.push(`${path}: no buy control found`);
           continue;
         }
-        if (serves.index > buy) {
+        // The pour count ("About 25 ×") and the first build line that measures
+        // the brine itself ("20 ml No. 02"). Both are on the page already; the
+        // question is only whether they arrive before the ask.
+        const pours = /about\s+\d+\s*×/i.exec(text);
+        const build = /\d+\s*ml\s+No\.\s*\d+/i.exec(text);
+        if (pours === null || pours.index > buy) {
           problems.push(
-            `${path}: the buy control is at character ${String(buy)} and the pours line at ${String(serves.index)} — ${String(serves.index - buy)} characters too late ("${serves[0]}…")`,
+            pours === null
+              ? `${path}: no pour count anywhere`
+              : `${path}: pour count ${String(pours.index - buy)} characters below the buy control`,
+          );
+        }
+        if (build === null || build.index > buy) {
+          problems.push(
+            build === null
+              ? `${path}: no build with a measure of the brine anywhere`
+              : `${path}: the first build ("${build[0]}") is ${String(build.index - buy)} characters below the buy control`,
           );
         }
       }
       return problems.length === 0
-        ? pass("The pours-per-bottle line comes before the buy control.")
+        ? pass("The pour count and a build both come before the buy control.")
         : fail(problems.join("; "));
     },
   },

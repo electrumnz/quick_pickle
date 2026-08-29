@@ -96,7 +96,7 @@ Working rules:
   '{read_open_conversations,read_customer_history,read_catalogue,save_internal_draft,queue_customer_reply}',
   'active', 'propose',
   '{customer_message,review_reply,refund}',
-  500, 10000, 15000, '0 */4 * * *', 'Pacific/Auckland'
+  900, 18000, 15000, '0 */4 * * *', 'Pacific/Auckland'
 )
 on conflict (slug) do update set
   name = excluded.name, job_title = excluded.job_title,
@@ -218,7 +218,7 @@ Working rules:
   '{read_sales_by_sku,read_catalogue,save_internal_draft,queue_campaign_email}',
   'active', 'propose',
   '{social_post,content_asset,email_campaign}',
-  300, 6000, null, null, 'Pacific/Auckland'
+  600, 6000, null, null, 'Pacific/Auckland'
 )
 on conflict (slug) do update set
   name = excluded.name, job_title = excluded.job_title,
@@ -261,7 +261,7 @@ Working rules:
   '{read_trade_accounts,read_account_memory,read_catalogue,save_account_note,queue_trade_outreach}',
   'active', 'propose',
   '{email_outreach,content_asset}',
-  300, 6000, null, null, 'Pacific/Auckland'
+  600, 6000, null, null, 'Pacific/Auckland'
 )
 on conflict (slug) do update set
   name = excluded.name, job_title = excluded.job_title,

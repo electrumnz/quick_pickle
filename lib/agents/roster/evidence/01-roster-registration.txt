@@ -18,7 +18,7 @@ Marlow — Head of Brine Ops (brine-ops)
   autonomy     act_with_limits
   tools        read_stock_cover, read_batch_plan, read_catalogue, save_internal_note, queue_supplier_order
   always asks  purchase_order, inventory_adjustment, batch_release
-  budget       NZ$0.40/run, NZ$8.00/day, NZ$160.00/month, single action ceiling NZ$250.00
+  budget       NZ$0.80/run, NZ$8.00/day, NZ$160.00/month, single action ceiling NZ$250.00
   schedule     0 19 * * *
   routine      read_stock_cover → read_batch_plan → save_internal_note → queue_supplier_order
   measured on  No line ever runs out, and no order is placed later than its lead time allows.
@@ -34,7 +34,7 @@ Dot — Customer Concierge (concierge)
   autonomy     propose
   tools        read_open_conversations, read_customer_history, read_catalogue, save_internal_draft, queue_customer_reply
   always asks  customer_message, review_reply, refund
-  budget       NZ$0.40/run, NZ$5.00/day, NZ$100.00/month, single action ceiling NZ$150.00
+  budget       NZ$1.40/run, NZ$9.00/day, NZ$180.00/month, single action ceiling NZ$150.00
   schedule     0 */4 * * *
   routine      read_open_conversations → read_customer_history → save_internal_draft → queue_customer_reply
   measured on  Nobody waits more than a working day, and no unhappy customer is ever answered by an agent.
@@ -50,7 +50,7 @@ Teller — Finance and Pricing (ledger)
   autonomy     propose
   tools        read_margins, read_takings, read_catalogue, save_internal_note, propose_price_change
   always asks  price_change, discount, settings_change
-  budget       NZ$0.60/run, NZ$9.00/day, NZ$180.00/month
+  budget       NZ$1.40/run, NZ$9.00/day, NZ$180.00/month
   schedule     0 8 * * 1
   routine      read_margins → read_takings → save_internal_note → propose_price_change
   measured on  Every line above the 60 percent floor, and GST never once counted as income.
@@ -66,7 +66,7 @@ Vinnie — Social and Content Lead (social)
   autonomy     propose
   tools        read_content_performance, read_sales_by_sku, read_catalogue, save_internal_draft, queue_social_post
   always asks  social_post, content_asset
-  budget       NZ$0.40/run, NZ$6.00/day, NZ$120.00/month
+  budget       NZ$1.40/run, NZ$6.00/day, NZ$120.00/month
   schedule     0 20 * * 1,4
   routine      read_content_performance → read_sales_by_sku → save_internal_draft → queue_social_post
   measured on  Engagement rate on published posts against the running median, and no post that breaks a brand rule.
@@ -82,7 +82,7 @@ Ari — Marketing (marketing)
   autonomy     propose
   tools        read_sales_by_sku, read_catalogue, save_internal_draft, queue_campaign_email
   always asks  social_post, content_asset, email_campaign
-  budget       NZ$0.40/run, NZ$3.00/day, NZ$60.00/month
+  budget       NZ$1.40/run, NZ$6.00/day, NZ$60.00/month
   schedule     (on demand)
   routine      read_sales_by_sku → read_catalogue → save_internal_draft → queue_campaign_email
   measured on  Repeat purchase rate and revenue per campaign. It is not measured on volume of output.
@@ -98,7 +98,7 @@ Vic — Trade (trade)
   autonomy     propose
   tools        read_trade_accounts, read_account_memory, read_catalogue, save_account_note, queue_trade_outreach
   always asks  email_outreach, content_asset
-  budget       NZ$0.40/run, NZ$3.00/day, NZ$60.00/month
+  budget       NZ$1.40/run, NZ$6.00/day, NZ$60.00/month
   schedule     (on demand)
   routine      read_trade_accounts → read_account_memory → queue_trade_outreach
   measured on  Accounts reordering inside their own cadence, and no account approached twice with the same line.
@@ -114,7 +114,7 @@ Pip — Product Development (product)
   autonomy     propose
   tools        read_range_signals, read_catalogue, save_product_concept
   always asks  recipe_change, content_asset
-  budget       NZ$0.50/run, NZ$4.00/day, NZ$80.00/month
+  budget       NZ$1.40/run, NZ$4.00/day, NZ$80.00/month
   schedule     0 9 1 * *
   routine      read_range_signals → save_product_concept
   measured on  Ideas that survive contact with the founder. One good concept a month beats ten.
@@ -130,7 +130,7 @@ Cass — Analyst (analyst)
   autonomy     act_with_limits
   tools        read_weekly_pulse, read_takings, read_sales_by_sku, save_internal_note
   always asks  (nothing)
-  budget       NZ$0.40/run, NZ$4.00/day, NZ$80.00/month
+  budget       NZ$0.80/run, NZ$4.00/day, NZ$80.00/month
   schedule     0 6 * * 1
   routine      read_weekly_pulse → read_sales_by_sku → read_takings → save_internal_note
   measured on  The founder can answer 'how was last week' from one paragraph, and nothing that failed goes unmentioned.
