@@ -6,6 +6,7 @@ import { addToCart, goToCheckout } from "./actions";
 import { formatPrice, type CatalogueEntry } from "./catalogue";
 import { PRODUCT, SHOP_PATH, STATE } from "./copy";
 import { AvailabilityChip, PriceBlock } from "./bits";
+import { drinksPerBottle } from "./serves";
 import { SubmitButton } from "./SubmitButton";
 import styles from "./shop.module.css";
 import { cx } from "./cx";
@@ -277,6 +278,11 @@ export function BuyPanel({
   problem: string | null;
   checkoutLive: boolean;
 }) {
+  const yieldInfo =
+    entry.brine === null
+      ? null
+      : drinksPerBottle(entry.brine.id, entry.volumeMl);
+
   return (
     <div className="gap-stack flex flex-col">
       <div className="gap-stack flex flex-wrap items-end justify-between">
@@ -311,19 +317,39 @@ export function BuyPanel({
         <BuyForm entry={entry} returnTo={returnTo} />
       )}
 
-      {entry.availability === "sold-out" ? (
-        <p className="text-body-sm text-muted">{STATE.soldOutNote}</p>
-      ) : null}
+      {/* When commerce is unreachable EVERY bottle reads as unavailable, and
+          the reason is the one in the panel above. Explaining it a second time
+          in the language of stock would be telling the reader something that is
+          not the case. */}
+      {degraded ? null : (
+        <>
+          {entry.availability === "sold-out" ? (
+            <p className="text-body-sm text-muted">{STATE.soldOutNote}</p>
+          ) : null}
 
-      {entry.availability === "unlisted" ? (
-        <p className="text-body-sm text-muted">
-          {entry.supplyLimited ? STATE.supplyLimitedNote : STATE.unlistedNote}
+          {entry.availability === "unlisted" ? (
+            <p className="text-body-sm text-muted">
+              {entry.supplyLimited
+                ? STATE.supplyLimitedNote
+                : STATE.unlistedNote}
+            </p>
+          ) : null}
+
+          {entry.availability !== "unlisted" && entry.supplyLimited ? (
+            <p className="text-body-sm text-muted">{STATE.supplyLimitedNote}</p>
+          ) : null}
+        </>
+      )}
+
+      {yieldInfo === null ? null : (
+        <p className="text-body-sm text-primary">
+          {PRODUCT.yieldLead}{" "}
+          <span className={cx(styles.figure)}>{yieldInfo.count}</span> ×{" "}
+          {yieldInfo.title}, at{" "}
+          <span className={cx(styles.figure)}>{yieldInfo.perServeMl} ml</span>{" "}
+          {PRODUCT.yieldTail}.
         </p>
-      ) : null}
-
-      {entry.availability !== "unlisted" && entry.supplyLimited ? (
-        <p className="text-body-sm text-muted">{STATE.supplyLimitedNote}</p>
-      ) : null}
+      )}
 
       <dl className="mt-stack border-hairline text-body-sm border-t">
         {entry.variant === null ? null : (

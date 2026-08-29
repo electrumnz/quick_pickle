@@ -87,7 +87,7 @@ export function ProductCard({
           </ul>
         )}
 
-        {entry.supplyLimited ? (
+        {entry.supplyLimited && !degraded ? (
           <p className="text-caption text-muted">{STATE.supplyLimitedNote}</p>
         ) : null}
 

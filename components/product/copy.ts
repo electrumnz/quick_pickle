@@ -97,7 +97,6 @@ export const SET_LINE = FULL_SET.line;
 /* ------------------------------------------------------- collection page */
 
 export const SHOP = {
-  title: "Shop",
   eyebrow: "Every bottle",
   heading: "Four brines and a box.",
   lede: "Half a litre of the brine, not the pickle. Start from what you are making and the bottle picks itself.",
@@ -156,7 +155,6 @@ export const PRODUCT = {
   bundleEyebrow: "One box",
   alsoEyebrow: "Also in the range",
   alsoHeading: "The rest of the shelf.",
-  specHeading: "The bottle",
   skuLabel: "SKU",
   priceShownLabel: "Price shown",
   priceShownValue: "NZD, GST included",
@@ -164,6 +162,9 @@ export const PRODUCT = {
   boxHeading: "Three bottles, named.",
   boxLink: "What is in the box",
   libraryCount: "in the recipe library",
+  /** "About 25 × The Dirty Martini, at 20 ml a drink." Both numbers shown. */
+  yieldLead: "About",
+  yieldTail: "a drink",
   specLine:
     "Flint glass, a cap you can open one-handed, and the batch number printed on the label rather than kept in a database.",
   viewerHint: "Drag to turn the bottle",
@@ -193,8 +194,6 @@ export const STATE = {
     "The cart is real and the total above is what the catalogue says. Payment is Shopify's hosted checkout, and this store is not connected to it yet, so there is nothing behind this button to send you to.",
   keepShopping: "Keep shopping",
   quantity: "Quantity",
-  decrease: "One fewer",
-  increase: "One more",
   size: "Size",
   onlyOption: "One size. Nothing to choose.",
 

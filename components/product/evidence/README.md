@@ -62,6 +62,47 @@ HS_GROUPS=stock HS_AUDIT=audit-stock.json node components/product/evidence/captu
 and restore the numbers afterwards. `HS_GROUPS` also takes
 `shop,product,states,dark,motion,nojs`.
 
+## The multi-variant state
+
+`state-variants-*.png` shows the size chooser. No product in the range has two
+sizes today — every bottle is 500 ml — so the state was produced the only honest
+way available: by putting a second variant in the scratch database, capturing
+it, and taking it out again.
+
+```sql
+insert into public.product_variants
+  (product_id, sku, title, size_ml, pack_count, price_cents, weight_grams,
+   position, provider, shopify_gid, shopify_inventory_item_gid,
+   shopify_updated_at, sync_status, synced_at)
+select id, 'HS-01-1000', '1 L', 1000, 1, 3200, 1420, 20, 'shopify',
+       'gid://shopify/ProductVariant/9911111111111',
+       'gid://shopify/InventoryItem/9911111111111', now(), 'synced', now()
+  from public.products where handle = 'no-01-house';
+
+insert into public.inventory_levels
+  (variant_id, location_id, on_hand, committed, provider, shopify_gid,
+   shopify_updated_at, sync_status, synced_at)
+select v.id, l.id, 8, 0, 'shopify',
+       'gid://shopify/InventoryLevel/9911111111111', now(), 'synced', now()
+  from public.product_variants v
+  cross join (select id from public.inventory_locations where ships_orders limit 1) l
+ where v.sku = 'HS-01-1000';
+```
+
+It found two real defects, which is why it was worth doing: the collection page
+quoted one variant's price as if it were the product's, and the page defaulted
+to whichever variant sorted first rather than the merchandiser's. Both are
+fixed — cards now read "From $18" when a product has a range, and the page opens
+on the first sellable variant in position order, as Shopify does.
+
+## A note on the full-page captures
+
+`*-full.png` is a full-page screenshot, and the mobile buy bar is
+`position: fixed`. Playwright composites fixed elements at their viewport
+position, so in a full-page capture the bar can appear over the middle of the
+page. In a real viewport it sits on the bottom edge — see the non-`-full`
+captures at 375, and `state-variants-375.png`.
+
 ## The 3D bottle in these captures
 
 Headless Chromium has no GPU, so the WebGL scene runs on SwiftShader at a few

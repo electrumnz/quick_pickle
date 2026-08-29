@@ -92,3 +92,49 @@ export function servesFor(
 export function serveCount(brine: BrineId): number {
   return ALL.filter((recipe) => recipe.brine === brine).length;
 }
+
+/**
+ * How many drinks are in a bottle.
+ *
+ * Arithmetic, not a marketing figure: the divisor is the measure printed in the
+ * recipe this bottle was built for, and both numbers are shown so the sum can
+ * be checked on sight. That is the difference between "about thirty martinis to
+ * a bottle" — a claim someone has to stand behind under the Fair Trading Act —
+ * and "500 ml at 20 ml a drink", which is a division.
+ *
+ * Returns null when the bottle has no drink recipe, or when that recipe's
+ * measure is not volumetric. A number that cannot be derived is not estimated.
+ */
+export function drinksPerBottle(
+  brine: BrineId,
+  bottleMl: number | null,
+): {
+  readonly count: number;
+  readonly perServeMl: number;
+  readonly title: string;
+} | null {
+  if (bottleMl === null || bottleMl <= 0) return null;
+
+  const drink = ALL.find(
+    (recipe) => recipe.brine === brine && recipe.kind === "drink",
+  );
+  if (drink === undefined) return null;
+
+  // The brine's own line in the build. Matched on the label form the recipe
+  // library uses for it — "No. 02 DIRTY" — rather than on position, because a
+  // recipe is free to list the spirit first.
+  const label = `No. ${brine.slice(3, 5)} `;
+  for (const group of drink.ingredients) {
+    for (const measure of group.items) {
+      if (!measure.item.startsWith(label)) continue;
+      const ml = measure.metricMl;
+      if (ml === undefined || ml <= 0) return null;
+      return {
+        count: Math.floor(bottleMl / ml),
+        perServeMl: ml,
+        title: drink.title,
+      };
+    }
+  }
+  return null;
+}
