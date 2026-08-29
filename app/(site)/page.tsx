@@ -277,7 +277,14 @@ export default function HomePage() {
                 className="bg-surface-inverse text-on-inverse rounded-lg px-6 py-[var(--spacing-block)] md:px-[var(--spacing-block)]"
                 data-reveal
               >
-                <div className="max-w-prose">
+                {/* The one parallax beat below the hero. The slab is the
+                    ground and this column is the figure sitting on it, which
+                    is the only shape of pair this page has outside the hero —
+                    everything else here is running text, and running text that
+                    drifts against its own heading reads as a fault rather than
+                    as depth. The rate is a tenth of the parallax token: about
+                    11px across a full viewport of scroll. */}
+                <div className="max-w-prose" data-parallax="0.12">
                   <p className="text-eyebrow font-mono uppercase">
                     {KITCHEN.kicker}
                   </p>

@@ -27,20 +27,18 @@ Updated 2026-08-27. Honest status, not a summary.
       Trading Act s 13(j). Make it true or change the copy before launch.
 - [ ] **Domain.** `halfsour.co.nz` and `halfsour.nz` are available; `halfsour.com` is
       registered but parked. Not purchased — deliberately.
-- [ ] **No. 04 WILD has no artwork.** `brand/assets/` holds `label-01-house.svg`,
-      `label-02-dirty.svg` and `label-03-smoke.svg` and stops there — WILD's label was
-      never drawn, and `lib/brand/assets.ts` does not list one. That is why the hero
-      line-up is three bottles: `brand/assets/bottles.svg` is titled "HALF SOUR launch
-      line — three 500ml bottles" and predates WILD.
-      Noted by the founder and deliberately deferred. WILD is NOT hidden meanwhile — the
-      range section carries it in full (name, Coastal Brine, $26, tasting notes, "Limited
-      by leaf supply") and it heads the oysters serve. Only the picture is short, and the
-      hero's alt text names just the three it actually shows, so nothing on the page
-      claims otherwise.
-      Two things to do together when it is picked up: draw the WILD label to match the
-      other three, then re-cut the line-up illustration as four bottles. Do not add WILD
-      to the existing SVG by copying another label — its seal colour is the secondary
-      accent, not a recolour of SMOKE.
+- [x] **No. 04 WILD is a first-class product.** `brand/assets/label-04-wild.svg` is
+      drawn by `brand/_src/build_labels.py` alongside the other three — same grid, same
+      outlined letterforms, no live `<text>` — with Dill, the second accent, as its seal
+      and foot band rather than a recolour of SMOKE. `bottles.svg` is regenerated from
+      the same SKU list and is now four bottles at 1500x900. The catalogue carries it
+      too: HS-04-500 at 2600c NZD in `supabase/seed.sql`, `lib/commerce/seed/` and
+      `supabase/migrations/20260103000100_catalogue_no_04_wild.sql` (the migration is how
+      a database that already exists gets it, since the seed truncates). Stock is 17
+      bottles off one 40-bottle run, which is a real low-stock state and not a posed one.
+      Still short: the brand guide's own header and label strip (`brand/_src/build_guide.py`)
+      list three products, and Shopify holds no image for HS-04-500, so the mirror row
+      carries a null `hero_image_url`.
 - [ ] **Real product photography.** Every AI image service was unreachable during the
       build (connector blocks invoke, ZeroGPU needs a token, FLUX spaces returned 503).
       The bottle line-up and labels are authored vector art instead, which is better than

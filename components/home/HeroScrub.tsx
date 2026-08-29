@@ -27,6 +27,22 @@ import { useMotionProfile } from "./use-motion";
  *     momentum and iOS elastic overscroll where a JS pin detaches.
  *  3. The positioning line is split by line and staggered in, once.
  *
+ * What it does NOT do is touch the film. The clip in the hero PLAYS; it is
+ * never seeked. `Hero.tsx` carries the measurement that settled that, and the
+ * consequence here is the useful one: every property this file animates is a
+ * transform or an opacity, so the whole sequence stays on the compositor and
+ * none of it can be starved by a video decode.
+ *
+ * The four layers, and the rates that make them read as depth rather than as
+ * four things sliding at once — nearer moves further, which is the only rule:
+ *
+ *   wordmark   -38%  and out      the foreground, and it LEAVES; the hero's
+ *                                 job is to hand the frame to the product
+ *   line-up     -7%  and forward  the subject
+ *   wash        -3.8% and deeper  the ground the bottles stand on
+ *   band         held             it carries the positioning line and the two
+ *                                 routes out; motion never charges for copy
+ *
  * Reduced motion is a different sequence, not a missing one: no track, no
  * scrub, and the line resolves as a one-shot fade in reading order. Both
  * profiles take every duration, easing and distance from lib/brand/motion.ts
@@ -73,6 +89,10 @@ export function HeroScrub() {
       const stagger = ms(MOTION_VARS.stagger.editorial);
       const ease = styles.getPropertyValue(MOTION_VARS.easing.enter).trim();
       const travel = px(MOTION_VARS.distance.md);
+      // The design system has a distance for exactly this and it is already
+      // 0px under prefers-reduced-motion, so the reduced profile gets a still
+      // composition from the token rather than from a branch here.
+      const parallax = px(MOTION_VARS.distance.parallax);
 
       const ctx = gsap.context(() => {
         /* ------------------------------------------------- the split line */
@@ -108,6 +128,9 @@ export function HeroScrub() {
 
         const mark = track.querySelector<HTMLElement>("[data-hero-mark]");
         const art = track.querySelector<HTMLElement>("[data-hero-art]");
+        const backdrop = track.querySelector<HTMLElement>(
+          "[data-hero-backdrop]",
+        );
 
         const timeline = gsap.timeline({
           scrollTrigger: {
@@ -127,6 +150,19 @@ export function HeroScrub() {
         // never leaves — it carries the positioning line and the only two
         // routes out of this screen, and hiding those behind a scroll
         // position would be an animation charging admission to the copy.
+        //
+        // The wash goes last and slowest. It is a third of the parallax
+        // distance, which at the token's 96px is under 34 pixels across two
+        // and a half screens of scroll: far too little to watch, which is the
+        // point. Take it out and the other three layers immediately read as
+        // sliding rather than as receding.
+        if (backdrop) {
+          timeline.to(
+            backdrop,
+            { y: -parallax * 0.35, scale: 1.05, opacity: 0.78 },
+            0,
+          );
+        }
         if (mark) timeline.to(mark, { yPercent: -38, opacity: 0.1 }, 0);
         if (art) timeline.to(art, { yPercent: -7, scale: 1.16 }, 0);
         if (band) timeline.to(band, { y: -travel }, 0);

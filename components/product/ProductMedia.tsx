@@ -1,7 +1,7 @@
 import Image from "next/image";
 
 import { BottlePlate, type PlateVariant } from "./BottlePlate";
-import { Film } from "./Film";
+import { FilmMount } from "./FilmMount";
 import { PRODUCT } from "./copy";
 import { BOTTLE_SHOTS } from "./media";
 import styles from "./shop.module.css";
@@ -60,7 +60,7 @@ export function ProductMedia({
               priority
               className={styles.photo}
             />
-            <Film shot={shot} fit="cover" />
+            <FilmMount shot={shot} fit="cover" />
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import { Film } from "@/components/product/Film";
+import { FilmMount } from "@/components/product/FilmMount";
 import { RANGE_SHOT } from "@/components/product/media";
 
 import { BUY } from "./data";
@@ -25,18 +25,31 @@ import { isLive } from "./routes";
  * against a 400,000 ceiling. That decision stands. The 3D system is NOT
  * deleted; it stays whole under components/3d and live at /lab/bottle.
  *
- * The drawn line-up that stood in for it, `brand/assets/bottles.svg`, has now
- * been replaced by the range photograph — the same four bottles, carrying the
+ * The range photograph runs in its place — the same four bottles, carrying the
  * same drawn labels, wrapped onto a real frame. It is the LCP element and it is
  * a STILL: `Film` layers the clip over it only on a desktop pointer with motion
  * allowed, so the phone Lighthouse audits never fetches a frame of video. How
  * the label artwork got onto the glass is documented in
  * components/product/media.ts.
  *
- * What the scrub moves, then, is the composition rather than a canvas: the
- * masthead lifts and thins, the line-up rises into the frame, and the closing
- * band resolves. Under reduced motion the track collapses to one screen and
- * the same composition is simply already assembled — see home.module.css.
+ * THE CLIP PLAYS; IT IS NOT SCRUBBED. That was measured, not assumed, and the
+ * numbers are in evidence/seek-bench.json. Every clip in public/media/film is
+ * encoded as one long GOP — `range.mp4` carries a single sync sample, at frame
+ * 1 of 132, and `range.webm` has two cue points, 0.0s and 5.333s. Seeking into
+ * a GOP that shape means decoding forward from the head every time, and the
+ * measured cost of one `currentTime` seek was 85ms median and 264ms at the 95th
+ * percentile unthrottled, rising to 159ms/251ms at 6x CPU. A scrub needs a
+ * frame every 16ms. Straight playback of the same file dropped 0 frames of 128
+ * at every throttle. The clip is also a push-in that returns to where it
+ * started, so there is no 0→1 arc for a scroll to map onto even if seeking
+ * were free.
+ *
+ * So what the SCROLL drives is the composition, and every property it touches
+ * is a compositor transform: the masthead lifts and thins, the line-up rises
+ * and comes forward, the wash behind it drifts at a third of that rate, and
+ * the closing band holds. Four layers at four rates is where the depth comes
+ * from. Under reduced motion the track collapses to one screen and the same
+ * composition is simply already assembled — see home.module.css.
  */
 export function Hero() {
   const shopLive = isLive({ href: BUY.shop.href, label: BUY.shop.label });
@@ -62,6 +75,24 @@ export function Hero() {
           aria-label="Half Sour"
         >
           {/*
+            The layer the product stands in front of, and the reason the hero
+            reads as having depth at all rather than as three things sliding.
+            It is a wash in a semantic surface token — no pigment here — sized
+            well past the stage on every edge so that when the scrub drifts it,
+            no edge of it can ever enter the frame.
+
+            Purely decorative and behind everything, so it is out of the
+            accessibility tree and cannot take a pointer event. It carries no
+            information: with scripting off it simply sits still, which is what
+            it looks like anyway until you scroll.
+          */}
+          <div
+            className={cx(styles.heroBackdrop)}
+            data-hero-backdrop
+            aria-hidden="true"
+          />
+
+          {/*
             The wordmark is drawn geometry loaded as a CSS mask, so it takes
             its colour from the type around it and never has to be recut for a
             second ground. brand/assets/wordmark.svg stays byte-identical.
@@ -75,7 +106,10 @@ export function Hero() {
             level-1 heading. The h1 takes its accessible name from that span's
             aria-label, so it reads "HALF SOUR".
           */}
-          <h1 className="pt-stack pb-stack" data-hero-mark>
+          {/* `relative` on the three content layers, and only for stacking:
+              the backdrop above is positioned, so without it the wash would
+              paint over the type rather than behind it. */}
+          <h1 className="pt-stack pb-stack relative" data-hero-mark>
             <span
               className={cx(
                 styles.wordmark,
@@ -115,14 +149,14 @@ export function Hero() {
               sizes="(max-width: 80rem) 100vw, 1280px"
               className={cx(styles.heroArt)}
             />
-            <Film shot={RANGE_SHOT} fit="contain" />
+            <FilmMount shot={RANGE_SHOT} fit="contain" />
           </div>
 
           {/* The closing band. It runs the full width of the stage, which is
               what keeps a 1920 viewport from reading as a small composition
               adrift in a large window. */}
           <div
-            className="max-w-page pb-block pt-stack gap-stack flex w-full flex-col items-center gap-y-6 lg:flex-row lg:items-end lg:justify-between"
+            className="max-w-page pb-block pt-stack gap-stack relative flex w-full flex-col items-center gap-y-6 lg:flex-row lg:items-end lg:justify-between"
             data-hero-band
           >
             <div className="max-w-prose text-center lg:text-left">

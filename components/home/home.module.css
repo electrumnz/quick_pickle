@@ -128,6 +128,38 @@
   z-index: 0;
 }
 
+/* ---------------------------------------------------------- hero backdrop */
+
+/* The slowest of the hero's four layers, and the only one that is not content.
+
+   Two things about the geometry are load-bearing. It is inset NEGATIVELY on
+   every side, so the layer is larger than the stage that clips it and the
+   scrub can drift it without an edge ever entering frame — an oversized layer
+   is the difference between parallax and a visible rectangle sliding. And it
+   is `z-index: 0` rather than a negative index: `.heroStage` is sticky and so
+   already a stacking context, but a negative index there paints the wash
+   behind the stage's own background rather than behind its content, which
+   put it out of sight entirely on the dark scheme.
+
+   The colour is a semantic surface token, so it re-resolves with the scheme.
+   The stop is deliberately short of the frame edge: past about 70% the wash
+   turns into a visible disc, which is the failure mode that makes this kind
+   of thing read as a template. */
+.heroBackdrop {
+  position: absolute;
+  inset: -12% -8%;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    58% 46% at 50% 56%,
+    var(--surface-sunken) 0%,
+    transparent 70%
+  );
+  /* Held low on purpose. This should be felt as the ground the bottles stand
+     on, never noticed as a shape of its own. */
+  opacity: 0.55;
+}
+
 /* --------------------------------------------------------------- masthead */
 
 /* The masthead is out of flow, so its height is a number the hero has to know

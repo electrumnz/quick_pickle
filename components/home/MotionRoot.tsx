@@ -9,7 +9,7 @@ import { useMotionProfile } from "./use-motion";
 /**
  * The page's motion runtime. Mounted once, renders nothing.
  *
- * Three jobs:
+ * Four jobs:
  *
  *  1. Smooth scroll (Lenis) — full-motion visitors only. Lenis is dynamically
  *     imported so neither it nor GSAP is in the first byte of JS the browser
@@ -18,7 +18,10 @@ import { useMotionProfile } from "./use-motion";
  *     start state is set in JavaScript, never in CSS, which is what keeps the
  *     page fully legible with scripting switched off. If this file never runs,
  *     every section is simply already there.
- *  3. Reduced motion — a different sequence, not a missing one. Travel goes to
+ *  3. Parallax over `[data-parallax]` — one restrained beat below the hero,
+ *     on a figure-and-ground pair rather than on running text. See the block
+ *     itself for why that distinction is the whole design.
+ *  4. Reduced motion — a different sequence, not a missing one. Travel goes to
  *     zero and the scrub becomes a one-shot threshold transition, so content
  *     still arrives in order and still resolves, it just does not move you.
  *     Values come from lib/brand/motion.ts; nothing here invents a duration.
@@ -132,6 +135,56 @@ export function MotionRoot() {
             },
           });
         });
+      });
+
+      /* -------------------------------------------------------- parallax */
+
+      /* Depth below the hero, and deliberately almost none of it.
+
+         The hero has four real layers to separate — type, product, wash,
+         band — and that is where the depth budget is spent. The sections
+         under it are type, and type that drifts against its own heading does
+         not read as depth, it reads as a rendering fault. So this is applied
+         to figure-and-ground pairs only: something that sits ON something.
+
+         A `[data-parallax]` element must never also be `[data-reveal]`. Both
+         animate `y`, and two tweens on one channel fight; the pattern is a
+         reveal on the ground and a parallax on the figure inside it.
+
+         The travel is a fraction of --motion-distance-parallax, which the
+         token layer already sets to 0px under prefers-reduced-motion. That is
+         why there is no reduced branch here — at 0 the guard below simply
+         skips the work rather than building triggers that animate nothing. */
+      const parallax = px(MOTION_VARS.distance.parallax);
+
+      ctx.add(() => {
+        if (parallax <= 0) return;
+        document
+          .querySelectorAll<HTMLElement>("[data-parallax]")
+          .forEach((el) => {
+            const rate = Number.parseFloat(el.dataset.parallax ?? "");
+            if (!Number.isFinite(rate) || rate === 0) return;
+            const distance = parallax * rate;
+            gsap.fromTo(
+              el,
+              { y: distance },
+              {
+                y: -distance,
+                // Scroll-linked motion reads as a lie about the scroll
+                // position the moment it is eased.
+                ease: "none",
+                scrollTrigger: {
+                  // The ground is the trigger, not the figure: a figure that
+                  // triggers on itself starts moving only once it is already
+                  // in frame, which is visible as a jump.
+                  trigger: el.parentElement ?? el,
+                  start: "top bottom",
+                  end: "bottom top",
+                  scrub: 0.5,
+                },
+              },
+            );
+          });
       });
 
       cleanups.push(() => ctx.revert());
