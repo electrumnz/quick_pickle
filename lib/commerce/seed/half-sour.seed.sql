@@ -1,8 +1,11 @@
 -- =============================================================================
 -- HALF SOUR — commerce fixture for the mock provider
 --
--- The real product line, as it exists in Shopify today: four SKUs, NZD,
--- 500 ml bottles. Everything is written with provider = 'local' and
+-- The real product line, as it exists in Shopify today: four brines plus the
+-- three-bottle set, NZD, 500 ml bottles. No 04 WILD is stocked in genuinely
+-- small numbers because its supply is limited by kawakawa leaf and not by
+-- demand — the low-stock path is exercised by real fixture data, not by a
+-- test that reaches in and sets it. Everything is written with provider = 'local' and
 -- sync_status = 'local', which is the schema's discriminator for "this row was
 -- never a mirror of a Shopify object" — so seeding a database does not make the
 -- Shopify sync think it has work to do.
@@ -72,7 +75,19 @@ values
    array['set','gift','bar','brine'],
    'The Full Set — three Half Sour brines',
    'All three Half Sour brines in one box. 3 x 500ml, NZ made.',
-   true, true, '/products/the-full-set.jpg', 4)
+   true, true, '/products/the-full-set.jpg', 5),
+
+  -- No sourcing relationship is asserted here. The leaf supply is a fact about
+  -- how much can be made; naming a grower would be a place-of-origin claim
+  -- (Fair Trading Act s 13(j)) and there is no verified grower yet.
+  ('11111111-0000-4000-8000-000000000005', 'local', 'local', 'no-04-wild',
+   'No 04 WILD', 'Kawakawa, kelp, lemon peel',
+   'Kawakawa, kelp and lemon peel. Peppery off the leaf, mineral underneath, and the least like anything else on the shelf. Built for seafood: a capful over oysters, the acid in a ceviche, a martini that tastes like the coast. Made in small runs, because the leaf is what limits it and not the demand.',
+   'Brine', 'Half Sour', 'active', now() - interval '40 days',
+   array['brine','bar','mixer','seafood','kawakawa','kelp','limited'],
+   'No 04 WILD kawakawa and kelp brine — Half Sour',
+   'Kawakawa, kelp and lemon peel brine, made for seafood. 500ml, NZ made. Limited by leaf supply.',
+   true, true, '/products/no-04-wild-500ml.jpg', 4)
 on conflict (id) do nothing;
 
 -- --- Variants ----------------------------------------------------------------
@@ -96,7 +111,15 @@ values
 
   ('22222222-0000-4000-8000-000000000004', '11111111-0000-4000-8000-000000000004',
    'local', 'local', 'HS-SET-3', '9421900110046', '3 x 500ml', 500, 3,
-   5400, 6000, 2170, 'NZD', 2450, true, 'deny', false, 540, 1)
+   5400, 6000, 2170, 'NZD', 2450, true, 'deny', false, 540, 1),
+
+  -- Barcode is null because HS-04-500 has not been allocated a GTIN — the live
+  -- Shopify variant carries none, and a made-up one is a made-up identifier.
+  -- 'deny' and track_inventory, deliberately: a bottle that cannot be made to
+  -- order must not be backorderable.
+  ('22222222-0000-4000-8000-000000000005', '11111111-0000-4000-8000-000000000005',
+   'local', 'local', 'HS-04-500', null, '500ml', 500, 1,
+   2600, null, 1015, 'NZD', 780, true, 'deny', false, 365, 1)
 on conflict (id) do nothing;
 
 -- --- Images ------------------------------------------------------------------
@@ -119,7 +142,10 @@ values
    'A 500ml bottle of Half Sour No 03 SMOKE brine', 1, 1600, 2000),
   ('88888888-0000-4000-8000-000000000005', '11111111-0000-4000-8000-000000000004',
    null, 'local', 'local', '/products/the-full-set.jpg',
-   'All three Half Sour brines in their shipping box', 1, 2000, 2000)
+   'All three Half Sour brines in their shipping box', 1, 2000, 2000),
+  ('88888888-0000-4000-8000-000000000006', '11111111-0000-4000-8000-000000000005',
+   null, 'local', 'local', '/products/no-04-wild-500ml.jpg',
+   'A 500ml bottle of Half Sour No 04 WILD brine', 1, 1600, 2000)
 on conflict (id) do nothing;
 
 -- --- Collections -------------------------------------------------------------
@@ -128,9 +154,9 @@ insert into public.collections
    is_published, published_at, position, is_smart, seo_title, seo_description)
 values
   ('33333333-0000-4000-8000-000000000001', 'local', 'local', 'brines',
-   'The Brines', 'Three brines, one bottle size, no filler.',
+   'The Brines', 'Four brines, one bottle size, no filler.',
    '/collections/brines.jpg', true, now() - interval '240 days', 1, false,
-   'Pickle brines — Half Sour', 'All three Half Sour brines, 500ml each.'),
+   'Pickle brines — Half Sour', 'Every Half Sour brine, 500ml each.'),
   ('33333333-0000-4000-8000-000000000002', 'local', 'local', 'bar-and-mixers',
    'Bar & Mixers', 'What to put behind the bar. Every bottle we make earns its place next to a spirit.',
    '/collections/bar-and-mixers.jpg', true, now() - interval '200 days', 2, false,
@@ -150,7 +176,9 @@ values
   ('33333333-0000-4000-8000-000000000002', '11111111-0000-4000-8000-000000000001', 2),
   ('33333333-0000-4000-8000-000000000002', '11111111-0000-4000-8000-000000000003', 3),
   ('33333333-0000-4000-8000-000000000002', '11111111-0000-4000-8000-000000000004', 4),
-  ('33333333-0000-4000-8000-000000000003', '11111111-0000-4000-8000-000000000004', 1)
+  ('33333333-0000-4000-8000-000000000003', '11111111-0000-4000-8000-000000000004', 1),
+  ('33333333-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000005', 4),
+  ('33333333-0000-4000-8000-000000000002', '11111111-0000-4000-8000-000000000005', 5)
 on conflict (collection_id, product_id) do nothing;
 
 -- --- Inventory ---------------------------------------------------------------
@@ -175,7 +203,16 @@ values
   ('22222222-0000-4000-8000-000000000004', '44444444-0000-4000-8000-000000000002',
    'local', 'local', 63, 0, 0, 24, 120, now() - interval '9 days'),
   ('22222222-0000-4000-8000-000000000001', '44444444-0000-4000-8000-000000000003',
-   'local', 'local', 18, 0, 0, 0, 0, now() - interval '2 days')
+   'local', 'local', 18, 0, 0, 0, 0, now() - interval '2 days'),
+  -- No 04 WILD. Fourteen bottles across the two locations that ship, which is
+  -- under the storefront's low-stock threshold on purpose: this is what the
+  -- last kawakawa harvest yielded. reorder_point is 0 because there is nothing
+  -- to reorder — the ops agent's morning queue must not raise a purchase order
+  -- against a constraint no supplier can fill.
+  ('22222222-0000-4000-8000-000000000005', '44444444-0000-4000-8000-000000000001',
+   'local', 'local', 9, 0, 0, 0, 0, now() - interval '4 days'),
+  ('22222222-0000-4000-8000-000000000005', '44444444-0000-4000-8000-000000000002',
+   'local', 'local', 5, 0, 0, 0, 0, now() - interval '4 days')
 on conflict (variant_id, location_id) do nothing;
 
 -- --- Customers ---------------------------------------------------------------

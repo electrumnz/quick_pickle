@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { AvailabilityChip, PriceBlock } from "./bits";
@@ -5,6 +6,7 @@ import { BottlePlate, type PlateVariant } from "./BottlePlate";
 import { BuyForm } from "./BuyPanel";
 import type { CatalogueEntry } from "./catalogue";
 import { productPath, SHOP, SHOP_PATH, STATE } from "./copy";
+import { BOTTLE_SHOTS } from "./media";
 import styles from "./shop.module.css";
 import { cx } from "./cx";
 
@@ -37,15 +39,36 @@ export function ProductCard({
 }) {
   const href = productPath(entry.handle);
   const headingId = `card-${entry.handle}`;
+  // Cards carry the still only. Five clips on one shelf is five video decoders
+  // for a picture nobody has asked to see moving yet; the film is on the
+  // product page, where the bottle is the subject.
+  const shot = entry.brine === null ? null : BOTTLE_SHOTS[entry.brine.id];
 
   return (
     <article className={cx(styles.card)} aria-labelledby={headingId}>
       <div className={cx(styles.plate, styles.cardMedia)}>
-        <BottlePlate
-          variant={plateVariantFor(entry)}
-          label=""
-          className={styles.plateArt}
-        />
+        {shot === null ? (
+          <BottlePlate
+            variant={plateVariantFor(entry)}
+            label=""
+            className={styles.plateArt}
+          />
+        ) : (
+          <div className={styles.photoLayer}>
+            {/* Decorative here, not descriptive: the heading beside it already
+                names the bottle, and the link's accessible name is the job plus
+                the title. A second reading of the same product would be noise
+                in a list of five. */}
+            <Image
+              src={shot.still}
+              alt=""
+              width={shot.width}
+              height={shot.height}
+              sizes="(max-width: 48rem) 7rem, (max-width: 80rem) 46vw, 24vw"
+              className={styles.photo}
+            />
+          </div>
+        )}
       </div>
 
       <div className={styles.cardBody}>

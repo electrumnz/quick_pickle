@@ -12,7 +12,7 @@ import {
   type CatalogueEntry,
 } from "./catalogue";
 import { PRODUCT, productPath, SHOP_PATH } from "./copy";
-import { ProductViewer } from "./ProductViewer";
+import { ProductMedia } from "./ProductMedia";
 import { servesFor, serveCount, type Serve } from "./serves";
 import styles from "./shop.module.css";
 import { StickyBuy } from "./StickyBuy";
@@ -442,7 +442,7 @@ export function ProductView({
 
         <div className="px-gutter pt-stack pb-block">
           <div className="max-w-page gap-block mx-auto grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-            <ProductViewer
+            <ProductMedia
               variant={plate}
               label={`${entry.title}${entry.descriptor === null ? "" : ` — ${entry.descriptor}`}`}
               className={cx(styles.stickyColumn)}

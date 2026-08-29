@@ -2,6 +2,7 @@ import { toDecimalString } from "@/lib/commerce";
 import { siteUrl } from "@/lib/site";
 
 import { catalogueImagesArePublished, type CatalogueEntry } from "./catalogue";
+import { BOTTLE_SHOTS } from "./media";
 import { productPath, SHOP_PATH } from "./copy";
 
 /**
@@ -91,7 +92,16 @@ export function productJsonLd(entry: CatalogueEntry): Json {
   const catalogueImage = catalogueImagesArePublished()
     ? entry.product?.featuredImage?.url
     : undefined;
-  const image = catalogueImage ?? `${base}/product/bottle-plate.svg`;
+  // Order of preference: what the commerce provider publishes, then the studio
+  // photograph of this bottle, then the drawn plate. A rich result wants a
+  // photograph, and the drawn plate was only ever the answer while there was
+  // no photography at all.
+  const shot = entry.brine === null ? null : BOTTLE_SHOTS[entry.brine.id];
+  const image =
+    catalogueImage ??
+    (shot === null
+      ? `${base}/product/bottle-plate.svg`
+      : `${base}${shot.still}`);
 
   const node: Json = {
     "@context": "https://schema.org",

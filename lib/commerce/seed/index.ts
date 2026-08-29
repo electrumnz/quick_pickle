@@ -52,6 +52,8 @@ export const SEED_VARIANTS = {
   dirty: "22222222-0000-4000-8000-000000000002",
   smoke: "22222222-0000-4000-8000-000000000003",
   fullSet: "22222222-0000-4000-8000-000000000004",
+  /** HS-04-500. Fourteen bottles in the fixture, and that is the whole run. */
+  wild: "22222222-0000-4000-8000-000000000005",
 } as const;
 
 export const SEED_CUSTOMERS = {
@@ -73,6 +75,7 @@ export const SEED_PRODUCTS = {
   dirty: "11111111-0000-4000-8000-000000000002",
   smoke: "11111111-0000-4000-8000-000000000003",
   fullSet: "11111111-0000-4000-8000-000000000004",
+  wild: "11111111-0000-4000-8000-000000000005",
 } as const;
 
 /**

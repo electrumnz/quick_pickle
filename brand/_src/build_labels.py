@@ -50,6 +50,15 @@ SKUS = [
     dict(no="03", name="SMOKE", sub="SMOKED CHILLI BRINE",
          ing="CUCUMBER BRINE / SMOKED CHILLI / DILL / GARLIC / BAY / SEA SALT",
          band=CHILLI, bandtype=BONE, ground=BONE, ink=INK, accent=CHILLI),
+    # No 04 takes DILL — the deep green `lib/brand` calls the second accent and
+    # `components/product/label-art.ts` already assigns to this SKU. It is NOT a
+    # recolour of SMOKE. Every word here is already in content/brines.ts and has
+    # passed the copy audit: "Coastal Brine" is the descriptor, and kawakawa and
+    # kelp appear as INGREDIENT NAMES only, which is the one use COPY-RULES.md
+    # Group H (WILD-02) permits.
+    dict(no="04", name="WILD", sub="COASTAL BRINE",
+         ing="CUCUMBER BRINE / KAWAKAWA / KELP / LEMON PEEL / SEA SALT",
+         band=DILL, bandtype=BONE, ground=BONE, ink=INK, accent=DILL),
 ]
 
 def label_body(s, w=LW, h=LH):
@@ -167,11 +176,19 @@ if __name__ == "__main__":
     for s in SKUS:
         files["label-%s-%s.svg" % (s["no"], s["name"].lower())] = svg(
             LW, LH, "HALF SOUR No %s %s — label artwork" % (s["no"], s["name"]), label_body(s))
+    # The line-up is drawn from SKUS, so adding a bottle above widens the
+    # artwork rather than leaving the picture one short of the range. Consumers
+    # of bottles.svg carry the intrinsic size (components/home/Hero.tsx), so the
+    # count is in the title too and not left as a stale word.
     gap = 20.0
-    body = ['<rect width="%s" height="%s" fill="none"/>' % (_f(3*BW+2*gap), _f(BH))]
+    n = len(SKUS)
+    width = n*BW + (n-1)*gap
+    count = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five"}.get(n, str(n))
+    body = ['<rect width="%s" height="%s" fill="none"/>' % (_f(width), _f(BH))]
     for i, s in enumerate(SKUS):
         body.append(bottle(s, i*(BW+gap)))
-    files["bottles.svg"] = svg(3*BW+2*gap, BH, "HALF SOUR launch line — three 500ml bottles", body)
+    files["bottles.svg"] = svg(
+        width, BH, "HALF SOUR launch line — %s 500ml bottles" % count, body)
     for n, c in files.items():
         open(os.path.join(OUT, n), "w").write(c)
         print("  %-30s %6d" % (n, len(c)))

@@ -1,7 +1,7 @@
 -- =============================================================================
 -- HALF SOUR — SEED
 --
--- Four months of a real small business: the three-brine line that is live in
+-- Four months of a real small business: the four-brine line that is live in
 -- Shopify (Picklin Jews / sgu8sy-at.myshopify.com, NZD, Pacific/Auckland),
 -- 95 orders across New Zealand, versioned production recipes, batches traced
 -- through to the order lines that shipped from them, five AI staff with live
@@ -280,6 +280,22 @@ values
    'https://cdn.shopify.com/s/files/1/0912/3456/7890/files/no-03-smoke-hero.jpg', 30,
    'shopify', 'gid://shopify/Product/9389912490234', now() - interval '2 days', 'synced', now() - interval '14 minutes'),
 
+  -- No 04 WILD. Product, variant and inventory-item gids below are the REAL
+  -- ones off sgu8sy-at.myshopify.com (read 29 Aug 2026), not invented.
+  --
+  -- The live Shopify description carries a fourth paragraph naming a Tairawhiti
+  -- kawakawa grower. That relationship does not exist yet, which makes it a
+  -- place-of-origin claim under Fair Trading Act s 13(j) — TODO.md tracks it.
+  -- It is deliberately NOT reproduced here: the constraint on how much can be
+  -- made is a fact and is stated; who grows the leaf is not, and is not.
+  ('no-04-wild', 'No 04 WILD', 'Coastal brine. Kawakawa, kelp, lemon peel.',
+   'Kawakawa, kelp and lemon peel. Peppery off the leaf, mineral and faintly oceanic underneath, and the least like anything else on the shelf. Built for seafood: a capful over oysters, the acid in a ceviche, a martini that tastes like the coast rather than the bar. It sits with a gin that has real botanicals in it instead of fighting one. Made in small runs — the leaf is what limits it, not the demand. 500ml.',
+   'Brine', 'active', now() - interval '6 weeks', '{wild,kawakawa,kelp,seafood,limited,vegan,gluten-free}',
+   'No 04 WILD — kawakawa and kelp brine | Half Sour',
+   'Kawakawa, kelp and lemon peel brine, built for seafood. Limited by leaf supply. Made in Auckland, 500ml.',
+   null, 35,
+   'shopify', 'gid://shopify/Product/9389915963642', now() - interval '2 days', 'synced', now() - interval '14 minutes'),
+
   ('the-full-set', 'The Full Set', 'All three, boxed.',
    'No 01, No 02 and No 03 in a rigid box with three cards: a Dirty Martini, a Bloody Mary and the pickleback. It is what we send when we do not know what someone drinks, and it is most of our December. 3 x 500ml.',
    'Gift', 'active', now() - interval '5 months', '{gift,bundle,set,vegan,gluten-free}',
@@ -298,10 +314,18 @@ select p.id, v.sku, v.barcode, v.title, v.size_ml, v.pack, v.price, v.cost, v.we
     ('no-01-house',  'HS-01-500', '9421903880014', '500ml',       500, 1, 1800,  620,  860, 540, 'gid://shopify/ProductVariant/48231847592314', 'gid://shopify/InventoryItem/50412938471625'),
     ('no-02-dirty',  'HS-02-500', '9421903880021', '500ml',       500, 1, 2000,  780,  860, 540, 'gid://shopify/ProductVariant/48231847625082', 'gid://shopify/InventoryItem/50412938504393'),
     ('no-03-smoke',  'HS-03-500', '9421903880038', '500ml',       500, 1, 2200,  890,  860, 180, 'gid://shopify/ProductVariant/48231847657850', 'gid://shopify/InventoryItem/50412938537161'),
+    -- HS-04-500 has no GTIN allocated and the live variant carries no barcode,
+    -- so this one is null rather than the next number in the block.
+    -- 1015c unit cost is the No 04 line off the strategy document's own cost
+    -- breakdown (520 + 185 + 60 + 250), not a fresh guess.
+    ('no-04-wild',   'HS-04-500', null,            '500ml',       500, 1, 2600, 1015,  860, 365, 'gid://shopify/ProductVariant/50186882384122', 'gid://shopify/InventoryItem/52028729295098'),
     ('the-full-set', 'HS-SET-3',  '9421903880045', '3 x 500ml',   500, 3, 5400, 2180, 2790, 180, 'gid://shopify/ProductVariant/48231847690618', 'gid://shopify/InventoryItem/50412938569929')
   ) as v(handle, sku, barcode, title, size_ml, pack, price, cost, weight, shelf, gid, inv_gid)
   join public.products p on p.handle = v.handle;
 
+-- No 04 WILD has NO rows here and a null hero_image_url, because the live
+-- Shopify product has no media attached (checked 29 Aug 2026). A mirror that
+-- invented a CDN URL would be a mirror of nothing.
 insert into public.product_images
   (product_id, url, alt_text, position, width_px, height_px, provider, shopify_gid, sync_status, synced_at)
 select p.id, i.url, i.alt, i.pos, 2400, 3000, 'shopify', i.gid, 'synced', now() - interval '14 minutes'
@@ -320,7 +344,7 @@ insert into public.collections
   (handle, title, description, is_published, published_at, position, is_smart, rules,
    provider, shopify_gid, sync_status, synced_at)
 values
-  ('the-brines', 'The Brines', 'No 01 HOUSE, No 02 DIRTY and No 03 SMOKE. Everything we make, in order.',
+  ('the-brines', 'The Brines', 'No 01 HOUSE, No 02 DIRTY, No 03 SMOKE and No 04 WILD. Everything we make, in order.',
    true, now() - interval '5 months', 10, false, null,
    'shopify', 'gid://shopify/Collection/475327070458', 'synced', now() - interval '14 minutes'),
   ('gifts', 'Gifts', 'The Full Set, boxed with recipe cards and posted anywhere in New Zealand.',
@@ -335,6 +359,7 @@ select c.id, p.id, cp.pos
     ('the-brines', 'no-01-house', 10),
     ('the-brines', 'no-02-dirty', 20),
     ('the-brines', 'no-03-smoke', 30),
+    ('the-brines', 'no-04-wild', 35),
     ('gifts', 'the-full-set', 10)
   ) as cp(coll, handle, pos)
   join public.collections c on c.handle = cp.coll
@@ -1055,6 +1080,13 @@ select i.code, i.name, i.cat::public.ingredient_category, i.unit::public.unit_of
     ('CORNICHON',  'Cornichon cucumbers',           'produce',   'kg', 'Small pickling cucumbers, 40-60mm.',                      '{}',          false, 'chilled',  10,  1150,  38.000,  20.000,  80.000, 'PUKEKOHE',  'Grown to order for No 02. Two rows at Pukekohe, picked small.'),
     ('OLIVE_MANZ', 'Spanish manzanilla olives',     'produce',   'kg', 'Whole green manzanilla in 10kg pails, brine packed.',     '{sulphites}', false, 'ambient', 720,  1980,  62.000,  30.000, 120.000, 'MEDITER',   'Contains sulphites, declared on the No 02 label. Two-month lead if a container is missed.'),
     ('LEMON_PEEL', 'Preserved lemon peel',          'produce',   'kg', 'Wide strips, salt-cured, no pith.',                       '{}',          false, 'chilled',  90,  2650,  11.400,   6.000,  24.000, 'MEDITER',   null),
+    -- The two No 04 botanicals have NO preferred supplier and NO row in
+    -- ingredient_suppliers, because there is no supplier. That is not an
+    -- omission to be tidied up later: it is the constraint, written where the
+    -- ops agent reads it. reorder_point is 0 on both, so neither can surface in
+    -- the morning reorder queue and become a purchase order nobody can fill.
+    ('KAWAKAWA',   'Kawakawa leaf',                 'herb',      'kg', 'Whole fresh leaf, stems off, picked to order.',            '{}',          false, 'chilled',   5,  9800,   0.000,   0.000,   0.000, null,        'NO VERIFIED SUPPLIER. Every leaf so far has been hand-picked in small lots and there is no standing arrangement behind it. The cost is an estimate off those lots, not a quoted price. Nothing published may name a grower or a place until a relationship exists — Fair Trading Act s 13(j). This ingredient is the whole reason No 04 is supply-limited.'),
+    ('KELP',       'Bull kelp blade',               'produce',   'kg', 'Storm-cast blade, rinsed, dried and cut.',                 '{}',          false, 'dry',     540,  4400,   3.200,   0.000,   0.000, null,        'NO VERIFIED SUPPLIER. Gathered in small quantities alongside the kawakawa. Cost is an estimate. Do not publish an origin for this either.'),
     ('DILL_FRESH', 'Fresh dill heads',              'herb',      'kg', 'Whole flowering dill heads, stems attached.',              '{}',          true,  'chilled',   7,  2600,   5.100,   8.000,  24.000, 'PUKEKOHE',  'Supply tightens from late August. This is the one that stops No 01.'),
     ('GARLIC',     'Garlic bulbs',                  'produce',   'kg', 'New Zealand grown, cured.',                               '{}',          false, 'ambient', null,  1250,  13.200,   6.000,  20.000, 'PUKEKOHE',  null),
     ('MANZANO',    'Manzano chilli',                'produce',   'kg', 'Fresh manzano, roughly 20,000 SHU.',                      '{}',          false, 'chilled',  10,  3100,   7.800,   6.000,  24.000, 'PUKEKOHE',  'Heat varies a lot by pick. Every No 03 batch gets tasted before the chilli goes in. Up 22% since February.'),
@@ -1071,7 +1103,7 @@ select i.code, i.name, i.cat::public.ingredient_category, i.unit::public.unit_of
     ('CITRIC',     'Citric acid',                   'acid',      'kg', 'Anhydrous, food grade.',                                  '{}',          false, 'dry',     900,   880,   5.200,   3.000,  10.000, 'CANTVIN',   null),
     ('SUGAR_CANE', 'Raw cane sugar',                'sweetener', 'kg', 'Unrefined, 25kg sacks.',                                  '{}',          false, 'dry',     720,   290,  19.000,  15.000,  50.000, 'CANTVIN',   null),
     ('BOTTLE_500', '500ml flint glass bottle',      'packaging', 'ea', 'Flint glass, 38mm neck.',                                 '{}',          false, 'ambient', null,   118,1180.000,1200.000,2400.000, 'GLASSCO',   'BELOW REORDER POINT. Fourteen-day lead time and the last two orders slipped three days each. Nothing else stops the line the way this does.'),
-    ('CAP_38',     '38mm tamper-evident cap',       'packaging', 'ea', 'Tamper band, three colourways.',                          '{}',          false, 'ambient', null,    22,4400.000,2500.000,7500.000, 'GLASSCO',   'Brine green for No 01, olive for No 02, ember for No 03.'),
+    ('CAP_38',     '38mm tamper-evident cap',       'packaging', 'ea', 'Tamper band, four colourways.',                          '{}',          false, 'ambient', null,    22,4400.000,2500.000,7500.000, 'GLASSCO',   'Brine green for No 01, olive for No 02, ember for No 03, dill for No 04.'),
     ('LABEL_500',  '500ml wrap label',              'label',     'ea', 'Uncoated stock, die-cut, batch code overprinted by us.',   '{}',          false, 'ambient', null,    31,3250.000,1500.000,4500.000, 'INKPRESS',  'Never pre-print the batch code. It goes on at bottling.'),
     ('BOX_SET3',   'The Full Set rigid box',        'packaging', 'ea', 'Rigid three-bottle box with moulded pulp insert.',         '{}',          false, 'ambient', null,   420, 210.000, 100.000, 300.000, 'INKPRESS',  null),
     ('CARD_SET3',  'The Full Set recipe cards',     'label',     'ea', 'Three-card set: Dirty Martini, Bloody Mary, pickleback.',  '{}',          false, 'ambient', null,    38, 640.000, 300.000, 900.000, 'INKPRESS',  null)
@@ -1173,6 +1205,12 @@ select r.slug, r.version, r.name, r.descr, p.id, r.status::public.recipe_status,
      'Manzano is up 22% since February and it is the single biggest line on the No 03 cost sheet. A longer smoke carries more of the flavour, so less chilli may get the same result. Waiting on a taste panel.',
      false, interval '3 weeks'),
 
+    ('wild-brine', 1, 'No 04 WILD v1', 'Current. Kawakawa and kelp in at day three, short ferment.', 'no-04-wild', 'active',
+     24.00, 46, 3.38, 4.40, 9,
+     'Rack 9.5kg cucumbers in the 50L vessel. Cover with 4.4% brine. Kawakawa leaf and rinsed kelp blade go in whole at day three, lemon peel at day five. Nine days at 18C — longer and the leaf turns bitter. Strain through muslin, then a 5 micron pad. Chill to 4C, fill 500ml, cap, overprint the batch code. Run size is set by the leaf that arrived, never by the order book.',
+     '{"50L fermenter","muslin","5 micron pad","plate chiller","gravity filler","code printer"}',
+     'No declared allergens. Gluten free. Suitable for vegans.', 21000, null, true, interval '6 weeks'),
+
     ('full-set-pack', 1, 'The Full Set pack-out v1', 'Pack-out procedure, not a brine.', 'the-full-set', 'active',
      1.00, 200, null, null, null,
      'Pack one each of No 01, No 02 and No 03 into the rigid box on the moulded pulp insert, with the three recipe cards. Tape, weigh at 2.79kg plus or minus 40g, and record all three brine batch codes on the pack sheet. The box inherits its traceability from the bottles inside it.',
@@ -1219,6 +1257,13 @@ select r.id, i.id, x.qty, x.unit::public.unit_of_measure, x.pct, x.step, x.prep,
     ('smoke-brine', 1, 'MANZANO',      7.380, 'kg',  4.10, 6, 'Split lengthways, seeds in, added day four. Taste the pick first.', false),
     ('smoke-brine', 1, 'GARLIC',       1.620, 'kg',  0.90, 7, 'Crushed, skins on, added day two.', false),
     ('smoke-brine', 1, 'CORIAND',      0.360, 'kg',  0.20, 8, 'Whole, added day two.', false),
+
+    ('wild-brine', 1, 'CUCUMBER',    9.500, 'kg', 39.58, 1, 'Washed, ends trimmed, racked whole.', false),
+    ('wild-brine', 1, 'WATER_FILT', 22.800, 'l',  95.00, 2, 'Filtered, brought to 18C.', false),
+    ('wild-brine', 1, 'SALT_SEA',    1.056, 'kg',  4.40, 3, 'Dissolved fully before the cucumbers go in.', false),
+    ('wild-brine', 1, 'KELP',        0.360, 'kg',  1.50, 4, 'Rinsed twice to take the surface salt off, added whole at day three.', false),
+    ('wild-brine', 1, 'KAWAKAWA',    0.240, 'kg',  1.00, 5, 'Whole leaf, added at day three. Out at day nine without fail.', false),
+    ('wild-brine', 1, 'LEMON_PEEL',  0.192, 'kg',  0.80, 6, 'Wide strips, no pith, added at day five.', false),
 
     ('full-set-pack', 1, 'BOX_SET3',   1.000, 'ea', null, 1, 'One rigid box with the moulded pulp insert.', false),
     ('full-set-pack', 1, 'CARD_SET3',  3.000, 'ea', null, 2, 'Three cards: Dirty Martini, Bloody Mary, pickleback.', false)
@@ -1272,6 +1317,9 @@ from (values
   ('03','no-03-smoke','smoke-brine',1,'C',interval  '44 days', interval '10 days', interval '12 days','released',180,170.00,340, 4,131,132000,46000,101900,21000,3.32,4.81,'pH 3.32, 4.81% salinity. Hotter pick than B — noted on the pack sheet. Passed.', 'This is the batch behind the three-star heat review.'),
   ('03','no-03-smoke','smoke-brine',1,'D',interval  '12 days', interval '10 days', interval '12 days','released',180,180.00,360, 3,318,139000,48000,106000,22000,3.33,4.78,'pH 3.33, 4.78% salinity. Passed.', null),
   ('03','no-03-smoke','smoke-brine',1,'E',interval   '1 days', null, null,'bottling',180,175.00,  0, 0,  0,141000,    0,     0,     0,null,null,null, 'On the filler now. Labels overprinting this afternoon.'),
+  -- No 04 WILD. One run, ever. Forty bottles is not a soft launch, it is how
+  -- much leaf came in — which is why nothing here plans a second one.
+  ('04','no-04-wild','wild-brine',1,'A',interval  '31 days', interval  '9 days', interval '11 days','released',365, 22.00, 40, 2, 17, 21000, 9000, 12400, 3400,3.37,4.41,'pH 3.37, 4.41% salinity. Two rejected on fill level. Passed.', 'The entire No 04 stock, and there is no second run booked. Do not promise a restock date.'),
   -- The Full Set pack-outs
   ('SET','the-full-set','full-set-pack',1,'X',interval '128 days', interval '0 days', interval '0 days','sold_out',540,0.00,120, 3,  0,     0,20000,238000, 6000,null,null,'Pack sheet complete, all three component codes recorded. Passed.', 'Components: the first HOUSE run, DIRTY A, SMOKE A.'),
   ('SET','the-full-set','full-set-pack',1,'A',interval  '70 days', interval '0 days', interval '0 days','sold_out',540,0.00,160, 2,  0,     0,26000,318000, 8000,null,null,'Pack sheet complete. Passed.', 'Components: HOUSE B, DIRTY B, SMOKE B.'),
@@ -1430,11 +1478,17 @@ select v.id, l.id,
      where oi.variant_id = v.id and o.status = 'open'
        and o.fulfillment_status in ('unfulfilled', 'partially_fulfilled')
   ) cm on true
+  -- No 04 WILD sits at 0/0 deliberately. A reorder point is a promise that
+  -- more can be bought; there is no kawakawa supplier to buy from, so putting a
+  -- number here would put No 04 in the ops agent's morning reorder queue and
+  -- have it raise a purchase order against nobody.
   cross join lateral (
     select case p.handle when 'no-01-house' then 120 when 'no-02-dirty' then 90
-                         when 'no-03-smoke' then 90 else 40 end as point,
+                         when 'no-03-smoke' then 90 when 'no-04-wild' then 0
+                         else 40 end as point,
            case p.handle when 'no-01-house' then 360 when 'no-02-dirty' then 240
-                         when 'no-03-smoke' then 240 else 120 end as qty
+                         when 'no-03-smoke' then 240 when 'no-04-wild' then 0
+                         else 120 end as qty
   ) rp
  where l.ships_orders;
 
@@ -1463,7 +1517,9 @@ select v.id, l.id, x.delta, x.reason::public.inventory_reason, null, null, x.not
     ('HS-01-500',  -3, 'damage',    'Three bottles dropped off the pack bench. Written off.', interval '17 days'),
     ('HS-03-500', -12, 'sample',    'Sample pack for the twelve Wellington venues on the trade approach.', interval '5 days'),
     ('HS-02-500',  -6, 'sample',    'Six bottles to the Coastville market stall for tastings.', interval '9 days'),
-    ('HS-01-500',  -2, 'stocktake', 'Count came in two under. Adjusted rather than argued with.', interval '3 days')
+    ('HS-01-500',  -2, 'stocktake', 'Count came in two under. Adjusted rather than argued with.', interval '3 days'),
+    ('HS-04-500', -12, 'sample',    'Twelve of the forty to the oyster bars and two chefs. No 04 sells by being tasted, and there is not enough of it to sell any other way.', interval '17 days'),
+    ('HS-04-500',  -9, 'sample',    'Nine to the Coastville stall for the seafood weekend.', interval '8 days')
   ) as x(sku, delta, reason, note, ago)
   join public.product_variants v on v.sku = x.sku
   cross join lateral (select id from public.inventory_locations where code = 'SALE_ST') l
