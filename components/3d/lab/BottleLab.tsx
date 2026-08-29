@@ -633,58 +633,58 @@ export function BottleLab() {
       <Leva collapsed hidden={!panelOpen} titleBar={{ title: "Bottle" }} />
 
       {url.chrome === false ? null : (
-      <header
-        style={{
-          position: "fixed",
-          insetInline: 0,
-          top: 0,
-          zIndex: 30,
-          display: "flex",
-          gap: "0.75rem",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0.65rem clamp(0.75rem, 3vw, 1.5rem)",
-          background: "linear-gradient(#08090acc, #08090a00)",
-          fontSize: "0.7rem",
-          letterSpacing: "0.14em",
-          textTransform: "uppercase",
-          pointerEvents: "none",
-        }}
-      >
-        <span style={{ opacity: 0.72 }}>Bottle lab</span>
-        <span
+        <header
           style={{
+            position: "fixed",
+            insetInline: 0,
+            top: 0,
+            zIndex: 30,
             display: "flex",
-            gap: "0.9rem",
-            opacity: 0.55,
-            flexWrap: "wrap",
-            justifyContent: "flex-end",
+            gap: "0.75rem",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0.65rem clamp(0.75rem, 3vw, 1.5rem)",
+            background: "linear-gradient(#08090acc, #08090a00)",
+            fontSize: "0.7rem",
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            pointerEvents: "none",
           }}
         >
-          <span data-testid="fps">{sample.fps.toFixed(0)} fps</span>
-          <span data-testid="tier">{device ? device.tier : "—"}</span>
-          <span data-testid="dpr">dpr {sample.dpr.toFixed(2)}</span>
-          <span data-testid="calls">{sample.calls} calls</span>
-          <button
-            type="button"
-            onClick={() => setPanelOpen((v) => !v)}
+          <span style={{ opacity: 0.72 }}>Bottle lab</span>
+          <span
             style={{
-              pointerEvents: "auto",
-              border: "1px solid #ffffff2e",
-              background: "transparent",
-              color: "inherit",
-              font: "inherit",
-              letterSpacing: "inherit",
-              textTransform: "inherit",
-              padding: "0.25rem 0.6rem",
-              borderRadius: "999px",
-              cursor: "pointer",
+              display: "flex",
+              gap: "0.9rem",
+              opacity: 0.55,
+              flexWrap: "wrap",
+              justifyContent: "flex-end",
             }}
           >
-            {panelOpen ? "Hide controls" : "Controls"}
-          </button>
-        </span>
-      </header>
+            <span data-testid="fps">{sample.fps.toFixed(0)} fps</span>
+            <span data-testid="tier">{device ? device.tier : "—"}</span>
+            <span data-testid="dpr">dpr {sample.dpr.toFixed(2)}</span>
+            <span data-testid="calls">{sample.calls} calls</span>
+            <button
+              type="button"
+              onClick={() => setPanelOpen((v) => !v)}
+              style={{
+                pointerEvents: "auto",
+                border: "1px solid #ffffff2e",
+                background: "transparent",
+                color: "inherit",
+                font: "inherit",
+                letterSpacing: "inherit",
+                textTransform: "inherit",
+                padding: "0.25rem 0.6rem",
+                borderRadius: "999px",
+                cursor: "pointer",
+              }}
+            >
+              {panelOpen ? "Hide controls" : "Controls"}
+            </button>
+          </span>
+        </header>
       )}
 
       {/* A tall track with a pinned canvas: the pour is scrubbed by scroll,

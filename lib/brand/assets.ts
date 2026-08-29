@@ -149,6 +149,14 @@ export const BRAND_ASSETS: readonly BrandAsset[] = [
     ground: null,
     usage: "Product label artwork. Carries its own ground.",
   },
+  {
+    id: "label-04-wild",
+    kind: "label",
+    file: "brand/assets/label-04-wild.svg",
+    label: "Label — Wild",
+    ground: null,
+    usage: "Product label artwork. Carries its own ground.",
+  },
 ] as const;
 
 /** Look one up by id. */

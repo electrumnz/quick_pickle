@@ -31,49 +31,105 @@ const SETTLE = Number(flag("settle", "14000"));
 const SHOTS = [
   {
     name: "hero",
-    q: { tier: "high", still: 1, pour: 0, rot: 0.55, dist: 1.02, cam: 0.3, fov: 26 },
+    q: {
+      tier: "high",
+      still: 1,
+      pour: 0,
+      rot: 0.55,
+      dist: 1.02,
+      cam: 0.3,
+      fov: 26,
+    },
     w: 900,
     h: 1180,
     clip: null,
   },
   {
     name: "label-edge",
-    q: { tier: "high", still: 1, pour: 0, rot: 0.75, dist: 0.62, cam: 0.18, fov: 22 },
+    q: {
+      tier: "high",
+      still: 1,
+      pour: 0,
+      rot: 0.75,
+      dist: 0.62,
+      cam: 0.18,
+      fov: 22,
+    },
     w: 900,
     h: 1180,
     clip: { x: 210, y: 300, width: 480, height: 620 },
   },
   {
     name: "meniscus",
-    q: { tier: "high", still: 1, pour: 0, rot: 0.2, dist: 0.6, cam: 0.72, fov: 22 },
+    q: {
+      tier: "high",
+      still: 1,
+      pour: 0,
+      rot: 0.2,
+      dist: 0.6,
+      cam: 0.72,
+      fov: 22,
+    },
     w: 900,
     h: 1180,
     clip: { x: 230, y: 260, width: 440, height: 520 },
   },
   {
     name: "grounding",
-    q: { tier: "high", still: 1, pour: 0, rot: 0.4, dist: 0.78, cam: -0.02, fov: 26 },
+    q: {
+      tier: "high",
+      still: 1,
+      pour: 0,
+      rot: 0.4,
+      dist: 0.78,
+      cam: -0.02,
+      fov: 26,
+    },
     w: 900,
     h: 1180,
     clip: { x: 130, y: 620, width: 640, height: 480 },
   },
   {
     name: "tier-medium",
-    q: { tier: "medium", still: 1, pour: 0, rot: 0.55, dist: 1.02, cam: 0.3, fov: 26 },
+    q: {
+      tier: "medium",
+      still: 1,
+      pour: 0,
+      rot: 0.55,
+      dist: 1.02,
+      cam: 0.3,
+      fov: 26,
+    },
     w: 700,
     h: 920,
     clip: null,
   },
   {
     name: "tier-low",
-    q: { tier: "low", still: 1, pour: 0, rot: 0.55, dist: 1.02, cam: 0.3, fov: 26 },
+    q: {
+      tier: "low",
+      still: 1,
+      pour: 0,
+      rot: 0.55,
+      dist: 1.02,
+      cam: 0.3,
+      fov: 26,
+    },
     w: 700,
     h: 920,
     clip: null,
   },
   {
     name: "pour",
-    q: { tier: "high", still: 1, pour: 0.52, rot: 0.35, dist: 1.24, cam: 0.5, fov: 30 },
+    q: {
+      tier: "high",
+      still: 1,
+      pour: 0.52,
+      rot: 0.35,
+      dist: 1.24,
+      cam: 0.5,
+      fov: 30,
+    },
     w: 900,
     h: 1000,
     clip: null,
@@ -98,12 +154,18 @@ for (const shot of SHOTS) {
     viewport: { width: shot.w, height: shot.h },
     deviceScaleFactor: 2,
   });
-  page.on("pageerror", (e) => console.log(`  ! ${shot.name}`, String(e).slice(0, 300)));
+  page.on("pageerror", (e) =>
+    console.log(`  ! ${shot.name}`, String(e).slice(0, 300)),
+  );
   const query = new URLSearchParams({ ...shot.q, chrome: "0" }).toString();
   await page.goto(`${BASE}/lab/bottle?${query}`, {
     waitUntil: "domcontentloaded",
     timeout: 180000,
   });
+  // The dev server's own build indicator sits in the corner of every frame.
+  await page.addStyleTag({
+    content: "nextjs-portal,[data-nextjs-toast]{display:none!important}",
+  }).catch(() => {});
   await page.waitForTimeout(SETTLE);
   const probe = await page
     .evaluate(() => window.__hsStats ?? null)
@@ -118,7 +180,10 @@ for (const shot of SHOTS) {
   const file = resolve(OUT, `${PREFIX}${shot.name}.png`);
   writeFileSync(file, Buffer.from(png.data, "base64"));
   stats.push({ shot: shot.name, ...(probe ?? {}) });
-  console.log(`  ${PREFIX}${shot.name}.png`, probe ? JSON.stringify(probe) : "");
+  console.log(
+    `  ${PREFIX}${shot.name}.png`,
+    probe ? JSON.stringify(probe) : "",
+  );
   await page.close();
 }
 

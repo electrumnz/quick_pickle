@@ -88,7 +88,7 @@ export function createCausticMaterial(
         // The light comes from behind, so the pattern it throws lands in FRONT
         // of the bottle and stretches away from the source. A caustic centred
         // under the subject is a caustic nobody lit.
-        vec2 m = (vUv - vec2(0.5, 0.365)) / vec2(0.2, 0.145);
+        vec2 m = (vUv - vec2(0.5, 0.4)) / vec2(0.165, 0.115);
         // A hole where the bottle stands. Light that reaches the table under
         // the glass is the light the glass just bent away from there, so the
         // pattern rings the contact shadow rather than lying across it.
@@ -166,7 +166,6 @@ export function createPoolMaterial(
     `,
   });
 }
-
 
 /**
  * The studio sweep, and the lights that are actually in the room.

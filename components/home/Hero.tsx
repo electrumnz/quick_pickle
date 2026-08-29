@@ -1,3 +1,8 @@
+import Image from "next/image";
+
+import { Film } from "@/components/product/Film";
+import { RANGE_SHOT } from "@/components/product/media";
+
 import { BUY } from "./data";
 import { HeroScrub } from "./HeroScrub";
 import { cx } from "./cx";
@@ -19,8 +24,14 @@ import { isLive } from "./routes";
  * drei add ~285 kB compressed, which put the page at 479,827 bytes of script
  * against a 400,000 ceiling. That decision stands. The 3D system is NOT
  * deleted; it stays whole under components/3d and live at /lab/bottle.
- * `brand/assets/bottles.svg` runs here instead and is the better picture — it
- * carries the real drawn labels for No. 01, No. 02 and No. 03.
+ *
+ * The drawn line-up that stood in for it, `brand/assets/bottles.svg`, has now
+ * been replaced by the range photograph — the same four bottles, carrying the
+ * same drawn labels, wrapped onto a real frame. It is the LCP element and it is
+ * a STILL: `Film` layers the clip over it only on a desktop pointer with motion
+ * allowed, so the phone Lighthouse audits never fetches a frame of video. How
+ * the label artwork got onto the glass is documented in
+ * components/product/media.ts.
  *
  * What the scrub moves, then, is the composition rather than a canvas: the
  * masthead lifts and thins, the line-up rises into the frame, and the closing
@@ -77,27 +88,32 @@ export function Hero() {
           </h1>
 
           {/*
-            The flex box owns the geometry, so the illustration cannot shift
-            the page as it decodes — the CLS budget here is 0.02. width/height
-            carry the intrinsic ratio; object-contain does the rest.
+            The box owns the geometry, so the photograph cannot shift the page
+            as it decodes — the CLS budget here is 0.02. `fill` gives the image
+            `position: absolute; inset: 0` inside this positioned parent, which
+            is a definite box before a byte of the file has arrived, and
+            object-contain does the rest.
 
-            The image is absolutely positioned rather than `h-full` in flow: a
-            percentage height on a child of a flex item whose height is not a
-            definite value resolves to `auto`, so `h-full` fell back to the
-            intrinsic 900px, blew past the viewport and cropped the bottles.
-            inset-0 against a positioned parent is a definite box either way.
+            Absolute rather than `h-full` in flow, and that was not a style
+            choice: a percentage height on a child of a flex item whose height
+            is not a definite value resolves to `auto`, so `h-full` fell back to
+            the intrinsic height, blew past the viewport and cropped the
+            bottles.
           */}
           <div className="relative h-full w-full" data-hero-art>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand/bottles.svg"
-              alt="No. 01 HOUSE, No. 02 DIRTY and No. 03 SMOKE, 500 ml each"
-              width={1120}
-              height={900}
-              className={cx(styles.heroArt, "absolute inset-0 h-full w-full")}
-              decoding="async"
-              fetchPriority="high"
+            <Image
+              src={RANGE_SHOT.still}
+              alt={RANGE_SHOT.alt}
+              fill
+              // The LCP element on this page, so it is fetched at high priority
+              // and never lazily. `sizes` stops a phone pulling the desktop
+              // cut: the stage runs the full viewport width until the page
+              // reaches its own maximum.
+              priority
+              sizes="(max-width: 80rem) 100vw, 1280px"
+              className={cx(styles.heroArt)}
             />
+            <Film shot={RANGE_SHOT} fit="contain" />
           </div>
 
           {/* The closing band. It runs the full width of the stage, which is

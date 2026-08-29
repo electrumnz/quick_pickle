@@ -124,13 +124,13 @@ export default async function IdentityPage() {
                 <div className="flex h-24 w-64 items-center justify-center rounded-md border border-hairline bg-surface-page px-4">
                   <Image
                     src="/brand/bottles.svg"
-                    alt="Three 500ml HALF SOUR bottles side by side"
+                    alt="Four 500ml HALF SOUR bottles side by side"
                     width={220}
                     height={80}
                   />
                 </div>
                 <figcaption className="text-caption text-muted">
-                  The launch line — three bottles. No 04 has no artwork yet.
+                  The launch line — all four bottles, each carrying its own label.
                 </figcaption>
               </figure>
             </CardBody>

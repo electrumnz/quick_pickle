@@ -1,9 +1,19 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, type ReactNode } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { AdaptiveDpr, AdaptiveEvents, PerformanceMonitor } from "@react-three/drei";
+import {
+  AdaptiveDpr,
+  AdaptiveEvents,
+  PerformanceMonitor,
+} from "@react-three/drei";
 import { BottleModel } from "./BottleModel";
 import { StudioEnvironment } from "./StudioEnvironment";
 import { DEFAULT_LIQUID, DEFAULT_STUDIO, TIER_SETTINGS } from "./defaults";
@@ -128,7 +138,7 @@ export function BottleScene({
   ...model
 }: BottleSceneProps) {
   const { tier, decline, incline } = useQualityTier(forceTier);
-  const turntable = useTurntable(interactive);
+  const { bind: bindTurntable, handle: turntable } = useTurntable(interactive);
   const q = TIER_SETTINGS[tier];
   const dprCap = Math.min(maxDpr ?? q.maxDpr, q.maxDpr);
   const setDpr = useRef<((dpr: number) => void) | null>(null);
@@ -150,7 +160,7 @@ export function BottleScene({
   return (
     <div
       className={className}
-      ref={turntable.ref}
+      ref={bindTurntable}
       // `pan-y` even while interactive. The turntable only ever claims
       // horizontal movement, so the browser keeps vertical swipes and the
       // page still scrolls with a finger on the bottle — which `touch-action:
@@ -222,7 +232,7 @@ export function BottleScene({
             height={height}
             liquidTint={liquidTint}
           />
-          <Turntable handle={turntable.handle}>
+          <Turntable handle={turntable}>
             <BottleModel
               {...model}
               height={height}

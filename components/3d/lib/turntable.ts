@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Turn the bottle.
@@ -40,18 +40,20 @@ const MAX_SPIN = 9;
 const KEY_STEP = Math.PI / 9;
 
 export function useTurntable(enabled: boolean): {
-  ref: (el: HTMLElement | null) => void;
+  /** Callback ref for the element the gesture is read from. */
+  bind: (el: HTMLElement | null) => void;
   handle: TurntableHandle;
 } {
   const yaw = useRef(0);
   const velocity = useRef(0);
   const target = useRef<number | null>(null);
   const dragging = useRef(false);
-  const host = useRef<HTMLElement | null>(null);
-  const enabledRef = useRef(enabled);
-  enabledRef.current = enabled;
+  // State rather than a ref, so attaching the element re-runs the listener
+  // effect. A ref would leave the listeners bound to whatever was there on the
+  // first commit, which for a lazily mounted canvas is nothing.
+  const [host, setHost] = useState<HTMLElement | null>(null);
 
-  const handle = useRef<TurntableHandle>({
+  const [handle] = useState<TurntableHandle>(() => ({
     step: (dt: number) => {
       // A keyed nudge is a target to ease toward; a flick is a velocity to
       // spend. Keeping them separate is what stops an arrow press fighting
@@ -73,11 +75,11 @@ export function useTurntable(enabled: boolean): {
       return yaw.current;
     },
     isDragging: () => dragging.current,
-  }).current;
+  }));
 
   useEffect(() => {
-    const el = host.current;
-    if (!el || !enabled) return;
+    const el = host;
+    if (el === null || !enabled) return;
 
     let pointerId: number | null = null;
     let lastX = 0;
@@ -135,7 +137,13 @@ export function useTurntable(enabled: boolean): {
 
     const onKey = (e: KeyboardEvent) => {
       const dir =
-        e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : e.key === "Home" ? 0 : null;
+        e.key === "ArrowRight"
+          ? 1
+          : e.key === "ArrowLeft"
+            ? -1
+            : e.key === "Home"
+              ? 0
+              : null;
       if (dir === null) return;
       e.preventDefault();
       velocity.current = 0;
@@ -155,11 +163,7 @@ export function useTurntable(enabled: boolean): {
       el.removeEventListener("pointercancel", onUp);
       el.removeEventListener("keydown", onKey);
     };
-  }, [enabled]);
+  }, [enabled, host]);
 
-  const ref = useCallback((el: HTMLElement | null) => {
-    host.current = el;
-  }, []);
-
-  return { ref, handle };
+  return { bind: setHost, handle };
 }
