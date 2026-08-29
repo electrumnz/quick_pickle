@@ -61,6 +61,7 @@ __pycache__/
 # stray orchestrator scratch
 _shot.mjs
 .shotcheck/
+.tune.mjs
 
 # agent scratch space
 .scratch/

@@ -430,6 +430,165 @@ export interface MarketModel {
   readonly nextActions: readonly NextAction[];
 }
 
+/* --------------------------------------------------------- 4. The avatars */
+
+/**
+ * An avatar is the BrandScript character with enough detail attached to make a
+ * decision from. The character says who wants what; the avatar says what their
+ * week looks like, what they do instead today, what it takes to make them buy,
+ * what stops them, and — the field this business actually runs on — what would
+ * make them buy a second time.
+ *
+ * Two rules keep these honest rather than decorative:
+ *
+ *  1. **Same two people as the BrandScript.** `derivedFrom` names the character
+ *     each one deepens, and `label` must match it. A third customer invented
+ *     here would be a second company.
+ *  2. **The market model has to be able to count them.** `counted` names the
+ *     inputs in `content/strategy/market.ts` that this person is counted by,
+ *     and how many of them the model implies. An avatar the model cannot count
+ *     is an avatar the plan cannot pay for — and where the two disagree, the
+ *     disagreement is written down in {@link StrategyContradiction} rather than
+ *     smoothed over.
+ */
+
+/** One block of the avatar's week, so "who they are" is a diary, not an adjective. */
+export interface WeekMoment {
+  readonly when: string;
+  readonly what: string;
+  /** Where HALF SOUR could plausibly appear in this moment, if anywhere. */
+  readonly ourWindow: string;
+}
+
+/** What they do today instead of buying this. */
+export interface Alternative {
+  readonly option: string;
+  /** Why it survives. An alternative with no advantage would already be gone. */
+  readonly whyItPersists: string;
+  /** What it costs them, in their words rather than ours. */
+  readonly whatItCosts: string;
+}
+
+/** Where this person is, and what they are reading when they are there. */
+export interface Watering {
+  readonly place: string;
+  readonly reading: string;
+  /** What would have to be true for them to notice us there. */
+  readonly reachedBy: string;
+}
+
+/** The event that turns interest into an order. */
+export interface PurchaseTrigger {
+  readonly trigger: string;
+  readonly whatTheyDoNext: string;
+  /** The surface that has to exist for the trigger to land somewhere. */
+  readonly needs: string;
+}
+
+/** The reason the order does not happen. */
+export interface Objection {
+  readonly objection: string;
+  /** True when the storefront can settle it. False means it needs a person. */
+  readonly answerableOnSite: boolean;
+  readonly ourAnswer: string;
+}
+
+/** What they compare the price against, and where they stop. */
+export interface PriceSensitivity {
+  /** The thing they price this against without being asked to. */
+  readonly anchor: string;
+  readonly comparedWith: readonly {
+    readonly thing: string;
+    /** Integer cents. Never a float in a price path, including this one. */
+    readonly cents: number;
+    readonly note: string;
+  }[];
+  /** What they will pay for a bottle without thinking about it. Cents. */
+  readonly unblinkingCents: number;
+  /** Where the decision becomes deliberate. Cents. */
+  readonly deliberateCents: number;
+  /** The cost that is not on the price tag and decides the order anyway. */
+  readonly hiddenCost: string;
+  readonly note: string;
+}
+
+/** Repeat is the whole business at 10,560 bottles a year. */
+export interface RepeatEngine {
+  readonly cadence: string;
+  /** Bottles a year. Must agree with the market input named in `counted`. */
+  readonly bottlesPerYear: number;
+  readonly whatBringsThemBack: readonly string[];
+  readonly whatLosesThem: readonly string[];
+  /** The one number that says whether repeat is working. */
+  readonly theCheck: string;
+}
+
+/** How the market model counts this person — or fails to. */
+export interface MarketReconciliation {
+  /** The channel this avatar buys through, in the model's language. */
+  readonly channel: string;
+  /** Market input ids this person is counted by. Every one must exist. */
+  readonly countedBy: readonly string[];
+  /** The input whose value must equal `repeat.bottlesPerYear`. */
+  readonly bottlesInput: string;
+  /** How many of this person the year-2 plan implies. */
+  readonly howMany: string;
+  /** Their share of the 10,560-bottle ceiling, said out loud. */
+  readonly capacityShare: string;
+}
+
+/** One complete avatar. */
+export interface CustomerAvatar {
+  readonly id: AudienceId;
+  readonly slug: string;
+  /** Must equal `brandScript.audiences[id].character.label`. */
+  readonly label: string;
+  /** The avatar in one sentence, for the top of a card. */
+  readonly headline: string;
+  /** The BrandScript field this deepens. */
+  readonly derivedFrom: string;
+  readonly who: string;
+  readonly week: readonly WeekMoment[];
+  /** What they are hiring a bottle of brine to do. One job. */
+  readonly jobToBeDone: string;
+  readonly insteadToday: readonly Alternative[];
+  readonly whereTheyAre: readonly Watering[];
+  readonly triggers: readonly PurchaseTrigger[];
+  readonly whatStopsThem: readonly Objection[];
+  readonly price: PriceSensitivity;
+  readonly repeat: RepeatEngine;
+  readonly counted: MarketReconciliation;
+  /** Who this is NOT, so the agents stop writing at somebody else. */
+  readonly notThisPerson: readonly string[];
+}
+
+/**
+ * Two parts of the strategy that cannot both be right.
+ *
+ * Written down rather than resolved in silence: the point of holding the
+ * strategy as data is that a disagreement between two files is visible, and the
+ * founder gets to decide which one moves.
+ */
+export interface StrategyContradiction {
+  readonly id: string;
+  /** The two places, as field paths. */
+  readonly between: readonly [string, string];
+  readonly says: string;
+  /** Which one is wrong, and why. Not "both have a point". */
+  readonly wrongOne: string;
+  /** What would settle it, and when. */
+  readonly settledBy: string;
+}
+
+export interface AudienceAvatars {
+  readonly version: string;
+  /** One plain sentence: what this framework is FOR. */
+  readonly purpose: string;
+  readonly avatars: Readonly<Record<AudienceId, CustomerAvatar>>;
+  readonly contradictions: readonly StrategyContradiction[];
+  readonly nextActions: readonly NextAction[];
+}
+
 /* ------------------------------------------------------------- the bundle */
 
 /**
@@ -446,4 +605,9 @@ export interface Strategy {
   readonly brandScript: BrandScript;
   readonly flightPlan: FlightPlan;
   readonly market: MarketModel;
+  /**
+   * The two BrandScript characters, deepened into people a decision can be made
+   * from — and the audit in `lib/strategy/audit.ts` is written out of them.
+   */
+  readonly avatars: AudienceAvatars;
 }

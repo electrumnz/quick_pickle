@@ -1,0 +1,1191 @@
+{
+  "$note": "copy-audit-ignore-file — generated evidence; see scrub-frames.mjs",
+  "base": "http://localhost:3517",
+  "frames": [
+    {
+      "file": "scrub-375-p000.png",
+      "name": "scrub-375",
+      "width": 375,
+      "stop": 0,
+      "trackSpan": 900,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 1800,
+      "scrub": "on",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    {
+      "file": "scrub-375-p025.png",
+      "name": "scrub-375",
+      "width": 375,
+      "stop": 0.25,
+      "trackSpan": 900,
+      "scrollY": 221,
+      "trackTop": -221,
+      "trackHeight": 1800,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -8.47125)",
+        "opacity": "0.7783"
+      },
+      "art": {
+        "transform": "matrix(1.0394, 0, 0, 1.0394, 0, -8.26802)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0123, 0, 0, 1.0123, 0, -8.2766)",
+        "opacity": "0.6067"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -5.9119)",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    {
+      "file": "scrub-375-p050.png",
+      "name": "scrub-375",
+      "width": 375,
+      "stop": 0.5,
+      "trackSpan": 900,
+      "scrollY": 444,
+      "trackTop": -444,
+      "trackHeight": 1800,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -16.9685)",
+        "opacity": "0.5559"
+      },
+      "art": {
+        "transform": "matrix(1.0789, 0, 0, 1.0789, 0, -16.5615)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0247, 0, 0, 1.0247, 0, -16.5786)",
+        "opacity": "0.6635"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -11.8419)",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    {
+      "file": "scrub-375-p075.png",
+      "name": "scrub-375",
+      "width": 375,
+      "stop": 0.75,
+      "trackSpan": 900,
+      "scrollY": 714,
+      "trackTop": -714,
+      "trackHeight": 1800,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -27.2572)",
+        "opacity": "0.2867"
+      },
+      "art": {
+        "transform": "matrix(1.1268, 0, 0, 1.1268, 0, -26.6036)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0396, 0, 0, 1.0396, 0, -26.6311)",
+        "opacity": "0.7323"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -19.0222)",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    {
+      "file": "scrub-375-p100.png",
+      "name": "scrub-375",
+      "width": 375,
+      "stop": 1,
+      "trackSpan": 900,
+      "scrollY": 893,
+      "trackTop": -893,
+      "trackHeight": 1800,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -34.1244)",
+        "opacity": "0.107"
+      },
+      "art": {
+        "transform": "matrix(1.1588, 0, 0, 1.1588, 0, -33.3056)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0496, 0, 0, 1.0496, 0, -33.3404)",
+        "opacity": "0.7782"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -23.8146)",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    {
+      "file": "scrub-768-p000.png",
+      "name": "scrub-768",
+      "width": 768,
+      "stop": 0,
+      "trackSpan": 1440,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 4.21,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 753,
+      "clientWidth": 768
+    },
+    {
+      "file": "scrub-768-p025.png",
+      "name": "scrub-768",
+      "width": 768,
+      "stop": 0.25,
+      "trackSpan": 1440,
+      "scrollY": 352,
+      "trackTop": -352,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -14.4797)",
+        "opacity": "0.78"
+      },
+      "art": {
+        "transform": "matrix(1.0391, 0, 0, 1.0391, 0, -8.38301)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0122, 0, 0, 1.0122, 0, -8.2137)",
+        "opacity": "0.6062"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -5.8669)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 0.94,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 753,
+      "clientWidth": 768
+    },
+    {
+      "file": "scrub-768-p050.png",
+      "name": "scrub-768",
+      "width": 768,
+      "stop": 0.5,
+      "trackSpan": 1440,
+      "scrollY": 717,
+      "trackTop": -717,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -29.4931)",
+        "opacity": "0.5519"
+      },
+      "art": {
+        "transform": "matrix(1.0797, 0, 0, 1.0797, 0, -17.0746)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0249, 0, 0, 1.0249, 0, -16.7301)",
+        "opacity": "0.6645"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -11.9501)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 3.11,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 753,
+      "clientWidth": 768
+    },
+    {
+      "file": "scrub-768-p075.png",
+      "name": "scrub-768",
+      "width": 768,
+      "stop": 0.75,
+      "trackSpan": 1440,
+      "scrollY": 1075,
+      "trackTop": -1075,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -44.2191)",
+        "opacity": "0.3281"
+      },
+      "art": {
+        "transform": "matrix(1.1194, 0, 0, 1.1194, 0, -25.6002)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0373, 0, 0, 1.0373, 0, -25.0835)",
+        "opacity": "0.7217"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -17.9168)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 5.26,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 753,
+      "clientWidth": 768
+    },
+    {
+      "file": "scrub-768-p100.png",
+      "name": "scrub-768",
+      "width": 768,
+      "stop": 1,
+      "trackSpan": 1440,
+      "scrollY": 1431,
+      "trackTop": -1431,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -58.8715)",
+        "opacity": "0.1055"
+      },
+      "art": {
+        "transform": "matrix(1.159, 0, 0, 1.159, 0, -34.0832)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0497, 0, 0, 1.0497, 0, -33.3952)",
+        "opacity": "0.7786"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -23.8537)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 2.1,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 753,
+      "clientWidth": 768
+    },
+    {
+      "file": "scrub-1280-p000.png",
+      "name": "scrub-1280",
+      "width": 1280,
+      "stop": 0,
+      "trackSpan": 1440,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 4.21,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-p025.png",
+      "name": "scrub-1280",
+      "width": 1280,
+      "stop": 0.25,
+      "trackSpan": 1440,
+      "scrollY": 363,
+      "trackTop": -363,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -20.9158)",
+        "opacity": "0.7731"
+      },
+      "art": {
+        "transform": "matrix(1.0403, 0, 0, 1.0403, 0, -8.46181)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0126, 0, 0, 1.0126, 0, -8.4701)",
+        "opacity": "0.608"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -6.0501)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 0.83,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-p050.png",
+      "name": "scrub-1280",
+      "width": 1280,
+      "stop": 0.5,
+      "trackSpan": 1440,
+      "scrollY": 714,
+      "trackTop": -714,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -41.1416)",
+        "opacity": "0.5537"
+      },
+      "art": {
+        "transform": "matrix(1.0793, 0, 0, 1.0793, 0, -16.6445)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0248, 0, 0, 1.0248, 0, -16.6609)",
+        "opacity": "0.664"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -11.9006)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 3.32,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-p075.png",
+      "name": "scrub-1280",
+      "width": 1280,
+      "stop": 0.75,
+      "trackSpan": 1440,
+      "scrollY": 1077,
+      "trackTop": -1077,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -62.0557)",
+        "opacity": "0.3269"
+      },
+      "art": {
+        "transform": "matrix(1.1197, 0, 0, 1.1197, 0, -25.1059)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0374, 0, 0, 1.0374, 0, -25.1302)",
+        "opacity": "0.722"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -17.9502)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 0.19,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-p100.png",
+      "name": "scrub-1280",
+      "width": 1280,
+      "stop": 1,
+      "trackSpan": 1440,
+      "scrollY": 1434,
+      "trackTop": -1434,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -82.6256)",
+        "opacity": "0.1037"
+      },
+      "art": {
+        "transform": "matrix(1.1593, 0, 0, 1.1593, 0, -33.4276)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0498, 0, 0, 1.0498, 0, -33.4603)",
+        "opacity": "0.779"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -23.9002)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 2.6,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1920-p000.png",
+      "name": "scrub-1920",
+      "width": 1920,
+      "stop": 0,
+      "trackSpan": 1440,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 4.21,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1905,
+      "clientWidth": 1920
+    },
+    {
+      "file": "scrub-1920-p025.png",
+      "name": "scrub-1920",
+      "width": 1920,
+      "stop": 0.25,
+      "trackSpan": 1440,
+      "scrollY": 366,
+      "trackTop": -366,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -24.3585)",
+        "opacity": "0.7712"
+      },
+      "art": {
+        "transform": "matrix(1.0407, 0, 0, 1.0407, 0, -7.4871)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0127, 0, 0, 1.0127, 0, -8.54)",
+        "opacity": "0.6085"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -6.1)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 1.17,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1905,
+      "clientWidth": 1920
+    },
+    {
+      "file": "scrub-1920-p050.png",
+      "name": "scrub-1920",
+      "width": 1920,
+      "stop": 0.5,
+      "trackSpan": 1440,
+      "scrollY": 714,
+      "trackTop": -714,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -47.5209)",
+        "opacity": "0.5537"
+      },
+      "art": {
+        "transform": "matrix(1.0793, 0, 0, 1.0793, 0, -14.606)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0248, 0, 0, 1.0248, 0, -16.6605)",
+        "opacity": "0.664"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -11.9004)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 3.87,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1905,
+      "clientWidth": 1920
+    },
+    {
+      "file": "scrub-1920-p075.png",
+      "name": "scrub-1920",
+      "width": 1920,
+      "stop": 0.75,
+      "trackSpan": 1440,
+      "scrollY": 1079,
+      "trackTop": -1079,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -71.8186)",
+        "opacity": "0.3256"
+      },
+      "art": {
+        "transform": "matrix(1.1199, 0, 0, 1.1199, 0, -22.0746)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0375, 0, 0, 1.0375, 0, -25.1792)",
+        "opacity": "0.7224"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -17.9851)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 1.15,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1905,
+      "clientWidth": 1920
+    },
+    {
+      "file": "scrub-1920-p100.png",
+      "name": "scrub-1920",
+      "width": 1920,
+      "stop": 1,
+      "trackSpan": 1440,
+      "scrollY": 1440,
+      "trackTop": -1440,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -95.8372)",
+        "opacity": "0.1"
+      },
+      "art": {
+        "transform": "matrix(1.16, 0, 0, 1.16, 0, -29.4569)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.05, 0, 0, 1.05, 0, -33.6)",
+        "opacity": "0.78"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -24)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 3.73,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1905,
+      "clientWidth": 1920
+    },
+    {
+      "file": "scrub-1280-reduced-motion-p000.png",
+      "name": "scrub-1280-reduced-motion",
+      "width": 1280,
+      "stop": 0,
+      "trackSpan": 0,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 900,
+      "scrub": "off",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-reduced-motion-p025.png",
+      "name": "scrub-1280-reduced-motion",
+      "width": 1280,
+      "stop": 0.25,
+      "trackSpan": 0,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 900,
+      "scrub": "off",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-reduced-motion-p050.png",
+      "name": "scrub-1280-reduced-motion",
+      "width": 1280,
+      "stop": 0.5,
+      "trackSpan": 0,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 900,
+      "scrub": "off",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-reduced-motion-p075.png",
+      "name": "scrub-1280-reduced-motion",
+      "width": 1280,
+      "stop": 0.75,
+      "trackSpan": 0,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 900,
+      "scrub": "off",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-reduced-motion-p100.png",
+      "name": "scrub-1280-reduced-motion",
+      "width": 1280,
+      "stop": 1,
+      "trackSpan": 0,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 900,
+      "scrub": "off",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-no-js-p000.png",
+      "name": "scrub-1280-no-js",
+      "width": 1280,
+      "stop": 0,
+      "trackSpan": 0,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 900,
+      "scrub": "off",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-no-js-p025.png",
+      "name": "scrub-1280-no-js",
+      "width": 1280,
+      "stop": 0.25,
+      "trackSpan": 0,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 900,
+      "scrub": "off",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-no-js-p050.png",
+      "name": "scrub-1280-no-js",
+      "width": 1280,
+      "stop": 0.5,
+      "trackSpan": 0,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 900,
+      "scrub": "off",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-no-js-p075.png",
+      "name": "scrub-1280-no-js",
+      "width": 1280,
+      "stop": 0.75,
+      "trackSpan": 0,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 900,
+      "scrub": "off",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-no-js-p100.png",
+      "name": "scrub-1280-no-js",
+      "width": 1280,
+      "stop": 1,
+      "trackSpan": 0,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 900,
+      "scrub": "off",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": null,
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-dark-p000.png",
+      "name": "scrub-1280-dark",
+      "width": 1280,
+      "stop": 0,
+      "trackSpan": 1440,
+      "scrollY": 0,
+      "trackTop": 0,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "art": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "none",
+        "opacity": "0.55"
+      },
+      "band": {
+        "transform": "none",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 4.22,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-dark-p025.png",
+      "name": "scrub-1280-dark",
+      "width": 1280,
+      "stop": 0.25,
+      "trackSpan": 1440,
+      "scrollY": 361,
+      "trackTop": -361,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -20.8005)",
+        "opacity": "0.7744"
+      },
+      "art": {
+        "transform": "matrix(1.0401, 0, 0, 1.0401, 0, -8.41529)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0125, 0, 0, 1.0125, 0, -8.4234)",
+        "opacity": "0.6077"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -6.0167)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 0.92,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-dark-p050.png",
+      "name": "scrub-1280-dark",
+      "width": 1280,
+      "stop": 0.5,
+      "trackSpan": 1440,
+      "scrollY": 713,
+      "trackTop": -713,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -41.0833)",
+        "opacity": "0.5544"
+      },
+      "art": {
+        "transform": "matrix(1.0792, 0, 0, 1.0792, 0, -16.621)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0248, 0, 0, 1.0248, 0, -16.6372)",
+        "opacity": "0.6639"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -11.8837)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 3.25,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-dark-p075.png",
+      "name": "scrub-1280-dark",
+      "width": 1280,
+      "stop": 0.75,
+      "trackSpan": 1440,
+      "scrollY": 1072,
+      "trackTop": -1072,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -61.771)",
+        "opacity": "0.33"
+      },
+      "art": {
+        "transform": "matrix(1.1191, 0, 0, 1.1191, 0, -24.9903)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0372, 0, 0, 1.0372, 0, -25.0149)",
+        "opacity": "0.7212"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -17.8678)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 0.05,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    },
+    {
+      "file": "scrub-1280-dark-p100.png",
+      "name": "scrub-1280-dark",
+      "width": 1280,
+      "stop": 1,
+      "trackSpan": 1440,
+      "scrollY": 1436,
+      "trackTop": -1436,
+      "trackHeight": 2340,
+      "scrub": "on",
+      "mark": {
+        "transform": "matrix(1, 0, 0, 1, 0, -82.7401)",
+        "opacity": "0.1025"
+      },
+      "art": {
+        "transform": "matrix(1.1596, 0, 0, 1.1596, 0, -33.4742)",
+        "opacity": "1"
+      },
+      "backdrop": {
+        "transform": "matrix(1.0499, 0, 0, 1.0499, 0, -33.5067)",
+        "opacity": "0.7794"
+      },
+      "band": {
+        "transform": "matrix(1, 0, 0, 1, 0, -23.9333)",
+        "opacity": "1"
+      },
+      "video": {
+        "present": true,
+        "paused": false,
+        "currentTime": 2.51,
+        "readyState": 4
+      },
+      "overflows": false,
+      "scrollWidth": 1265,
+      "clientWidth": 1280
+    }
+  ]
+}

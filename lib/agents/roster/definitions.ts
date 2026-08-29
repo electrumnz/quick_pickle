@@ -184,12 +184,13 @@ export function defineOpsAgent(strategy: Strategy): AgentDefinition {
       "batch_release",
     ],
     budget: {
-      perRunCents: 40,
+      perRunCents: 80,
       dailyCents: 800,
       monthlyCents: 16_000,
       singleActionCents: 25_000,
     },
     maxSteps: 8,
+    maxOutputTokens: 1_200,
     brandRuleScopes: ["packaging"],
     schedule: { cron: "0 19 * * *", timezone: "Pacific/Auckland" },
   });
@@ -220,8 +221,9 @@ export function defineSocialAgent(strategy: Strategy): AgentDefinition {
     ],
     autonomy: "propose",
     requiresApprovalFor: ["social_post", "content_asset"],
-    budget: { perRunCents: 40, dailyCents: 600, monthlyCents: 12_000 },
+    budget: { perRunCents: 140, dailyCents: 600, monthlyCents: 12_000 },
     maxSteps: 8,
+    maxOutputTokens: 1_500,
     brandRuleScopes: ["social"],
     schedule: { cron: "0 20 * * 1,4", timezone: "Pacific/Auckland" },
   });
@@ -253,12 +255,13 @@ export function defineConciergeAgent(strategy: Strategy): AgentDefinition {
     autonomy: "propose",
     requiresApprovalFor: ["customer_message", "review_reply", "refund"],
     budget: {
-      perRunCents: 40,
+      perRunCents: 140,
       dailyCents: 500,
       monthlyCents: 10_000,
       singleActionCents: 15_000,
     },
     maxSteps: 8,
+    maxOutputTokens: 1_500,
     brandRuleScopes: ["storefront", "email"],
     schedule: { cron: "0 */4 * * *", timezone: "Pacific/Auckland" },
   });
@@ -288,8 +291,9 @@ export function defineFinanceAgent(strategy: Strategy): AgentDefinition {
     ],
     autonomy: "propose",
     requiresApprovalFor: ["price_change", "discount", "settings_change"],
-    budget: { perRunCents: 60, dailyCents: 900, monthlyCents: 18_000 },
+    budget: { perRunCents: 140, dailyCents: 900, monthlyCents: 18_000 },
     maxSteps: 8,
+    maxOutputTokens: 1_500,
     brandRuleScopes: ["storefront"],
     schedule: { cron: "0 8 * * 1", timezone: "Pacific/Auckland" },
   });
@@ -314,8 +318,9 @@ export function defineProductAgent(strategy: Strategy): AgentDefinition {
     tools: ["read_range_signals", "read_catalogue", "save_product_concept"],
     autonomy: "propose",
     requiresApprovalFor: ["recipe_change", "content_asset"],
-    budget: { perRunCents: 50, dailyCents: 400, monthlyCents: 8_000 },
+    budget: { perRunCents: 140, dailyCents: 400, monthlyCents: 8_000 },
     maxSteps: 6,
+    maxOutputTokens: 1_500,
     brandRuleScopes: ["packaging", "storefront"],
     schedule: { cron: "0 9 1 * *", timezone: "Pacific/Auckland" },
   });
@@ -344,8 +349,9 @@ export function defineAnalystAgent(strategy: Strategy): AgentDefinition {
     ],
     autonomy: "act_with_limits",
     requiresApprovalFor: [],
-    budget: { perRunCents: 40, dailyCents: 400, monthlyCents: 8_000 },
+    budget: { perRunCents: 80, dailyCents: 400, monthlyCents: 8_000 },
     maxSteps: 6,
+    maxOutputTokens: 1_200,
     brandRuleScopes: ["storefront"],
     schedule: { cron: "0 6 * * 1", timezone: "Pacific/Auckland" },
   });
@@ -363,6 +369,19 @@ export function defineAnalystAgent(strategy: Strategy): AgentDefinition {
 export function grantRosterTools(
   base: AgentDefinition,
   tools: readonly string[],
+  limits: {
+    /**
+     * Ceiling on one run. The strategy layer declares a nominal 40c, which is
+     * below the worst case for an Opus role with a long briefing: the cost
+     * meter projects `input + maxOutputTokens` BEFORE each call, so a cap that
+     * cannot cover a full run halts it halfway. That is exactly the trap
+     * `defineAgent` warns about, so the roster — which is where these roles are
+     * actually run — sets a ceiling a run can finish inside.
+     */
+    readonly perRunCents: number;
+    /** A caption is not four thousand tokens. Lower is cheaper and truer. */
+    readonly maxOutputTokens: number;
+  },
 ): AgentDefinition {
   return defineAgent({
     slug: base.slug,
@@ -374,13 +393,11 @@ export function grantRosterTools(
     tools: [...tools],
     autonomy: base.autonomy,
     requiresApprovalFor: [...base.requiresApprovalFor],
-    budget: { ...base.budget },
+    budget: { ...base.budget, perRunCents: limits.perRunCents },
     maxSteps: base.maxSteps,
+    maxOutputTokens: limits.maxOutputTokens,
     brandRuleScopes: [...base.brandRuleScopes],
     ...(base.temperature === undefined ? {} : { temperature: base.temperature }),
-    ...(base.maxOutputTokens === undefined
-      ? {}
-      : { maxOutputTokens: base.maxOutputTokens }),
     ...(base.schedule === undefined ? {} : { schedule: { ...base.schedule } }),
   });
 }
@@ -595,7 +612,10 @@ export function financeRole(strategy: Strategy): RosterRole {
 /** Marketing: Ari, from the strategy layer. */
 export function marketingRole(base: AgentDefinition): RosterRole {
   return {
-    definition: grantRosterTools(base, MARKETING_TOOLS),
+    definition: grantRosterTools(base, MARKETING_TOOLS, {
+      perRunCents: 140,
+      maxOutputTokens: 1_500,
+    }),
     audience: "b2c",
     plainJob:
       "Plans and drafts the campaigns that go to the customer list, working only from the brand script and what is selling.",
@@ -642,7 +662,10 @@ export function marketingRole(base: AgentDefinition): RosterRole {
 /** Trade: Vic, from the strategy layer. */
 export function tradeRole(base: AgentDefinition): RosterRole {
   return {
-    definition: grantRosterTools(base, TRADE_TOOLS),
+    definition: grantRosterTools(base, TRADE_TOOLS, {
+      perRunCents: 140,
+      maxOutputTokens: 1_500,
+    }),
     audience: "b2b",
     plainJob:
       "Works the list of bars, restaurants and shops: who is due a restock, who has gone quiet, and what was already said to them.",

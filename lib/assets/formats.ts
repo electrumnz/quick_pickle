@@ -110,9 +110,9 @@ function startsWith(bytes: Uint8Array, signature: readonly number[]): boolean {
 }
 
 function ascii(bytes: Uint8Array, start: number, length: number): string {
-  if (bytes.length < start + length) return "";
   let text = "";
-  for (let index = start; index < start + length; index += 1) {
+  const end = Math.min(start + length, bytes.length);
+  for (let index = start; index < end; index += 1) {
     text += String.fromCharCode(bytes[index] ?? 0);
   }
   return text;

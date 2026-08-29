@@ -14,6 +14,38 @@ export {
   type StrategyBriefingOptions,
 } from "./context";
 export {
+  AUDIT_CHECKS,
+  HOME,
+  LEAD_PRODUCT,
+  PRODUCT_PATHS,
+  PageIndex,
+  RECIPES,
+  SEVERITY_ORDER,
+  SHOP,
+  TRADE_PATHS,
+  auditPaths,
+  fixGroups,
+  runAudit,
+  type AuditCheck,
+  type AuditFinding,
+  type AuditRun,
+  type AuditScore,
+  type AuditSeverity,
+  type CheckOutcome,
+  type FixGroup,
+} from "./audit";
+export {
+  fetchPage,
+  fetchStorefront,
+  pageLinks,
+  pageTitle,
+  visibleText,
+  type PageFetcher,
+  type PageLink,
+  type RenderedPage,
+  type StorefrontPages,
+} from "./audit-pages";
+export {
   MARKETING_SCOPES,
   TRADE_SCOPES,
   defineMarketingAgent,
@@ -23,18 +55,22 @@ export {
 } from "./agents";
 export {
   StrategyDecodeError,
+  decodeAvatar,
   decodeBrandScript,
   decodeFlightPlan,
   decodeMarketNarrative,
   type MarketNarrative,
 } from "./schema";
 export {
+  AVATAR_SCOPES,
   DOCUMENT_SCOPES,
   SqlStrategyStore,
   StaticStrategyStore,
   StrategyStoreError,
+  assembleAvatars,
   assembleStrategy,
   assumptionToInput,
+  staticAvatars,
   staticDocuments,
   type StrategySqlClient,
   type StrategySqlRow,
@@ -42,10 +78,12 @@ export {
 } from "./store";
 export {
   MICRO,
+  STRATEGY_AUDIENCES,
   STRATEGY_FRAMEWORKS,
   fromMicro,
   toMicro,
   type StrategyAssumptionRecord,
+  type StrategyAvatarRecord,
   type StrategyDocumentRecord,
   type StrategyFramework,
 } from "./types";

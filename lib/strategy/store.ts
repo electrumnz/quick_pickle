@@ -22,7 +22,10 @@
 import { computeMarket } from "@/content/strategy/market";
 import { STRATEGY } from "@/content/strategy";
 import type {
+  AudienceAvatars,
+  AudienceId,
   Confidence,
+  CustomerAvatar,
   MarketInput,
   MarketUnit,
   Strategy,
@@ -30,14 +33,17 @@ import type {
 } from "@/content/strategy/types";
 
 import {
+  decodeAvatar,
   decodeBrandScript,
   decodeFlightPlan,
   decodeMarketNarrative,
 } from "./schema";
 import {
+  STRATEGY_AUDIENCES,
   STRATEGY_FRAMEWORKS,
   fromMicro,
   type StrategyAssumptionRecord,
+  type StrategyAvatarRecord,
   type StrategyDocumentRecord,
   type StrategyFramework,
 } from "./types";
@@ -67,7 +73,14 @@ export interface StrategyStore {
     scopes: readonly string[],
   ): Promise<readonly StrategyDocumentRecord[]>;
   listAssumptions(): Promise<readonly StrategyAssumptionRecord[]>;
-  /** The three frameworks assembled, with the market model recomputed. */
+  /**
+   * The customer avatars this agent should be given. Scoped exactly as the
+   * documents are, so the trade agent is not handed the home host's week.
+   */
+  listAvatars(
+    scopes: readonly string[],
+  ): Promise<readonly StrategyAvatarRecord[]>;
+  /** The frameworks assembled, with the market model recomputed. */
   loadStrategy(): Promise<Strategy>;
 }
 
@@ -197,6 +210,20 @@ function mapAssumption(row: StrategySqlRow): StrategyAssumptionRecord {
   };
 }
 
+function mapAvatar(row: StrategySqlRow): StrategyAvatarRecord {
+  return {
+    slug: str(row, "slug"),
+    audience: oneOf(STRATEGY_AUDIENCES, str(row, "audience"), "audience"),
+    label: str(row, "label"),
+    version: str(row, "version"),
+    appliesTo: textArray(row, "applies_to"),
+    position: int(row, "position"),
+    body: jsonBody(row, "body"),
+    isActive: row["is_active"] === true,
+    updatedAt: iso(row, "updated_at"),
+  };
+}
+
 /** An assumption row, as the market model wants to see it. */
 export function assumptionToInput(
   record: StrategyAssumptionRecord,
@@ -219,6 +246,9 @@ export function assumptionToInput(
 
 const DOCUMENT_COLUMNS = `slug, framework, title, purpose, version, applies_to,
                           priority, body, is_active, updated_at`;
+
+const AVATAR_COLUMNS = `slug, audience, label, version, applies_to, position,
+                        body, is_active, updated_at`;
 
 export class SqlStrategyStore implements StrategyStore {
   constructor(
@@ -260,12 +290,32 @@ export class SqlStrategyStore implements StrategyStore {
     return result.rows.map(mapAssumption);
   }
 
+  async listAvatars(
+    scopes: readonly string[],
+  ): Promise<readonly StrategyAvatarRecord[]> {
+    const text =
+      scopes.length === 0
+        ? `select ${AVATAR_COLUMNS}
+             from public.strategy_avatars
+            where is_active
+            order by position, slug`
+        : `select ${AVATAR_COLUMNS}
+             from public.strategy_avatars
+            where is_active
+              and (cardinality(applies_to) = 0 or applies_to && $1::text[])
+            order by position, slug`;
+    const params = scopes.length === 0 ? [] : [[...scopes]];
+    const result = await this.sql.query(text, params);
+    return result.rows.map(mapAvatar);
+  }
+
   async loadStrategy(): Promise<Strategy> {
-    const [documents, assumptions] = await Promise.all([
+    const [documents, assumptions, avatars] = await Promise.all([
       this.listDocuments([]),
       this.listAssumptions(),
+      this.listAvatars([]),
     ]);
-    return assembleStrategy(documents, assumptions, this.sources);
+    return assembleStrategy(documents, assumptions, this.sources, avatars);
   }
 }
 
@@ -308,6 +358,17 @@ export class StaticStrategyStore implements StrategyStore {
       position: (index + 1) * 10,
       isActive: true,
     }));
+  }
+
+  async listAvatars(
+    scopes: readonly string[],
+  ): Promise<readonly StrategyAvatarRecord[]> {
+    return staticAvatars(this.strategy).filter(
+      (avatar) =>
+        scopes.length === 0 ||
+        avatar.appliesTo.length === 0 ||
+        avatar.appliesTo.some((scope) => scopes.includes(scope)),
+    );
   }
 
   async loadStrategy(): Promise<Strategy> {
@@ -403,6 +464,102 @@ export function staticDocuments(
 }
 
 /**
+ * Which agents get which avatar.
+ *
+ * The marketing agent writes to the person in the kitchen and the trade agent
+ * writes to the person behind the bar, so handing each of them both avatars in
+ * full would be handing each of them one avatar to ignore. The scopes mirror
+ * `DOCUMENT_SCOPES` above and land in `strategy_avatars.applies_to`.
+ */
+export const AVATAR_SCOPES: Readonly<Record<AudienceId, string[]>> = {
+  b2c: ["social", "email", "storefront", "packaging", "paid", "support"],
+  b2b: ["wholesale", "pricing", "planning"],
+};
+
+const AVATAR_POSITION: Readonly<Record<AudienceId, number>> = {
+  b2c: 10,
+  b2b: 20,
+};
+
+/**
+ * The code-defined avatars projected onto the row shape.
+ *
+ * Same trick as `staticDocuments`: one projection, used by the static store,
+ * by the migration's seed generator and by the parity test, so the rows in
+ * Postgres and the objects in `content/strategy/avatars.ts` cannot drift
+ * without a test going red.
+ */
+export function staticAvatars(
+  strategy: Strategy = STRATEGY,
+): readonly StrategyAvatarRecord[] {
+  return STRATEGY_AUDIENCES.map((audience) => {
+    const avatar = strategy.avatars.avatars[audience];
+    return {
+      slug: avatar.slug,
+      audience,
+      label: avatar.label,
+      version: strategy.avatars.version,
+      appliesTo: AVATAR_SCOPES[audience],
+      position: AVATAR_POSITION[audience],
+      body: avatar,
+      isActive: true,
+      updatedAt: `${strategy.updated}T00:00:00.000Z`,
+    };
+  });
+}
+
+/**
+ * Rows back into the avatar framework.
+ *
+ * The wrapper — the purpose line, the contradictions, the next actions — stays
+ * in code, for the same reason `sources` does: it is commentary ABOUT the
+ * avatars rather than the thing an agent is handed, and a fourth editable
+ * surface nobody edits is a fourth surface that goes stale. The avatars
+ * themselves are rows, because those are what reach the system prompt.
+ *
+ * No rows at all is not an error. A database migrated before this table existed
+ * still has to serve a Brand & Plan page, so the code copy stands in and the
+ * caller cannot tell — the same fallback discipline as the rest of this file.
+ */
+export function assembleAvatars(
+  records: readonly StrategyAvatarRecord[],
+  fallback: AudienceAvatars = STRATEGY.avatars,
+): AudienceAvatars {
+  if (records.length === 0) return fallback;
+
+  const decoded = new Map<AudienceId, CustomerAvatar>();
+  for (const record of records) {
+    const avatar = decodeAvatar(record.slug, record.body);
+    if (avatar.id !== record.audience) {
+      throw new StrategyStoreError(
+        `strategy_avatars row "${record.slug}"`,
+        new Error(
+          `column audience is "${record.audience}" and the document says "${avatar.id}"`,
+        ),
+      );
+    }
+    decoded.set(record.audience, avatar);
+  }
+
+  const b2c = decoded.get("b2c");
+  const b2b = decoded.get("b2b");
+  if (b2c === undefined || b2b === undefined) {
+    throw new StrategyStoreError(
+      "assemble avatars",
+      new Error(
+        `strategy_avatars is missing an active row for ${b2c === undefined ? "b2c" : "b2b"}`,
+      ),
+    );
+  }
+
+  return {
+    ...fallback,
+    version: records[0]?.version ?? fallback.version,
+    avatars: { b2c, b2b },
+  };
+}
+
+/**
  * Put the rows back together into a `Strategy`.
  *
  * The market model is not read out of a row — it is recomputed from the
@@ -413,6 +570,7 @@ export function assembleStrategy(
   documents: readonly StrategyDocumentRecord[],
   assumptions: readonly StrategyAssumptionRecord[],
   sources: readonly StrategySource[] = STRATEGY.sources,
+  avatars: readonly StrategyAvatarRecord[] = [],
 ): Strategy {
   const find = (framework: StrategyFramework): StrategyDocumentRecord => {
     const found = documents.find(
@@ -447,6 +605,7 @@ export function assembleStrategy(
     inputs,
     brandScript: decodeBrandScript(brandDoc.slug, brandDoc.body),
     flightPlan: decodeFlightPlan(planDoc.slug, planDoc.body),
+    avatars: assembleAvatars(avatars),
     market: {
       ...computed,
       version: marketDoc.version,

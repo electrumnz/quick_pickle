@@ -558,8 +558,11 @@ function findBoxes(
   for (const box of isoBoxes(bytes, from, to)) {
     if (wanted.has(box.type)) found.push(box);
     if (containers.has(box.type)) {
+      // `meta` is a full box: four bytes of version and flags come before its
+      // children. Walking from bodyStart would read those as a box header.
+      const from = box.type === "meta" ? box.bodyStart + 4 : box.bodyStart;
       found.push(
-        ...findBoxes(bytes, box.bodyStart, box.end, wanted, containers, depth + 1),
+        ...findBoxes(bytes, from, box.end, wanted, containers, depth + 1),
       );
     }
   }

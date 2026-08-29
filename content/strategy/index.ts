@@ -11,6 +11,7 @@
 export * from "./types";
 export { SOURCES, source } from "./sources";
 export { BRAND_SCRIPT } from "./brandscript";
+export { AVATARS } from "./avatars";
 export {
   ESTIMATE,
   FLIGHT_PLAN,
@@ -30,6 +31,7 @@ export {
   inputValue,
 } from "./market";
 
+import { AVATARS } from "./avatars";
 import { BRAND_SCRIPT } from "./brandscript";
 import { FLIGHT_PLAN } from "./flight-plan";
 import { MARKET, MARKET_INPUTS } from "./market";
@@ -53,4 +55,5 @@ export const STRATEGY: Strategy = {
   brandScript: BRAND_SCRIPT,
   flightPlan: FLIGHT_PLAN,
   market: MARKET,
+  avatars: AVATARS,
 };

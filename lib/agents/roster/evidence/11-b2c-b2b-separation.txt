@@ -19,7 +19,7 @@ IDENTITY
 ------------------------------------------------------------------------------
 PROMPTS
 ------------------------------------------------------------------------------
-  Ari's prompt is 13273 characters; Vic's is 14940. They are not the same text.
+  Ari's prompt is 21518 characters; Vic's is 22936. They are not the same text.
   Ari leads with the DIRECT CUSTOMER script; Vic leads with the TRADE BUYER script.
   "Qualify before you approach: a spirits-led list, 40 seats or more" is in
   Vic's instructions and nowhere in Ari's.

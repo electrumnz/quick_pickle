@@ -30,15 +30,17 @@ import {
   RecordingOutbox,
   SqlBusinessReads,
   createRosterTools,
-  loadRoster,
   type Roster,
   type RosterRole,
   type RosterTools,
 } from "@/lib/agents/roster";
-import { SqlStrategyStore } from "@/lib/strategy";
 
 import { PlannerModel } from "./planner-model";
-import { createSeededBusiness, type RosterTestDatabase } from "./pglite";
+import {
+  createSeededBusiness,
+  loadRosterFrom,
+  type RosterTestDatabase,
+} from "./pglite";
 
 /** How the founder answers each approval this run raises. */
 export type DecisionPolicy = (
@@ -66,13 +68,15 @@ export interface RosterHarness {
   readonly roster: Roster;
   readonly tools: RosterTools;
   readonly reads: SqlBusinessReads;
+  /** Where the strategy behind the prompts came from. */
+  readonly strategySource: "database" | "code";
   close(): Promise<void>;
 }
 
 /** One seeded business, one tool registry, all eight roles built from it. */
 export async function createRosterHarness(): Promise<RosterHarness> {
   const database = await createSeededBusiness();
-  const roster = await loadRoster(new SqlStrategyStore(database.sql));
+  const { roster, source } = await loadRosterFrom(database);
   const reads = new SqlBusinessReads(database.sql);
   const tools = createRosterTools({ reads, outbox: new RecordingOutbox() });
   return {
@@ -80,6 +84,7 @@ export async function createRosterHarness(): Promise<RosterHarness> {
     roster,
     tools,
     reads,
+    strategySource: source,
     close: () => database.close(),
   };
 }

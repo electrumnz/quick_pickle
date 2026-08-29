@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { load } from "@/components/admin/data/db";
+import { adminSql, load } from "@/components/admin/data/db";
 import { ago, money, plural, until } from "@/components/admin/data/format";
 import {
   decidedApprovals,
@@ -38,8 +38,12 @@ import {
   triggerWords,
   type RosterRole,
 } from "@/lib/agents/roster";
-import { SqlStrategyStore, StaticStrategyStore } from "@/lib/strategy";
-import { adminSql } from "@/components/admin/data/db";
+import {
+  SqlStrategyStore,
+  StaticStrategyStore,
+  defineMarketingAgent,
+  defineTradeAgent,
+} from "@/lib/strategy";
 import { requireAdminSession } from "@/lib/auth/server";
 
 import { PauseForm } from "./pause-form";
@@ -70,31 +74,26 @@ export const metadata: Metadata = {
  * `purchase_order` is "orders to suppliers".
  */
 
-/** The strategy the roles are built from, or the code-defined one if it is unreadable. */
+/**
+ * The eight roles as the runtime would build them right now.
+ *
+ * The prompts are composed from the strategy in `strategy_documents`, which is
+ * why this reads the database rather than a constant. The plain-English half —
+ * what each role is for, what it remembers, how you would know it was doing its
+ * job — does not depend on the strategy, so an unreadable strategy falls back to
+ * the code-defined one and the page still describes the team.
+ */
 async function loadRoles(): Promise<readonly RosterRole[]> {
-  const store = new SqlStrategyStore(adminSql());
+  let strategy;
   try {
-    const strategy = await store.loadStrategy();
-    const { defineMarketingAgent, defineTradeAgent } = await import(
-      "@/lib/strategy"
-    );
-    return buildRoster(strategy, {
-      marketing: defineMarketingAgent(strategy),
-      trade: defineTradeAgent(strategy),
-    }).roles;
+    strategy = await new SqlStrategyStore(adminSql()).loadStrategy();
   } catch {
-    // The strategy tables are unreadable. The words below do not depend on them,
-    // so the page still describes the roles rather than showing nothing.
-    const fallback = new StaticStrategyStore();
-    const strategy = await fallback.loadStrategy();
-    const { defineMarketingAgent, defineTradeAgent } = await import(
-      "@/lib/strategy"
-    );
-    return buildRoster(strategy, {
-      marketing: defineMarketingAgent(strategy),
-      trade: defineTradeAgent(strategy),
-    }).roles;
+    strategy = await new StaticStrategyStore().loadStrategy();
   }
+  return buildRoster(strategy, {
+    marketing: defineMarketingAgent(strategy),
+    trade: defineTradeAgent(strategy),
+  }).roles;
 }
 
 export default async function TeamPage({

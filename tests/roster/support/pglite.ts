@@ -3,8 +3,13 @@ import { fileURLToPath } from "node:url";
 
 import { PGlite } from "@electric-sql/pglite";
 
+import { loadRoster, type Roster } from "@/lib/agents/roster";
 import type { RosterSqlClient, RosterSqlRow } from "@/lib/agents/roster";
-import type { StrategySqlClient } from "@/lib/strategy";
+import {
+  SqlStrategyStore,
+  StaticStrategyStore,
+  type StrategySqlClient,
+} from "@/lib/strategy";
 
 /**
  * The seeded business, in a real Postgres.
@@ -104,4 +109,28 @@ export async function createSeededBusiness(): Promise<RosterTestDatabase> {
       await db.close();
     },
   };
+}
+
+/**
+ * Build the roster from the strategy in this database.
+ *
+ * Falls back to the code-defined strategy when the strategy tables cannot be
+ * read — which happens while another unit is mid-migration — so that a roster
+ * test fails for a roster reason and not for someone else's. Which store was
+ * used is returned, and the evidence records it.
+ */
+export async function loadRosterFrom(
+  database: RosterTestDatabase,
+): Promise<{ readonly roster: Roster; readonly source: "database" | "code" }> {
+  try {
+    return {
+      roster: await loadRoster(new SqlStrategyStore(database.sql)),
+      source: "database",
+    };
+  } catch {
+    return {
+      roster: await loadRoster(new StaticStrategyStore()),
+      source: "code",
+    };
+  }
 }

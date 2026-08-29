@@ -15,6 +15,7 @@ import { z } from "zod";
 
 import type {
   BrandScript,
+  CustomerAvatar,
   FlightPlan,
   NextAction,
 } from "@/content/strategy/types";
@@ -288,6 +289,91 @@ const marketNarrativeSchema = z.object({
   nextActions: z.array(nextActionSchema),
 });
 
+/* ---------------------------------------------------------- the avatars */
+
+const weekMomentSchema = z.object({
+  when: nonEmpty,
+  what: nonEmpty,
+  ourWindow: nonEmpty,
+});
+
+const alternativeSchema = z.object({
+  option: nonEmpty,
+  whyItPersists: nonEmpty,
+  whatItCosts: nonEmpty,
+});
+
+const wateringSchema = z.object({
+  place: nonEmpty,
+  reading: nonEmpty,
+  reachedBy: nonEmpty,
+});
+
+const triggerSchema = z.object({
+  trigger: nonEmpty,
+  whatTheyDoNext: nonEmpty,
+  needs: nonEmpty,
+});
+
+const objectionSchema = z.object({
+  objection: nonEmpty,
+  answerableOnSite: z.boolean(),
+  ourAnswer: nonEmpty,
+});
+
+/**
+ * Money stays integer cents through the decoder as well as through the model.
+ * A price that arrives from `jsonb` as 19.99 is a float in a price path, and
+ * the boundary is the last place it can be stopped.
+ */
+const centsSchema = z.number().int().nonnegative();
+
+const priceSchema = z.object({
+  anchor: nonEmpty,
+  comparedWith: z
+    .array(z.object({ thing: nonEmpty, cents: centsSchema, note: nonEmpty }))
+    .min(1),
+  unblinkingCents: centsSchema,
+  deliberateCents: centsSchema,
+  hiddenCost: nonEmpty,
+  note: nonEmpty,
+});
+
+const repeatSchema = z.object({
+  cadence: nonEmpty,
+  bottlesPerYear: z.number().positive(),
+  whatBringsThemBack: z.array(nonEmpty).min(1),
+  whatLosesThem: z.array(nonEmpty).min(1),
+  theCheck: nonEmpty,
+});
+
+const countedSchema = z.object({
+  channel: nonEmpty,
+  countedBy: z.array(nonEmpty).min(1),
+  bottlesInput: nonEmpty,
+  howMany: nonEmpty,
+  capacityShare: nonEmpty,
+});
+
+const avatarSchema = z.object({
+  id: z.enum(["b2c", "b2b"]),
+  slug: nonEmpty,
+  label: nonEmpty,
+  headline: nonEmpty,
+  derivedFrom: nonEmpty,
+  who: nonEmpty,
+  week: z.array(weekMomentSchema).min(1),
+  jobToBeDone: nonEmpty,
+  insteadToday: z.array(alternativeSchema).min(1),
+  whereTheyAre: z.array(wateringSchema).min(1),
+  triggers: z.array(triggerSchema).min(1),
+  whatStopsThem: z.array(objectionSchema).min(1),
+  price: priceSchema,
+  repeat: repeatSchema,
+  counted: countedSchema,
+  notThisPerson: z.array(nonEmpty).min(1),
+});
+
 /* ------------------------------------------------------------- the doors */
 
 export class StrategyDecodeError extends Error {
@@ -327,6 +413,21 @@ export function decodeMarketNarrative(
   body: unknown,
 ): MarketNarrative {
   const parsed = marketNarrativeSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new StrategyDecodeError(slug, issueText(parsed.error));
+  }
+  return parsed.data;
+}
+
+/**
+ * One `strategy_avatars` row, checked.
+ *
+ * Same rule as the documents: nothing crosses out of `jsonb` untyped. An avatar
+ * is what the marketing and trade agents are told they are writing to, so a row
+ * with half a person in it would produce copy aimed at half a person.
+ */
+export function decodeAvatar(slug: string, body: unknown): CustomerAvatar {
+  const parsed = avatarSchema.safeParse(body);
   if (!parsed.success) {
     throw new StrategyDecodeError(slug, issueText(parsed.error));
   }

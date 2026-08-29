@@ -150,14 +150,37 @@
   inset: -12% -8%;
   z-index: 0;
   pointer-events: none;
-  background: radial-gradient(
-    58% 46% at 50% 56%,
-    var(--surface-sunken) 0%,
-    transparent 70%
-  );
+  /* Two washes doing two jobs.
+
+     The wide one is a pool under the bottles — an ellipse far wider than it
+     is tall, centred below the middle of the frame, so it reads as light on
+     the surface the line-up is standing on rather than as a disc behind it.
+
+     The tall one is the reason this layer exists at all: the photograph is a
+     hard-edged dark rectangle sitting on a flat bone page, and that edge is
+     the one thing in the composition that looks pasted on. A soft tint
+     bleeding out past where the picture ends gives the eye something between
+     the two, so the frame reads as sitting IN the page rather than on it.
+
+     A first pass put a single 58%-wide wash here at 0.55 and it was
+     invisible: the picture covers the middle, and the gradient had already
+     faded to nothing by the time it cleared the picture's edge. Anything
+     that cannot be seen where it is not covered is not restraint, it is
+     dead weight. */
+  background:
+    radial-gradient(
+      78% 34% at 50% 74%,
+      var(--surface-sunken) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      96% 62% at 50% 52%,
+      var(--surface-sunken) 0%,
+      transparent 68%
+    );
   /* Held low on purpose. This should be felt as the ground the bottles stand
      on, never noticed as a shape of its own. */
-  opacity: 0.55;
+  opacity: 0.72;
 }
 
 /* --------------------------------------------------------------- masthead */

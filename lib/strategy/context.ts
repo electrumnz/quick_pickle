@@ -35,6 +35,7 @@ import { formatCents, formatCentsShort } from "@/content/strategy/market";
 import type {
   AudienceId,
   AudienceScript,
+  CustomerAvatar,
   MarketModel,
   Strategy,
 } from "@/content/strategy/types";
@@ -96,6 +97,82 @@ function renderScript(id: AudienceId, script: AudienceScript): string[] {
     `  7. SUCCESS THEY REACH`,
     ...bullet(script.stakes.success, "     "),
     `     Transformation: from "${script.stakes.transformation.from}" to "${script.stakes.transformation.to}"`,
+  ];
+}
+
+/**
+ * The avatar, rendered as the person the agent is writing to.
+ *
+ * The BrandScript says what the customer wants; this says who they are on a
+ * Thursday, what they do instead today, what makes them buy, what stops them,
+ * and what would make them buy again. An agent handed only the script writes
+ * to an audience. An agent handed the avatar writes to a person, and the
+ * difference shows up in the first sentence.
+ *
+ * `notThisPerson` is included deliberately. Most generated copy goes wrong by
+ * widening — one sentence for the host, one for anybody else who might be
+ * listening — and the fastest way to stop that is to name who is not being
+ * written to.
+ */
+function renderAvatar(avatar: CustomerAvatar): string[] {
+  const money = (cents: number) => formatCents(cents);
+  return [
+    `WHO YOU ARE WRITING TO — ${avatar.label}`,
+    `  ${avatar.headline}`,
+    `  In full: ${avatar.who}`,
+    `  THE JOB THEY ARE HIRING THIS FOR: ${avatar.jobToBeDone}`,
+    "  THEIR WEEK — write into a moment in it, not into the abstract:",
+    ...bullet(
+      avatar.week.map((moment) => `${moment.when}: ${moment.what}`),
+      "    ",
+    ),
+    "  WHAT THEY DO INSTEAD TODAY — this is what you are actually competing with:",
+    ...bullet(
+      avatar.insteadToday.map(
+        (option) => `${option.option} — costs them: ${option.whatItCosts}`,
+      ),
+      "    ",
+    ),
+    "  WHERE THEY ARE, AND WHAT THEY ARE READING THERE:",
+    ...bullet(
+      avatar.whereTheyAre.map((place) => `${place.place} — ${place.reading}`),
+      "    ",
+    ),
+    "  WHAT TRIGGERS A PURCHASE — a piece that does not sit on one of these is decoration:",
+    ...bullet(
+      avatar.triggers.map(
+        (trigger) => `${trigger.trigger} → ${trigger.whatTheyDoNext}`,
+      ),
+      "    ",
+    ),
+    "  WHAT STOPS THEM — answer one of these rather than adding an adjective:",
+    ...bullet(
+      avatar.whatStopsThem.map(
+        (stop) =>
+          `${stop.objection} ${stop.answerableOnSite ? "(the page can settle this)" : "(needs a person, not a page)"} — ${stop.ourAnswer}`,
+      ),
+      "    ",
+    ),
+    "  PRICE",
+    `    They price it against: ${avatar.price.anchor}`,
+    `    Unblinking up to ${money(avatar.price.unblinkingCents)}; deliberate at ${money(avatar.price.deliberateCents)}.`,
+    ...bullet(
+      avatar.price.comparedWith.map(
+        (item) => `${item.thing} — ${money(item.cents)}. ${item.note}`,
+      ),
+      "    ",
+    ),
+    `    The cost that is not on the price tag: ${avatar.price.hiddenCost}`,
+    "  WHAT WOULD MAKE THEM BUY AGAIN — repeat is the whole business at this volume:",
+    `    Cadence: ${avatar.repeat.cadence} (${avatar.repeat.bottlesPerYear} bottles a year)`,
+    ...bullet(avatar.repeat.whatBringsThemBack, "    "),
+    "    And what loses them:",
+    ...bullet(avatar.repeat.whatLosesThem, "      "),
+    `    The number that says it is working: ${avatar.repeat.theCheck}`,
+    `  HOW MANY OF THEM THE PLAN NEEDS: ${avatar.counted.howMany}`,
+    `    Their share of what can be made: ${avatar.counted.capacityShare}`,
+    "  WHO THIS IS NOT — do not widen a sentence to include them:",
+    ...bullet(avatar.notThisPerson, "    "),
   ];
 }
 
@@ -169,6 +246,10 @@ export function composeStrategyBriefing(
     ...renderScript(lead, strategy.brandScript.audiences[lead]),
     "",
     ...renderScript(second, strategy.brandScript.audiences[second]),
+    "",
+    ...renderAvatar(strategy.avatars.avatars[lead]),
+    "",
+    `THE OTHER CUSTOMER, IN ONE LINE — not yours to write to here: ${strategy.avatars.avatars[second].label}. ${strategy.avatars.avatars[second].headline}`,
   ];
 
   if (includeFlightPlan) {
@@ -202,6 +283,8 @@ export function composeStrategyBriefing(
   lines.push(
     "",
     "HOW TO USE THIS",
+    "  - Write to the one person in WHO YOU ARE WRITING TO. If a sentence would",
+    "    also suit the other customer, it is too wide — narrow it.",
     "  - Name the customer's problem before naming the product.",
     "  - One idea per sentence, and one call to action per piece.",
     "  - Never make a claim about what brine does to a person. Positioning is",
