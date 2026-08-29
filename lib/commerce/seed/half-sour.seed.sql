@@ -82,7 +82,7 @@ values
   -- (Fair Trading Act s 13(j)) and there is no verified grower yet.
   ('11111111-0000-4000-8000-000000000005', 'local', 'local', 'no-04-wild',
    'No 04 WILD', 'Kawakawa, kelp, lemon peel',
-   'Kawakawa, kelp and lemon peel. Peppery off the leaf, mineral underneath, and the least like anything else on the shelf. Built for seafood: a capful over oysters, the acid in a ceviche, a martini that tastes like the coast. Made in small runs, because the leaf is what limits it and not the demand.',
+   'Kawakawa, kelp and lemon peel. Peppery off the leaf, maritime underneath, and the least like anything else on the shelf. Built for seafood: a capful over oysters, the acid in a ceviche, a martini that tastes like the coast. Made in small runs, because the leaf is what limits it and not the demand.',
    'Brine', 'Half Sour', 'active', now() - interval '40 days',
    array['brine','bar','mixer','seafood','kawakawa','kelp','limited'],
    'No 04 WILD kawakawa and kelp brine — Half Sour',

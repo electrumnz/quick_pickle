@@ -13,6 +13,10 @@ const eslintConfig = defineConfig([
     "test-results/**",
     ".lighthouseci/**",
     "next-env.d.ts",
+    // Generation working files: prompt scratch, model outputs and the
+    // throwaway builds the image/video units diff against. Gitignored, so
+    // linting it only ever reports on someone else's build artefact.
+    ".gen/**",
   ]),
   ...nextVitals,
   ...nextTs,

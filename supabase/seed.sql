@@ -289,8 +289,8 @@ values
   -- It is deliberately NOT reproduced here: the constraint on how much can be
   -- made is a fact and is stated; who grows the leaf is not, and is not.
   ('no-04-wild', 'No 04 WILD', 'Coastal brine. Kawakawa, kelp, lemon peel.',
-   'Kawakawa, kelp and lemon peel. Peppery off the leaf, mineral and faintly oceanic underneath, and the least like anything else on the shelf. Built for seafood: a capful over oysters, the acid in a ceviche, a martini that tastes like the coast rather than the bar. It sits with a gin that has real botanicals in it instead of fighting one. Made in small runs — the leaf is what limits it, not the demand. 500ml.',
-   'Brine', 'active', now() - interval '6 weeks', '{wild,kawakawa,kelp,seafood,limited,vegan,gluten-free}',
+   'Kawakawa, kelp and lemon peel. Peppery off the leaf, maritime underneath, and the least like anything else on the shelf. Built for seafood: a capful over oysters, the acid in a ceviche, a martini that tastes like the coast rather than the bar. It sits with a gin that has real botanicals in it instead of fighting one. Made in small runs — the leaf is what limits it, not the demand. 500ml.',
+   'Brine', 'active', now() - interval '6 weeks', '{wild,kawakawa,kelp,seafood,limited,mixer,native}',
    'No 04 WILD — kawakawa and kelp brine | Half Sour',
    'Kawakawa, kelp and lemon peel brine, built for seafood. Limited by leaf supply. Made in Auckland, 500ml.',
    null, 35,
@@ -1209,7 +1209,7 @@ select r.slug, r.version, r.name, r.descr, p.id, r.status::public.recipe_status,
      24.00, 46, 3.38, 4.40, 9,
      'Rack 9.5kg cucumbers in the 50L vessel. Cover with 4.4% brine. Kawakawa leaf and rinsed kelp blade go in whole at day three, lemon peel at day five. Nine days at 18C — longer and the leaf turns bitter. Strain through muslin, then a 5 micron pad. Chill to 4C, fill 500ml, cap, overprint the batch code. Run size is set by the leaf that arrived, never by the order book.',
      '{"50L fermenter","muslin","5 micron pad","plate chiller","gravity filler","code printer"}',
-     'No declared allergens. Gluten free. Suitable for vegans.', 21000, null, true, interval '6 weeks'),
+     'No declared allergens. Suitable for vegans.', 21000, null, true, interval '6 weeks'),
 
     ('full-set-pack', 1, 'The Full Set pack-out v1', 'Pack-out procedure, not a brine.', 'the-full-set', 'active',
      1.00, 200, null, null, null,

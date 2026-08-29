@@ -56,8 +56,8 @@ insert into public.products
    provider, shopify_gid, shopify_updated_at, sync_status, synced_at)
 select
   'no-04-wild', 'No 04 WILD', 'Coastal brine. Kawakawa, kelp, lemon peel.',
-  'Kawakawa, kelp and lemon peel. Peppery off the leaf, mineral and faintly oceanic underneath, and the least like anything else on the shelf. Built for seafood: a capful over oysters, the acid in a ceviche, a martini that tastes like the coast rather than the bar. It sits with a gin that has real botanicals in it instead of fighting one. Made in small runs — the leaf is what limits it, not the demand. 500ml.',
-  'Brine', 'active', now(), '{wild,kawakawa,kelp,seafood,limited,vegan,gluten-free}',
+  'Kawakawa, kelp and lemon peel. Peppery off the leaf, maritime underneath, and the least like anything else on the shelf. Built for seafood: a capful over oysters, the acid in a ceviche, a martini that tastes like the coast rather than the bar. It sits with a gin that has real botanicals in it instead of fighting one. Made in small runs — the leaf is what limits it, not the demand. 500ml.',
+  'Brine', 'active', now(), '{wild,kawakawa,kelp,seafood,limited,mixer,native}',
   'No 04 WILD — kawakawa and kelp brine | Half Sour',
   'Kawakawa, kelp and lemon peel brine, built for seafood. Limited by leaf supply. Made in Auckland, 500ml.',
   null, 35,
