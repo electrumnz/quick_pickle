@@ -306,6 +306,13 @@ on conflict (slug) do update set
   runs_count  = excluded.runs_count,
   updated_at  = now();
 
+-- Bex is retired, and `is_enabled` is not in the insert's column list above, so
+-- it would otherwise default to true and leave her retired-but-enabled. The
+-- migration's own retirement statement cannot do this either: it runs before
+-- this file, when `scout` does not yet exist.
+update public.agents set is_enabled = false, updated_at = now()
+ where slug = 'scout' and is_enabled;
+
 -- The rest of the roster: registered by the migration, and given the same
 -- demonstration colour and history as everyone else so The Team does not show
 -- half a company in colour and half of it blank. Only the three demonstration
