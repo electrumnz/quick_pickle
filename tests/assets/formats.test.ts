@@ -40,9 +40,9 @@ function codeOf(run: () => unknown): string {
 describe("what the bytes actually are", () => {
   it("recognises every format on the list, from its signature alone", () => {
     expect(sniff(jpegWithGps()).format.mime).toBe("image/jpeg");
-    expect(sniff(repoFile("public/3d/fallback/bottle-hero.png")).format.mime).toBe(
-      "image/png",
-    );
+    expect(
+      sniff(repoFile("public/3d/fallback/bottle-hero.png")).format.mime,
+    ).toBe("image/png");
     expect(sniff(webpWithExif()).format.mime).toBe("image/webp");
     expect(sniff(repoFile("public/media/film/range.mp4")).format.mime).toBe(
       "video/mp4",

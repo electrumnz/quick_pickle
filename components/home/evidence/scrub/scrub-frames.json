@@ -22,7 +22,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -39,24 +39,24 @@
       "width": 375,
       "stop": 0.25,
       "trackSpan": 900,
-      "scrollY": 221,
-      "trackTop": -221,
+      "scrollY": 287,
+      "trackTop": -287,
       "trackHeight": 1800,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -8.47125)",
-        "opacity": "0.7783"
+        "transform": "matrix(1, 0, 0, 1, 0, -10.911)",
+        "opacity": "0.7145"
       },
       "art": {
-        "transform": "matrix(1.0394, 0, 0, 1.0394, 0, -8.26802)",
+        "transform": "matrix(1.0508, 0, 0, 1.0508, 0, -10.6492)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0123, 0, 0, 1.0123, 0, -8.2766)",
-        "opacity": "0.6067"
+        "transform": "matrix(1, 0, 0, 1, 0, -10.6604)",
+        "opacity": "0.739"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -5.9119)",
+        "transform": "matrix(1, 0, 0, 1, 0, -7.6146)",
         "opacity": "1"
       },
       "video": null,
@@ -70,24 +70,24 @@
       "width": 375,
       "stop": 0.5,
       "trackSpan": 900,
-      "scrollY": 444,
-      "trackTop": -444,
+      "scrollY": 499,
+      "trackTop": -499,
       "trackHeight": 1800,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -16.9685)",
-        "opacity": "0.5559"
+        "transform": "matrix(1, 0, 0, 1, 0, -19.0493)",
+        "opacity": "0.5015"
       },
       "art": {
-        "transform": "matrix(1.0789, 0, 0, 1.0789, 0, -16.5615)",
+        "transform": "matrix(1.0886, 0, 0, 1.0886, 0, -18.5926)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0247, 0, 0, 1.0247, 0, -16.5786)",
-        "opacity": "0.6635"
+        "transform": "matrix(1, 0, 0, 1, 0, -18.6118)",
+        "opacity": "0.7532"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -11.8419)",
+        "transform": "matrix(1, 0, 0, 1, 0, -13.2941)",
         "opacity": "1"
       },
       "video": null,
@@ -101,24 +101,24 @@
       "width": 375,
       "stop": 0.75,
       "trackSpan": 900,
-      "scrollY": 714,
-      "trackTop": -714,
+      "scrollY": 669,
+      "trackTop": -669,
       "trackHeight": 1800,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -27.2572)",
-        "opacity": "0.2867"
+        "transform": "matrix(1, 0, 0, 1, 0, -25.5687)",
+        "opacity": "0.3309"
       },
       "art": {
-        "transform": "matrix(1.1268, 0, 0, 1.1268, 0, -26.6036)",
+        "transform": "matrix(1.119, 0, 0, 1.119, 0, -24.9551)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0396, 0, 0, 1.0396, 0, -26.6311)",
-        "opacity": "0.7323"
+        "transform": "matrix(1, 0, 0, 1, 0, -24.9813)",
+        "opacity": "0.7646"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -19.0222)",
+        "transform": "matrix(1, 0, 0, 1, 0, -17.8438)",
         "opacity": "1"
       },
       "video": null,
@@ -132,24 +132,24 @@
       "width": 375,
       "stop": 1,
       "trackSpan": 900,
-      "scrollY": 893,
-      "trackTop": -893,
+      "scrollY": 894,
+      "trackTop": -894,
       "trackHeight": 1800,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -34.1244)",
-        "opacity": "0.107"
+        "transform": "matrix(1, 0, 0, 1, 0, -34.1645)",
+        "opacity": "0.1059"
       },
       "art": {
-        "transform": "matrix(1.1588, 0, 0, 1.1588, 0, -33.3056)",
+        "transform": "matrix(1.159, 0, 0, 1.159, 0, -33.3449)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0496, 0, 0, 1.0496, 0, -33.3404)",
-        "opacity": "0.7782"
+        "transform": "matrix(1, 0, 0, 1, 0, -33.3796)",
+        "opacity": "0.7796"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -23.8146)",
+        "transform": "matrix(1, 0, 0, 1, 0, -23.8426)",
         "opacity": "1"
       },
       "video": null,
@@ -177,7 +177,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -199,30 +199,30 @@
       "width": 768,
       "stop": 0.25,
       "trackSpan": 1440,
-      "scrollY": 352,
-      "trackTop": -352,
+      "scrollY": 350,
+      "trackTop": -350,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -14.4797)",
-        "opacity": "0.78"
+        "transform": "matrix(1, 0, 0, 1, 0, -14.4044)",
+        "opacity": "0.7811"
       },
       "art": {
-        "transform": "matrix(1.0391, 0, 0, 1.0391, 0, -8.38301)",
+        "transform": "matrix(1.0389, 0, 0, 1.0389, 0, -8.33941)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0122, 0, 0, 1.0122, 0, -8.2137)",
-        "opacity": "0.6062"
+        "transform": "matrix(1, 0, 0, 1, 0, -8.171)",
+        "opacity": "0.7346"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -5.8669)",
+        "transform": "matrix(1, 0, 0, 1, 0, -5.8364)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 0.94,
+        "currentTime": 0.7,
         "readyState": 4
       },
       "overflows": false,
@@ -235,30 +235,30 @@
       "width": 768,
       "stop": 0.5,
       "trackSpan": 1440,
-      "scrollY": 717,
-      "trackTop": -717,
+      "scrollY": 711,
+      "trackTop": -711,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -29.4931)",
-        "opacity": "0.5519"
+        "transform": "matrix(1, 0, 0, 1, 0, -29.2531)",
+        "opacity": "0.5555"
       },
       "art": {
-        "transform": "matrix(1.0797, 0, 0, 1.0797, 0, -17.0746)",
+        "transform": "matrix(1.079, 0, 0, 1.079, 0, -16.936)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0249, 0, 0, 1.0249, 0, -16.7301)",
-        "opacity": "0.6645"
+        "transform": "matrix(1, 0, 0, 1, 0, -16.594)",
+        "opacity": "0.7496"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -11.9501)",
+        "transform": "matrix(1, 0, 0, 1, 0, -11.8528)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 3.11,
+        "currentTime": 2.62,
         "readyState": 4
       },
       "overflows": false,
@@ -271,30 +271,30 @@
       "width": 768,
       "stop": 0.75,
       "trackSpan": 1440,
-      "scrollY": 1075,
-      "trackTop": -1075,
+      "scrollY": 1066,
+      "trackTop": -1066,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -44.2191)",
-        "opacity": "0.3281"
+        "transform": "matrix(1, 0, 0, 1, 0, -43.8493)",
+        "opacity": "0.3337"
       },
       "art": {
-        "transform": "matrix(1.1194, 0, 0, 1.1194, 0, -25.6002)",
+        "transform": "matrix(1.1184, 0, 0, 1.1184, 0, -25.3861)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0373, 0, 0, 1.0373, 0, -25.0835)",
-        "opacity": "0.7217"
+        "transform": "matrix(1, 0, 0, 1, 0, -24.8738)",
+        "opacity": "0.7644"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -17.9168)",
+        "transform": "matrix(1, 0, 0, 1, 0, -17.767)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 5.26,
+        "currentTime": 4.69,
         "readyState": 4
       },
       "overflows": false,
@@ -307,30 +307,30 @@
       "width": 768,
       "stop": 1,
       "trackSpan": 1440,
-      "scrollY": 1431,
-      "trackTop": -1431,
+      "scrollY": 1434,
+      "trackTop": -1434,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -58.8715)",
-        "opacity": "0.1055"
+        "transform": "matrix(1, 0, 0, 1, 0, -58.9943)",
+        "opacity": "0.1036"
       },
       "art": {
-        "transform": "matrix(1.159, 0, 0, 1.159, 0, -34.0832)",
+        "transform": "matrix(1.1594, 0, 0, 1.1594, 0, -34.1542)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0497, 0, 0, 1.0497, 0, -33.3952)",
-        "opacity": "0.7786"
+        "transform": "matrix(1, 0, 0, 1, 0, -33.4649)",
+        "opacity": "0.7798"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -23.8537)",
+        "transform": "matrix(1, 0, 0, 1, 0, -23.9035)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 2.1,
+        "currentTime": 1.12,
         "readyState": 4
       },
       "overflows": false,
@@ -357,7 +357,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -379,30 +379,30 @@
       "width": 1280,
       "stop": 0.25,
       "trackSpan": 1440,
-      "scrollY": 363,
-      "trackTop": -363,
+      "scrollY": 354,
+      "trackTop": -354,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -20.9158)",
-        "opacity": "0.7731"
+        "transform": "matrix(1, 0, 0, 1, 0, -20.3972)",
+        "opacity": "0.7787"
       },
       "art": {
-        "transform": "matrix(1.0403, 0, 0, 1.0403, 0, -8.46181)",
+        "transform": "matrix(1.0393, 0, 0, 1.0393, 0, -8.25225)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0126, 0, 0, 1.0126, 0, -8.4701)",
-        "opacity": "0.608"
+        "transform": "matrix(1, 0, 0, 1, 0, -8.2602)",
+        "opacity": "0.7348"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -6.0501)",
+        "transform": "matrix(1, 0, 0, 1, 0, -5.9001)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 0.83,
+        "currentTime": 0.91,
         "readyState": 4
       },
       "overflows": false,
@@ -415,30 +415,30 @@
       "width": 1280,
       "stop": 0.5,
       "trackSpan": 1440,
-      "scrollY": 714,
-      "trackTop": -714,
+      "scrollY": 721,
+      "trackTop": -721,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -41.1416)",
-        "opacity": "0.5537"
+        "transform": "matrix(1, 0, 0, 1, 0, -41.5469)",
+        "opacity": "0.5493"
       },
       "art": {
-        "transform": "matrix(1.0793, 0, 0, 1.0793, 0, -16.6445)",
+        "transform": "matrix(1.0801, 0, 0, 1.0801, 0, -16.8085)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0248, 0, 0, 1.0248, 0, -16.6609)",
-        "opacity": "0.664"
+        "transform": "matrix(1, 0, 0, 1, 0, -16.825)",
+        "opacity": "0.75"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -11.9006)",
+        "transform": "matrix(1, 0, 0, 1, 0, -12.0178)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 3.32,
+        "currentTime": 3.31,
         "readyState": 4
       },
       "overflows": false,
@@ -451,30 +451,30 @@
       "width": 1280,
       "stop": 0.75,
       "trackSpan": 1440,
-      "scrollY": 1077,
-      "trackTop": -1077,
+      "scrollY": 1074,
+      "trackTop": -1074,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -62.0557)",
-        "opacity": "0.3269"
+        "transform": "matrix(1, 0, 0, 1, 0, -61.8823)",
+        "opacity": "0.3287"
       },
       "art": {
-        "transform": "matrix(1.1197, 0, 0, 1.1197, 0, -25.1059)",
+        "transform": "matrix(1.1193, 0, 0, 1.1193, 0, -25.0354)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0374, 0, 0, 1.0374, 0, -25.1302)",
-        "opacity": "0.722"
+        "transform": "matrix(1, 0, 0, 1, 0, -25.0601)",
+        "opacity": "0.7648"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -17.9502)",
+        "transform": "matrix(1, 0, 0, 1, 0, -17.9)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 0.19,
+        "currentTime": 0.35,
         "readyState": 4
       },
       "overflows": false,
@@ -487,30 +487,30 @@
       "width": 1280,
       "stop": 1,
       "trackSpan": 1440,
-      "scrollY": 1434,
-      "trackTop": -1434,
+      "scrollY": 1436,
+      "trackTop": -1436,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -82.6256)",
-        "opacity": "0.1037"
+        "transform": "matrix(1, 0, 0, 1, 0, -82.7407)",
+        "opacity": "0.1025"
       },
       "art": {
-        "transform": "matrix(1.1593, 0, 0, 1.1593, 0, -33.4276)",
+        "transform": "matrix(1.1596, 0, 0, 1.1596, 0, -33.4742)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0498, 0, 0, 1.0498, 0, -33.4603)",
-        "opacity": "0.779"
+        "transform": "matrix(1, 0, 0, 1, 0, -33.5069)",
+        "opacity": "0.7798"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -23.9002)",
+        "transform": "matrix(1, 0, 0, 1, 0, -23.9335)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 2.6,
+        "currentTime": 2.69,
         "readyState": 4
       },
       "overflows": false,
@@ -537,7 +537,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -559,30 +559,30 @@
       "width": 1920,
       "stop": 0.25,
       "trackSpan": 1440,
-      "scrollY": 366,
-      "trackTop": -366,
+      "scrollY": 362,
+      "trackTop": -362,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -24.3585)",
-        "opacity": "0.7712"
+        "transform": "matrix(1, 0, 0, 1, 0, -24.093)",
+        "opacity": "0.7737"
       },
       "art": {
-        "transform": "matrix(1.0407, 0, 0, 1.0407, 0, -7.4871)",
+        "transform": "matrix(1.0402, 0, 0, 1.0402, 0, -7.40546)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0127, 0, 0, 1.0127, 0, -8.54)",
-        "opacity": "0.6085"
+        "transform": "matrix(1, 0, 0, 1, 0, -8.4469)",
+        "opacity": "0.7351"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -6.1)",
+        "transform": "matrix(1, 0, 0, 1, 0, -6.0335)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 1.17,
+        "currentTime": 1.16,
         "readyState": 4
       },
       "overflows": false,
@@ -600,7 +600,7 @@
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -47.5209)",
+        "transform": "matrix(1, 0, 0, 1, 0, -47.5196)",
         "opacity": "0.5537"
       },
       "art": {
@@ -608,17 +608,17 @@
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0248, 0, 0, 1.0248, 0, -16.6605)",
-        "opacity": "0.664"
+        "transform": "matrix(1, 0, 0, 1, 0, -16.6601)",
+        "opacity": "0.7498"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -11.9004)",
+        "transform": "matrix(1, 0, 0, 1, 0, -11.9001)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 3.87,
+        "currentTime": 3.95,
         "readyState": 4
       },
       "overflows": false,
@@ -631,30 +631,30 @@
       "width": 1920,
       "stop": 0.75,
       "trackSpan": 1440,
-      "scrollY": 1079,
-      "trackTop": -1079,
+      "scrollY": 1077,
+      "trackTop": -1077,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -71.8186)",
-        "opacity": "0.3256"
+        "transform": "matrix(1, 0, 0, 1, 0, -71.6781)",
+        "opacity": "0.3269"
       },
       "art": {
-        "transform": "matrix(1.1199, 0, 0, 1.1199, 0, -22.0746)",
+        "transform": "matrix(1.1197, 0, 0, 1.1197, 0, -22.0312)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0375, 0, 0, 1.0375, 0, -25.1792)",
-        "opacity": "0.7224"
+        "transform": "matrix(1, 0, 0, 1, 0, -25.13)",
+        "opacity": "0.7649"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -17.9851)",
+        "transform": "matrix(1, 0, 0, 1, 0, -17.95)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 1.15,
+        "currentTime": 1.31,
         "readyState": 4
       },
       "overflows": false,
@@ -667,8 +667,8 @@
       "width": 1920,
       "stop": 1,
       "trackSpan": 1440,
-      "scrollY": 1440,
-      "trackTop": -1440,
+      "scrollY": 1442,
+      "trackTop": -1442,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
@@ -680,7 +680,7 @@
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.05, 0, 0, 1.05, 0, -33.6)",
+        "transform": "matrix(1, 0, 0, 1, 0, -33.6)",
         "opacity": "0.78"
       },
       "band": {
@@ -690,7 +690,7 @@
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 3.73,
+        "currentTime": 4.13,
         "readyState": 4
       },
       "overflows": false,
@@ -717,7 +717,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -748,7 +748,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -779,7 +779,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -810,7 +810,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -841,7 +841,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -872,7 +872,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -903,7 +903,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -934,7 +934,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -965,7 +965,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -996,7 +996,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -1027,7 +1027,7 @@
       },
       "backdrop": {
         "transform": "none",
-        "opacity": "0.55"
+        "opacity": "0.72"
       },
       "band": {
         "transform": "none",
@@ -1036,7 +1036,7 @@
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 4.22,
+        "currentTime": 4.21,
         "readyState": 4
       },
       "overflows": false,
@@ -1049,30 +1049,30 @@
       "width": 1280,
       "stop": 0.25,
       "trackSpan": 1440,
-      "scrollY": 361,
-      "trackTop": -361,
+      "scrollY": 352,
+      "trackTop": -352,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -20.8005)",
-        "opacity": "0.7744"
+        "transform": "matrix(1, 0, 0, 1, 0, -20.2833)",
+        "opacity": "0.78"
       },
       "art": {
-        "transform": "matrix(1.0401, 0, 0, 1.0401, 0, -8.41529)",
+        "transform": "matrix(1.0391, 0, 0, 1.0391, 0, -8.20574)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0125, 0, 0, 1.0125, 0, -8.4234)",
-        "opacity": "0.6077"
+        "transform": "matrix(1, 0, 0, 1, 0, -8.2139)",
+        "opacity": "0.7347"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -6.0167)",
+        "transform": "matrix(1, 0, 0, 1, 0, -5.8671)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 0.92,
+        "currentTime": 0.9,
         "readyState": 4
       },
       "overflows": false,
@@ -1085,30 +1085,30 @@
       "width": 1280,
       "stop": 0.5,
       "trackSpan": 1440,
-      "scrollY": 713,
-      "trackTop": -713,
+      "scrollY": 714,
+      "trackTop": -714,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -41.0833)",
-        "opacity": "0.5544"
+        "transform": "matrix(1, 0, 0, 1, 0, -41.141)",
+        "opacity": "0.5537"
       },
       "art": {
-        "transform": "matrix(1.0792, 0, 0, 1.0792, 0, -16.621)",
+        "transform": "matrix(1.0793, 0, 0, 1.0793, 0, -16.6441)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0248, 0, 0, 1.0248, 0, -16.6372)",
-        "opacity": "0.6639"
+        "transform": "matrix(1, 0, 0, 1, 0, -16.6606)",
+        "opacity": "0.7498"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -11.8837)",
+        "transform": "matrix(1, 0, 0, 1, 0, -11.9004)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 3.25,
+        "currentTime": 3.12,
         "readyState": 4
       },
       "overflows": false,
@@ -1126,25 +1126,25 @@
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -61.771)",
-        "opacity": "0.33"
+        "transform": "matrix(1, 0, 0, 1, 0, -61.7736)",
+        "opacity": "0.3299"
       },
       "art": {
-        "transform": "matrix(1.1191, 0, 0, 1.1191, 0, -24.9903)",
+        "transform": "matrix(1.1191, 0, 0, 1.1191, 0, -24.9917)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0372, 0, 0, 1.0372, 0, -25.0149)",
-        "opacity": "0.7212"
+        "transform": "matrix(1, 0, 0, 1, 0, -25.016)",
+        "opacity": "0.7647"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -17.8678)",
+        "transform": "matrix(1, 0, 0, 1, 0, -17.8686)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 0.05,
+        "currentTime": 5.3,
         "readyState": 4
       },
       "overflows": false,
@@ -1157,30 +1157,30 @@
       "width": 1280,
       "stop": 1,
       "trackSpan": 1440,
-      "scrollY": 1436,
-      "trackTop": -1436,
+      "scrollY": 1433,
+      "trackTop": -1433,
       "trackHeight": 2340,
       "scrub": "on",
       "mark": {
-        "transform": "matrix(1, 0, 0, 1, 0, -82.7401)",
-        "opacity": "0.1025"
+        "transform": "matrix(1, 0, 0, 1, 0, -82.5711)",
+        "opacity": "0.1043"
       },
       "art": {
-        "transform": "matrix(1.1596, 0, 0, 1.1596, 0, -33.4742)",
+        "transform": "matrix(1.1592, 0, 0, 1.1592, 0, -33.4056)",
         "opacity": "1"
       },
       "backdrop": {
-        "transform": "matrix(1.0499, 0, 0, 1.0499, 0, -33.5067)",
-        "opacity": "0.7794"
+        "transform": "matrix(1, 0, 0, 1, 0, -33.4382)",
+        "opacity": "0.7797"
       },
       "band": {
-        "transform": "matrix(1, 0, 0, 1, 0, -23.9333)",
+        "transform": "matrix(1, 0, 0, 1, 0, -23.8844)",
         "opacity": "1"
       },
       "video": {
         "present": true,
         "paused": false,
-        "currentTime": 2.51,
+        "currentTime": 1.93,
         "readyState": 4
       },
       "overflows": false,

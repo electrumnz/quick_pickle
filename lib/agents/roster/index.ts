@@ -56,6 +56,8 @@ export {
   type RosterSlug,
 } from "./roster";
 
+export { createRosterPlatform, type RosterPlatform } from "./production";
+
 export {
   createRosterTools,
   type RosterToolPorts,

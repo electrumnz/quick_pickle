@@ -1,0 +1,18 @@
+==============================================================================
+THE PAUSE CONTROL, CLICKED FOR REAL
+==============================================================================
+The Team page can change exactly one thing: whether an agent is working.
+Below is the row in public.agents either side of a real click on the button,
+through the real form, in a signed-in browser session, plus the append-only
+audit row the action wrote. `is_enabled` is what the runtime's control plane
+reads before every model call and every tool call, so a paused agent stops
+mid-run rather than finishing what it started.
+
+BEFORE  {"slug":"analyst","name":"Cass","status":"active","is_enabled":true}
+AFTER   {"slug":"analyst","name":"Cass","status":"paused","is_enabled":false}
+PAGE    the agent's page shows the paused notice: true
+AUDIT   {"actor_label":"Founder","summary":"Paused Cass (Analyst). It will stop mid-run and start nothing new.","occurred_at":"2026-08-30T00:12:39.095Z"}
+RESTORED {"slug":"analyst","name":"Cass","status":"active","is_enabled":true}
+
+The agent was put back on duty afterwards, so this evidence leaves the
+business exactly as it found it.

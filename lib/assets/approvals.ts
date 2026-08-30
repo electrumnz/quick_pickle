@@ -18,8 +18,7 @@
  * by the lookup that follows.
  */
 
-const UUID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The key names a tool is asked to use. Matches are hoisted to the front. */
 const PREFERRED_KEYS = new Set([
@@ -35,7 +34,11 @@ export function assetIdsIn(payload: unknown, limit = 12): readonly string[] {
   const preferred: string[] = [];
   const other: string[] = [];
 
-  const walk = (value: unknown, underPreferredKey: boolean, depth: number): void => {
+  const walk = (
+    value: unknown,
+    underPreferredKey: boolean,
+    depth: number,
+  ): void => {
     if (depth > 6) return;
     if (typeof value === "string") {
       if (UUID.test(value)) {

@@ -76,7 +76,13 @@ export { AssetError, isAssetError, type AssetErrorCode } from "./errors";
 
 export { assetIdsIn } from "./approvals";
 export { checkGeneratedText, type ClaimCheck } from "./claim-guard";
-export { assetSlug, cleanTags, defaultDescription, defaultTitle, slugify } from "./naming";
+export {
+  assetSlug,
+  cleanTags,
+  defaultDescription,
+  defaultTitle,
+  slugify,
+} from "./naming";
 
 export {
   ASSET_TOOL_NAMES,

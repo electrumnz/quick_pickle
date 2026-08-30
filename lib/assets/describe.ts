@@ -100,7 +100,9 @@ export class ReplicateDescriptionDrafter implements DescriptionDrafter {
           input: {
             image: dataUri,
             prompt:
-              input.hint === undefined || input.hint === null || input.hint === ""
+              input.hint === undefined ||
+              input.hint === null ||
+              input.hint === ""
                 ? PROMPT
                 : `${PROMPT} Context you may use if it matches what you can see: ${input.hint}`,
             max_tokens: 120,

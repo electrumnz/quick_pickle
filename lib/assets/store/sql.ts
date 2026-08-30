@@ -175,7 +175,11 @@ export class SqlAssetStore implements AssetStore {
       }
 
       const peoplePresent = patch.peoplePresent ?? current.peoplePresent;
-      const consent = resolveConsent(patch, current.peopleConsent, peoplePresent);
+      const consent = resolveConsent(
+        patch,
+        current.peopleConsent,
+        peoplePresent,
+      );
       const decided = consent === "granted" || consent === "refused";
       const consentChanged = consent !== current.peopleConsent;
       const recordedAt = decided
@@ -222,7 +226,8 @@ export class SqlAssetStore implements AssetStore {
         await replaceProducts(tx, id, patch.variantIds);
       }
       const updated = await readOne(tx, "a.id = $1::uuid", [id]);
-      if (updated === null) throw new AssetError("not_found", "Asset vanished.");
+      if (updated === null)
+        throw new AssetError("not_found", "Asset vanished.");
       return updated;
     });
   }
@@ -231,9 +236,10 @@ export class SqlAssetStore implements AssetStore {
     if (!isUuid(id)) return null;
     const existing = await this.get(id);
     if (existing === null) return null;
-    await this.sql.query(`delete from public.marketing_assets where id = $1::uuid`, [
-      id,
-    ]);
+    await this.sql.query(
+      `delete from public.marketing_assets where id = $1::uuid`,
+      [id],
+    );
     return existing;
   }
 

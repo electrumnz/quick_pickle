@@ -5,9 +5,8 @@ Left: the role as declared in lib/agents/roster/definitions.ts.
 Right: the row in public.agents after supabase/migrations/20260103000000_agent_roster.sql.
 The admin's Team page reads the row; the runtime runs the declaration; this
 file is the two of them side by side.
-model: PLANNER (tests/roster/support/planner-model.ts) — deterministic, and
-cannot write a number the tools did not return. Everything below the model is
-the real runtime, and every read is real SQL against the seeded business.
+No model was involved in this file. It is a declaration compared to a row
+in a real Postgres with every migration and the seed applied.
 
 ------------------------------------------------------------------------------
 Marlow — Head of Brine Ops (brine-ops)

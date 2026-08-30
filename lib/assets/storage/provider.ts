@@ -128,7 +128,8 @@ export function parseRange(
     return { start: Math.max(0, totalBytes - length), end: totalBytes - 1 };
   }
   const start = Number.parseInt(rawStart ?? "0", 10);
-  const end = rawEnd === "" ? totalBytes - 1 : Number.parseInt(rawEnd ?? "0", 10);
+  const end =
+    rawEnd === "" ? totalBytes - 1 : Number.parseInt(rawEnd ?? "0", 10);
   if (!Number.isFinite(start) || start >= totalBytes) return null;
   return { start, end: Math.min(end, totalBytes - 1) };
 }

@@ -151,7 +151,9 @@ export interface AssetStore {
   /** Every sellable variant, so "which bottles are in it" is a real SKU list. */
   variants(): Promise<readonly AssetProduct[]>;
   /** Approvals whose payload cites one of these assets. */
-  approvalsFor(assetIds: readonly string[]): Promise<readonly AssetApprovalReference[]>;
+  approvalsFor(
+    assetIds: readonly string[],
+  ): Promise<readonly AssetApprovalReference[]>;
   /** The file behind a storage key — the asset's own, or its poster frame. */
   fileByKey(key: string): Promise<StoredFileRef | null>;
 }

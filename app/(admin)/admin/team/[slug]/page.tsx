@@ -82,9 +82,7 @@ async function roleFor(slug: string): Promise<RosterRole | null> {
     marketing: defineMarketingAgent(strategy),
     trade: defineTradeAgent(strategy),
   });
-  return (
-    roster.roles.find((role) => role.definition.slug === slug) ?? null
-  );
+  return roster.roles.find((role) => role.definition.slug === slug) ?? null;
 }
 
 export default async function AgentPage({
@@ -109,7 +107,10 @@ export default async function AgentPage({
   if (!result.ok) {
     return (
       <>
-        <PageHeader title="An agent" lede="What it does, and what it has done." />
+        <PageHeader
+          title="An agent"
+          lede="What it does, and what it has done."
+        />
         <DataUnavailable problem={result.problem} detail={result.detail} />
       </>
     );
@@ -125,10 +126,7 @@ export default async function AgentPage({
     <>
       <PageHeader
         title={member.name}
-        lede={
-          role?.plainJob ??
-          member.purpose
-        }
+        lede={role?.plainJob ?? member.purpose}
         meta={
           <>
             <span>{member.jobTitle}</span>
@@ -181,7 +179,8 @@ export default async function AgentPage({
                   },
                   {
                     term: "What it may do alone",
-                    value: role?.autonomyWords ?? autonomyWords(member.autonomy),
+                    value:
+                      role?.autonomyWords ?? autonomyWords(member.autonomy),
                     hint: `Autonomy level "${member.autonomy}". No level lets it change the shop or contact anyone without your yes.`,
                   },
                   {
@@ -305,9 +304,8 @@ export default async function AgentPage({
               </div>
               {member.singleActionCapCents !== null && (
                 <p className="mt-3 text-caption text-muted">
-                  Anything worth more than{" "}
-                  {money(member.singleActionCapCents)} in one action comes to you
-                  whatever its other limits say.
+                  Anything worth more than {money(member.singleActionCapCents)}{" "}
+                  in one action comes to you whatever its other limits say.
                 </p>
               )}
             </CardBody>
@@ -435,8 +433,7 @@ function RunCard({ run, member }: { run: AgentRun; member: TeamMember }) {
             {runStatusWords(run.status)}
           </Badge>
           <span className="text-caption text-muted">
-            {money(run.costCents)} ·{" "}
-            {plural(run.toolCallCount, "action")}
+            {money(run.costCents)} · {plural(run.toolCallCount, "action")}
             {run.durationMs === null
               ? ""
               : ` · took ${String(Math.max(1, Math.round(run.durationMs / 1000)))}s`}

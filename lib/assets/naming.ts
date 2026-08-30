@@ -42,14 +42,16 @@ export function assetSlug(input: {
   readonly filename: string;
   readonly checksum: string;
 }): string {
-  const stem =
-    slugify(input.title) || slugify(input.filename) || "asset";
+  const stem = slugify(input.title) || slugify(input.filename) || "asset";
   return `${stem}-${input.checksum.slice(0, 8)}`;
 }
 
 /** `IMG_4821.HEIC` → `IMG 4821`; a name she will recognise on the screen. */
 export function defaultTitle(filename: string, kind: AssetKind): string {
-  const stem = filename.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+  const stem = filename
+    .replace(/\.[^.]+$/, "")
+    .replace(/[_-]+/g, " ")
+    .trim();
   if (stem === "") return kind === "photo" ? "Untitled photo" : "Untitled clip";
   return stem.slice(0, 120);
 }
@@ -73,9 +75,7 @@ export function defaultDescription(input: {
 
 /** Free-text tags, cleaned: lowercase, deduplicated, no empties, capped. */
 export function cleanTags(raw: string | readonly string[]): readonly string[] {
-  const parts = Array.isArray(raw)
-    ? [...raw]
-    : String(raw).split(/[,\n]/);
+  const parts = Array.isArray(raw) ? [...raw] : String(raw).split(/[,\n]/);
   const cleaned = parts
     .map((tag) => tag.trim().toLowerCase().replace(/\s+/g, " "))
     .filter((tag) => tag !== "" && tag.length <= 40);

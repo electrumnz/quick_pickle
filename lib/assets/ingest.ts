@@ -40,21 +40,27 @@ import {
   MAX_UPLOAD_BYTES,
   megabytes,
 } from "./formats";
-import { assetSlug, cleanTags, defaultDescription, defaultTitle } from "./naming";
+import {
+  assetSlug,
+  cleanTags,
+  defaultDescription,
+  defaultTitle,
+} from "./naming";
 import { scrub } from "./scrub";
 import { assetObjectKey, type StorageProvider } from "./storage/provider";
 import type { AssetStore } from "./store/types";
-import type {
-  ConsentState,
-  MarketingAsset,
-  UsageRights,
-} from "./types";
+import type { ConsentState, MarketingAsset, UsageRights } from "./types";
 
 export interface UploadedFile {
   readonly bytes: Uint8Array;
   readonly filename: string;
   /** What the browser said it was. Never trusted, only quoted back. */
   readonly declaredMimeType?: string | null;
+  /**
+   * The still the browser captured for this clip, when there is one. It is a
+   * file like any other and is sniffed, capped and scrubbed like any other.
+   */
+  readonly poster?: UploadedFile | null;
 }
 
 /** What the founder filled in beside the file. Every field is optional. */
@@ -150,8 +156,9 @@ export async function ingestFile(
     // The poster frame is an uploaded file too, and gets the same treatment.
     let posterKey: string | null = null;
     let posterBytes: Uint8Array | null = null;
-    if (format.kind === "video" && intake.poster != null) {
-      const poster = preparePoster(intake.poster);
+    const supplied = file.poster ?? intake.poster ?? null;
+    if (format.kind === "video" && supplied !== null) {
+      const poster = preparePoster(supplied);
       if (poster === null) {
         notes.push(
           "The poster frame the browser captured was not a picture we accept, so it was dropped.",
@@ -181,7 +188,8 @@ export async function ingestFile(
     });
     await ports.storage.put(key, scrubbed.bytes);
 
-    const title = clean(intake.title) ?? defaultTitle(file.filename, format.kind);
+    const title =
+      clean(intake.title) ?? defaultTitle(file.filename, format.kind);
     const occasion = clean(intake.occasion) ?? null;
     const takenAt = scrubbed.capturedAt;
 
@@ -415,7 +423,9 @@ function clean(value: string | undefined | null): string | null {
 function dayOf(iso: string | null): string | null {
   if (iso === null) return null;
   const parsed = new Date(iso);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+  return Number.isNaN(parsed.getTime())
+    ? null
+    : parsed.toISOString().slice(0, 10);
 }
 
 function positive(value: number | null | undefined): number | null {

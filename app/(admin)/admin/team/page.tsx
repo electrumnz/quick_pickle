@@ -136,8 +136,7 @@ export default async function TeamPage({
   const registered = members.filter((member) => roleBySlug.has(member.slug));
   const unregistered = members.filter((member) => !roleBySlug.has(member.slug));
   const missing = roles.filter(
-    (role) =>
-      !members.some((member) => member.slug === role.definition.slug),
+    (role) => !members.some((member) => member.slug === role.definition.slug),
   );
 
   const matches = (member: TeamMember): boolean =>
@@ -276,7 +275,9 @@ export default async function TeamPage({
                         </span>{" "}
                         — {role.definition.jobTitle}
                       </p>
-                      <Badge tone="danger">Declared in code, not in the database</Badge>
+                      <Badge tone="danger">
+                        Declared in code, not in the database
+                      </Badge>
                     </div>
                     <p className="mt-1 text-caption text-muted">
                       {role.plainJob} It cannot run until the roster migration
@@ -470,7 +471,9 @@ function drift(member: TeamMember, role: RosterRole | null): string[] {
       `the database says it is on "${member.autonomy}" and the code declares "${declared.autonomy}"`,
     );
   }
-  if ([...member.tools].sort().join(",") !== [...declared.tools].sort().join(",")) {
+  if (
+    [...member.tools].sort().join(",") !== [...declared.tools].sort().join(",")
+  ) {
     problems.push("its tool list differs from the one declared in code");
   }
   if (member.dailyCapCents !== declared.budget.dailyCents) {

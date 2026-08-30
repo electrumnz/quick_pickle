@@ -1,0 +1,46 @@
+{
+  "$note": "copy-audit-ignore-file — generated evidence; see layer-cost.mjs",
+  "base": "http://localhost:3517",
+  "note": "one run, one variable; compare cases within a run, never across runs",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "cases": [
+    {
+      "case": "as shipped",
+      "frames": 122,
+      "fps": 40.9,
+      "msP95": 49.9,
+      "msWorst": 50.1
+    },
+    {
+      "case": "backdrop hidden",
+      "frames": 131,
+      "fps": 44.4,
+      "msP95": 33.4,
+      "msWorst": 50.1
+    },
+    {
+      "case": "grain hidden",
+      "frames": 169,
+      "fps": 58.3,
+      "msP95": 16.8,
+      "msWorst": 50
+    },
+    {
+      "case": "video hidden",
+      "frames": 132,
+      "fps": 45.3,
+      "msP95": 33.4,
+      "msWorst": 33.4
+    },
+    {
+      "case": "backdrop+grain hidden",
+      "frames": 173,
+      "fps": 60,
+      "msP95": 16.7,
+      "msWorst": 16.8
+    }
+  ]
+}

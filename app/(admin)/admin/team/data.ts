@@ -295,9 +295,7 @@ export async function recentTeamRuns(limit = 8): Promise<readonly TeamRun[]> {
     toolCallCount: int(row, "tool_call_count"),
     blockingApprovalId: textOrNull(row, "blocking_approval_id"),
     reasoning:
-      textOrNull(row, "last_reason") === null
-        ? []
-        : [text(row, "last_reason")],
+      textOrNull(row, "last_reason") === null ? [] : [text(row, "last_reason")],
     actions: [],
   }));
 }
@@ -421,10 +419,17 @@ export async function approvalsForAgent(
 /**
  * Pause or restart one agent.
  *
- * `is_enabled` is what the runtime's control plane reads before every model
- * call and before every tool call, so a paused agent stops mid-run rather than
- * finishing what it started. The row is also flipped to `paused` status so the
- * admin and the database agree about why it is not working.
+ * This writes exactly what `StoreControlPlane.pauseAgent()` writes —
+ * `setAgentStatus(slug, "paused", false)` — because that is what the runtime
+ * reads: `assertNotHalted` refuses a run when `!agent.isEnabled ||
+ * agent.status !== "active"`, before every model call and again before every
+ * tool call. So a paused agent stops mid-run rather than finishing what it
+ * started.
+ *
+ * It is SQL rather than a call into the control plane because the control plane
+ * takes an `AgentStore`, and the only SQL implementation of that port is
+ * `SupabaseAgentStore`, which needs service-role credentials this deployment
+ * does not have. The columns are the same two columns either way.
  */
 export async function setAgentPaused(
   slug: string,

@@ -58,13 +58,17 @@ export function UploadPanel({
   const [results, setResults] = useState<readonly UploadResult[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
 
-  async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+  async function submit(
+    event: React.FormEvent<HTMLFormElement>,
+  ): Promise<void> {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
     const files = data
       .getAll("files")
-      .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+      .filter(
+        (entry): entry is File => entry instanceof File && entry.size > 0,
+      );
 
     if (files.length === 0) {
       setProblem("Choose a photo or a clip first.");
@@ -86,7 +90,11 @@ export function UploadPanel({
         if (!file.type.startsWith("video/")) continue;
         const poster = await captureFrame(file);
         if (poster !== null) {
-          data.append(`poster-${String(index)}`, poster, `poster-${String(index)}.jpg`);
+          data.append(
+            `poster-${String(index)}`,
+            poster,
+            `poster-${String(index)}.jpg`,
+          );
         }
       }
 
@@ -138,12 +146,7 @@ export function UploadPanel({
         onSubmit={(event) => void submit(event)}
         className="space-y-4 px-4 py-4"
       >
-        <input
-          type="hidden"
-          name={csrfField}
-          value={csrfToken}
-          readOnly
-        />
+        <input type="hidden" name={csrfField} value={csrfToken} readOnly />
 
         <Field
           label="The files"
@@ -186,7 +189,11 @@ export function UploadPanel({
         </Field>
 
         <Field label="Tags" htmlFor="tags">
-          <TextInput id="tags" name="tags" placeholder="market, stall, spring" />
+          <TextInput
+            id="tags"
+            name="tags"
+            placeholder="market, stall, spring"
+          />
         </Field>
 
         <div className="space-y-2.5 rounded-md border border-strong px-3.5 py-3">
@@ -306,9 +313,13 @@ async function captureFrame(file: File): Promise<Blob | null> {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     return await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((blob) => {
-        resolve(blob);
-      }, "image/jpeg", 0.82);
+      canvas.toBlob(
+        (blob) => {
+          resolve(blob);
+        },
+        "image/jpeg",
+        0.82,
+      );
     });
   } catch {
     return null;

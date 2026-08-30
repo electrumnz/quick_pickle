@@ -68,3 +68,7 @@ _shot.mjs
 
 # generation working files
 .gen/
+
+# the marketing asset library's local storage (photos and video the founder
+# uploads; never committed, never inside public/)
+.assets/

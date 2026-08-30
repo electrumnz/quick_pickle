@@ -56,8 +56,12 @@ export async function saveAssetMetadata(
   const { session } = await requireAdminSession();
   await assertAdminCsrf(text(formData, ADMIN_CSRF_FIELD_NAME));
 
-  const consent = CONSENT.find((state) => state === text(formData, "peopleConsent"));
-  const rights = RIGHTS.find((right) => right === text(formData, "usageRights"));
+  const consent = CONSENT.find(
+    (state) => state === text(formData, "peopleConsent"),
+  );
+  const rights = RIGHTS.find(
+    (right) => right === text(formData, "usageRights"),
+  );
 
   const library = assetLibrary();
   await library.store.update(id, {
@@ -92,7 +96,10 @@ export async function saveAssetMetadata(
   redirect(`/admin/assets/${id}?saved=1`);
 }
 
-export async function removeAsset(id: string, formData: FormData): Promise<void> {
+export async function removeAsset(
+  id: string,
+  formData: FormData,
+): Promise<void> {
   await requireAdminSession();
   await assertAdminCsrf(text(formData, ADMIN_CSRF_FIELD_NAME));
 

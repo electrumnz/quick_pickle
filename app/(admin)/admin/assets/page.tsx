@@ -15,7 +15,10 @@ import {
   Stat,
   StatGrid,
 } from "@/components/admin";
-import { AssetFilters, type FilterValues } from "@/components/assets/AssetFilters";
+import {
+  AssetFilters,
+  type FilterValues,
+} from "@/components/assets/AssetFilters";
 import { AssetGrid, LibraryEmpty } from "@/components/assets/AssetGrid";
 import { UploadPanel } from "@/components/assets/UploadPanel";
 import { assetHref, consentBadge, fileSize } from "@/components/assets/words";
@@ -53,6 +56,10 @@ export default async function AssetsPage({
 }) {
   const { csrfToken } = await requireAdminSession();
   const params = await searchParams;
+  const query = params;
+  // The no-JavaScript upload path carries its result in the query string,
+  // because a plain form post cannot render a list of per-file outcomes.
+  const added = uploadSummary(params);
 
   const values: FilterValues = {
     q: one(params, "q"),
@@ -66,7 +73,8 @@ export default async function AssetsPage({
 
   const filter: AssetFilter = {
     search: values.q === "" ? null : values.q,
-    kind: values.kind === "photo" || values.kind === "video" ? values.kind : null,
+    kind:
+      values.kind === "photo" || values.kind === "video" ? values.kind : null,
     sku: values.sku === "" ? null : values.sku,
     frame: FRAME_NAMES.find((frame) => frame === values.frame) ?? null,
     consent: consentFilter(values.consent),
@@ -121,6 +129,25 @@ export default async function AssetsPage({
     <>
       {header}
       <PageSections>
+        {added !== null && (
+          <Callout title="That upload is in">
+            {added}{" "}
+            <Link
+              href="/admin/assets"
+              className="text-link underline underline-offset-4 hover:no-underline"
+            >
+              Clear this message
+            </Link>
+            .
+          </Callout>
+        )}
+
+        {query["deleted"] === "1" && (
+          <Callout title="Deleted">
+            The file and everything recorded about it are gone.
+          </Callout>
+        )}
+
         <Section title="Add to it">
           <UploadPanel
             csrfToken={csrfToken}
@@ -145,7 +172,9 @@ export default async function AssetsPage({
                 />
                 <Stat
                   label="Waiting on you"
-                  value={String(summary.awaitingConsent + summary.rightsUnknown)}
+                  value={String(
+                    summary.awaitingConsent + summary.rightsUnknown,
+                  )}
                   hint="People to ask about, or rights to record"
                   tone={
                     summary.awaitingConsent + summary.rightsUnknown > 0
@@ -252,6 +281,23 @@ export default async function AssetsPage({
       </PageSections>
     </>
   );
+}
+
+/** "Two added, one was already here" — the plain-form upload's receipt. */
+function uploadSummary(params: Params): string | null {
+  const count = (key: string): number => {
+    const value = Number.parseInt(one(params, key), 10);
+    return Number.isFinite(value) ? value : 0;
+  };
+  const parts: string[] = [];
+  const added = count("added");
+  const already = count("already");
+  const refused = count("refused");
+  if (added + already + refused === 0) return null;
+  if (added > 0) parts.push(`${String(added)} added`);
+  if (already > 0) parts.push(`${String(already)} already here`);
+  if (refused > 0) parts.push(`${String(refused)} turned away`);
+  return `${parts.join(", ")}.`;
 }
 
 function consentFilter(value: string): ConsentState | null {

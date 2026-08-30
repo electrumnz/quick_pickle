@@ -155,7 +155,7 @@ export default async function AudiencePage() {
         >
           <Card>
             <CardHeader
-              title="Two things that cannot both be right"
+              title="Pairs that cannot both be right"
               count={avatars.contradictions.length}
               note="Each one names which is wrong, and what would settle it"
             />

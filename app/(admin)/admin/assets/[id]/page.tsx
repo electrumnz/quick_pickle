@@ -27,7 +27,14 @@ import {
   seconds,
   shapeWords,
 } from "@/components/assets/words";
-import { CONSENT_WORDS, RIGHTS_WORDS, citationFor, framesFor, FRAMES, outboundVerdict } from "@/lib/assets";
+import {
+  CONSENT_WORDS,
+  RIGHTS_WORDS,
+  citationFor,
+  framesFor,
+  FRAMES,
+  outboundVerdict,
+} from "@/lib/assets";
 import { assetLibrary, loadAssets } from "@/lib/assets/server";
 import { ADMIN_CSRF_FIELD_NAME, requireAdminSession } from "@/lib/auth/server";
 
@@ -175,7 +182,8 @@ export default async function AssetPage({
                   },
                   {
                     term: "Tags",
-                    value: asset.tags.length === 0 ? "none" : asset.tags.join(", "),
+                    value:
+                      asset.tags.length === 0 ? "none" : asset.tags.join(", "),
                   },
                 ]}
               />
@@ -275,7 +283,9 @@ export default async function AssetPage({
                           {approval.title}
                         </p>
                         <Badge
-                          tone={approval.status === "pending" ? "accent" : "quiet"}
+                          tone={
+                            approval.status === "pending" ? "accent" : "quiet"
+                          }
                         >
                           {approval.status === "pending"
                             ? "Waiting on you"
@@ -299,16 +309,17 @@ export default async function AssetPage({
             >
               <Card>
                 <CardBody>
-                  <form action={remove} className="flex flex-wrap items-center gap-3">
+                  <form
+                    action={remove}
+                    className="flex flex-wrap items-center gap-3"
+                  >
                     <input
                       type="hidden"
                       name={ADMIN_CSRF_FIELD_NAME}
                       value={csrfToken}
                       readOnly
                     />
-                    <DangerButton type="submit">
-                      Delete this file
-                    </DangerButton>
+                    <DangerButton type="submit">Delete this file</DangerButton>
                     <p className="text-caption text-muted">
                       Anything already sent out that used it stays sent.
                     </p>

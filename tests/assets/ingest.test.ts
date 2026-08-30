@@ -43,10 +43,15 @@ function ports() {
 describe("uploading a photo off a phone", () => {
   it("stores it, scrubbed, described and linked to the bottles in it", async () => {
     const outcome = await ingestFile(
-      { bytes: jpegWithGps(), filename: "IMG_4821.JPG", declaredMimeType: "image/jpeg" },
+      {
+        bytes: jpegWithGps(),
+        filename: "IMG_4821.JPG",
+        declaredMimeType: "image/jpeg",
+      },
       {
         title: "Stall on the corner",
-        description: "The stall at the Sunday market, four bottles on the table.",
+        description:
+          "The stall at the Sunday market, four bottles on the table.",
         occasion: "Grey Lynn market",
         occasionOn: "2026-09-14",
         tags: "market, stall, spring",
@@ -106,7 +111,10 @@ describe("uploading a photo off a phone", () => {
 
   it("defaults consent to the state nothing can use when there are people in it", async () => {
     const outcome = await ingestFile(
-      { bytes: repoFile("public/media/bottles/no-02-dirty.jpg"), filename: "market.jpg" },
+      {
+        bytes: repoFile("public/media/bottles/no-02-dirty.jpg"),
+        filename: "market.jpg",
+      },
       {
         title: "Two customers at the stall",
         description: "Two people at the stall, holding a bottle each.",
@@ -123,7 +131,10 @@ describe("uploading a photo off a phone", () => {
 
   it("writes an honest default description when she does not write one", async () => {
     const outcome = await ingestFile(
-      { bytes: repoFile("public/media/bottles/no-03-smoke.jpg"), filename: "IMG_5000.jpg" },
+      {
+        bytes: repoFile("public/media/bottles/no-03-smoke.jpg"),
+        filename: "IMG_5000.jpg",
+      },
       { occasion: "the kitchen bench" },
       ports(),
     );
@@ -158,7 +169,9 @@ describe("uploading a video", () => {
     expect(outcome.asset.durationMs).toBe(6000);
     expect(outcome.asset.posterStorageKey).not.toBeNull();
     expect(outcome.asset.posterStorageKey ?? "").toContain("posters/");
-    const poster = await world.storage.bytes(outcome.asset.posterStorageKey ?? "");
+    const poster = await world.storage.bytes(
+      outcome.asset.posterStorageKey ?? "",
+    );
     expect(poster?.length).toBeGreaterThan(1000);
   });
 
@@ -204,10 +217,13 @@ describe("what does not get in", () => {
   });
 
   it("refuses an upload with more files than the cap", async () => {
-    const many = Array.from({ length: MAX_FILES_PER_UPLOAD + 1 }, (_, index) => ({
-      bytes: jpegWithGps(),
-      filename: `photo-${String(index)}.jpg`,
-    }));
+    const many = Array.from(
+      { length: MAX_FILES_PER_UPLOAD + 1 },
+      (_, index) => ({
+        bytes: jpegWithGps(),
+        filename: `photo-${String(index)}.jpg`,
+      }),
+    );
     await expect(ingestFiles(many, {}, ports())).rejects.toThrow(/at most/i);
   });
 });

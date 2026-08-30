@@ -8,20 +8,20 @@
       "width": 375,
       "bytes": {
         "atLoad": {
-          "total": 412138,
-          "document": 11817,
-          "stylesheet": 15106,
+          "total": 405200,
+          "document": 11823,
           "font": 166242,
-          "image": 14503,
-          "script": 204470
+          "stylesheet": 15235,
+          "image": 7425,
+          "script": 204475
         },
         "afterScrub": {
-          "total": 412138,
-          "document": 11817,
-          "stylesheet": 15106,
+          "total": 405200,
+          "document": 11823,
           "font": 166242,
-          "image": 14503,
-          "script": 204470
+          "stylesheet": 15235,
+          "image": 7425,
+          "script": 204475
         },
         "scriptDeferred": 0
       },
@@ -38,12 +38,12 @@
         }
       },
       "scrub": {
-        "frames": 140,
-        "fpsMean": 48,
+        "frames": 104,
+        "fpsMean": 34.9,
         "msMedian": 16.7,
-        "msP95": 33.4,
-        "msWorst": 83.3,
-        "longFrames": 27
+        "msP95": 66.7,
+        "msWorst": 133.3,
+        "longFrames": 44
       },
       "before": {
         "canvases": 0,
@@ -64,21 +64,21 @@
       "width": 768,
       "bytes": {
         "atLoad": {
-          "total": 761733,
-          "document": 11817,
-          "stylesheet": 15785,
+          "total": 751856,
+          "document": 11823,
           "font": 166242,
-          "image": 64520,
-          "script": 205512,
+          "stylesheet": 15914,
+          "image": 54503,
+          "script": 205517,
           "media": 297857
         },
         "afterScrub": {
-          "total": 761733,
-          "document": 11817,
-          "stylesheet": 15785,
+          "total": 751856,
+          "document": 11823,
           "font": 166242,
-          "image": 64520,
-          "script": 205512,
+          "stylesheet": 15914,
+          "image": 54503,
+          "script": 205517,
           "media": 297857
         },
         "scriptDeferred": 0
@@ -96,12 +96,12 @@
         }
       },
       "scrub": {
-        "frames": 120,
-        "fpsMean": 39.1,
-        "msMedian": 16.7,
-        "msP95": 50,
-        "msWorst": 50.1,
-        "longFrames": 56
+        "frames": 59,
+        "fpsMean": 18.7,
+        "msMedian": 66.5,
+        "msP95": 100,
+        "msWorst": 133.4,
+        "longFrames": 42
       },
       "before": {
         "canvases": 0,
@@ -122,21 +122,21 @@
       "width": 1280,
       "bytes": {
         "atLoad": {
-          "total": 786104,
-          "document": 11817,
+          "total": 762709,
+          "document": 11823,
           "font": 166242,
-          "stylesheet": 15785,
-          "script": 205512,
-          "image": 88891,
+          "stylesheet": 15914,
+          "image": 65356,
+          "script": 205517,
           "media": 297857
         },
         "afterScrub": {
-          "total": 786104,
-          "document": 11817,
+          "total": 762709,
+          "document": 11823,
           "font": 166242,
-          "stylesheet": 15785,
-          "script": 205512,
-          "image": 88891,
+          "stylesheet": 15914,
+          "image": 65356,
+          "script": 205517,
           "media": 297857
         },
         "scriptDeferred": 0
@@ -154,12 +154,12 @@
         }
       },
       "scrub": {
-        "frames": 55,
-        "fpsMean": 16.9,
-        "msMedian": 66.6,
-        "msP95": 116.7,
-        "msWorst": 183.3,
-        "longFrames": 37
+        "frames": 48,
+        "fpsMean": 11.4,
+        "msMedian": 83.3,
+        "msP95": 233.3,
+        "msWorst": 466.6,
+        "longFrames": 38
       },
       "before": {
         "canvases": 0,
@@ -180,21 +180,21 @@
       "width": 1920,
       "bytes": {
         "atLoad": {
-          "total": 786104,
-          "document": 11817,
-          "stylesheet": 15785,
+          "total": 762709,
+          "document": 11823,
+          "stylesheet": 15914,
+          "image": 65356,
           "font": 166242,
-          "script": 205512,
-          "image": 88891,
+          "script": 205517,
           "media": 297857
         },
         "afterScrub": {
-          "total": 786104,
-          "document": 11817,
-          "stylesheet": 15785,
+          "total": 762709,
+          "document": 11823,
+          "stylesheet": 15914,
+          "image": 65356,
           "font": 166242,
-          "script": 205512,
-          "image": 88891,
+          "script": 205517,
           "media": 297857
         },
         "scriptDeferred": 0
@@ -212,12 +212,12 @@
         }
       },
       "scrub": {
-        "frames": 38,
-        "fpsMean": 8.3,
-        "msMedian": 83.3,
+        "frames": 27,
+        "fpsMean": 6.6,
+        "msMedian": 50,
         "msP95": 416.7,
-        "msWorst": 566.7,
-        "longFrames": 20
+        "msWorst": 433.4,
+        "longFrames": 22
       },
       "before": {
         "canvases": 0,
@@ -238,20 +238,20 @@
       "width": 1280,
       "bytes": {
         "atLoad": {
-          "total": 436062,
-          "document": 11817,
+          "total": 412667,
+          "document": 11823,
           "font": 166242,
-          "stylesheet": 15106,
-          "image": 44278,
-          "script": 198619
+          "stylesheet": 15235,
+          "image": 20743,
+          "script": 198624
         },
         "afterScrub": {
-          "total": 436062,
-          "document": 11817,
+          "total": 412667,
+          "document": 11823,
           "font": 166242,
-          "stylesheet": 15106,
-          "image": 44278,
-          "script": 198619
+          "stylesheet": 15235,
+          "image": 20743,
+          "script": 198624
         },
         "scriptDeferred": 0
       },
@@ -268,12 +268,12 @@
         }
       },
       "scrub": {
-        "frames": 86,
-        "fpsMean": 27.9,
+        "frames": 58,
+        "fpsMean": 18.2,
         "msMedian": 16.7,
-        "msP95": 150,
-        "msWorst": 833.3,
-        "longFrames": 12
+        "msP95": 266.7,
+        "msWorst": 1349.9,
+        "longFrames": 7
       },
       "before": {
         "canvases": 0,

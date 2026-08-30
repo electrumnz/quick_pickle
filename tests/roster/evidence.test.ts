@@ -64,17 +64,14 @@ function redact(body: string): string {
   );
 }
 
-function heading(title: string, note: string): string {
-  return [
-    RULE,
-    title,
-    RULE,
-    note,
-    "model: PLANNER (tests/roster/support/planner-model.ts) — deterministic, and",
-    "cannot write a number the tools did not return. Everything below the model is",
-    "the real runtime, and every read is real SQL against the seeded business.",
-    "",
-  ].join("\n");
+const MODEL_NOTE = [
+  "model: PLANNER (tests/roster/support/planner-model.ts) — deterministic, and",
+  "cannot write a number the tools did not return. Everything below the model is",
+  "the real runtime, and every read is real SQL against the seeded business.",
+];
+
+function heading(title: string, note: string, provenance = MODEL_NOTE): string {
+  return [RULE, title, RULE, note, ...provenance, ""].join("\n");
 }
 
 /** A tool result, condensed to what a person would want to read. */
@@ -217,6 +214,10 @@ describe("roster evidence", () => {
           "Right: the row in public.agents after supabase/migrations/20260103000000_agent_roster.sql.\n" +
           "The admin's Team page reads the row; the runtime runs the declaration; this\n" +
           "file is the two of them side by side.",
+        [
+          "No model was involved in this file. It is a declaration compared to a row",
+          "in a real Postgres with every migration and the seed applied.",
+        ],
       ),
     ];
 

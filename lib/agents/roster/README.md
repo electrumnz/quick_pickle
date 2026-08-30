@@ -101,6 +101,25 @@ const run = await platform.runtime.startRun({
 await platform.runtime.runToCompletion(run.runId, { onApproval });
 ```
 
+## Wiring it into the app
+
+`app/api/inngest/route.ts` currently serves the durable functions with an empty
+registry, and its own comment says the unit that defines the agents replaces it.
+`createRosterPlatform()` is that replacement, in one call:
+
+```ts
+const { platform } = await createRosterPlatform({
+  sql: createPgExecutor(process.env.SUPABASE_DB_URL),
+  outbox: new RecordingOutbox(),
+});
+```
+
+**It is not called anywhere yet.** It needs `ANTHROPIC_API_KEY` and the Supabase
+service credentials, neither of which is configured in this environment, and
+`createProductionRuntime` refuses to build a platform with no model behind it —
+which is the correct behaviour and the reason the wiring is left as one
+deliberate line for whoever configures those.
+
 ## Testing without a key
 
 `ANTHROPIC_API_KEY` is not required and was not present when this was built.

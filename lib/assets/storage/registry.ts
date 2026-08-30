@@ -51,16 +51,38 @@ export function readStorageConfig(env: EnvSource = process.env): StorageConfig {
   }
   return {
     backend: raw === undefined || raw === "" ? "local" : raw,
-    directory: path.resolve(
-      orNull(env.ASSET_STORAGE_DIR) ??
-        path.join(process.cwd(), DEFAULT_ASSET_DIRECTORY),
-    ),
+    directory: assetDirectory(orNull(env.ASSET_STORAGE_DIR)),
     supabase: {
       url: orNull(env.SUPABASE_URL) ?? orNull(env.NEXT_PUBLIC_SUPABASE_URL),
       serviceKey: orNull(env.SUPABASE_SERVICE_ROLE_KEY),
       bucket: orNull(env.ASSET_STORAGE_BUCKET) ?? DEFAULT_ASSET_BUCKET,
     },
   };
+}
+
+/**
+ * Where the local provider keeps files.
+ *
+ * The default is one fixed subfolder of the project, spelled out statically: the
+ * build's file tracer follows path expressions, and one it cannot resolve makes
+ * it trace and deploy the entire repository — public folder included.
+ *
+ * `ASSET_STORAGE_DIR` must therefore be an absolute path. A relative one would
+ * have to be joined to the working directory here, which is exactly the
+ * expression the tracer cannot see through, and "relative to what?" is a bad
+ * question to leave open about the folder holding the company's photographs.
+ */
+function assetDirectory(configured: string | null): string {
+  if (configured === null) {
+    return path.join(process.cwd(), DEFAULT_ASSET_DIRECTORY);
+  }
+  if (!path.isAbsolute(configured)) {
+    throw new AssetError(
+      "storage_unavailable",
+      `ASSET_STORAGE_DIR is ${JSON.stringify(configured)}, which is a relative path. Give it an absolute one, or leave it unset to use ${DEFAULT_ASSET_DIRECTORY} in the project.`,
+    );
+  }
+  return configured;
 }
 
 function isBackend(value: string): value is StorageBackend {
@@ -92,9 +114,13 @@ export function createStorageProvider(config: StorageConfig): StorageProvider {
 type StorageGlobal = { __halfSourAssetStorage?: StorageProvider };
 
 /** The process-wide provider, resolved on first use. */
-export function getStorageProvider(env: EnvSource = process.env): StorageProvider {
+export function getStorageProvider(
+  env: EnvSource = process.env,
+): StorageProvider {
   const store = globalThis as unknown as StorageGlobal;
-  store.__halfSourAssetStorage ??= createStorageProvider(readStorageConfig(env));
+  store.__halfSourAssetStorage ??= createStorageProvider(
+    readStorageConfig(env),
+  );
   return store.__halfSourAssetStorage;
 }
 

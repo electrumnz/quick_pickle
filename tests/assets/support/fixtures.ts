@@ -40,7 +40,11 @@ export function exifWithGps(): Uint8Array {
       tiff[offset + index] = index < text.length ? text.charCodeAt(index) : 0;
     }
   };
-  const rational = (offset: number, numerator: number, denominator: number): void => {
+  const rational = (
+    offset: number,
+    numerator: number,
+    denominator: number,
+  ): void => {
     view.setUint32(offset, numerator, true);
     view.setUint32(offset + 4, denominator, true);
   };
@@ -233,7 +237,13 @@ export function heicWithGps(): {
   exifItem.set(tiff, 4);
   const picture = new Uint8Array(64).fill(0x5a);
 
-  const ftyp = box("ftyp", fourcc("heic"), u32(0), fourcc("heic"), fourcc("mif1"));
+  const ftyp = box(
+    "ftyp",
+    fourcc("heic"),
+    u32(0),
+    fourcc("heic"),
+    fourcc("mif1"),
+  );
 
   const infePicture = box(
     "infe",
@@ -243,7 +253,14 @@ export function heicWithGps(): {
     fourcc("hvc1"),
     u8(0),
   );
-  const infeExif = box("infe", u8(2, 0, 0, 0), u16(2), u16(0), fourcc("Exif"), u8(0));
+  const infeExif = box(
+    "infe",
+    u8(2, 0, 0, 0),
+    u16(2),
+    u16(0),
+    fourcc("Exif"),
+    u8(0),
+  );
   const iinf = box("iinf", u8(0, 0, 0, 0), u16(2), infePicture, infeExif);
 
   // Offsets into the file are only known once the header is sized, so the boxes
@@ -266,7 +283,13 @@ export function heicWithGps(): {
       u32(exifAt),
       u32(exifItem.length),
     );
-    const hdlr = box("hdlr", u8(0, 0, 0, 0), u32(0), fourcc("pict"), new Uint8Array(13));
+    const hdlr = box(
+      "hdlr",
+      u8(0, 0, 0, 0),
+      u32(0),
+      fourcc("pict"),
+      new Uint8Array(13),
+    );
     const ispe = box("ispe", u8(0, 0, 0, 0), u32(1200), u32(1600));
     const ipco = box("ipco", ispe);
     const iprp = box("iprp", ipco);
@@ -348,7 +371,9 @@ export function webpWithExif(): Uint8Array {
   const exif = riffChunk("EXIF", tiff);
   const xmp = riffChunk(
     "XMP ",
-    new TextEncoder().encode('<x:xmpmeta><exif:GPSLatitude>-36,50.91S</exif:GPSLatitude></x:xmpmeta>'),
+    new TextEncoder().encode(
+      "<x:xmpmeta><exif:GPSLatitude>-36,50.91S</exif:GPSLatitude></x:xmpmeta>",
+    ),
   );
   const body = concat([vp8x, vp8, exif, xmp]);
   const out = new Uint8Array(12 + body.length);
@@ -400,6 +425,7 @@ export function scriptedSvgNamedPng(): { bytes: Uint8Array; filename: string } {
 
 /** An HTML page with a `.jpeg` extension and an image content type. */
 export function htmlNamedJpeg(): { bytes: Uint8Array; filename: string } {
-  const html = "<!DOCTYPE html><html><body><script>alert(1)</script></body></html>";
+  const html =
+    "<!DOCTYPE html><html><body><script>alert(1)</script></body></html>";
   return { bytes: new TextEncoder().encode(html), filename: "photo.jpeg" };
 }

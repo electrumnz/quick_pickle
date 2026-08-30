@@ -88,7 +88,9 @@ export function citationFor(asset: MarketingAsset): AssetCitation {
     products: asset.products.map((product) => product.sku),
     tags: asset.tags,
     seconds:
-      asset.durationMs === null ? null : Math.round(asset.durationMs / 100) / 10,
+      asset.durationMs === null
+        ? null
+        : Math.round(asset.durationMs / 100) / 10,
     consent:
       asset.peopleConsent === "no_people"
         ? "nobody identifiable in it"
@@ -125,16 +127,15 @@ const findSchema = z.object({
     .describe(
       "The shape the post needs: story (9:16), portrait_post (4:5), square (1:1) or wide (16:9).",
     ),
-  kind: z
-    .enum(["photo", "video"])
-    .nullable()
-    .default(null),
+  kind: z.enum(["photo", "video"]).nullable().default(null),
   from: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable()
     .default(null)
-    .describe("Earliest occasion date, YYYY-MM-DD. Use it to keep the season right."),
+    .describe(
+      "Earliest occasion date, YYYY-MM-DD. Use it to keep the season right.",
+    ),
   to: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -151,7 +152,10 @@ const findSchema = z.object({
 });
 
 const selectSchema = z.object({
-  assetId: z.string().min(1).describe("The assetId from find_marketing_assets."),
+  assetId: z
+    .string()
+    .min(1)
+    .describe("The assetId from find_marketing_assets."),
   purpose: z
     .string()
     .min(1)

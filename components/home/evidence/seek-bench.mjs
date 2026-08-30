@@ -42,7 +42,7 @@ const THROTTLES = [1, 4, 6];
 mkdirSync(HERE, { recursive: true });
 
 const PAGE = (src) => `<!doctype html><meta charset="utf-8">
-<style>html,body{margin:0;background:#111}video{width:100vw;height:100vh;object-fit:contain}</style>
+<style>html,body{margin:0}video{width:100vw;height:100vh;object-fit:contain}</style>
 <video id="v" src="${src}" preload="auto" muted playsinline></video>`;
 
 async function bench(browser, { src, throttle }) {

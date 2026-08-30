@@ -27,7 +27,11 @@ import {
 /** Does `haystack` contain `needle`, byte for byte? */
 function contains(haystack: Uint8Array, needle: Uint8Array): boolean {
   if (needle.length === 0 || needle.length > haystack.length) return false;
-  outer: for (let start = 0; start <= haystack.length - needle.length; start += 1) {
+  outer: for (
+    let start = 0;
+    start <= haystack.length - needle.length;
+    start += 1
+  ) {
     for (let index = 0; index < needle.length; index += 1) {
       if (haystack[start + index] !== needle[index]) continue outer;
     }
@@ -72,7 +76,9 @@ describe("a phone photo carrying GPS", () => {
     expect(result.capturedAt).toBe("2026-09-14T10:31:08.000Z");
     expect(FIXTURE_TAKEN.startsWith("2026:09:14")).toBe(true);
     // Nothing in the result names a place or a number from the GPS block.
-    expect(JSON.stringify({ ...result, bytes: undefined })).not.toContain("174");
+    expect(JSON.stringify({ ...result, bytes: undefined })).not.toContain(
+      "174",
+    );
   });
 
   it("is still the same JPEG, pixel for pixel", () => {
@@ -157,9 +163,7 @@ describe("HEIC", () => {
     expect(item.every((byte) => byte === 0)).toBe(true);
     expect(contains(result.bytes, exifWithGps())).toBe(false);
     // The picture item, immediately before it, is untouched.
-    expect(
-      contains(result.bytes, new Uint8Array(64).fill(0x5a)),
-    ).toBe(true);
+    expect(contains(result.bytes, new Uint8Array(64).fill(0x5a))).toBe(true);
     expect(result.width).toBe(1200);
     expect(result.height).toBe(1600);
   });

@@ -17,7 +17,11 @@ import {
 } from "@/lib/agents/tools/registry";
 import { ingestFile } from "@/lib/assets/ingest";
 import { ASSET_TOOL_NAMES, registerAssetTools } from "@/lib/assets/tools";
-import type { ConsentState, MarketingAsset, UsageRights } from "@/lib/assets/types";
+import type {
+  ConsentState,
+  MarketingAsset,
+  UsageRights,
+} from "@/lib/assets/types";
 
 import { createAssetWorld, type AssetTestWorld } from "./support/db";
 import { repoFile } from "./support/fixtures";
@@ -171,9 +175,9 @@ describe("the tools are ordinary tools", () => {
   });
 
   it("refuses arguments that do not fit the schema", async () => {
-    await expect(run("select_marketing_asset", { assetId: 42 })).rejects.toThrow(
-      /rejected its arguments/i,
-    );
+    await expect(
+      run("select_marketing_asset", { assetId: 42 }),
+    ).rejects.toThrow(/rejected its arguments/i);
   });
 });
 
@@ -231,7 +235,9 @@ describe("an agent cannot select an asset whose consent is unrecorded", () => {
       throw new Error("should have refused");
     } catch (cause) {
       expect(String(cause)).not.toContain("storage");
-      expect(String(cause)).not.toContain(assets.get("crowd")?.storageKey ?? "!");
+      expect(String(cause)).not.toContain(
+        assets.get("crowd")?.storageKey ?? "!",
+      );
     }
   });
 
@@ -294,7 +300,9 @@ describe("searching", () => {
       "The stall, set up",
     ]);
 
-    const bySku = (await run("find_marketing_assets", { sku: "HS-02-500" })) as {
+    const bySku = (await run("find_marketing_assets", {
+      sku: "HS-02-500",
+    })) as {
       assets: unknown[];
     };
     expect(bySku.assets).toHaveLength(0); // the only HS-02 photo is refused

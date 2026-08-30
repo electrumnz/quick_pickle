@@ -99,7 +99,13 @@ afterAll(async () => {
     "because this build has no outbound channel at all.",
   ].join("\n");
   mkdirSync(dirname(EVIDENCE), { recursive: true });
-  writeFileSync(EVIDENCE, `${body.trimEnd()}\n`, "utf8");
+  // Fresh uuids would make this file churn on every run without a behaviour
+  // change, which is how evidence stops being read.
+  const stable = body.replace(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+    "id#1",
+  );
+  writeFileSync(EVIDENCE, `${stable.trimEnd()}\n`, "utf8");
   await harness.close();
 });
 

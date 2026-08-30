@@ -141,6 +141,9 @@ function totalFrom(response: Response): number {
   const contentRange = response.headers.get("content-range");
   const match = contentRange === null ? null : /\/(\d+)$/.exec(contentRange);
   if (match?.[1] !== undefined) return Number.parseInt(match[1], 10);
-  const length = Number.parseInt(response.headers.get("content-length") ?? "", 10);
+  const length = Number.parseInt(
+    response.headers.get("content-length") ?? "",
+    10,
+  );
   return Number.isFinite(length) ? length : 0;
 }

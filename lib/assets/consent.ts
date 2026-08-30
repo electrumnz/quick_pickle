@@ -172,7 +172,6 @@ export const RIGHTS_WORDS: Readonly<
   },
   unknown: {
     label: "Not recorded",
-    meaning:
-      "Nobody has said where this came from, so no agent can choose it.",
+    meaning: "Nobody has said where this came from, so no agent can choose it.",
   },
 };

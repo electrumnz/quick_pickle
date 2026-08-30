@@ -44,7 +44,9 @@ async function bodyOf(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> {
     if (done) break;
     if (value !== undefined) chunks.push(value);
   }
-  const out = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.length, 0));
+  const out = new Uint8Array(
+    chunks.reduce((sum, chunk) => sum + chunk.length, 0),
+  );
   let offset = 0;
   for (const chunk of chunks) {
     out.set(chunk, offset);
@@ -72,8 +74,12 @@ describe("the local provider", () => {
   });
 
   it("returns null rather than throwing for a key that is not there", async () => {
-    expect(await storage.head("photos/2026/09/" + "b".repeat(64) + ".jpg")).toBeNull();
-    expect(await storage.read("photos/2026/09/" + "b".repeat(64) + ".jpg")).toBeNull();
+    expect(
+      await storage.head("photos/2026/09/" + "b".repeat(64) + ".jpg"),
+    ).toBeNull();
+    expect(
+      await storage.read("photos/2026/09/" + "b".repeat(64) + ".jpg"),
+    ).toBeNull();
   });
 
   it("deletes", async () => {
@@ -143,9 +149,9 @@ describe("choosing a provider", () => {
   });
 
   it("refuses a provider name it does not know, rather than falling back", () => {
-    expect(() => readStorageConfig({ ASSET_STORAGE_PROVIDER: "s4" })).toThrowError(
-      /not a storage provider/i,
-    );
+    expect(() =>
+      readStorageConfig({ ASSET_STORAGE_PROVIDER: "s4" }),
+    ).toThrowError(/not a storage provider/i);
   });
 
   it("names exactly what is missing for Supabase Storage", () => {
@@ -173,7 +179,10 @@ describe("choosing a provider", () => {
     const directory = path.join(root, "nested", "deeper");
     await mkdir(directory, { recursive: true });
     const provider = new LocalStorageProvider(directory);
-    await provider.put("photos/2026/09/" + "d".repeat(64) + ".png", new Uint8Array([1]));
+    await provider.put(
+      "photos/2026/09/" + "d".repeat(64) + ".png",
+      new Uint8Array([1]),
+    );
     expect(
       await provider.head("photos/2026/09/" + "d".repeat(64) + ".png"),
     ).not.toBeNull();

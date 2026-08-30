@@ -44,7 +44,9 @@ export class LocalStorageProvider implements StorageProvider {
   private resolve(key: string): string {
     assertSafeKey(key);
     const full = path.resolve(this.root, key);
-    const prefix = this.root.endsWith(path.sep) ? this.root : this.root + path.sep;
+    const prefix = this.root.endsWith(path.sep)
+      ? this.root
+      : this.root + path.sep;
     if (!full.startsWith(prefix)) {
       throw new AssetError(
         "invalid_storage_key",

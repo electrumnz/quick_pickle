@@ -18,12 +18,14 @@ import "server-only";
 
 import { createPgExecutor, type SqlExecutor } from "@/lib/commerce";
 
+import { assetIdsIn } from "./approvals";
 import { getDescriptionDrafter, type DescriptionDrafter } from "./describe";
 import { AssetError } from "./errors";
 import { getStorageProvider } from "./storage/registry";
 import type { StorageProvider } from "./storage/provider";
 import { SqlAssetStore } from "./store/sql";
 import type { AssetStore } from "./store/types";
+import type { MarketingAsset } from "./types";
 
 type AssetGlobal = { __halfSourAssetSql?: SqlExecutor };
 
@@ -55,6 +57,28 @@ export function assetLibrary(): AssetLibrary {
 }
 
 /**
+ * The assets an approval is about, ready to render.
+ *
+ * The ids travel in the approval's own payload — the agent cited them there
+ * when it proposed the action — so this needs nothing but the payload and a
+ * lookup. An id that is not an asset simply does not come back.
+ *
+ * ```tsx
+ * const pictures = await assetsForApproval(approval.payload);
+ * <ApprovalAssets assets={pictures} />
+ * ```
+ */
+export async function assetsForApproval(
+  payload: unknown,
+  library: Pick<AssetLibrary, "store"> = assetLibrary(),
+): Promise<readonly MarketingAsset[]> {
+  const ids = assetIdsIn(payload);
+  if (ids.length === 0) return [];
+  const found = await Promise.all(ids.map((id) => library.store.get(id)));
+  return found.filter((asset): asset is MarketingAsset => asset !== null);
+}
+
+/**
  * Run a read and turn a failure into something a person can read.
  *
  * The same shape as `components/admin/data/db.ts`'s `load`, and for the same
@@ -65,7 +89,9 @@ export type Loaded<T> =
   | { readonly ok: true; readonly data: T }
   | { readonly ok: false; readonly problem: string; readonly detail: string };
 
-export async function loadAssets<T>(read: () => Promise<T>): Promise<Loaded<T>> {
+export async function loadAssets<T>(
+  read: () => Promise<T>,
+): Promise<Loaded<T>> {
   try {
     return { ok: true, data: await read() };
   } catch (cause) {

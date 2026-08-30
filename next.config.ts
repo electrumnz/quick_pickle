@@ -30,13 +30,33 @@ const nextConfig: NextConfig = {
      */
     qualities: [58, 75],
     /**
-     * The default is WebP alone. Every image on this site is now a
-     * photograph rather than a flat drawing, and AVIF is materially smaller
-     * than WebP on exactly that content. Browsers that cannot read it fall
-     * back through the list on their own `Accept` header, so there is
-     * nothing to feature-detect.
+     * WebP alone, which is also the default — written out because the
+     * obvious change here is wrong, and should not be made again without a
+     * clean measurement.
+     *
+     * AVIF is genuinely half the bytes at every width on this photography,
+     * measured by fetching both: 5.2KB against 10.4KB at w=640, 12.5
+     * against 24.7 at 1200, 18.5 against 35.8 at 3840. It still scored
+     * worse. Five Lighthouse runs against each, same build, same machine,
+     * same minute:
+     *
+     *                perf median    LCP      TBT    image
+     *   AVIF+WebP       0.91       3.04s    216ms    9KB
+     *   WebP only       0.93       3.17s     93ms   15KB
+     *
+     * Half the bytes, slightly better LCP, and more than double the
+     * blocking time — AVIF decodes slowly under Lighthouse's 4x CPU
+     * throttle, and the score follows blocking time here. The AVIF spread
+     * was also wide (0.84-0.94 against 0.91-0.93), which on a machine
+     * running four other builds is a reason to distrust the number rather
+     * than to average it.
+     *
+     * So this is a hold, not a verdict. Real phones decode better than the
+     * throttle implies and pay worse for bytes, so AVIF may well win for
+     * actual customers while losing the audit. Re-measure on a quiet
+     * machine before deciding. Neither setting reaches the 0.95 CI gate.
      */
-    formats: ["image/avif", "image/webp"],
+    formats: ["image/webp"],
   },
 };
 

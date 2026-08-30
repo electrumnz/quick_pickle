@@ -103,7 +103,7 @@ function corrupt(what: string): AssetError {
 
 function ascii(bytes: Uint8Array, start: number, length: number): string {
   let text = "";
-  for (let index = start; index < start + length && index < bytes.length; ) {
+  for (let index = start; index < start + length && index < bytes.length;) {
     text += String.fromCharCode(bytes[index] ?? 0);
     index += 1;
   }
@@ -365,9 +365,7 @@ function scrubPng(bytes: Uint8Array): ScrubResult {
       const facts = readExif(payload);
       hadLocation = hadLocation || facts.hasGps;
       capturedAt = capturedAt ?? facts.capturedAt;
-      removed.push(
-        facts.hasGps ? "EXIF chunk, including GPS" : "EXIF chunk",
-      );
+      removed.push(facts.hasGps ? "EXIF chunk, including GPS" : "EXIF chunk");
     } else if (type === "tEXt" || type === "iTXt" || type === "zTXt") {
       const text = ascii(payload, 0, Math.min(payload.length, 4096));
       if (/GPS(Latitude|Longitude)/i.test(text)) hadLocation = true;
@@ -436,9 +434,15 @@ function scrubWebp(bytes: Uint8Array): ScrubResult {
     if (fourcc === "VP8X" && size >= 10) {
       vp8xPayload = payload;
       width =
-        1 + ((payload[4] ?? 0) | ((payload[5] ?? 0) << 8) | ((payload[6] ?? 0) << 16));
+        1 +
+        ((payload[4] ?? 0) |
+          ((payload[5] ?? 0) << 8) |
+          ((payload[6] ?? 0) << 16));
       height =
-        1 + ((payload[7] ?? 0) | ((payload[8] ?? 0) << 8) | ((payload[9] ?? 0) << 16));
+        1 +
+        ((payload[7] ?? 0) |
+          ((payload[8] ?? 0) << 8) |
+          ((payload[9] ?? 0) << 16));
     }
     if (fourcc === "VP8 " && size >= 10 && width === null) {
       width = ((payload[6] ?? 0) | ((payload[7] ?? 0) << 8)) & 0x3fff;
@@ -616,7 +620,9 @@ function scrubIsoImage(bytes: Uint8Array): ScrubResult {
       if (type === "Exif") {
         // An Exif item begins with a four-byte offset to the TIFF header.
         const tiffStart = 4 + readUint32(payload, 0);
-        const facts = readExif(payload.subarray(Math.min(tiffStart, payload.length)));
+        const facts = readExif(
+          payload.subarray(Math.min(tiffStart, payload.length)),
+        );
         hadLocation = hadLocation || facts.hasGps;
         capturedAt = capturedAt ?? facts.capturedAt;
         removed.push(facts.hasGps ? "EXIF item, including GPS" : "EXIF item");
@@ -637,7 +643,8 @@ function scrubIsoImage(bytes: Uint8Array): ScrubResult {
     ISO_IMAGE_CONTAINERS,
   )[0];
   const width = ispe === undefined ? null : readUint32(out, ispe.bodyStart + 4);
-  const height = ispe === undefined ? null : readUint32(out, ispe.bodyStart + 8);
+  const height =
+    ispe === undefined ? null : readUint32(out, ispe.bodyStart + 8);
 
   return {
     ...EMPTY,
@@ -822,7 +829,8 @@ function readItemLocations(
   const readSized = (at: number, size: number): number => {
     if (size === 0) return 0;
     if (size === 4) return readUint32(bytes, at);
-    if (size === 8) return readUint32(bytes, at) * 2 ** 32 + readUint32(bytes, at + 4);
+    if (size === 8)
+      return readUint32(bytes, at) * 2 ** 32 + readUint32(bytes, at + 4);
     if (size === 2) return readUint16(bytes, at);
     return 0;
   };
@@ -848,7 +856,11 @@ function readItemLocations(
     const extentCount = readUint16(bytes, cursor);
     cursor += 2;
     const extents: ItemExtent[] = [];
-    for (let extent = 0; extent < extentCount && cursor < iloc.end; extent += 1) {
+    for (
+      let extent = 0;
+      extent < extentCount && cursor < iloc.end;
+      extent += 1
+    ) {
       cursor += indexSize;
       const offset = readSized(cursor, offsetSize);
       cursor += offsetSize;
