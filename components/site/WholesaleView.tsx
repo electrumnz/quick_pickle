@@ -49,7 +49,11 @@ function Sheet() {
       <p id="trade-note" className="text-caption text-muted max-w-prose">
         {WHOLESALE.listNote}
       </p>
-      <div className={cx(styles.sheetScroll, "mt-stack")}>
+      {/* `tabIndex` because the box scrolls and holds nothing focusable: with
+          a keyboard alone there was no way to bring the trade and case columns
+          into view on a phone (axe `scrollable-region-focusable`, WCAG 2.1.1).
+          The build's one `:focus-visible` ring makes the stop visible. */}
+      <div tabIndex={0} className={cx(styles.sheetScroll, "mt-stack")}>
         <table
           className={cx(styles.sheet)}
           aria-labelledby="w-list"

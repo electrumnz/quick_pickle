@@ -69,7 +69,11 @@ export default async function AdminLoginPage({
   const gaps = describeAuthConfigGaps();
   if (gaps.length > 0) {
     return (
-      <section className="mx-auto w-full max-w-sm space-y-6">
+      // <main>, not <section>: this page is the whole document, so its content
+      // has to sit inside a landmark or a screen-reader user has no region to
+      // jump to and nothing announces where they have landed (axe
+      // `landmark-one-main` and `region`, WCAG 1.3.1).
+      <main className="mx-auto w-full max-w-sm space-y-6">
         <header className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">
             Staff sign in
@@ -91,7 +95,7 @@ export default async function AdminLoginPage({
           stays closed, which is the intended behaviour — it is not a fault in
           the sign-in page.
         </p>
-      </section>
+      </main>
     );
   }
 
@@ -102,7 +106,7 @@ export default async function AdminLoginPage({
   const action = `${LOGIN_SUBMIT_PATH}?${RETURN_TO_PARAM}=${encodeURIComponent(returnTo)}`;
 
   return (
-    <section className="mx-auto w-full max-w-sm space-y-8">
+    <main className="mx-auto w-full max-w-sm space-y-8">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Staff sign in</h1>
         <p className="text-sm opacity-70">
@@ -166,7 +170,7 @@ export default async function AdminLoginPage({
           Sign in
         </button>
       </form>
-    </section>
+    </main>
   );
 }
 

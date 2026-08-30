@@ -98,7 +98,16 @@ export function HeroScrub() {
         /* ------------------------------------------------- the split line */
         const line = document.querySelector<HTMLElement>("[data-hero-line]");
         if (line) {
-          const split = new SplitText(line, { type: "lines" });
+          // `aria: "none"`, and not for tidiness. SplitText's default is
+          // `"auto"`, which puts `aria-label` on the element it splits and
+          // `aria-hidden="true"` on every line it makes. On a `<p>` that is a
+          // prohibited attribute (axe `aria-prohibited-attr`, ARIA 1.2: role
+          // `paragraph` supports no accessible name), so assistive technology
+          // discards the label — and every line beneath it is hidden. The one
+          // sentence in the hero, the positioning statement, disappeared from
+          // the accessibility tree entirely. With `"none"` no ARIA is added,
+          // the text stays in the tree, and the animation is unchanged.
+          const split = new SplitText(line, { type: "lines", aria: "none" });
           gsap.from(split.lines, {
             opacity: 0,
             y: travel,

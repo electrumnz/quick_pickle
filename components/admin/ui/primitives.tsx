@@ -178,6 +178,11 @@ export function Stat({
   hint?: string;
   tone?: "neutral" | "danger";
 }) {
+  // The hint lives INSIDE the <dd>, not beside it. A <div> may group a
+  // dt/dd pair inside a <dl>, but only if that is all it holds — a stray <p>
+  // makes the whole list an invalid definition list (axe `definition-list`,
+  // WCAG 1.3.1), and a screen reader then loses the label/value pairing that
+  // is the only thing giving the number its meaning.
   return (
     <div className="min-w-0">
       <dt className="text-caption text-muted">{label}</dt>
@@ -187,10 +192,12 @@ export function Stat({
         }`}
       >
         {value}
+        {hint !== undefined && (
+          <span className="mt-1 block text-caption font-normal normal-nums text-muted">
+            {hint}
+          </span>
+        )}
       </dd>
-      {hint !== undefined && (
-        <p className="mt-1 text-caption text-muted">{hint}</p>
-      )}
     </div>
   );
 }
@@ -385,7 +392,17 @@ export function TableScroll({ children }: { children: ReactNode }) {
       <p className="px-4 pt-2.5 text-caption text-muted sm:hidden">
         Scroll sideways for the rest of the columns.
       </p>
-      <div className="overflow-x-auto">
+      {/*
+        `tabIndex` on the scroller, not decoration. A region that scrolls and
+        holds nothing focusable cannot be reached by a keyboard at all — there
+        is no way to bring the off-screen columns into view without a mouse or
+        a trackpad (axe `scrollable-region-focusable`, WCAG 2.1.1). Most admin
+        tables happen to contain links and pass by accident; the plan table has
+        none and did not. Making the scroller itself a tab stop fixes both,
+        and the build's single `:focus-visible` ring in app/globals.css means
+        it is visible when it is reached.
+      */}
+      <div tabIndex={0} className="overflow-x-auto">
         <table className="w-full min-w-[34rem] border-collapse text-body-sm">
           {children}
         </table>

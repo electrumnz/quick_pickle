@@ -22,10 +22,19 @@ import styles from "./shop.module.css";
  */
 export function StickyBuy({
   watch,
+  label,
   children,
 }: {
   /** id of the element whose visibility decides whether the bar is needed. */
   watch: string;
+  /**
+   * The bar's accessible name. It is fixed to the bottom of the window and
+   * rendered after `</main>` and the footer, so without a landmark of its own
+   * its content belongs to no region at all — a screen-reader user tabbing
+   * past the footer met a price and a button with nothing saying what they
+   * were for (axe `region`, WCAG 1.3.1).
+   */
+  label: string;
   children: React.ReactNode;
 }) {
   // "off" until script has run at all, so the bar is never in the no-JS page.
@@ -60,6 +69,8 @@ export function StickyBuy({
     <>
       <div className={styles.stickySpacer} aria-hidden="true" />
       <div
+        role="region"
+        aria-label={label}
         className={styles.stickyBuy}
         data-state={state === "here" ? "here" : "away"}
       >

@@ -100,7 +100,7 @@ export default async function TodayPage() {
           <StockToday data={data} />
         </div>
 
-        <aside className="space-y-6">
+        <aside aria-label="Today at a glance" className="space-y-6">
           <BusinessNow data={data} />
           <ComingUp data={data} />
           <TeamToday data={data} />

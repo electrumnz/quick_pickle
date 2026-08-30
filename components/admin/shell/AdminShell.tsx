@@ -60,7 +60,13 @@ export function AdminShell({
         Skip to content
       </a>
 
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-hairline bg-surface-raised lg:flex">
+      <aside
+        // Named because the Today page has a complementary column of its own,
+        // and two unnamed <aside>s are two landmarks a screen-reader user
+        // cannot tell apart in the landmark list (axe `landmark-unique`).
+        aria-label="Admin sidebar"
+        className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-hairline bg-surface-raised lg:flex"
+      >
         <div className="px-4 pt-4 pb-3">
           <p className="font-display text-body font-semibold tracking-tight text-primary">
             Half Sour

@@ -259,7 +259,11 @@ export default async function HomePage({
           {/* The rail bleeds to the gutter on touch and becomes a grid at
               768. Padding lives on the rail itself, not on this wrapper. */}
           <div className="max-w-page mt-block mx-auto md:px-[var(--spacing-gutter)]">
-            <ul className={cx(styles.rail)}>
+            {/* Below 768 the rail scrolls sideways and every card in it is
+                plain text, so a keyboard could not move it at all. The list
+                itself is the tab stop (axe `scrollable-region-focusable`,
+                WCAG 2.1.1); above 768 it is a grid and scrolls nowhere. */}
+            <ul tabIndex={0} className={cx(styles.rail)}>
               {SERVES.map((serve) => (
                 <li key={serve.id}>
                   <article
