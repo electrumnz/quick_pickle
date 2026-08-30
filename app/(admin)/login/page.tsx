@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import {
   CSRF_FIELD_NAME,
+  describeAuthConfigGaps,
   LOGIN_SUBMIT_PATH,
   PASSWORD_FIELD_NAME,
   RETURN_TO_PARAM,
@@ -56,6 +57,43 @@ export default async function AdminLoginPage({
   const failed = firstValue(params[LOGIN_ERROR_PARAM]) !== null;
   const returnTo = safeReturnPath(firstValue(params[RETURN_TO_PARAM]));
   const csrfToken = await getLoginCsrfToken();
+
+  // A deployment with no admin secrets configured cannot sign anyone in, and
+  // the proxy has already given up minting a CSRF token for the form below. A
+  // form that cannot succeed is worse than no form: it reads as a rejected
+  // password. Say what is actually wrong instead.
+  //
+  // This is safe to show to anyone who can reach the page. It names environment
+  // variables and never their contents, and every one of them being absent is
+  // already observable from outside by the fact that nobody can sign in.
+  const gaps = describeAuthConfigGaps();
+  if (gaps.length > 0) {
+    return (
+      <section className="mx-auto w-full max-w-sm space-y-6">
+        <header className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Staff sign in
+          </h1>
+          <p className="text-sm opacity-70">
+            This deployment has not been given its admin secrets yet, so there
+            is nothing to sign in against.
+          </p>
+        </header>
+        <ul className="space-y-3 text-sm">
+          {gaps.map((gap) => (
+            <li key={gap} className="border-l-2 border-current pl-3 opacity-80">
+              {gap}
+            </li>
+          ))}
+        </ul>
+        <p className="text-sm opacity-70">
+          Set them in the hosting environment and redeploy. Until then the admin
+          stays closed, which is the intended behaviour — it is not a fault in
+          the sign-in page.
+        </p>
+      </section>
+    );
+  }
 
   const challenge = await resolveChallenge(
     firstValue(params[LOGIN_CHALLENGE_PARAM]),

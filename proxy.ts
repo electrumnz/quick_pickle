@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { LOGIN_PATH } from "@/lib/auth/config";
 import { decideProxy } from "@/lib/auth/http/proxy-core";
 import {
   CACHE_HEADER,
@@ -41,8 +42,21 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
       "[admin-auth] proxy failed closed:",
       cause instanceof Error ? cause.name : "unknown error",
     );
+    // Failing closed onto the login page is right for every path except the
+    // login page itself, which this used to redirect to itself: an unopenable
+    // front door and a browser redirect loop, with nothing on screen to say
+    // why. The page is public, and it renders no secret and no session — it
+    // reads the environment only to report which parts of it are missing. So
+    // it is let through, and it explains itself.
+    //
+    // `/login/session` is deliberately NOT included: that is where a password
+    // is verified, and an authentication endpoint that cannot reach its own
+    // configuration must refuse rather than improvise.
+    if (request.nextUrl.pathname === LOGIN_PATH) {
+      return guard(NextResponse.next(), true);
+    }
     return guard(
-      NextResponse.redirect(new URL("/login", request.url), 307),
+      NextResponse.redirect(new URL(LOGIN_PATH, request.url), 307),
       true,
     );
   }

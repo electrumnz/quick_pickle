@@ -204,6 +204,52 @@ export function isAdminPasswordConfigured(): boolean {
 }
 
 /**
+ * What the environment is missing, in words, without echoing a single value.
+ *
+ * The gate fails closed, which is right, and for a while it failed closed onto
+ * the login page — including when the request WAS the login page. That is a
+ * redirect to itself, and the front door became unopenable: no error, no form,
+ * just a loop. Failing closed has to leave one door reachable, and the door has
+ * to be able to say why it will not open.
+ *
+ * Each entry names an environment variable and what to do about it. Nothing
+ * here reads a secret's contents beyond the shape check that decides whether it
+ * is configured at all.
+ */
+export function describeAuthConfigGaps(): readonly string[] {
+  const gaps: string[] = [];
+  const hash = readEnv("ADMIN_PASSWORD_HASH");
+  if (hash === undefined) {
+    gaps.push(
+      "ADMIN_PASSWORD_HASH is not set. Generate one with `npm run auth:hash-password`.",
+    );
+  } else if (!hash.startsWith("$argon2id$")) {
+    gaps.push(
+      "ADMIN_PASSWORD_HASH is set but is not an argon2id PHC string. Re-generate it with `npm run auth:hash-password`.",
+    );
+  }
+
+  const secret = readEnv("ADMIN_SESSION_SECRET");
+  if (secret === undefined) {
+    gaps.push(
+      "ADMIN_SESSION_SECRET is not set. It needs 32 or more random bytes, base64 or hex.",
+    );
+  } else if (decodeSecret(secret).length < 32) {
+    gaps.push(
+      "ADMIN_SESSION_SECRET is set but decodes to fewer than 32 bytes.",
+    );
+  }
+
+  if (readEnv("SUPABASE_DB_URL") === undefined) {
+    gaps.push(
+      "SUPABASE_DB_URL is not set. Sessions are stored in Postgres so they can be revoked, so there is no sign-in without it.",
+    );
+  }
+
+  return gaps;
+}
+
+/**
  * Root key for sealing cookies. 32 bytes minimum, base64 or hex.
  *
  * Rotating it invalidates every outstanding session, which is the intended
