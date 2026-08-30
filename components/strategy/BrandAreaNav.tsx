@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 /**
- * The four areas of Brand & Plan.
+ * The five areas of Brand & Plan.
  *
  * Each label is a plain word and each blurb says what the area answers, because
  * "Messaging" on its own means nothing to somebody who has not read StoryBrand.
@@ -21,6 +21,12 @@ export const BRAND_AREAS = [
     label: "Messaging",
     href: "/admin/brand/messaging",
     answers: "What we say, and who we say it to.",
+  },
+  {
+    id: "audience",
+    label: "Audience",
+    href: "/admin/brand/audience",
+    answers: "Who we sell to, and what the store currently does for them.",
   },
   {
     id: "plan",

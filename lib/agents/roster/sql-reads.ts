@@ -394,7 +394,11 @@ export class SqlBusinessReads implements BusinessReads {
     const nextToBrew =
       first === undefined
         ? null
-        : { sku: first.sku, title: first.title, daysOfCover: first.daysOfCover };
+        : {
+            sku: first.sku,
+            title: first.title,
+            daysOfCover: first.daysOfCover,
+          };
 
     const findings = [
       ...inFlight.map(
@@ -632,19 +636,17 @@ export class SqlBusinessReads implements BusinessReads {
           unhappy: rating !== null && rating <= 3,
         };
       }),
-      ...deliveryRows.map(
-        (row): OpenConversation => ({
-          kind: "delivery",
-          id: str(row, "id"),
-          who: str(row, "who"),
-          sku: null,
-          rating: null,
-          title: `Order ${str(row, "order_number")} is paid and not yet sent`,
-          body: `Paid ${String(int(row, "waiting_days"))} days ago and still ${str(row, "fulfillment_status")}.`,
-          waitingDays: int(row, "waiting_days"),
-          unhappy: true,
-        }),
-      ),
+      ...deliveryRows.map((row): OpenConversation => ({
+        kind: "delivery",
+        id: str(row, "id"),
+        who: str(row, "who"),
+        sku: null,
+        rating: null,
+        title: `Order ${str(row, "order_number")} is paid and not yet sent`,
+        body: `Paid ${String(int(row, "waiting_days"))} days ago and still ${str(row, "fulfillment_status")}.`,
+        waitingDays: int(row, "waiting_days"),
+        unhappy: true,
+      })),
     ];
 
     const unhappy = open.filter((item) => item.unhappy);
@@ -790,7 +792,9 @@ export class SqlBusinessReads implements BusinessReads {
         impressions,
         engagements,
         engagementRatePct:
-          impressions === 0 ? null : round((engagements / impressions) * 100, 2),
+          impressions === 0
+            ? null
+            : round((engagements / impressions) * 100, 2),
         brandCheckPassed: boolOrNull(row, "brand_check_passed"),
       };
     });
@@ -909,7 +913,10 @@ export class SqlBusinessReads implements BusinessReads {
     const repeatRow = repeatRows[0] ?? {};
     const total = int(repeatRow, "total");
 
-    const totalRevenue = lines.reduce((sum, line) => sum + line.revenueCents, 0);
+    const totalRevenue = lines.reduce(
+      (sum, line) => sum + line.revenueCents,
+      0,
+    );
 
     // The campaign is aimed at whichever line fell hardest against the window
     // before it; if nothing fell, at the line that is carrying the range.
@@ -925,9 +932,7 @@ export class SqlBusinessReads implements BusinessReads {
             subject: `${target.title}`,
             body: `${target.title} sold ${String(target.units)} bottles in the last ${String(windowDays)} days.`,
             audience: (falling === undefined ? "all" : "lapsed") as
-              | "all"
-              | "repeat"
-              | "lapsed",
+              "all" | "repeat" | "lapsed",
             reason:
               falling === undefined
                 ? `${target.title} is carrying the range at ${String(target.units)} bottles, so the campaign goes to the whole list behind it.`
@@ -1019,8 +1024,7 @@ export class SqlBusinessReads implements BusinessReads {
       [...accounts]
         .filter((account) => account.daysSinceLastOrder !== null)
         .sort(
-          (a, b) =>
-            (b.daysSinceLastOrder ?? 0) - (a.daysSinceLastOrder ?? 0),
+          (a, b) => (b.daysSinceLastOrder ?? 0) - (a.daysSinceLastOrder ?? 0),
         )[0];
 
     const proposal =

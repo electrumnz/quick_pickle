@@ -114,7 +114,14 @@ async function sequence(context, { name, width, height = 900 }) {
     const state = await readState(page);
     const file = `${name}-p${String(Math.round(stop * 100)).padStart(3, "0")}.png`;
     await page.screenshot({ path: join(OUT, file) });
-    report.push({ file, name, width, stop, trackSpan: Math.round(span), ...state });
+    report.push({
+      file,
+      name,
+      width,
+      stop,
+      trackSpan: Math.round(span),
+      ...state,
+    });
     console.log(
       `${file.padEnd(34)} y=${String(state.scrollY).padStart(5)}  ` +
         `mark ${state.mark?.opacity ?? "-"}  ` +
@@ -165,7 +172,8 @@ writeFileSync(
   join(OUT, "scrub-frames.json"),
   `${JSON.stringify(
     {
-      $note: "copy-audit-ignore-file — generated evidence; see scrub-frames.mjs",
+      $note:
+        "copy-audit-ignore-file — generated evidence; see scrub-frames.mjs",
       base: BASE,
       frames: report,
     },

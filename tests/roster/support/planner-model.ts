@@ -278,7 +278,9 @@ export class PlannerModel implements LanguageModelV4 {
   }
 
   async doStream(): Promise<LanguageModelV4StreamResult> {
-    throw new Error("PlannerModel does not stream; the runtime uses generateText.");
+    throw new Error(
+      "PlannerModel does not stream; the runtime uses generateText.",
+    );
   }
 
   /* --------------------------------------------------------------- steps */
@@ -372,7 +374,8 @@ export class PlannerModel implements LanguageModelV4 {
       this.headlines(results)[0] ??
       `${this.role.definition.name}: nothing to report`;
     const sentence = headline.split(". ")[0] ?? headline;
-    const trimmed = sentence.length > 160 ? `${sentence.slice(0, 157)}…` : sentence;
+    const trimmed =
+      sentence.length > 160 ? `${sentence.slice(0, 157)}…` : sentence;
     return trimmed.endsWith(".") ? trimmed : `${trimmed}.`;
   }
 

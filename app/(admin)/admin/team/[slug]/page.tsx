@@ -401,6 +401,7 @@ export default async function AgentPage({
         </Section>
 
         <NotBuiltYet
+          blurb={`This page reads the real business database, and pausing ${member.name} really does stop it. Nothing else here changes anything.`}
           works={[
             "Everything this agent is allowed to do, read from the row the runtime uses",
             "The reasoning behind every action it took, as it was written at the time",

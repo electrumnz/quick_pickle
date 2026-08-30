@@ -67,8 +67,13 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async head(key: string): Promise<StoredObject | null> {
+    // The key is validated OUTSIDE the catch on purpose: "this file is not
+    // here" is a null, but "this key tried to leave the root" is a thrown
+    // error, and collapsing the two would turn a refused traversal into a
+    // quiet miss that nobody ever looks at.
+    const full = this.resolve(key);
     try {
-      const info = await stat(this.resolve(key));
+      const info = await stat(full);
       return info.isFile() ? { key, byteSize: info.size } : null;
     } catch {
       return null;
@@ -95,8 +100,9 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async bytes(key: string): Promise<Uint8Array | null> {
+    const full = this.resolve(key);
     try {
-      return new Uint8Array(await readFile(this.resolve(key)));
+      return new Uint8Array(await readFile(full));
     } catch {
       return null;
     }

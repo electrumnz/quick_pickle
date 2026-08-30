@@ -156,12 +156,14 @@ export function HeroScrub() {
         // and a half screens of scroll: far too little to watch, which is the
         // point. Take it out and the other three layers immediately read as
         // sliding rather than as receding.
+        // `y` and opacity only — deliberately no `scale`. Scaling this layer
+        // costs a re-raster of two full-stage gradients on every frame and
+        // measured at less than half the frame rate of translating it; the
+        // numbers are in home.module.css beside the promotion that pairs
+        // with this. Nothing is lost visually: depth here comes from the
+        // layer moving at a different RATE to the others, not from its size.
         if (backdrop) {
-          timeline.to(
-            backdrop,
-            { y: -parallax * 0.35, scale: 1.05, opacity: 0.78 },
-            0,
-          );
+          timeline.to(backdrop, { y: -parallax * 0.35, opacity: 0.78 }, 0);
         }
         if (mark) timeline.to(mark, { yPercent: -38, opacity: 0.1 }, 0);
         if (art) timeline.to(art, { yPercent: -7, scale: 1.16 }, 0);

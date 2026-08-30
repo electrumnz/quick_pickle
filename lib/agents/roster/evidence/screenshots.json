@@ -1,0 +1,166 @@
+[
+  {
+    "file": "team-1440-light.png",
+    "route": "/admin/team",
+    "scheme": "light",
+    "viewport": "1440",
+    "title": "The Team · Half Sour admin",
+    "headings": [
+      "The Team"
+    ],
+    "agentCards": 24,
+    "horizontalOverflow": false
+  },
+  {
+    "file": "agent-marlow-1440-light.png",
+    "route": "/admin/team/brine-ops",
+    "scheme": "light",
+    "viewport": "1440",
+    "title": "Agent · Half Sour admin",
+    "headings": [
+      "Marlow"
+    ],
+    "agentCards": 0,
+    "horizontalOverflow": false
+  },
+  {
+    "file": "agent-vic-1440-light.png",
+    "route": "/admin/team/trade",
+    "scheme": "light",
+    "viewport": "1440",
+    "title": "Agent · Half Sour admin",
+    "headings": [
+      "Vic"
+    ],
+    "agentCards": 0,
+    "horizontalOverflow": false
+  },
+  {
+    "consoleErrors": [],
+    "scheme": "light",
+    "viewport": "1440"
+  },
+  {
+    "file": "team-375-light.png",
+    "route": "/admin/team",
+    "scheme": "light",
+    "viewport": "375",
+    "title": "The Team · Half Sour admin",
+    "headings": [
+      "The Team"
+    ],
+    "agentCards": 24,
+    "horizontalOverflow": false
+  },
+  {
+    "file": "agent-marlow-375-light.png",
+    "route": "/admin/team/brine-ops",
+    "scheme": "light",
+    "viewport": "375",
+    "title": "Agent · Half Sour admin",
+    "headings": [
+      "Marlow"
+    ],
+    "agentCards": 0,
+    "horizontalOverflow": false
+  },
+  {
+    "file": "agent-vic-375-light.png",
+    "route": "/admin/team/trade",
+    "scheme": "light",
+    "viewport": "375",
+    "title": "Agent · Half Sour admin",
+    "headings": [
+      "Vic"
+    ],
+    "agentCards": 0,
+    "horizontalOverflow": false
+  },
+  {
+    "consoleErrors": [],
+    "scheme": "light",
+    "viewport": "375"
+  },
+  {
+    "file": "team-1440-dark.png",
+    "route": "/admin/team",
+    "scheme": "dark",
+    "viewport": "1440",
+    "title": "The Team · Half Sour admin",
+    "headings": [
+      "The Team"
+    ],
+    "agentCards": 24,
+    "horizontalOverflow": false
+  },
+  {
+    "file": "agent-marlow-1440-dark.png",
+    "route": "/admin/team/brine-ops",
+    "scheme": "dark",
+    "viewport": "1440",
+    "title": "Agent · Half Sour admin",
+    "headings": [
+      "Marlow"
+    ],
+    "agentCards": 0,
+    "horizontalOverflow": false
+  },
+  {
+    "file": "agent-vic-1440-dark.png",
+    "route": "/admin/team/trade",
+    "scheme": "dark",
+    "viewport": "1440",
+    "title": "Agent · Half Sour admin",
+    "headings": [
+      "Vic"
+    ],
+    "agentCards": 0,
+    "horizontalOverflow": false
+  },
+  {
+    "consoleErrors": [],
+    "scheme": "dark",
+    "viewport": "1440"
+  },
+  {
+    "file": "team-375-dark.png",
+    "route": "/admin/team",
+    "scheme": "dark",
+    "viewport": "375",
+    "title": "The Team · Half Sour admin",
+    "headings": [
+      "The Team"
+    ],
+    "agentCards": 24,
+    "horizontalOverflow": false
+  },
+  {
+    "file": "agent-marlow-375-dark.png",
+    "route": "/admin/team/brine-ops",
+    "scheme": "dark",
+    "viewport": "375",
+    "title": "Agent · Half Sour admin",
+    "headings": [
+      "Marlow"
+    ],
+    "agentCards": 0,
+    "horizontalOverflow": false
+  },
+  {
+    "file": "agent-vic-375-dark.png",
+    "route": "/admin/team/trade",
+    "scheme": "dark",
+    "viewport": "375",
+    "title": "Agent · Half Sour admin",
+    "headings": [
+      "Vic"
+    ],
+    "agentCards": 0,
+    "horizontalOverflow": false
+  },
+  {
+    "consoleErrors": [],
+    "scheme": "dark",
+    "viewport": "375"
+  }
+]

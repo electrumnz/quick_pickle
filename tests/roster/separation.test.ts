@@ -109,7 +109,9 @@ describe("M38 the two sides are genuinely separate agents", () => {
     expect(ari.indexOf("DIRECT CUSTOMER")).toBeLessThan(
       ari.indexOf("TRADE BUYER"),
     );
-    expect(vic.indexOf("TRADE BUYER")).toBeLessThan(vic.indexOf("DIRECT CUSTOMER"));
+    expect(vic.indexOf("TRADE BUYER")).toBeLessThan(
+      vic.indexOf("DIRECT CUSTOMER"),
+    );
 
     // Only the trade side is given the market model to target from.
     expect(vic).toContain("MARKET SIZING");

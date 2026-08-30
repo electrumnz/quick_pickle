@@ -7,7 +7,7 @@ Both briefings are composed from the same strategy_documents rows and scoped
 by applies_to, exactly as brand_rules already are. Ari gets the story; Vic
 gets the story and the numbers.
 
-generated: 2026-08-29T23:42:20.990Z (npx vitest run tests/strategy/agent-wiring.test.ts)
+generated: 2026-08-30T00:06:24.732Z (npx vitest run tests/strategy/agent-wiring.test.ts)
 model: BriefingModel — deterministic, composes only from the system prompt.
 Everything below the model is the real runtime and the real strategy tables.
 
@@ -130,6 +130,66 @@ TRADE BUYER — The bar manager
      - A bar team that makes it the same way on a Tuesday and a Saturday.
      Transformation: from "A bar manager who tolerates one drink they cannot control." to "A bar manager whose list has no weak line on it."
 
+WHO YOU ARE WRITING TO — The Friday host
+  Cooks properly, owns a jigger, hosts four people twice a month, and buys one better ingredient at a time.
+  In full: Thirty-two to forty-five, in Auckland, Wellington or Christchurch, in a household where $20 on one bottle is an ordinary grocery decision and $60 on three is a considered one. They cook five nights a week from things rather than from packets, and the sour-and-savoury end of the shelf is where their money already goes: vermouth, anchovies, a good vinegar, capers. They are the 56% who go looking for a difficult flavour and the half who are done with sweet drinks. They are not a bartender, do not want to be one, and will not buy equipment — every improvement they have made in two years has been one ingredient at a time.
+  THE JOB THEY ARE HIRING THIS FOR: Hand somebody a drink at home that tastes like the one they would have queued for at a bar, without becoming the sort of person who owns a bar cart.
+  THEIR WEEK — write into a moment in it, not into the abstract:
+    - Monday to Thursday, about 6.30pm: Cooking on a weeknight. Acid is a decision they make three times a week — lemon, vinegar, or whatever is open.
+    - Thursday, late: Phone in hand. This is when the weekend gets planned and when things get bought.
+    - Friday, 6pm: Four people in the kitchen and a drink to make. The martini is stirred first because it is the one they are proudest of and the one most likely to be nearly right.
+    - Saturday morning: A market, a good grocer, or neither. This is where they meet small food brands face to face and decide whether to trust them.
+    - Sunday: A roast, or the fridge audit. Half-used jars either get used or get thrown out, and the fridge door is where the villain lives.
+  WHAT THEY DO INSTEAD TODAY — this is what you are actually competing with:
+    - The brine left in the olive jar — costs them: Cloudy, different every jar, salty in the wrong way, and gone halfway through the second round.
+    - Buying better everything else instead — costs them: They keep fixing the part that was not broken. Nobody has told them the brine is the variable.
+    - Ordering it out instead — costs them: About $24 a glass, and it is not the thing they wanted, which was to have made it.
+    - The imported bottle in the running shop — costs them: It is sold in a supplement aisle to somebody else entirely. A home cook reads that shelf and concludes the whole category is not for them.
+  WHERE THEY ARE, AND WHAT THEY ARE READING THERE:
+    - Instagram and TikTok, saved rather than followed — Fifteen-second builds. The pickle martini and the pickleback are the formats carrying the category, and they are watching them without buying anything.
+    - A bar they trust, sitting at the counter — The list. They order the drink they cannot make at home yet.
+    - Search, when they have decided — Two or three words: the drink, the ingredient, and the country. This is the highest-intent moment they have and it currently lands on an imported supplement.
+    - A Saturday market stall — A tasting cup and the founder's face.
+  WHAT TRIGGERS A PURCHASE — a piece that does not sit on one of these is decoration:
+    - Somebody poured them a good one and they asked what was in it. → Search the brand name that evening.
+    - They made a round at home and it was flat. → Look for the missing variable. This is the only moment they are actively shopping for brine.
+    - People are coming on Friday and there is nothing to make. → Order on Thursday, if it will arrive.
+    - A present for the friend who cooks. → Buy the set, because choosing for someone else is hard.
+  WHAT STOPS THEM — answer one of these rather than adding an adjective:
+    - What does it cost to get here? (the page can settle this) — A courier charge nobody has stated is the commonest reason an $18 bottle stays in a cart. The number belongs on the product page, not at step three of checkout.
+    - Which of the four is mine? (the page can settle this) — Each bottle carries one job. The shop page does this well already: the job is printed beside the name.
+    - Will it just sit in the fridge? (the page can settle this) — Twenty-five pours a bottle, and a second use in the pan. Both are true and only one of them is on the page.
+    - Is this a drink thing or one of those bottles? (the page can settle this) — The category's only shelf presence here is in a running shop. The first line a stranger reads has to name a glass, or they file us next to it.
+    - What happens if it arrives broken? (the page can settle this) — New Zealand consumer law gives them rights whether or not we write them down. A page that sets them out is worth more than one that hopes nobody asks.
+  PRICE
+    They price it against: The $24 they would have paid for the same drink at a bar, divided by the number of drinks in the bottle.
+    Unblinking up to $20.00; deliberate at $26.00.
+    - One made for them at a bar — $24.00. The reference price. A $20 bottle that makes 25 of them is the whole argument, and the arithmetic is not on the page.
+    - A jar of good olives — $12.00. What they use the brine of today. This is the price they will flinch against, not the bar price.
+    - A bottle of dry vermouth — $35.00. The last ingredient they upgraded. It proves they will pay for one bottle that fixes one drink.
+    - Aromatic bitters — $28.00. Bought once, used by the drop, never questioned. The shape of purchase we want.
+    The cost that is not on the price tag: Courier. On a single bottle it can be half the price of the bottle, which is why The Full Set at $54 in one parcel is the order shape the plan actually wants — the Flight Plan's wings section says the same thing from the margin end.
+  WHAT WOULD MAKE THEM BUY AGAIN — repeat is the whole business at this volume:
+    Cadence: A bottle every ten to twelve weeks if it is only for drinks; every five or six if it gets into the cooking. (2 bottles a year)
+    - A recipe that uses a third of the bottle in one go — brined olives, a vinaigrette, a beurre blanc. The kitchen use is what converts an occasional bottle into a standing one.
+    - An email at week ten that says what is in the tank, not one that says buy again.
+    - The bottle running out in front of guests, which only helps if reordering takes under a minute.
+    - A second bottle they did not choose: the set, given as a present, comes back as a repeat order for the one they liked.
+    And what loses them:
+      - A first parcel that cost more to ship than they expected.
+      - Buying No 03 SMOKE first, liking it least, and concluding the range is not for them.
+      - Nothing arriving between the first order and the third month. The list is the only thing that keeps the account alive and it currently has no form to sign up to.
+    The number that says it is working: Repeat rate at twelve weeks, without a discount. The Flight Plan's B2C sales process already names it as stage four; nothing on the storefront currently makes it happen.
+  HOW MANY OF THEM THE PLAN NEEDS: 216,038 reachable households in the SAM; the year-2 plan needs about 2,178 of them buying two bottles a year — 1% of the reachable pool, 1,815 orders a year, 151 a month, five a day.
+    Their share of what can be made: 4,356 bottles of the 7,920 made in year 2 — 55% of everything the two production days produce.
+  WHO THIS IS NOT — do not widen a sentence to include them:
+    - The runner who found pickle juice in a shoe shop. Different bottle, different aisle, different claim, and one this company may not make.
+    - The sweet ready-to-drink buyer. Half of this cohort is cutting sweetness; we are on the other side of that line.
+    - The bargain hunter waiting for a sale. At two production days a week there is no volume to discount into.
+    - Anyone under 18. Every serve on the site is an adult occasion and the copy rules treat it that way.
+
+THE OTHER CUSTOMER, IN ONE LINE — not yours to write to here: The bar manager. Runs a 40-to-90-seat spirits-led room, already pours the serve five times a night, and buys on cost per pour and consistency.
+
 FLIGHT PLAN — what this company is, in six parts:
   Mission: We will put HALF SOUR behind 83 New Zealand bar lists and in 2,000 New Zealand kitchens by 31 August 2028, because a drink made at home deserves the same ingredient a bar would reach for, because a one-person company can own a category a large one will not bother to enter, and because every bottle is still made by the person whose name is on it.
   Guiding principles, and the argument each one settles:
@@ -149,6 +209,8 @@ FLIGHT PLAN — what this company is, in six parts:
   Hard constraint: Two production days a week is the hard ceiling. At 120 bottles a day and 44 working weeks that is 10,560 bottles a year, and no amount of marketing moves it.
 
 HOW TO USE THIS
+  - Write to the one person in WHO YOU ARE WRITING TO. If a sentence would
+    also suit the other customer, it is too wide — narrow it.
   - Name the customer's problem before naming the product.
   - One idea per sentence, and one call to action per piece.
   - Never make a claim about what brine does to a person. Positioning is
@@ -280,6 +342,65 @@ DIRECT CUSTOMER — The Friday host
      - You stop apologising for the round before you have handed it over.
      Transformation: from "Someone who makes drinks at home and hopes." to "The person whose round everyone waits for."
 
+WHO YOU ARE WRITING TO — The bar manager
+  Runs a 40-to-90-seat spirits-led room, already pours the serve five times a night, and buys on cost per pour and consistency.
+  In full: The person who signs off what goes on the list at an owner-operated bar or a restaurant with a proper back bar — one of about 9,036 café and restaurant businesses in a market growing at 1.0% a year with venues closing in it. They are measured on gross profit percentage and on consistency, do the stocktake on a Sunday night, and already carry six suppliers they did not choose. They are not looking for a seventh. They are looking for one line on the list to stop costing them arguments.
+  THE JOB THEY ARE HIRING THIS FOR: Make the dirty martini the same drink on a Tuesday as on a Saturday, at a cost per pour they can put in a spreadsheet and defend to an owner.
+  THEIR WEEK — write into a moment in it, not into the abstract:
+    - Monday, 10am: Ordering. Six supplier emails, one spreadsheet, and a delivery window that has to fit around a lunch service.
+    - Tuesday to Thursday, 4.30pm: The pre-service line-up. Ten minutes where the team tastes what is new and the manager decides whether it is worth the rail space.
+    - Friday and Saturday, service: Five to ten of the serve a night, poured by whoever is on. Consistency is a staffing problem, not a recipe problem.
+    - Sunday night: Stocktake and the GP conversation with the owner. Every line on the list is defended or dropped here.
+  WHAT THEY DO INSTEAD TODAY — this is what you are actually competing with:
+    - The catering jar of olives, drained for its liquid — costs them: An unmeasured pour, a different jar every fortnight, and a serve whose cost nobody can name.
+    - Making a house brine in-house — costs them: Prep hours, a different result each batch, and no food-safety record for the thing that goes in the glass.
+    - Leaving the serve off the list — costs them: The drink is being ordered by name elsewhere. A spirits-led room without it looks like the bar two doors down.
+  WHERE THEY ARE, AND WHAT THEY ARE READING THERE:
+    - Behind their own bar, between 4 and 5pm — Nothing. This is why the approach is a person and two bottles, not an email campaign.
+    - Their inbox, at 10am on a Monday — Order confirmations and price lists.
+    - The trade press and the association's newsletter — Closures, wage costs, and what other venues are cutting. They are reading about a tightening market, which is the mood every approach lands in.
+    - The distributor rep who already visits — A folder of things with better margins than ours.
+  WHAT TRIGGERS A PURCHASE — a piece that does not sit on one of these is decoration:
+    - A drink came back to the pass, or two staff made it differently in one shift. → Look for a way to remove the variable.
+    - The Sunday GP conversation named this drink. → Cost the serve properly for the first time.
+    - A list rewrite — new season, new menu, new bar manager. → Take samples from three suppliers in one fortnight.
+    - A customer asked for it by name and they had to say no. → Add it, quickly, with whatever is available.
+  WHAT STOPS THEM — answer one of these rather than adding an adjective:
+    - What does it cost me per pour? (the page can settle this) — Trade price divided by twenty-five pours. Both numbers exist and neither is published, so the answer currently takes an email and two working days.
+    - What is the minimum, and how often do I have to order? (the page can settle this) — Six bottles to a case, no split cases. It is in the BrandScript's agreement and nowhere a venue can read it.
+    - Will it still be here in six months? (needs a person, not a page) — A one-person supplier is a real risk to a venue. Batch numbers, a named human and a check-in before the case runs out are the only answers that work, and they are answers a person gives, not a page.
+    - Rail space. What comes off to make room? (needs a person, not a page) — Nothing comes off. It replaces the jar that was never a purchased line in the first place — which is the argument, and it needs the side-by-side pour to land.
+    - Can I get it cheaper if I take more? (the page can settle this) — No. One published number for every venue of the same size. Publishing it is what makes that promise checkable.
+  PRICE
+    They price it against: Cost per pour against the drink's menu price, and the GP percentage that comes out of it.
+    Unblinking up to $11.00; deliberate at $14.00.
+    - No 01 HOUSE at trade, per bottle, before GST — $9.39. Forty per cent below the GST-exclusive shelf price. Against $6.95 of cost it leaves $2.44 — 26% — which is the number the Flight Plan says does not pay for the hour.
+    - The same bottle at a 30% trade discount — $10.96. $4.01 a bottle, 36.6%. This is the discount the wings arithmetic points at, and it changes the whole trade case.
+    - A case of six at the published 40% — $56.34. What a venue actually pays. It is also the entire first order, which is why the acquisition cost has to be measured against a year, not an order.
+    - The catering jar they use now — $0.00. The number they will compare against, and it is zero on their sheet. Cost per pour is the only argument that beats free.
+    The cost that is not on the price tag: Ours, not theirs: at a one-in-five close rate, one live account costs about five approaches — two sample bottles at cost, a delivery and an hour each time, near enough $265. At $2.44 a bottle that account has to ship 109 bottles before it has paid for its own beginning.
+  WHAT WOULD MAKE THEM BUY AGAIN — repeat is the whole business at this volume:
+    Cadence: A case a month, ordered on a Monday, checked in on a week before it runs out. (72 bottles a year)
+    - The serve selling. Five a night at 20ml is six bottles a month, and a line that sells does not get argued about on a Sunday.
+    - A check-in that arrives before the case runs out rather than after, which is the Flight Plan's trade stage five and the only stage that compounds.
+    - The pour cost holding. One price, no surprises, no renegotiation.
+    - Being told when supply is short before an empty shelf tells them — No 04 especially.
+    And what loses them:
+      - A month of silence. A venue that runs out and does not hear from us has already replaced us with a jar.
+      - A price that moves.
+      - A split case, once, which teaches them the rule was never real.
+      - The bar manager leaving. The relationship is with a person, so the account has to be re-won on their last day.
+    The number that says it is working: Accounts reordering on schedule, and accounts gone quiet. Both are counted, and the second one is the one that matters.
+  HOW MANY OF THEM THE PLAN NEEDS: 2,058 venues in the SAM would list a brine. The year-2 plan needs 1,980 trade bottles: 83 accounts at the model's 24 bottles a year, or 28 accounts at the case-a-month this avatar describes. The second number is the one that pays for the hour — see the contradiction below.
+    Their share of what can be made: 1,980 bottles of the 7,920 made in year 2 — 25%, and the quarter that advertises itself on somebody else's printed list.
+  WHO THIS IS NOT — do not widen a sentence to include them:
+    - The 200-seat group venue with a procurement process. The volume looks good and the terms would take the margin that is left.
+    - The café with no spirits licence. There is no serve for this to replace.
+    - The venue that wants an exclusive or a bespoke blend. Two production days do not stretch to a private label.
+    - The bar that wants a sample and a price and has never poured the serve. They are a tasting, not an account.
+
+THE OTHER CUSTOMER, IN ONE LINE — not yours to write to here: The Friday host. Cooks properly, owns a jigger, hosts four people twice a month, and buys one better ingredient at a time.
+
 FLIGHT PLAN — what this company is, in six parts:
   Mission: We will put HALF SOUR behind 83 New Zealand bar lists and in 2,000 New Zealand kitchens by 31 August 2028, because a drink made at home deserves the same ingredient a bar would reach for, because a one-person company can own a category a large one will not bother to enter, and because every bottle is still made by the person whose name is on it.
   Guiding principles, and the argument each one settles:
@@ -316,6 +437,8 @@ MARKET SIZING — what is on the table, and what we are actually going for
     - Wage costs run at about 40% of hospitality revenue. A venue under that pressure buys on cost per pour, not on a story, which is why the trade one-liner leads with the pour and not the provenance. [RA-CLOSURES-2025]
 
 HOW TO USE THIS
+  - Write to the one person in WHO YOU ARE WRITING TO. If a sentence would
+    also suit the other customer, it is too wide — narrow it.
   - Name the customer's problem before naming the product.
   - One idea per sentence, and one call to action per piece.
   - Never make a claim about what brine does to a person. Positioning is

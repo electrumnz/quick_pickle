@@ -5,16 +5,15 @@
  *   node components/home/evidence/metrics.mjs [baseUrl] [--tag before]
  *
  * capture.mjs proves the page LOOKS right at four widths and in both designed
- * alternatives. This one proves it BEHAVES, and it exists because the three
- * facts that decide whether a scroll-scrubbed WebGL hero may ship are all
- * numbers:
+ * alternatives. This one proves it BEHAVES, on the three facts that decide
+ * whether a scroll choreography may ship at all:
  *
  *  1. **Transferred bytes, split at first paint.** `lighthouserc.json` asserts
- *     `resource-summary:script:size` at 400,000 and the 3D system is ~285 kB
- *     compressed, so WHEN the renderer is fetched is the whole question. Bytes
- *     are read from CDP `encodedDataLength` — the same quantity Lighthouse
- *     sums — and sampled twice: once when the page has gone quiet, and again
- *     after a real scrub. The gap between the two columns IS the deferral.
+ *     script at 400,000, images at 600,000 and the total at 1,600,000, and the
+ *     hero carries a video. Bytes are read from CDP `encodedDataLength` — the
+ *     same quantity Lighthouse sums — and sampled twice: once when the page
+ *     has gone quiet, and again after a real scrub, because the clip is
+ *     mounted on idle and a single sample taken too early would miss it.
  *  2. **Layout shift**, as the sum and as the worst 5s session window, which
  *     is the definition CLS actually uses. Budget is 0.02.
  *  3. **Frame pacing under the scrub**, driven by a synthesised browser-level
@@ -22,9 +21,12 @@
  *     input, and a scripted scroll measures a page nobody is scrolling.
  *
  * A caveat that belongs in the output rather than in a footnote: this runs
- * headless on SwiftShader, so WebGL rasterises on the CPU. The frame figures
- * here are a FLOOR, not a phone. They are useful for spotting a scrub that
- * stalls; they are not a device measurement.
+ * headless on SwiftShader on a machine several agents are building on, so the
+ * ABSOLUTE frame figures here are a floor and they move run to run. Treat them
+ * as a stall detector. For deciding whether one layer costs frames, an A/B in
+ * a single run with one variable changed is the trustworthy shape — that is
+ * how the backdrop's promotion was settled, and those numbers are recorded in
+ * home.module.css next to the rule they justify.
  */
 import { chromium } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -148,8 +150,9 @@ async function run(context, { name, width, height = 900 }) {
   const beforeState = await page.evaluate(() => ({
     canvases: document.querySelectorAll("canvas").length,
     bottleMode:
-      document.querySelector("[data-bottle-mode]")?.getAttribute("data-bottle-mode") ??
-      null,
+      document
+        .querySelector("[data-bottle-mode]")
+        ?.getAttribute("data-bottle-mode") ?? null,
     trackScrub:
       document.querySelector("[data-hero-track]")?.getAttribute("data-scrub") ??
       "off",
@@ -194,7 +197,11 @@ async function run(context, { name, width, height = 900 }) {
   return {
     name,
     width,
-    bytes: { atLoad, afterScrub, scriptDeferred: afterScrub.script - atLoad.script },
+    bytes: {
+      atLoad,
+      afterScrub,
+      scriptDeferred: afterScrub.script - atLoad.script,
+    },
     cls: { atLoad: clsAtLoad, afterScrub: clsAfterScrub },
     scrub,
     before: beforeState,
@@ -206,7 +213,11 @@ const browser = await chromium.launch({
   // The same flags components/3d/tools use, so a WebGL canvas actually
   // rasterises here instead of silently falling back to the plate and
   // flattering the numbers.
-  args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+  args: [
+    "--use-gl=angle",
+    "--use-angle=swiftshader",
+    "--enable-unsafe-swiftshader",
+  ],
 });
 
 const runs = [];
@@ -228,7 +239,9 @@ for (const width of WIDTHS) {
     colorScheme: "light",
     reducedMotion: "reduce",
   });
-  runs.push(await run(context, { name: "metrics-1280-reduced-motion", width: 1280 }));
+  runs.push(
+    await run(context, { name: "metrics-1280-reduced-motion", width: 1280 }),
+  );
   await context.close();
 }
 

@@ -25,7 +25,11 @@
 
 import { z } from "zod";
 
-import { defineTool, ToolRegistry, type ToolDefinition } from "../tools/registry";
+import {
+  defineTool,
+  ToolRegistry,
+  type ToolDefinition,
+} from "../tools/registry";
 import type { BusinessReads } from "./reads";
 import { nzd } from "./sql-reads";
 import type { DraftSink } from "./outbox";

@@ -389,6 +389,7 @@ export default async function TeamPage({
         )}
 
         <NotBuiltYet
+          blurb="This page reads the real business database, and the pause buttons really do change it: pausing an agent stops it, immediately, including mid-run. Everything else here is read-only."
           works={[
             "The roster read live from the database, with each agent's job, limits, budget and schedule",
             "Pausing and restarting any agent, which stops it mid-run",

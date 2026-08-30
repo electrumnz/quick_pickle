@@ -33,6 +33,7 @@ import type {
   AssetMetadataPatch,
   AssetStore,
   NewAsset,
+  StoredFileRef,
 } from "./types";
 
 const COLUMNS = `
@@ -310,6 +311,41 @@ export class SqlAssetStore implements AssetStore {
       requestedAt: iso(row, "requested_at") ?? "",
       assetIds: textArray(row["asset_ids"]),
     }));
+  }
+
+  async fileByKey(key: string): Promise<StoredFileRef | null> {
+    const result = await this.sql.query<SqlRow>(
+      `select id, slug, mime_type, byte_size, storage_key, poster_storage_key
+         from public.marketing_assets
+        where storage_key = $1 or poster_storage_key = $1
+        limit 1`,
+      [key],
+    );
+    const row = result.rows[0];
+    if (row === undefined) return null;
+    const isPoster = text(row, "storage_key") !== key;
+    const extension = key.slice(key.lastIndexOf(".") + 1).toLowerCase();
+    // A poster's type is derived from the extension of a key THIS LIBRARY
+    // issued, and that extension came from sniffing the bytes at upload. It is
+    // never derived from anything a request carried.
+    const posterTypes: Readonly<Record<string, string>> = {
+      jpg: "image/jpeg",
+      png: "image/png",
+      webp: "image/webp",
+      avif: "image/avif",
+      heic: "image/heic",
+    };
+    const mimeType = isPoster
+      ? (posterTypes[extension] ?? "application/octet-stream")
+      : text(row, "mime_type");
+    return {
+      assetId: text(row, "id"),
+      key,
+      mimeType,
+      byteSize: isPoster ? null : intOrNull(row, "byte_size"),
+      downloadName: `${text(row, "slug")}${isPoster ? "-still" : ""}.${extension.replace(/[^a-z0-9]/g, "")}`,
+      isPoster,
+    };
   }
 }
 

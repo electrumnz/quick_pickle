@@ -20,7 +20,7 @@ import { ASSET_TOOL_NAMES, registerAssetTools } from "@/lib/assets/tools";
 import type { ConsentState, MarketingAsset, UsageRights } from "@/lib/assets/types";
 
 import { createAssetWorld, type AssetTestWorld } from "./support/db";
-import { jpegWithGps, repoFile } from "./support/fixtures";
+import { repoFile } from "./support/fixtures";
 
 let world: AssetTestWorld;
 let registry: ToolRegistry;
@@ -54,8 +54,7 @@ async function put(input: {
   readonly sku?: string;
   readonly tags?: string;
 }): Promise<MarketingAsset> {
-  const bytes =
-    input.source === "gps" ? jpegWithGps() : repoFile(input.source);
+  const bytes = repoFile(input.source);
   const outcome = await ingestFile(
     { bytes, filename: `${input.name}.jpg` },
     {

@@ -11,6 +11,7 @@ GOAL          Recompute unit cost and margin per line, and check the takings and
 AUTONOMY      propose — Proposes and waits. A price change is what a customer pays, so it is always your call.
 TOOLS GRANTED read_margins, read_takings, read_catalogue, save_internal_note, propose_price_change
 ALWAYS ASKS   price_change, discount, settings_change
+              (the next line lists rule names, not claims — copy-audit-ignore)
 BRAND RULES   no-health-claims, alcohol-adjacent, name-two-words, sku-numerals, voice-dry-not-zany, nz-spelling, gst-inclusive, photo-no-stock, batch-code-visible, reply-within-day
 MEMORY        Nothing between runs. Cost is recomputed from the last three released batches every time, so a stale number cannot survive.
 

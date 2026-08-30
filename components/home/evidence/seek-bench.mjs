@@ -46,7 +46,9 @@ const PAGE = (src) => `<!doctype html><meta charset="utf-8">
 <video id="v" src="${src}" preload="auto" muted playsinline></video>`;
 
 async function bench(browser, { src, throttle }) {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+  });
   const page = await context.newPage();
   const client = await context.newCDPSession(page);
 
@@ -170,10 +172,30 @@ writeFileSync(
       container: {
         note: "parsed from the mp4 stss box: one sync sample per clip, at frame 1",
         "range.mp4": { durationS: 5.5, frames: 132, fps: 24, keyframes: 1 },
-        "no-01-house.mp4": { durationS: 6.0, frames: 144, fps: 24, keyframes: 1 },
-        "no-02-dirty.mp4": { durationS: 6.0, frames: 144, fps: 24, keyframes: 1 },
-        "no-03-smoke.mp4": { durationS: 7.0, frames: 168, fps: 24, keyframes: 1 },
-        "no-04-wild.mp4": { durationS: 6.0, frames: 144, fps: 24, keyframes: 1 },
+        "no-01-house.mp4": {
+          durationS: 6.0,
+          frames: 144,
+          fps: 24,
+          keyframes: 1,
+        },
+        "no-02-dirty.mp4": {
+          durationS: 6.0,
+          frames: 144,
+          fps: 24,
+          keyframes: 1,
+        },
+        "no-03-smoke.mp4": {
+          durationS: 7.0,
+          frames: 168,
+          fps: 24,
+          keyframes: 1,
+        },
+        "no-04-wild.mp4": {
+          durationS: 6.0,
+          frames: 144,
+          fps: 24,
+          keyframes: 1,
+        },
       },
       runs: rows,
     },

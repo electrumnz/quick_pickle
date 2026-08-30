@@ -77,7 +77,9 @@ export async function createSeededBusiness(): Promise<RosterTestDatabase> {
   const db = await PGlite.create();
   await db.exec(SUPABASE_AUTH_STUB);
   for (const name of migrationNames()) {
-    await db.exec(readFileSync(repoPath(`supabase/migrations/${name}`), "utf8"));
+    await db.exec(
+      readFileSync(repoPath(`supabase/migrations/${name}`), "utf8"),
+    );
   }
   await db.exec(readFileSync(repoPath("supabase/seed.sql"), "utf8"));
   // The seed truncates public.agents; register the roster back over it.

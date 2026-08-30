@@ -1,0 +1,293 @@
+{
+  "$note": "copy-audit-ignore-file — generated evidence; see metrics.mjs",
+  "tag": "after",
+  "base": "http://localhost:3517",
+  "runs": [
+    {
+      "name": "metrics-375",
+      "width": 375,
+      "bytes": {
+        "atLoad": {
+          "total": 412138,
+          "document": 11817,
+          "stylesheet": 15106,
+          "font": 166242,
+          "image": 14503,
+          "script": 204470
+        },
+        "afterScrub": {
+          "total": 412138,
+          "document": 11817,
+          "stylesheet": 15106,
+          "font": 166242,
+          "image": 14503,
+          "script": 204470
+        },
+        "scriptDeferred": 0
+      },
+      "cls": {
+        "atLoad": {
+          "sum": 0,
+          "sessionWindow": 0,
+          "count": 0
+        },
+        "afterScrub": {
+          "sum": 0,
+          "sessionWindow": 0,
+          "count": 0
+        }
+      },
+      "scrub": {
+        "frames": 140,
+        "fpsMean": 48,
+        "msMedian": 16.7,
+        "msP95": 33.4,
+        "msWorst": 83.3,
+        "longFrames": 27
+      },
+      "before": {
+        "canvases": 0,
+        "bottleMode": null,
+        "trackScrub": "on"
+      },
+      "after": {
+        "canvases": 0,
+        "bottleMode": null,
+        "pourProgress": null,
+        "overflows": false,
+        "scrollWidth": 375,
+        "clientWidth": 375
+      }
+    },
+    {
+      "name": "metrics-768",
+      "width": 768,
+      "bytes": {
+        "atLoad": {
+          "total": 761733,
+          "document": 11817,
+          "stylesheet": 15785,
+          "font": 166242,
+          "image": 64520,
+          "script": 205512,
+          "media": 297857
+        },
+        "afterScrub": {
+          "total": 761733,
+          "document": 11817,
+          "stylesheet": 15785,
+          "font": 166242,
+          "image": 64520,
+          "script": 205512,
+          "media": 297857
+        },
+        "scriptDeferred": 0
+      },
+      "cls": {
+        "atLoad": {
+          "sum": 0.000583484790943287,
+          "sessionWindow": 0.000583484790943287,
+          "count": 1
+        },
+        "afterScrub": {
+          "sum": 0.000583484790943287,
+          "sessionWindow": 0.000583484790943287,
+          "count": 1
+        }
+      },
+      "scrub": {
+        "frames": 120,
+        "fpsMean": 39.1,
+        "msMedian": 16.7,
+        "msP95": 50,
+        "msWorst": 50.1,
+        "longFrames": 56
+      },
+      "before": {
+        "canvases": 0,
+        "bottleMode": null,
+        "trackScrub": "on"
+      },
+      "after": {
+        "canvases": 0,
+        "bottleMode": null,
+        "pourProgress": null,
+        "overflows": false,
+        "scrollWidth": 753,
+        "clientWidth": 768
+      }
+    },
+    {
+      "name": "metrics-1280",
+      "width": 1280,
+      "bytes": {
+        "atLoad": {
+          "total": 786104,
+          "document": 11817,
+          "font": 166242,
+          "stylesheet": 15785,
+          "script": 205512,
+          "image": 88891,
+          "media": 297857
+        },
+        "afterScrub": {
+          "total": 786104,
+          "document": 11817,
+          "font": 166242,
+          "stylesheet": 15785,
+          "script": 205512,
+          "image": 88891,
+          "media": 297857
+        },
+        "scriptDeferred": 0
+      },
+      "cls": {
+        "atLoad": {
+          "sum": 0,
+          "sessionWindow": 0,
+          "count": 0
+        },
+        "afterScrub": {
+          "sum": 0,
+          "sessionWindow": 0,
+          "count": 0
+        }
+      },
+      "scrub": {
+        "frames": 55,
+        "fpsMean": 16.9,
+        "msMedian": 66.6,
+        "msP95": 116.7,
+        "msWorst": 183.3,
+        "longFrames": 37
+      },
+      "before": {
+        "canvases": 0,
+        "bottleMode": null,
+        "trackScrub": "on"
+      },
+      "after": {
+        "canvases": 0,
+        "bottleMode": null,
+        "pourProgress": null,
+        "overflows": false,
+        "scrollWidth": 1265,
+        "clientWidth": 1280
+      }
+    },
+    {
+      "name": "metrics-1920",
+      "width": 1920,
+      "bytes": {
+        "atLoad": {
+          "total": 786104,
+          "document": 11817,
+          "stylesheet": 15785,
+          "font": 166242,
+          "script": 205512,
+          "image": 88891,
+          "media": 297857
+        },
+        "afterScrub": {
+          "total": 786104,
+          "document": 11817,
+          "stylesheet": 15785,
+          "font": 166242,
+          "script": 205512,
+          "image": 88891,
+          "media": 297857
+        },
+        "scriptDeferred": 0
+      },
+      "cls": {
+        "atLoad": {
+          "sum": 0,
+          "sessionWindow": 0,
+          "count": 0
+        },
+        "afterScrub": {
+          "sum": 0,
+          "sessionWindow": 0,
+          "count": 0
+        }
+      },
+      "scrub": {
+        "frames": 38,
+        "fpsMean": 8.3,
+        "msMedian": 83.3,
+        "msP95": 416.7,
+        "msWorst": 566.7,
+        "longFrames": 20
+      },
+      "before": {
+        "canvases": 0,
+        "bottleMode": null,
+        "trackScrub": "on"
+      },
+      "after": {
+        "canvases": 0,
+        "bottleMode": null,
+        "pourProgress": null,
+        "overflows": false,
+        "scrollWidth": 1905,
+        "clientWidth": 1920
+      }
+    },
+    {
+      "name": "metrics-1280-reduced-motion",
+      "width": 1280,
+      "bytes": {
+        "atLoad": {
+          "total": 436062,
+          "document": 11817,
+          "font": 166242,
+          "stylesheet": 15106,
+          "image": 44278,
+          "script": 198619
+        },
+        "afterScrub": {
+          "total": 436062,
+          "document": 11817,
+          "font": 166242,
+          "stylesheet": 15106,
+          "image": 44278,
+          "script": 198619
+        },
+        "scriptDeferred": 0
+      },
+      "cls": {
+        "atLoad": {
+          "sum": 0,
+          "sessionWindow": 0,
+          "count": 0
+        },
+        "afterScrub": {
+          "sum": 0,
+          "sessionWindow": 0,
+          "count": 0
+        }
+      },
+      "scrub": {
+        "frames": 86,
+        "fpsMean": 27.9,
+        "msMedian": 16.7,
+        "msP95": 150,
+        "msWorst": 833.3,
+        "longFrames": 12
+      },
+      "before": {
+        "canvases": 0,
+        "bottleMode": null,
+        "trackScrub": "off"
+      },
+      "after": {
+        "canvases": 0,
+        "bottleMode": null,
+        "pourProgress": null,
+        "overflows": false,
+        "scrollWidth": 1265,
+        "clientWidth": 1280
+      }
+    }
+  ]
+}

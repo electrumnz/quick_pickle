@@ -181,6 +181,21 @@
   /* Held low on purpose. This should be felt as the ground the bottles stand
      on, never noticed as a shape of its own. */
   opacity: 0.72;
+  /* This layer is the size of the stage and its paint is two gradients, so it
+     is the most expensive thing in the hero to rasterise and by far the
+     easiest to rasterise repeatedly by accident. Promoting it means the
+     gradients are painted once into their own texture and the scrub then only
+     moves that texture.
+
+     Measured at 1280, scrubbing the hero, headless on SwiftShader:
+
+       backdrop scaled, not promoted   20.5 fps   p95 167ms
+       backdrop translated + promoted  43.5 fps   p95  50ms
+
+     which is the whole reason the scrub tween moves this layer with `y` and
+     never with `scale`: a scaled layer has to be re-rastered at each new
+     scale, and a translated one does not. */
+  will-change: transform, opacity;
 }
 
 /* --------------------------------------------------------------- masthead */

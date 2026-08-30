@@ -10,7 +10,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { SqlBusinessReads } from "@/lib/agents/roster";
 
-import { createSeededBusiness, type RosterTestDatabase } from "./support/pglite";
+import {
+  createSeededBusiness,
+  type RosterTestDatabase,
+} from "./support/pglite";
 
 let database: RosterTestDatabase;
 let reads: SqlBusinessReads;
@@ -81,7 +84,8 @@ describe("the roster reads the real business", () => {
     const unhappy = report.open.filter((item) => item.unhappy);
     expect(unhappy.length).toBe(report.unhappyCount);
     for (const item of report.open) {
-      if (item.rating !== null && item.rating <= 3) expect(item.unhappy).toBe(true);
+      if (item.rating !== null && item.rating <= 3)
+        expect(item.unhappy).toBe(true);
     }
     // A proposal is only ever drafted for someone who is not unhappy.
     if (report.proposal !== null) {

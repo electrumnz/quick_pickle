@@ -11,6 +11,7 @@ GOAL          Sweep the reviews and orders waiting on a reply and draft what can
 AUTONOMY      propose — Drafts and asks, every time. It will not answer an unhappy customer at all — that one comes to you with the history attached.
 TOOLS GRANTED read_open_conversations, read_customer_history, read_catalogue, save_internal_draft, queue_customer_reply
 ALWAYS ASKS   customer_message, review_reply, refund
+              (the next line lists rule names, not claims — copy-audit-ignore)
 BRAND RULES   no-health-claims, alcohol-adjacent, name-two-words, sku-numerals, voice-dry-not-zany, nz-spelling, gst-inclusive, photo-no-stock, batch-code-visible, trade-tone, reply-within-day
 MEMORY        One customer at a time, and only on demand: it reads a person's order and review history before drafting, then forgets them.
 

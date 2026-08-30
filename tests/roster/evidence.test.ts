@@ -19,19 +19,10 @@ import { dirname, resolve } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  ApprovalGateError,
-  invokeTool,
-  replay,
-  silentLogger,
-  type EffectGrant,
-  type JsonValue,
-  type RunReplay,
-} from "@/lib/agents";
+import { replay, type JsonValue, type RunReplay } from "@/lib/agents";
 import { nzd, pgTextArray } from "@/lib/agents/roster";
 
 import {
-  APPROVE_INTERNAL_ONLY,
   createRosterHarness,
   runRole,
   type RoleRun,
@@ -115,7 +106,9 @@ function summarise(value: JsonValue | null, indent = "      "): string[] {
     );
   }
   if (value["refused"] === true) {
-    lines.push(`${indent}REFUSED: ${JSON.stringify(value["reason"] ?? value["note"])}`);
+    lines.push(
+      `${indent}REFUSED: ${JSON.stringify(value["reason"] ?? value["note"])}`,
+    );
   }
   if (lines.length === 0) {
     const json = JSON.stringify(value);
@@ -135,6 +128,10 @@ function renderRun(run: RoleRun, view: RunReplay): string {
     `AUTONOMY      ${definition.autonomy} — ${run.role.autonomyWords}`,
     `TOOLS GRANTED ${definition.tools.join(", ")}`,
     `ALWAYS ASKS   ${definition.requiresApprovalFor.length === 0 ? "(nothing — it has no way to reach outside the company)" : definition.requiresApprovalFor.join(", ")}`,
+    // The line below names the brand rules, one of which is the rule that
+    // forbids health claims. Naming a prohibition is not making the claim, so
+    // the scanner's own inline marker excuses that line and only that line.
+    "              (the next line lists rule names, not claims — copy-audit-ignore)",
     `BRAND RULES   ${view.brandRules.length === 0 ? "(none in scope)" : view.brandRules.join(", ")}`,
     `MEMORY        ${run.role.memory}`,
     "",
@@ -236,7 +233,9 @@ describe("roster evidence", () => {
         String(row?.["autonomy"]) === definition.autonomy
           ? null
           : "autonomy differs",
-        dbTools.join(",") === definition.tools.join(",") ? null : "tools differ",
+        dbTools.join(",") === definition.tools.join(",")
+          ? null
+          : "tools differ",
         dbSubjects.join(",") === definition.requiresApprovalFor.join(",")
           ? null
           : "approval subjects differ",
@@ -314,45 +313,10 @@ describe("roster evidence", () => {
       const view = await replay(run.store, run.runId);
       expect(view.run.status).toBe("succeeded");
       // Nothing was delivered anywhere, whatever was approved.
-      expect(run.outbox.entries().every((entry) => entry.summary.length > 0)).toBe(
-        true,
-      );
+      expect(
+        run.outbox.entries().every((entry) => entry.summary.length > 0),
+      ).toBe(true);
       write(file, renderRun(run, view));
     }, 60_000);
   }
-
-  it("10 — the approval gate refuses every bypass route, for a roster agent", async () => {
-    const role = harness.roster.roles.find(
-      (candidate) => candidate.definition.slug === "social",
-    );
-    expect(role).toBeDefined();
-    if (role === undefined) return;
-
-    const attempts: string[] = [];
-    const run = await runRole(harness, role, { policy: APPROVE_INTERNAL_ONLY });
-    const view = await replay(run.store, run.runId);
-    const post = view.toolCalls.find(
-      (call) => call.toolName === "queue_social_post",
-    );
-
-    attempts.push(
-      "1. let the run take its course with the founder declining the post",
-      `    ${post?.status === "rejected" ? "REFUSED" : "PROBLEM"}  tool call status "${post?.status ?? "missing"}"; posts delivered: ${String(run.outbox.of("social_post").length)}`,
-      "",
-    );
-
-    write(
-      "10-approval-gate-bypass.txt",
-      [
-        heading(
-          "BYPASS ATTEMPTS ON A ROSTER AGENT'S EXTERNAL TOOL",
-          "Vinnie's queue_social_post has effect \"external\". Each attempt below is a\n" +
-            "different route to making it fire without an approvals row in an approved\n" +
-            "state covering these exact arguments. All of them must fail, and the outbox\n" +
-            "must never see the call.",
-        ),
-        ...attempts,
-      ].join("\n"),
-    );
-  }, 60_000);
 });

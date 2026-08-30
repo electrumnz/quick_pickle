@@ -137,11 +137,18 @@ export function PageNav({
 export function NotBuiltYet({
   works,
   coming,
+  blurb,
 }: {
   /** What this page can already do. */
   works: readonly string[];
   /** What is still to come, in the order it is expected. */
   coming: readonly string[];
+  /**
+   * The sentence under the heading. The default is true of a read-only page;
+   * a page that can genuinely change something has to say so instead, or this
+   * block becomes the thing on the screen that is lying.
+   */
+  blurb?: string;
 }) {
   return (
     <div className="rounded-lg border border-hairline bg-surface-raised">
@@ -150,9 +157,8 @@ export function NotBuiltYet({
           What works here, and what does not yet
         </h2>
         <p className="mt-1 text-caption text-muted">
-          This page reads the real business database. It cannot change anything
-          yet — the buttons that would do that are not built, so they are not
-          drawn.
+          {blurb ??
+            "This page reads the real business database. It cannot change anything yet — the buttons that would do that are not built, so they are not drawn."}
         </p>
       </div>
       <div className="grid gap-x-8 gap-y-5 px-4 py-4 sm:grid-cols-2">

@@ -110,9 +110,9 @@ describe("the roster cannot get around the approval gate", () => {
     expect(tool).toBeDefined();
     if (tool === undefined) return;
 
-    await expect(
-      invokeTool(tool, POST, context(run.runId)),
-    ).rejects.toThrow(ApprovalGateError);
+    await expect(invokeTool(tool, POST, context(run.runId))).rejects.toThrow(
+      ApprovalGateError,
+    );
     expect(run.outbox.externalCount()).toBe(0);
     record(
       "call queue_social_post directly, with no grant at all",

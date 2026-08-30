@@ -5,7 +5,7 @@
  *
  *   node components/strategy/evidence/capture.mjs [baseUrl]
  *
- * The four areas at 1440 and 375, full page, plus a per-page check that
+ * The five areas at 1440 and 375, full page, plus a per-page check that
  * `documentElement.scrollWidth` has not exceeded the viewport — the failure a
  * full-page screenshot hides, because it silently widens the capture instead of
  * showing the sideways scroll a person would get.
@@ -35,6 +35,7 @@ const COOKIE_FILE =
 const AREAS = [
   ["identity", "/admin/brand"],
   ["messaging", "/admin/brand/messaging"],
+  ["audience", "/admin/brand/audience"],
   ["plan", "/admin/brand/plan"],
   ["market", "/admin/brand/market"],
 ];
@@ -85,6 +86,17 @@ for (const [label, width, height] of WIDTHS) {
       failures += 1;
       console.error(
         `${name}@${label} returned ${status} — is the session cookie live?`,
+      );
+      continue;
+    }
+    // A stale cookie does not fail loudly: the gate redirects to /login, which
+    // answers 200, and the run quietly captures five screenshots of the sign-in
+    // form. That happened. Landing anywhere but the requested path is now an
+    // error rather than a picture.
+    if (new URL(page.url()).pathname !== path) {
+      failures += 1;
+      console.error(
+        `${name}@${label} landed on ${page.url()} instead of ${path} — the session cookie is stale.`,
       );
       continue;
     }

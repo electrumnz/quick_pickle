@@ -43,9 +43,10 @@ import {
 } from "./pglite";
 
 /** How the founder answers each approval this run raises. */
-export type DecisionPolicy = (
-  approval: ApprovalRecord,
-) => { readonly approve: boolean; readonly note: string };
+export type DecisionPolicy = (approval: ApprovalRecord) => {
+  readonly approve: boolean;
+  readonly note: string;
+};
 
 /** Approve everything, which is what shows the whole chain end to end. */
 export const APPROVE_EVERYTHING: DecisionPolicy = () => ({

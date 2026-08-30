@@ -11,6 +11,7 @@ GOAL          Sweep stock against days of cover and the production board, and dr
 AUTONOMY      act_with_limits — Writes its own notes without asking. Any order that spends money stops and waits for your yes.
 TOOLS GRANTED read_stock_cover, read_batch_plan, read_catalogue, save_internal_note, queue_supplier_order
 ALWAYS ASKS   purchase_order, inventory_adjustment, batch_release
+              (the next line lists rule names, not claims — copy-audit-ignore)
 BRAND RULES   no-health-claims, name-two-words, sku-numerals, nz-spelling, batch-code-visible
 MEMORY        Nothing between runs. Every run reads stock, sales and the batch board fresh, because a stale reorder decision is worse than none.
 
@@ -34,9 +35,9 @@ WHAT IT DID, STEP BY STEP
    tool: read_batch_plan {"windowDays":28}
    status: succeeded
       2 batches in the fermenter or on the bottling line, 1 released batch inside four months of its best-before.
-        - HS-03-260828-E is bottling, started 2026-08-26.
-        - HS-01-260826-E is fermenting, started 2026-08-24.
-        - HS-03-260401-A has 22 bottles left and reaches its best-before on 2026-09-28.
+        - HS-03-260829-E is bottling, started 2026-08-27.
+        - HS-01-260827-E is fermenting, started 2026-08-25.
+        - HS-03-260402-A has 22 bottles left and reaches its best-before on 2026-09-29.
         - No 01 HOUSE has the least cover at 65 days, so it is the one to schedule.
 
 3. reasoning: File the sweep so the next run, and the founder, can see what was true today.
@@ -61,9 +62,9 @@ What I found
 - The Full Set: 117 bottles available, selling 0.39 a day — 298 days of cover.
 - 500ml flint glass bottle is below its reorder point: 1180ea on hand against 1200ea, 14 day lead time.
 - Fresh dill heads is below its reorder point: 5.1kg on hand against 8kg, 3 day lead time.
-- HS-03-260828-E is bottling, started 2026-08-26.
-- HS-01-260826-E is fermenting, started 2026-08-24.
-- HS-03-260401-A has 22 bottles left and reaches its best-before on 2026-09-28.
+- HS-03-260829-E is bottling, started 2026-08-27.
+- HS-01-260827-E is fermenting, started 2026-08-25.
+- HS-03-260402-A has 22 bottles left and reaches its best-before on 2026-09-29.
 - No 01 HOUSE has the least cover at 65 days, so it is the one to schedule.
 
 What I did
@@ -100,9 +101,9 @@ WHAT IT REPORTED
    - The Full Set: 117 bottles available, selling 0.39 a day — 298 days of cover.
    - 500ml flint glass bottle is below its reorder point: 1180ea on hand against 1200ea, 14 day lead time.
    - Fresh dill heads is below its reorder point: 5.1kg on hand against 8kg, 3 day lead time.
-   - HS-03-260828-E is bottling, started 2026-08-26.
-   - HS-01-260826-E is fermenting, started 2026-08-24.
-   - HS-03-260401-A has 22 bottles left and reaches its best-before on 2026-09-28.
+   - HS-03-260829-E is bottling, started 2026-08-27.
+   - HS-01-260827-E is fermenting, started 2026-08-25.
+   - HS-03-260402-A has 22 bottles left and reaches its best-before on 2026-09-29.
    - No 01 HOUSE has the least cover at 65 days, so it is the one to schedule.
    
    What I did

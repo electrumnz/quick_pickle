@@ -120,6 +120,24 @@ export interface AssetApprovalReference {
   readonly assetIds: readonly string[];
 }
 
+/**
+ * One stored file, addressed by its storage key.
+ *
+ * What the file route needs, and nothing more. The MIME type comes from this
+ * row — never from the request, never from the object store — because the type
+ * a browser is told to treat bytes as is a security decision, and the database
+ * is the only place that holds the answer sniffing produced.
+ */
+export interface StoredFileRef {
+  readonly assetId: string;
+  readonly key: string;
+  readonly mimeType: string;
+  readonly byteSize: number | null;
+  /** A safe filename for `Content-Disposition`. Built from the slug. */
+  readonly downloadName: string;
+  readonly isPoster: boolean;
+}
+
 export interface AssetStore {
   create(input: NewAsset): Promise<MarketingAsset>;
   get(id: string): Promise<MarketingAsset | null>;
@@ -134,4 +152,6 @@ export interface AssetStore {
   variants(): Promise<readonly AssetProduct[]>;
   /** Approvals whose payload cites one of these assets. */
   approvalsFor(assetIds: readonly string[]): Promise<readonly AssetApprovalReference[]>;
+  /** The file behind a storage key — the asset's own, or its poster frame. */
+  fileByKey(key: string): Promise<StoredFileRef | null>;
 }

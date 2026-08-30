@@ -19,7 +19,7 @@ IDENTITY
 ------------------------------------------------------------------------------
 PROMPTS
 ------------------------------------------------------------------------------
-  Ari's prompt is 21518 characters; Vic's is 22936. They are not the same text.
+  Ari's prompt is 21530 characters; Vic's is 22948. They are not the same text.
   Ari leads with the DIRECT CUSTOMER script; Vic leads with the TRADE BUYER script.
   "Qualify before you approach: a spirits-led list, 40 seats or more" is in
   Vic's instructions and nowhere in Ari's.
@@ -60,7 +60,7 @@ WHAT EACH ONE ACTUALLY WROTE, ON THE SAME DAY, FROM THE SAME DATABASE
   VIC — to Brass and Bitters Limited, by name, from that account's file:
       Kiri Ngatai,
       
-      Your last order was 57 days ago, against your usual 13 days between orders.
+      Your last order was 58 days ago, against your usual 13 days between orders.
       A case is six bottles and trade pricing is the one published number.
       Say how many cases and I will get them on the next run.
 

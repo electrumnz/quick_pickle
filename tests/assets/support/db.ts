@@ -7,7 +7,7 @@
  * a gate that lives half in SQL.
  */
 
-import { mkdtemp, rm } from "node:fs/promises";
+import { copyFile, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -33,9 +33,49 @@ const RANGE: readonly (readonly [string, string, string, number])[] = [
   ["no-03-smoke", "No 03 SMOKE", "HS-03-500", 2200],
 ];
 
+/** This unit's migration. The schema it needs is complete at this file. */
+const OWN_MIGRATION = "20260104013000_marketing_assets.sql";
+const GUARANTEES = "20260101999900_schema_guarantees.sql";
+
+/**
+ * Apply the migrations up to and including this unit's own.
+ *
+ * Several agents are writing migrations into the same directory at the same
+ * time, and one of them being mid-edit is not a reason for this unit's tests to
+ * fail — nor is it something this unit may fix, since the file belongs to
+ * someone else. Everything up to this unit's migration is applied in order, so
+ * the schema under test is the real one, in the real sequence.
+ *
+ * The guarantees migration sorts before this one, so it is then applied a
+ * SECOND time, deliberately. It is written to be re-runnable, and re-running it
+ * is what asserts that the tables added here have RLS with a policy, an index
+ * on every foreign key, an updated_at trigger and nothing granted to anon.
+ */
+async function migrationsThroughThisUnit(): Promise<string> {
+  const source = path.join(process.cwd(), "supabase", "migrations");
+  const directory = await mkdtemp(path.join(tmpdir(), "half-sour-migrations-"));
+  const files = (await readdir(source))
+    .filter((name) => name.endsWith(".sql"))
+    .sort()
+    .filter((name) => name <= OWN_MIGRATION);
+  for (const name of files) {
+    await copyFile(path.join(source, name), path.join(directory, name));
+  }
+  return directory;
+}
+
 export async function createAssetWorld(): Promise<AssetTestWorld> {
-  const database = await createSchemaDatabase();
+  const migrations = await migrationsThroughThisUnit();
+  const database = await createSchemaDatabase(migrations);
   const sql = database.sql;
+  await rm(migrations, { recursive: true, force: true });
+
+  await sql.execScript(
+    await readFile(
+      path.join(process.cwd(), "supabase", "migrations", GUARANTEES),
+      "utf8",
+    ),
+  );
 
   for (const [handle, title, sku, priceCents] of RANGE) {
     const product = await sql.query<{ id: string }>(

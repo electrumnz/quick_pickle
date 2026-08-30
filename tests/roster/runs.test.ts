@@ -8,7 +8,11 @@
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { createRosterHarness, runRole, type RosterHarness } from "./support/harness";
+import {
+  createRosterHarness,
+  runRole,
+  type RosterHarness,
+} from "./support/harness";
 
 let harness: RosterHarness;
 

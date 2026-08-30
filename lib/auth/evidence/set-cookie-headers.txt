@@ -3,7 +3,7 @@ Verbatim Set-Cookie headers from the real route handler and proxy
 
 1. Session cookie, on successful sign-in (POST /login/session -> 303):
 
-   __Host-half_sour_admin=v1.HDHgNnc7a...[296 chars]; Path=/; Max-Age=1800; Expires=Thu, 01 Jan 2026 00:30:00 GMT; HttpOnly; Secure; SameSite=Strict; Priority=High
+   __Host-half_sour_admin=v1.tjEgSRUeC...[296 chars]; Path=/; Max-Age=1800; Expires=Thu, 01 Jan 2026 00:30:00 GMT; HttpOnly; Secure; SameSite=Strict; Priority=High
 
    __Host- prefix ...... yes (browser enforces Secure + Path=/ + no Domain,
                         so a sibling subdomain cannot overwrite it)
@@ -17,7 +17,7 @@ Verbatim Set-Cookie headers from the real route handler and proxy
 
 2. Pre-authentication CSRF cookie, minted by the proxy on GET /login:
 
-   __Host-half_sour_login_csrf=v1.2pFHvGmBL...[167 chars]; Path=/; Max-Age=3600; Expires=Thu, 01 Jan 2026 01:00:00 GMT; HttpOnly; Secure; SameSite=Strict
+   __Host-half_sour_login_csrf=v1.73BVnDF3o...[167 chars]; Path=/; Max-Age=3600; Expires=Thu, 01 Jan 2026 01:00:00 GMT; HttpOnly; Secure; SameSite=Strict
 
 3. The same CSRF cookie being cleared once it is spent:
 

@@ -11,6 +11,7 @@ GOAL          Review how the last fortnight's posts did and draft the next one.
 AUTONOMY      propose — Drafts and asks. Nothing it writes goes out without your yes.
 TOOLS GRANTED read_content_performance, read_sales_by_sku, read_catalogue, save_internal_draft, queue_social_post
 ALWAYS ASKS   social_post, content_asset
+              (the next line lists rule names, not claims — copy-audit-ignore)
 BRAND RULES   no-health-claims, alcohol-adjacent, name-two-words, sku-numerals, voice-dry-not-zany, nz-spelling, gst-inclusive, photo-no-stock, batch-code-visible, reply-within-day
 MEMORY        The performance of everything already published. It does not remember individual people: to this role a customer is an audience, not a name.
 
@@ -21,11 +22,11 @@ WHAT IT DID, STEP BY STEP
    tool: read_content_performance {"windowDays":28}
    status: succeeded
       5 posts published in the window, 2 waiting on a decision, 1 failed to go out.
-        - instagram on 2026-08-20: 6210 impressions, 412 engagements (6.63%).
-        - instagram on 2026-08-18: 22610 impressions, 2415 engagements (10.68%).
-        - instagram on 2026-08-17: 9880 impressions, 911 engagements (9.22%).
-        - tiktok on 2026-08-04: 41200 impressions, 4595 engagements (11.15%).
-        - instagram on 2026-08-03: 7420 impressions, 776 engagements (10.46%).
+        - instagram on 2026-08-21: 6210 impressions, 412 engagements (6.63%).
+        - instagram on 2026-08-19: 22610 impressions, 2415 engagements (10.68%).
+        - instagram on 2026-08-18: 9880 impressions, 911 engagements (9.22%).
+        - tiktok on 2026-08-05: 41200 impressions, 4595 engagements (11.15%).
+        - instagram on 2026-08-04: 7420 impressions, 776 engagements (10.46%).
         - A tiktok post failed to publish and nobody was told.
         proposal: {"platform":"tiktok","caption":"Fourteen seconds of a batch code going onto a label. Weirdly satisfying. Sorry.","sku":null,"reason":"The post that worked hardest in the window ran at 11.15% against a median of 10.46%. This drafts the same shape again, for the founder to approve or throw out."}
 
@@ -54,11 +55,11 @@ WHAT IT DID, STEP BY STEP
 5. reasoning: 5 posts published in the window, 2 waiting on a decision, 1 failed to go out. NZ$8880.60 across 493 bottles in 28 days.
 
 What I found
-- instagram on 2026-08-20: 6210 impressions, 412 engagements (6.63%).
-- instagram on 2026-08-18: 22610 impressions, 2415 engagements (10.68%).
-- instagram on 2026-08-17: 9880 impressions, 911 engagements (9.22%).
-- tiktok on 2026-08-04: 41200 impressions, 4595 engagements (11.15%).
-- instagram on 2026-08-03: 7420 impressions, 776 engagements (10.46%).
+- instagram on 2026-08-21: 6210 impressions, 412 engagements (6.63%).
+- instagram on 2026-08-19: 22610 impressions, 2415 engagements (10.68%).
+- instagram on 2026-08-18: 9880 impressions, 911 engagements (9.22%).
+- tiktok on 2026-08-05: 41200 impressions, 4595 engagements (11.15%).
+- instagram on 2026-08-04: 7420 impressions, 776 engagements (10.46%).
 - A tiktok post failed to publish and nobody was told.
 - No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before.
 - No 01 HOUSE: 172 bottles, NZ$2685.60, up 201.8% on the 28 days before.
@@ -74,7 +75,7 @@ What I did
 DECISIONS PUT TO THE FOUNDER
 ------------------------------------------------------------------------------
    [approved] content_asset: Draft: 5 posts published in the window, 2 waiting on a decision, 1 failed to go out.
-      summary: 5 posts published in the window, 2 waiting on a decision, 1 failed to go out. NZ$8880.60 across 493 bottles in 28 days.  - instagram on 2026-08-20: 6210 impressions, 412 engagements (6.63%). - instagr
+      summary: 5 posts published in the window, 2 waiting on a decision, 1 failed to go out. NZ$8880.60 across 493 bottles in 28 days.  - instagram on 2026-08-21: 6210 impressions, 412 engagements (6.63%). - instagr
       why:     Save the read on the fortnight next to the draft, so the reasoning survives the decision.
       decided: founder — Approved.
    [approved] social_post: tiktok post
@@ -96,11 +97,11 @@ WHAT IT REPORTED
    5 posts published in the window, 2 waiting on a decision, 1 failed to go out. NZ$8880.60 across 493 bottles in 28 days.
    
    What I found
-   - instagram on 2026-08-20: 6210 impressions, 412 engagements (6.63%).
-   - instagram on 2026-08-18: 22610 impressions, 2415 engagements (10.68%).
-   - instagram on 2026-08-17: 9880 impressions, 911 engagements (9.22%).
-   - tiktok on 2026-08-04: 41200 impressions, 4595 engagements (11.15%).
-   - instagram on 2026-08-03: 7420 impressions, 776 engagements (10.46%).
+   - instagram on 2026-08-21: 6210 impressions, 412 engagements (6.63%).
+   - instagram on 2026-08-19: 22610 impressions, 2415 engagements (10.68%).
+   - instagram on 2026-08-18: 9880 impressions, 911 engagements (9.22%).
+   - tiktok on 2026-08-05: 41200 impressions, 4595 engagements (11.15%).
+   - instagram on 2026-08-04: 7420 impressions, 776 engagements (10.46%).
    - A tiktok post failed to publish and nobody was told.
    - No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before.
    - No 01 HOUSE: 172 bottles, NZ$2685.60, up 201.8% on the 28 days before.

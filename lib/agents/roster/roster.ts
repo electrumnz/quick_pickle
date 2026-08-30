@@ -87,10 +87,7 @@ export async function loadRoster(store: StrategyStore): Promise<Roster> {
 }
 
 /** Look a role up by slug. */
-export function roleFor(
-  roster: Roster,
-  slug: string,
-): RosterRole | null {
+export function roleFor(roster: Roster, slug: string): RosterRole | null {
   return roster.roles.find((role) => role.definition.slug === slug) ?? null;
 }
 
