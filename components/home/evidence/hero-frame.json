@@ -1,0 +1,171 @@
+{
+  "base": "http://127.0.0.1:3660",
+  "viewportHeight": 900,
+  "failures": 0,
+  "rows": [
+    {
+      "width": 375,
+      "src": "/_next/image?url=%2Fmedia%2Frange%2Frange.jpg&w=640&q=58",
+      "objectFit": "contain",
+      "intrinsicAspect": 1.5,
+      "artBox": {
+        "width": 330,
+        "height": 412.3,
+        "aspect": 0.8
+      },
+      "paintedPhotograph": {
+        "width": 330,
+        "height": 220
+      },
+      "film": {
+        "src": "/media/film/range.webm",
+        "intrinsic": "1152x768",
+        "aspect": 1.5,
+        "objectFit": "contain"
+      },
+      "capturedWidth": 330,
+      "capturedHeight": 220,
+      "medianDetail": 7.1,
+      "cut": 1.28,
+      "flatColsLeft": 0,
+      "flatColsRight": 0,
+      "flatEdgePercent": 0,
+      "longestFlatRun": 0,
+      "longestFlatRunPercent": 0,
+      "profile": "+-++######+++---+++++########++---+---++#####++++----++-+#+####+++------",
+      "noInventedPixels": true,
+      "shot": "hero-frame-375.png",
+      "picture": "hero-frame-375-picture.png"
+    },
+    {
+      "width": 768,
+      "src": "/_next/image?url=%2Fmedia%2Frange%2Frange.jpg&w=828&q=58",
+      "objectFit": "contain",
+      "intrinsicAspect": 1.5,
+      "artBox": {
+        "width": 698.8,
+        "height": 445.9,
+        "aspect": 1.567
+      },
+      "paintedPhotograph": {
+        "width": 668.8,
+        "height": 445.9
+      },
+      "film": {
+        "src": "/media/film/range.webm",
+        "intrinsic": "1152x768",
+        "aspect": 1.5,
+        "objectFit": "contain"
+      },
+      "capturedWidth": 669,
+      "capturedHeight": 446,
+      "medianDetail": 4.2,
+      "cut": 0.76,
+      "flatColsLeft": 0,
+      "flatColsRight": 0,
+      "flatEdgePercent": 0,
+      "longestFlatRun": 0,
+      "longestFlatRunPercent": 0,
+      "profile": "+-++#######++---++-++######+#++---+---++#####++++----++-+++####+++------",
+      "noInventedPixels": true,
+      "shot": "hero-frame-768.png",
+      "picture": "hero-frame-768-picture.png"
+    },
+    {
+      "width": 1280,
+      "src": "/_next/image?url=%2Fmedia%2Frange%2Frange.jpg&w=1920&q=58",
+      "objectFit": "contain",
+      "intrinsicAspect": 1.499,
+      "artBox": {
+        "width": 1192.2,
+        "height": 432.3,
+        "aspect": 2.758
+      },
+      "paintedPhotograph": {
+        "width": 648.2,
+        "height": 432.3
+      },
+      "film": {
+        "src": "/media/film/range.webm",
+        "intrinsic": "1152x768",
+        "aspect": 1.5,
+        "objectFit": "contain"
+      },
+      "capturedWidth": 648,
+      "capturedHeight": 432,
+      "medianDetail": 4.33,
+      "cut": 0.78,
+      "flatColsLeft": 0,
+      "flatColsRight": 0,
+      "flatEdgePercent": 0,
+      "longestFlatRun": 0,
+      "longestFlatRunPercent": 0,
+      "profile": "+++#######++---++++++#######++-------++######++++-----+-++#####+++------",
+      "noInventedPixels": true,
+      "shot": "hero-frame-1280.png",
+      "picture": "hero-frame-1280-picture.png"
+    },
+    {
+      "width": 1920,
+      "src": "/_next/image?url=%2Fmedia%2Frange%2Frange.jpg&w=1920&q=58",
+      "objectFit": "contain",
+      "intrinsicAspect": 1.499,
+      "artBox": {
+        "width": 1809,
+        "height": 369.6,
+        "aspect": 4.894
+      },
+      "paintedPhotograph": {
+        "width": 554.2,
+        "height": 369.6
+      },
+      "film": {
+        "src": "/media/film/range.webm",
+        "intrinsic": "1152x768",
+        "aspect": 1.5,
+        "objectFit": "contain"
+      },
+      "capturedWidth": 554,
+      "capturedHeight": 370,
+      "medianDetail": 4.91,
+      "cut": 0.88,
+      "flatColsLeft": 0,
+      "flatColsRight": 0,
+      "flatEdgePercent": 0,
+      "longestFlatRun": 0,
+      "longestFlatRunPercent": 0,
+      "profile": "+++#######++-+-+++-++#######++----+--++#######++-------+++#####+++------",
+      "noInventedPixels": true,
+      "shot": "hero-frame-1920.png",
+      "picture": "hero-frame-1920-picture.png"
+    },
+    {
+      "width": 1280,
+      "layer": "film",
+      "film": {
+        "src": "/media/film/range.webm",
+        "intrinsic": "1152x768",
+        "aspect": 1.5,
+        "playing": true,
+        "opacity": 1,
+        "currentTime": 2.04
+      },
+      "paintedPhotograph": {
+        "width": 648.5,
+        "height": 432.3
+      },
+      "capturedWidth": 649,
+      "capturedHeight": 432,
+      "medianDetail": 4.3,
+      "cut": 0.77,
+      "flatColsLeft": 0,
+      "flatColsRight": 0,
+      "flatEdgePercent": 0,
+      "longestFlatRun": 0,
+      "longestFlatRunPercent": 0,
+      "profile": "+++#######++---++++++#######++-------++######++++----++-++#####+++------",
+      "noInventedPixels": true,
+      "picture": "hero-frame-film.png"
+    }
+  ]
+}

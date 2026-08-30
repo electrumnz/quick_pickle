@@ -336,21 +336,50 @@
   opacity: 1;
 }
 
+/* The ring sizes itself to whatever word it is carrying.
+
+   It was a fixed 4rem square in the `link` state, centred by a negative margin
+   of half that. The label inside is `white-space: nowrap` in a `place-items:
+   center` grid with no width constraint, so anything wider than 64px hung out
+   of BOTH sides of the circle, unclipped and unreadable. At 9px mono with
+   0.18em tracking that is almost every label the site has: "HOW IT'S MADE" in
+   the masthead was the reported case, and "DELIVERY AND RETURNS" in the footer
+   is the widest in the tree. The word is the affordance, so the box gives way
+   to the word rather than the other way round.
+
+   `width: max-content` with a `min-width` floor does the whole job. With no
+   label the max-content width is zero, the floor wins, and it is exactly the
+   circle it has always been; with one it grows into a pill, and `--radius-pill`
+   was already the corner so nothing else has to change.
+
+   Centring moves from `margin: -2rem 0 0 -2rem` to `translate(-50%, -50%)`,
+   because half of `max-content` is not a number a margin can hold. That does
+   not fight the parent transform: Cursor.tsx writes `transform` on `.cursor`
+   every frame, and this is a CHILD's own transform composing on top of it,
+   not a second writer of the same property. It is also cheaper — the ring now
+   grows from its own centre instead of animating a margin against a width.
+
+   `min-width` rather than `width` is what carries the state transition, since
+   `max-content` is not an interpolatable length. For a short label the two are
+   the same number and the growth animates exactly as it did; for a long one the
+   width arrives at once and the height, fill and edge still tween. */
 .cursorRing {
   position: absolute;
   top: 0;
   left: 0;
   display: grid;
+  box-sizing: border-box;
   place-items: center;
-  width: 2.5rem;
+  width: max-content;
+  min-width: 2.5rem;
   height: 2.5rem;
-  margin: -1.25rem 0 0 -1.25rem;
+  padding-inline: 1.125rem;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
+  transform: translate(-50%, -50%);
   transition:
-    width var(--motion-duration-quick) var(--motion-ease-standard),
+    min-width var(--motion-duration-quick) var(--motion-ease-standard),
     height var(--motion-duration-quick) var(--motion-ease-standard),
-    margin var(--motion-duration-quick) var(--motion-ease-standard),
     background-color var(--motion-duration-quick) var(--motion-ease-standard),
     border-color var(--motion-duration-quick) var(--motion-ease-standard);
 }
@@ -367,17 +396,15 @@
 }
 
 .cursor[data-state="link"] .cursorRing {
-  width: 4rem;
+  min-width: 4rem;
   height: 4rem;
-  margin: -2rem 0 0 -2rem;
   background-color: var(--surface-accent);
   border-color: var(--accent-edge);
 }
 
 .cursor[data-state="pour"] .cursorRing {
-  width: 6.5rem;
+  min-width: 6.5rem;
   height: 6.5rem;
-  margin: -3.25rem 0 0 -3.25rem;
   background-color: var(--surface-accent);
   border-color: var(--accent-edge);
 }

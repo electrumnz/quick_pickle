@@ -78,30 +78,46 @@ export const BOTTLE_SHOTS: Readonly<Record<BrineId, Shot>> = {
 /**
  * The four bottles in one frame, cut from the same four hero frames.
  *
- * Two versions of one picture live in public/media, and the difference is the
- * frame, not the photograph:
+ * ONE version of this picture exists, and it is the photograph: `range.jpg`
+ * with `range.mp4` / `range.webm` over it, 3:2, as composed. It is the
+ * homepage hero and the clip components/home/evidence/seek-bench.mjs measures.
  *
- *   range.jpg / range.mp4 / range.webm   the plate as composed, 3:2. This is
- *       the range shot itself, and what components/home/evidence/seek-bench.mjs
- *       measures.
- *   range-hero.*                          the same plate with its dark ground
- *       extended sideways to 2.4:1. The homepage's art row is close to 3:1, and
- *       a 3:2 picture contained in it renders small enough that the four labels
- *       stop being readable — which is the only reason to put photography there
- *       at all. Nothing is added to the extended area but the background the
- *       shot already had, so there is no new bottle, prop or claim in it, and
- *       the wider cut is the SMALLER file: near-black compresses to nothing.
+ * There was a second, wider cut — `range-hero.*`, the same plate with its dark
+ * ground extended sideways to 2.4:1 by averaging, blurring and ramping the
+ * outer columns outwards. It has been deleted, and the reasoning it was built
+ * on is worth writing down so it is not rebuilt.
  *
- * The hero clip is the 3:2 clip composited back into the wide frame over a
- * still of its own first frame, so the moving part is the photograph and the
- * extension stays put — which is also what a locked-off camera would do.
+ * The argument for it was that the hero's art row is close to 3:1 and a 3:2
+ * picture contained in one renders too small for the four labels to read. The
+ * first half is true only at 1280; the second half is false at every width,
+ * because the row is WIDER than either cut, so `object-fit: contain` is limited
+ * by the row's HEIGHT and not its width. Both cuts are the same height, so both
+ * put the photograph on screen at exactly the same size — the wide one just
+ * pads it with 300 px of invention on each side. Measured, painted size of the
+ * real photograph, wide cut vs this one:
+ *
+ *   375    206x137  ->  330x220      768   437x291  ->  669x446
+ *   1280   649x432  ->  648x432      1920  555x370  ->  554x370
+ *
+ * So the extension bought nothing anywhere and cost half the frame at the two
+ * narrow widths, where the row is TALLER than it is wide and the wide cut was
+ * the thing being squeezed. What it did buy was a visible defect: the fill is a
+ * one-column average blurred to 40 px, so it has no vertical detail at all, and
+ * the outer bottle's lemon peel came through it as a yellow horizontal smear.
+ * The unit that generated it recorded that smear at the time and shipped it.
+ *
+ * The rule this leaves behind: the art row is allowed to be wider than the
+ * picture, and the picture is allowed to sit centred against the page ground
+ * inside it. Extending a photograph with pixels that were never photographed is
+ * not a framing choice — a viewer reads the smear long before they read the
+ * ratio.
  */
 export const RANGE_SHOT: Shot = {
-  still: "/media/range/range-hero.jpg",
+  still: "/media/range/range.jpg",
   width: 1600,
-  height: 667,
+  height: 1067,
   alt: "No. 01 HOUSE, No. 02 DIRTY, No. 03 SMOKE and No. 04 WILD, 500 ml each, on a dark slate bar top.",
-  film: film("range-hero"),
+  film: film("range"),
 };
 
 export function bottleShot(id: BrineId): Shot {
