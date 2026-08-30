@@ -51,14 +51,18 @@
  * photograph on screen at the same size — while at 375 and 768 the row is
  * taller than it is wide and the wide cut was the one being squeezed.
  *
- * THREE MORE THINGS ARE ASSERTED HERE, and they are the founder's brief for the
+ * FOUR MORE THINGS ARE ASSERTED HERE, and they are the founder's brief for the
  * band written as arithmetic rather than as an opinion about a screenshot.
  *
- *   full bleed at and above 48rem   `object-fit: cover`, and the band runs past
- *                                   the page gutter to the edge of the layout
- *                                   box — or, on a window too short to carry a
- *                                   full-width crop, to the label-safety cap
- *                                   `.heroFrame` sets. Both are recorded.
+ *   bled at and above 48rem         `object-fit: cover`, and the band runs to
+ *                                   the edge of the layout box — or, where
+ *                                   running that wide would break one of the
+ *                                   rules below, to the cap `.heroFrame` sets
+ *                                   instead. Which rule held it short is
+ *                                   recorded, and a band that stops short for
+ *                                   no reason still fails. At 900px of window
+ *                                   height only 768 reaches the full bleed;
+ *                                   1280 and up are held by the zoom rule.
  *   contained below 48rem           `object-fit: contain`, inside the gutter,
  *                                   whole plate on screen. A 3:2 picture
  *                                   covering a 375px viewport is limited by
@@ -68,6 +72,23 @@
  *                                   the fit and `object-position`, and it must
  *                                   contain rows 396–832 of the plate — the
  *                                   label panels, measured by label-band.mjs.
+ *   still a photograph              the crop is not magnified past 1.75x. This
+ *                                   is the founder's fourth report, "too zoomed
+ *                                   in on desktop", and it is a different
+ *                                   statement from the one above it: a band can
+ *                                   hold every label and still be a photograph
+ *                                   of nothing but labels. At 1920x900 it was —
+ *                                   1280x370, magnified 2.31x, with the panels
+ *                                   filling 95% of the band's height and 1.4%
+ *                                   of the plate showing above them.
+ *
+ * MAGNIFICATION is `cover`'s scale over `contain`: the painted plate's height
+ * divided by the height of the window the band shows of it, which is the band's
+ * own aspect divided by the plate's 1.4995. `.heroFrame` now derives its WIDTH
+ * from its height with `aspect-ratio`, so that number is a constant above the
+ * breakpoint rather than something the window decides, and the ceiling here is
+ * the stylesheet's 2.6 : 1 turned back into a magnification, plus a hair for
+ * subpixel rounding. label-band.mjs is where 2.6 comes from.
  *
  * And the film is asserted ABSENT. `range.webm` was documented as a push-in and
  * measured as a pure lateral truck of 4.8% of the frame width, out and back on
@@ -105,6 +126,20 @@ const BLEED_FROM = 768;
 const PLATE_ROWS = 1067;
 const LABEL_TOP = 396 / PLATE_ROWS;
 const LABEL_BOTTOM = 833 / PLATE_ROWS;
+/** The panels' own share of the plate's height, from label-band.json. */
+const LABEL_SHARE_OF_PLATE = 0.4096;
+/**
+ * The most `cover` may magnify the plate over `contain`.
+ *
+ * `.heroFrame` sets `--hero-band-aspect: 2.6`, and a band's magnification is
+ * its aspect over the plate's own 1600/1067 — so 2.6 is 1.734x. The ceiling is
+ * that plus a hair: the band's height comes from a grid row and lands on a
+ * subpixel, and 1.75 is still under the 1.83 at which the label panels would
+ * take three quarters of the band's height. label-band.mjs prints the table.
+ */
+const MAG_CEILING = 1.75;
+/** Where the plate would start being upscaled: `.heroFrame`'s second cap. */
+const UPSCALE_CEILING = 1280;
 
 mkdirSync(HERE, { recursive: true });
 
@@ -311,6 +346,16 @@ for (const width of WIDTHS) {
     const bleedB = Math.min(1, r.height / bleedPlateHeight);
     const bleedTop = (1 - bleedB) * posY;
 
+    /* How far `cover` magnifies the plate over `contain`: the whole plate's
+     * painted height against the height of the window the band shows of it.
+     * Under `contain` nothing is cropped and the answer is 1. It is the band's
+     * own aspect over the plate's, so it is independent of the intrinsic size
+     * the browser reports — which is NOT the file's: a candidate picked from a
+     * `srcset` with `w` descriptors is corrected by its density, so the 1920w
+     * entry of a 1600px plate reports 1066x711 in a 1280px slot. Every fraction
+     * here is a ratio, so the correction cancels. */
+    const magnification = ph / Math.min(r.height, ph);
+
     const video = box.querySelector("video");
     return {
       src:
@@ -334,10 +379,12 @@ for (const width of WIDTHS) {
         contentWidth: +(layoutWidth - 2 * gutter).toFixed(1),
         overflowsDocument: doc.scrollWidth > layoutWidth + 1,
       },
+      magnification: +magnification.toFixed(3),
       atFullBleed: {
         width: +layoutWidth.toFixed(1),
         cropTop: +bleedTop.toFixed(4),
         cropBottom: +(bleedTop + bleedB).toFixed(4),
+        magnification: +(1 / bleedB).toFixed(3),
       },
       cropWindow: {
         top: +windowTop.toFixed(4),
@@ -414,10 +461,11 @@ for (const width of WIDTHS) {
    * "Full bleed" is measured against the LAYOUT box, never `100vw`: the page
    * sets `scrollbar-gutter: stable`, so `100vw` is wider than the layout box by
    * the scrollbar and a band sized from it would put a horizontal scrollbar on
-   * the document. At and above 48rem the band must at least escape the gutter;
-   * it reaches the full layout box unless `.heroFrame`'s label-safety cap holds
-   * it in, which is the case on a window too short to carry a full-width crop
-   * without cutting a label. */
+   * the document. At and above 48rem the band reaches the full layout box
+   * unless one of `.heroFrame`'s caps holds it in — which, since the band's
+   * width is derived from its height, is the case on every window wider than
+   * about 2.6 times the middle grid row. The rule that bit is recorded below,
+   * and "not full bleed" is only a failure when none of them did. */
   const wants = width >= BLEED_FROM ? "cover" : "contain";
   /* "Bled" is an edge test, not a width test, and it reads the LEFT edge.
    *
@@ -433,17 +481,49 @@ for (const width of WIDTHS) {
     ? geo.artBox.width >= geo.layout.layoutWidth - 1
     : false;
   const fitCorrect = geo?.objectFit === wants;
-  /* Would a band running the full layout width, at this height, still hold
-   * every label? Where it would not, `.heroFrame`'s cap is the reason the band
-   * stops short, and stopping short is then the correct behaviour rather than a
-   * missing bleed. The founder's own reason for the crop was that all four
-   * labels stay in frame. */
+  /* Would a band running the full layout width, at this height, be allowed?
+   *
+   * Three rules can forbid it, and where one does, `.heroFrame` holding the
+   * band short IS the correct behaviour rather than a missing bleed. They are
+   * checked in the order the stylesheet applies them, and the one that bites is
+   * recorded, because "narrower than the window" on its own says nothing about
+   * whether the band is doing its job.
+   *
+   *   zoom      full bleed at this height would magnify the plate past the
+   *             ceiling. This is what holds the band short at 1280 and above:
+   *             the window keeps getting wider and the middle grid row does
+   *             not, so a full-width crop gets thinner and thinner a slice.
+   *   labels    it would cut a label panel off the top or the bottom.
+   *   upscale   it would paint the plate wider than the file that was served.
+   */
   const fullBleedHoldsLabels = geo
     ? geo.atFullBleed.cropTop <= LABEL_TOP + 0.001 &&
       geo.atFullBleed.cropBottom >= LABEL_BOTTOM - 0.001
     : false;
-  const capped = !fullBleed && !fullBleedHoldsLabels;
+  const fullBleedHoldsZoom = geo
+    ? geo.atFullBleed.magnification <= MAG_CEILING + 0.01
+    : false;
+  const fullBleedHoldsResolution = geo
+    ? geo.layout.layoutWidth <= UPSCALE_CEILING + 1
+    : false;
+  const heldShortBecause = fullBleed
+    ? null
+    : !fullBleedHoldsZoom
+      ? "zoom"
+      : !fullBleedHoldsLabels
+        ? "labels"
+        : !fullBleedHoldsResolution
+          ? "upscale"
+          : null;
+  const capped = !fullBleed && heldShortBecause !== null;
   const bleedCorrect = width >= BLEED_FROM ? fullBleed || capped : !bled;
+  /* The founder's fourth report: the picture read as a detail of itself rather
+   * than as a photograph. The band's aspect is the magnification, so this is
+   * one number at every width above the breakpoint — and the share of the band
+   * the label panels fill is the same statement in the form you can see. */
+  const magnification = geo?.magnification ?? 0;
+  const labelShareOfBand = +(LABEL_SHARE_OF_PLATE * magnification).toFixed(3);
+  const notTooZoomed = geo ? magnification <= MAG_CEILING + 0.01 : false;
   // Below the breakpoint the whole plate is on screen; above it the crop must
   // still hold every label panel.
   const labelsInFrame = geo
@@ -460,6 +540,7 @@ for (const width of WIDTHS) {
     fitCorrect &&
     bleedCorrect &&
     labelsInFrame &&
+    notTooZoomed &&
     noFilm &&
     noOverflow;
   if (!ok) failures++;
@@ -505,8 +586,16 @@ for (const width of WIDTHS) {
     fullBleed,
     atFullBleed: geo?.atFullBleed ?? null,
     fullBleedHoldsLabels,
-    heldAtLabelSafetyCap: capped,
+    fullBleedHoldsZoom,
+    fullBleedHoldsResolution,
+    heldShortOfFullBleedBy: heldShortBecause,
+    heldAtCap: capped,
     labelsInFrame,
+    bandAspect: geo ? +(geo.artBox.width / geo.artBox.height).toFixed(3) : null,
+    magnification: geo?.magnification ?? null,
+    labelShareOfBand,
+    magnificationCeiling: MAG_CEILING,
+    notTooZoomed,
     noFilmMounted: noFilm,
     noDocumentOverflow: noOverflow,
     pass: ok,
@@ -519,10 +608,16 @@ for (const width of WIDTHS) {
       `band ${geo?.artBox.width}x${geo?.artBox.height} (${geo?.artBox.aspect}:1) ` +
       `of ${geo?.layout.layoutWidth}  ` +
       `${geo?.objectFit}${fitCorrect ? "" : ` WANTED ${wants}`}  ` +
-      `${width >= BLEED_FROM ? (fullBleed ? "full bleed" : capped ? "capped, full bleed would crop a label" : "NOT BLED") : bled ? "BLED" : "contained"}  ` +
+      `${width >= BLEED_FROM ? (fullBleed ? "full bleed" : capped ? `capped, full bleed would cost ${heldShortBecause}` : "NOT BLED") : bled ? "BLED" : "contained"}  ` +
       `picture ${Math.round(geo?.visible.width ?? 0)}x${Math.round(geo?.visible.height ?? 0)}  ` +
       `labels ${labelsInFrame ? "in frame" : "CROPPED"}  ` +
       `${noFilm ? "no film" : "FILM MOUNTED"}`,
+  );
+  console.log(
+    `      magnified ${magnification.toFixed(2)}x ${notTooZoomed ? "<=" : "OVER"} ${MAG_CEILING.toFixed(2)} ` +
+      `(band ${(geo ? geo.artBox.width / geo.artBox.height : 0).toFixed(2)} : 1, ` +
+      `labels ${(labelShareOfBand * 100).toFixed(0)}% of its height` +
+      `${geo && width >= BLEED_FROM ? `, ${geo.atFullBleed.magnification.toFixed(2)}x at full bleed` : ""})`,
   );
   console.log(
     `      crop rows ${((geo?.cropWindow.top ?? 0) * 100).toFixed(1)}%-${((geo?.cropWindow.bottom ?? 1) * 100).toFixed(1)}% ` +

@@ -1,5 +1,5 @@
 {
-  "base": "http://localhost:3416",
+  "base": "http://127.0.0.1:3541",
   "viewportHeight": 900,
   "failures": 0,
   "rows": [
@@ -65,11 +65,20 @@
       "atFullBleed": {
         "width": 360,
         "cropTop": 0,
-        "cropBottom": 1
+        "cropBottom": 1,
+        "magnification": 1
       },
       "fullBleedHoldsLabels": true,
-      "heldAtLabelSafetyCap": false,
+      "fullBleedHoldsZoom": true,
+      "fullBleedHoldsResolution": true,
+      "heldShortOfFullBleedBy": null,
+      "heldAtCap": false,
       "labelsInFrame": true,
+      "bandAspect": 0.833,
+      "magnification": 1,
+      "labelShareOfBand": 0.41,
+      "magnificationCeiling": 1.75,
+      "notTooZoomed": true,
       "noFilmMounted": true,
       "noDocumentOverflow": true,
       "pass": true,
@@ -84,14 +93,14 @@
         },
         {
           "stop": 0.5,
-          "transform": "matrix(1.0766, 0, 0, 1.0766, 0, -13.2755)",
-          "gap": 20.7,
+          "transform": "matrix(1.0772, 0, 0, 1.0772, 0, -13.3674)",
+          "gap": 20.6,
           "overlap": 0
         },
         {
           "stop": 1,
-          "transform": "matrix(1.1596, 0, 0, 1.1596, 0, -27.6582)",
-          "gap": 8.2,
+          "transform": "matrix(1.1575, 0, 0, 1.1575, 0, -27.2895)",
+          "gap": 8.5,
           "overlap": 0
         }
       ],
@@ -159,11 +168,20 @@
       "atFullBleed": {
         "width": 753,
         "cropTop": 0.133,
-        "cropBottom": 0.9219
+        "cropBottom": 0.9219,
+        "magnification": 1.268
       },
       "fullBleedHoldsLabels": true,
-      "heldAtLabelSafetyCap": false,
+      "fullBleedHoldsZoom": true,
+      "fullBleedHoldsResolution": true,
+      "heldShortOfFullBleedBy": null,
+      "heldAtCap": false,
       "labelsInFrame": true,
+      "bandAspect": 1.902,
+      "magnification": 1.268,
+      "labelShareOfBand": 0.519,
+      "magnificationCeiling": 1.75,
+      "notTooZoomed": true,
       "noFilmMounted": true,
       "noDocumentOverflow": true,
       "pass": true,
@@ -178,14 +196,14 @@
         },
         {
           "stop": 0.5,
-          "transform": "matrix(1.0799, 0, 0, 1.0799, 0, -13.8406)",
-          "gap": 40,
+          "transform": "matrix(1.0781, 0, 0, 1.0781, 0, -13.5329)",
+          "gap": 40.3,
           "overlap": 0
         },
         {
           "stop": 1,
-          "transform": "matrix(1.158, 0, 0, 1.158, 0, -27.3739)",
-          "gap": 28.3,
+          "transform": "matrix(1.1587, 0, 0, 1.1587, 0, -27.4891)",
+          "gap": 28.2,
           "overlap": 0
         }
       ],
@@ -198,10 +216,10 @@
       "objectPosition": "50% 63%",
       "intrinsicAspect": 1.499,
       "artBox": {
-        "width": 1265,
+        "width": 1029.6,
         "height": 396,
-        "left": 0,
-        "aspect": 3.194
+        "left": 117.7,
+        "aspect": 2.6
       },
       "layout": {
         "viewportWidth": 1280,
@@ -212,30 +230,30 @@
         "overflowsDocument": false
       },
       "cropWindow": {
-        "top": 0.3343,
-        "bottom": 0.8037,
+        "top": 0.2667,
+        "bottom": 0.8434,
         "left": 0,
         "right": 1
       },
       "paintedPhotograph": {
-        "width": 1265,
-        "height": 843.7
+        "width": 1029.6,
+        "height": 686.7
       },
       "visiblePicture": {
-        "width": 1265,
+        "width": 1029.6,
         "height": 396
       },
       "film": null,
-      "capturedWidth": 1265,
+      "capturedWidth": 1030,
       "capturedHeight": 396,
-      "medianDetail": 3.7,
-      "cut": 0.67,
+      "medianDetail": 4.35,
+      "cut": 0.78,
       "flatColsLeft": 0,
       "flatColsRight": 0,
       "flatEdgePercent": 0,
-      "longestFlatRun": 92,
-      "longestFlatRunPercent": 7.3,
-      "profile": "----++#####+#++.--.--.+#######+++.-.....+######+#++......-+#######+++...",
+      "longestFlatRun": 58,
+      "longestFlatRunPercent": 5.6,
+      "profile": "-+--+######+#++.--.--.+#######+++.----..+######+#++....---+######+++----",
       "asset": {
         "capturedWidth": 1600,
         "capturedHeight": 1067,
@@ -248,16 +266,25 @@
       "noInventedPixels": true,
       "fitCorrect": true,
       "expectedFit": "cover",
-      "bleedsPastGutter": true,
-      "fullBleed": true,
+      "bleedsPastGutter": false,
+      "fullBleed": false,
       "atFullBleed": {
         "width": 1265,
         "cropTop": 0.3343,
-        "cropBottom": 0.8037
+        "cropBottom": 0.8037,
+        "magnification": 2.131
       },
       "fullBleedHoldsLabels": true,
-      "heldAtLabelSafetyCap": false,
+      "fullBleedHoldsZoom": false,
+      "fullBleedHoldsResolution": true,
+      "heldShortOfFullBleedBy": "zoom",
+      "heldAtCap": true,
       "labelsInFrame": true,
+      "bandAspect": 2.6,
+      "magnification": 1.734,
+      "labelShareOfBand": 0.71,
+      "magnificationCeiling": 1.75,
+      "notTooZoomed": true,
       "noFilmMounted": true,
       "noDocumentOverflow": true,
       "pass": true,
@@ -278,8 +305,8 @@
         },
         {
           "stop": 1,
-          "transform": "matrix(1.1588, 0, 0, 1.1588, 0, -27.5081)",
-          "gap": 25.4,
+          "transform": "matrix(1.1593, 0, 0, 1.1593, 0, -27.6044)",
+          "gap": 25.3,
           "overlap": 0
         }
       ],
@@ -292,10 +319,10 @@
       "objectPosition": "50% 63%",
       "intrinsicAspect": 1.499,
       "artBox": {
-        "width": 1280,
+        "width": 961.1,
         "height": 369.6,
-        "left": 312.5,
-        "aspect": 3.463
+        "left": 472,
+        "aspect": 2.6
       },
       "layout": {
         "viewportWidth": 1920,
@@ -306,30 +333,30 @@
         "overflowsDocument": false
       },
       "cropWindow": {
-        "top": 0.3572,
-        "bottom": 0.7902,
+        "top": 0.2667,
+        "bottom": 0.8434,
         "left": 0,
         "right": 1
       },
       "paintedPhotograph": {
-        "width": 1280,
-        "height": 853.7
+        "width": 961.1,
+        "height": 641
       },
       "visiblePicture": {
-        "width": 1280,
+        "width": 961.1,
         "height": 369.6
       },
       "film": null,
-      "capturedWidth": 1280,
+      "capturedWidth": 961,
       "capturedHeight": 370,
-      "medianDetail": 3.84,
-      "cut": 0.69,
+      "medianDetail": 4.56,
+      "cut": 0.82,
       "flatColsLeft": 0,
       "flatColsRight": 0,
       "flatEdgePercent": 0,
-      "longestFlatRun": 123,
-      "longestFlatRunPercent": 9.6,
-      "profile": "----++#####+#++.....-.########+++.......+######+#++......-+#######++-...",
+      "longestFlatRun": 53,
+      "longestFlatRunPercent": 5.5,
+      "profile": "----++#####+#++.--.--.+#######+++.--.-..+########++....---+######+++----",
       "asset": {
         "capturedWidth": 1600,
         "capturedHeight": 1067,
@@ -347,11 +374,20 @@
       "atFullBleed": {
         "width": 1905,
         "cropTop": 0.4467,
-        "cropBottom": 0.7376
+        "cropBottom": 0.7376,
+        "magnification": 3.437
       },
       "fullBleedHoldsLabels": false,
-      "heldAtLabelSafetyCap": true,
+      "fullBleedHoldsZoom": false,
+      "fullBleedHoldsResolution": false,
+      "heldShortOfFullBleedBy": "zoom",
+      "heldAtCap": true,
       "labelsInFrame": true,
+      "bandAspect": 2.6,
+      "magnification": 1.734,
+      "labelShareOfBand": 0.71,
+      "magnificationCeiling": 1.75,
+      "notTooZoomed": true,
       "noFilmMounted": true,
       "noDocumentOverflow": true,
       "pass": true,
@@ -366,13 +402,13 @@
         },
         {
           "stop": 0.5,
-          "transform": "matrix(1.079, 0, 0, 1.079, 0, -12.7755)",
+          "transform": "matrix(1.0792, 0, 0, 1.0792, 0, -12.8117)",
           "gap": 24.1,
           "overlap": 0
         },
         {
           "stop": 1,
-          "transform": "matrix(1.159, 0, 0, 1.159, 0, -25.7129)",
+          "transform": "matrix(1.1592, 0, 0, 1.1592, 0, -25.7492)",
           "gap": 12.1,
           "overlap": 0
         }

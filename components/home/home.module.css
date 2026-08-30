@@ -246,7 +246,7 @@
 
 /* The cinematic band the photograph runs in, and the box that clips the zoom.
  *
- * Three jobs, in the order they matter.
+ * Four jobs, in the order they matter.
  *
  * 1. IT CLIPS. The scrub scales `[data-hero-art]` — this element's child — to
  *    1.16, and a transform does not affect layout, so the scaled art used to
@@ -261,34 +261,56 @@
  *    middle row is smaller than the token and the band takes the row instead
  *    of overflowing it into the band below.
  *
- * 3. IT ESCAPES THE GUTTER. `.heroStage` carries `px-gutter` for the wordmark
- *    and the closing band, and only the picture is meant to run past it. The
- *    escape is `calc(100% + 2 * gutter)` on the item, not `100vw`: the page
- *    sets `scrollbar-gutter: stable`, so `100vw` is WIDER than the layout box
- *    by the scrollbar and would put a horizontal scrollbar on the document.
- *    Measured at 1280: scrollWidth 1265, clientWidth 1265, and 100vw is 1280.
+ * 3. IT OWNS THE MAGNIFICATION, because at and above 48rem its width is
+ *    derived from that height rather than from the window. See below.
+ *
+ * 4. IT ESCAPES THE GUTTER, when the shape lets it. `.heroStage` carries
+ *    `px-gutter` for the wordmark and the closing band, and only the picture
+ *    is meant to run past it. The escape is `calc(100% + 2 * gutter)`, not
+ *    `100vw`: the page sets `scrollbar-gutter: stable`, so `100vw` is WIDER
+ *    than the layout box by the scrollbar and would put a horizontal scrollbar
+ *    on the document. Measured at 1280: scrollWidth 1265, clientWidth 1265,
+ *    and 100vw is 1280.
  */
 .heroFrame {
   /* Fixed, viewport-relative, and sized so the middle row can always carry it:
      the smallest that row gets across the four measured widths is 370px on a
      900px-tall window, at 1920, where the wordmark is at its largest. */
   --hero-band-height: clamp(13rem, 44svh, 30rem);
-  /* The widest this band may be before a centred `cover` crop starts cutting a
-     label off the top and bottom of the frame.
-
-     Measured, not chosen: evidence/label-band.mjs finds the four cream label
-     panels occupying rows 396–832 of the 1067-row plate — 40.9% of the frame,
-     centred at 57.5% of its height. A `cover` crop of a band W wide and H tall
-     shows H * 1600/W rows of the plate, so keeping the whole label band plus a
-     margin needs W/H at or under about 3.25. Past that the band is held at its
-     cap and sits centred on the page ground instead, which is the same rule
-     components/product/media.ts already states for the picture inside the row.
-
-     The second term is the served asset: `sizes` fetches the 1280px cut and
-     the plate is only 1600px wide, so a band wider than 80rem would be an
-     upscale of an upscale. Both terms bind on real windows — the aspect one on
-     a short window, the 80rem one on a tall 1920. */
-  max-inline-size: min(calc(var(--hero-band-height) * 3.25), 80rem);
+  /* HOW MUCH OF THE PHOTOGRAPH YOU SEE, written as the band's shape.
+   *
+   * A `cover` crop of a band W wide and H tall shows H * 1600/W of the plate's
+   * 1067 rows, so the picture is magnified over `contain` by
+   *
+   *     m = (W / H) / (1600 / 1067) = aspect / 1.4995
+   *
+   * and the band's aspect IS the magnification, up to that constant. Fixing
+   * one fixes the other at every width, which is the whole reason the width is
+   * derived from the height below rather than from the window.
+   *
+   * 2.6 is measured, not chosen. evidence/label-band.mjs finds the four cream
+   * label panels occupying rows 396–832 of the 1067-row plate: 41.0% of the
+   * frame, centred at 57.5% of its height. The share of the BAND those panels
+   * fill is 0.410 * m, and that share is what "too zoomed in" actually was —
+   * the band was as wide as the window allowed, so at 1920x900 it ran
+   * 1280x370, an aspect of 3.46, m = 2.31, and the labels filled 95% of the
+   * band's height with 1.4% of the plate above them and 1.0% below. Labels
+   * touching both edges is a photograph of a label, not of four bottles.
+   *
+   * At 2.6 the crop shows 57.7% of the plate, the panels fill 71% of the band,
+   * and there is 10.4% of the plate above them and 6.3% below — the shoulders,
+   * the necks and the bases are back in frame. label-band.mjs prints the
+   * aspect for any share: 2.75 puts the labels at three quarters of the band,
+   * 2.56 at seven tenths.
+   *
+   * Label safety, which is what the old 3.25 cap was for, is subsumed: the
+   * widest shape that still holds rows 396–832 at `object-position: 50% 63%`
+   * is 3.65, and this is 2.6. The old cap also could not deliver its own
+   * number, because it was computed from the TOKEN and not from the height the
+   * grid row actually gave the band — at 1920 the row is 370px against a 396px
+   * token, so the realised aspect was 3.46 and already past the 3.25 it was
+   * meant to hold. `aspect-ratio` cannot drift like that. */
+  --hero-band-aspect: 2.6;
   position: relative;
   align-self: center;
   inline-size: 100%;
@@ -302,7 +324,36 @@
 
 @media (min-width: 48rem) {
   .heroFrame {
-    inline-size: calc(100% + 2 * var(--spacing-gutter));
+    /* The width comes FROM the height. `block-size` above is definite, so with
+       an `auto` inline size `aspect-ratio` transfers it, and the band is
+       exactly `--hero-band-aspect` wide whatever the row gave it — no CLS,
+       since nothing here waits on the image.
+
+       `max-inline-size` is the two ceilings that may make the band NARROWER
+       than its aspect, never wider, so neither can raise the magnification.
+
+       The first is the layout box, which is also the full bleed: where the
+       middle row is tall against the window's width the aspect asks for more
+       width than the page has, and the band runs edge to edge instead. This is
+       the term that keeps 768 full-bleed — 753x396 there, an aspect of 1.90,
+       magnified 1.27x.
+
+       The second is the served asset. `sizes` asks for 1280px above 80rem, the
+       browser takes the 1920w candidate, and Next serves that as the plate's
+       own 1600x1067 — 87.7 kB of JPEG, 65.1 kB of WebP — because it never
+       upscales a source. So at DPR 1 the real ceiling is the plate's 1600px,
+       and 80rem is inside it with room.
+
+       That second term can no longer be reached, and saying so is the point:
+       the height tops out at the token's 30rem, so the widest shape the aspect
+       can ask for is 30rem * 2.6 = 1248px, 32px inside the ceiling. Measured at
+       2560x1440, the tallest window this page was checked on, the band is
+       1248x480. It stays because it is the honest statement of where upscaling
+       would start, and because it is the guard if the aspect is ever widened
+       again. */
+    inline-size: auto;
+    aspect-ratio: var(--hero-band-aspect);
+    max-inline-size: min(calc(100% + 2 * var(--spacing-gutter)), 80rem);
   }
 }
 

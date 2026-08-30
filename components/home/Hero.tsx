@@ -175,9 +175,14 @@ export function Hero() {
                 fill
                 // The LCP element on this page, so it is fetched at high
                 // priority and never lazily. `sizes` stops a phone pulling the
-                // desktop cut: the band runs the full viewport width until the
-                // page reaches its own maximum, and `.heroFrame` caps it at
-                // 80rem so the served 1280px cut is never upscaled.
+                // desktop cut: the band runs up to the full viewport width
+                // until the page reaches its own maximum, and never past
+                // 1248px above it — `.heroFrame` derives its width from its
+                // height, and the height tops out at 30rem. Both terms are
+                // upper bounds, so the browser is never under-served: it takes
+                // the 1920w candidate, which Next serves as the plate's own
+                // 1600x1067 because it will not upscale a source, and at DPR 1
+                // the picture is therefore always painted down, never up.
                 priority
                 fetchPriority="high"
                 quality={58}

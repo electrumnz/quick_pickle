@@ -109,6 +109,48 @@ const P = 0.63;
 //   (1 - b)·P + b    >= bandBottom   ->  b >= (bandBottom - P)/(1 - P)
 const minB = Math.max(1 - bandTop / P, (bandBottom - P) / (1 - P));
 
+/**
+ * The band's SHAPE, which is the same statement as how far the picture is
+ * magnified — and, once the founder has said "too zoomed in", the number the
+ * stylesheet actually needs from this file.
+ *
+ * A `cover` crop of a band W wide and H tall shows a fraction b = (H/W)·(Wp/Hp)
+ * of the plate's height, so the picture is magnified over `contain` by 1/b and
+ *
+ *     magnification = bandAspect / (Wp / Hp)
+ *
+ * The band's aspect IS the magnification, up to the plate's own 1.4995. What
+ * that costs is legible in one number: the label panels are `labelShare` of the
+ * plate's height, so they fill `labelShare · magnification` of the band. Solve
+ * it the other way — pick the share of the band the labels may fill, get the
+ * aspect — and the stylesheet has a measured number instead of a taste.
+ */
+const labelShare = (bottom - top + 1) / H;
+const plateAspect = W / H;
+const forLabelShare = (share) => {
+  const b = labelShare / share;
+  return {
+    labelShareOfBand: share,
+    visibleHeightFraction: +b.toFixed(4),
+    magnification: +(1 / b).toFixed(3),
+    bandAspect: +(plateAspect / b).toFixed(3),
+    ...positionFor(b),
+  };
+};
+/** `--hero-band-aspect` in components/home/home.module.css. */
+const CHOSEN_ASPECT = 2.6;
+const chosenB = plateAspect / CHOSEN_ASPECT;
+const chosen = {
+  bandAspect: CHOSEN_ASPECT,
+  magnification: +(1 / chosenB).toFixed(3),
+  visibleHeightFraction: +chosenB.toFixed(4),
+  labelShareOfBand: +(labelShare / chosenB).toFixed(3),
+  plateAboveLabels: +(bandTop - (1 - chosenB) * P).toFixed(4),
+  plateBelowLabels: +((1 - chosenB) * P + chosenB - bandBottom).toFixed(4),
+  holdsLabels:
+    (1 - chosenB) * P <= bandTop && (1 - chosenB) * P + chosenB >= bandBottom,
+};
+
 const report = {
   $note: "copy-audit-ignore-file — generated evidence; see label-band.mjs",
   plate: PLATE,
@@ -135,6 +177,17 @@ const report = {
     maxBandAspect: +(1 / (minB * (H / W))).toFixed(3),
     note: "At 50% P the crop keeps headroom and loses label; these are the bounds that keep rows topRow..bottomRow inside the window.",
   },
+  bandShape: {
+    plateAspect: +plateAspect.toFixed(4),
+    labelShareOfPlate: +labelShare.toFixed(4),
+    /* Label safety alone allows a band this wide. It is not the binding rule
+       any more: it keeps the panels inside the frame, and says nothing about
+       the panels filling the whole of it. */
+    labelSafetyMaxAspect: +(1 / (minB * (H / W))).toFixed(3),
+    forLabelShare: [0.95, 0.85, 0.75, 0.7, 0.65, 0.5].map(forLabelShare),
+    chosen,
+    note: "bandAspect = plateAspect * magnification; the label panels then fill labelShare * magnification of the band's height.",
+  },
 };
 
 writeFileSync(
@@ -157,6 +210,26 @@ console.log(
   `object-position 50% ${(P * 100).toFixed(0)}% keeps the band while the crop ` +
     `shows at least ${(minB * 100).toFixed(1)}% of the plate height, ` +
     `which is a band no wider than ${(1 / (minB * (H / W))).toFixed(2)} : 1`,
+);
+console.log(
+  `the panels are ${(labelShare * 100).toFixed(1)}% of the plate's height, so a band ` +
+    `magnified m over \`contain\` gives them ${(labelShare * 100).toFixed(1)}% * m of its own:`,
+);
+for (const s of report.bandShape.forLabelShare) {
+  console.log(
+    `  labels fill ${(s.labelShareOfBand * 100).toFixed(0).padStart(3)}% of the band  ->  ` +
+      `${(s.visibleHeightFraction * 100).toFixed(1).padStart(5)}% of the plate on screen, ` +
+      `magnified ${s.magnification.toFixed(2)}x, band aspect ${s.bandAspect.toFixed(2)} : 1` +
+      `  (P allowed ${s.minP.toFixed(3)}..${s.maxP.toFixed(3)})`,
+  );
+}
+console.log(
+  `chosen: --hero-band-aspect ${chosen.bandAspect} -> ${chosen.magnification}x, ` +
+    `${(chosen.visibleHeightFraction * 100).toFixed(1)}% of the plate on screen, ` +
+    `labels ${(chosen.labelShareOfBand * 100).toFixed(0)}% of the band, ` +
+    `${(chosen.plateAboveLabels * 100).toFixed(1)}% of the plate above them and ` +
+    `${(chosen.plateBelowLabels * 100).toFixed(1)}% below  ` +
+    `${chosen.holdsLabels ? "(labels in frame)" : "(LABELS CROPPED)"}`,
 );
 console.log(
   Array.from({ length: 72 }, (_, i) => {
