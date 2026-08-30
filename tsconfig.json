@@ -36,7 +36,9 @@
     ".scratch/next-home/types/**/*.ts",
     ".scratch/next-home/dev/types/**/*.ts",
     ".scratch/next-audit/types/**/*.ts",
-    ".scratch/next-audit/dev/types/**/*.ts"
+    ".scratch/next-audit/dev/types/**/*.ts",
+    ".scratch/next-a11y/types/**/*.ts",
+    ".scratch/next-a11y/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules", ".next", "out"]
 }

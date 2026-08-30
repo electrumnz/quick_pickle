@@ -3,11 +3,11 @@ Wall-clock response time by sign-in outcome, real handler, real clock
 Configured floor: 400 ms
 
 outcome          samples  min      median   max     (milliseconds)
-wrong_password   5        401      404      405
-locked_out       5        401      402      418
-csrf_failed      5        401      402      407
+wrong_password   5        402      405      408
+locked_out       5        401      402      402
+csrf_failed      5        401      402      402
 
-spread between medians: 2.0 ms
+spread between medians: 3.0 ms
 
 Internally these paths differ by ~85 ms of argon2id work: a wrong
 password hashes, a locked-out attempt refuses before hashing, and a CSRF
