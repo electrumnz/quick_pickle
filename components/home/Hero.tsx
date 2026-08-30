@@ -123,7 +123,7 @@ export function Hero() {
           {/* `relative` on the three content layers, and only for stacking:
               the backdrop above is positioned, so without it the wash would
               paint over the type rather than behind it. */}
-          <h1 className="pt-stack pb-stack relative" data-hero-mark>
+          <h1 className={cx(styles.heroMark, "relative")} data-hero-mark>
             <span
               className={cx(
                 styles.wordmark,
@@ -174,19 +174,22 @@ export function Hero() {
                 alt={RANGE_SHOT.alt}
                 fill
                 // The LCP element on this page, so it is fetched at high
-                // priority and never lazily. `sizes` stops a phone pulling the
-                // desktop cut: the band runs up to the full viewport width
-                // until the page reaches its own maximum, and never past
-                // 1248px above it — `.heroFrame` derives its width from its
-                // height, and the height tops out at 30rem. Both terms are
-                // upper bounds, so the browser is never under-served: it takes
-                // the 1920w candidate, which Next serves as the plate's own
-                // 1600x1067 because it will not upscale a source, and at DPR 1
-                // the picture is therefore always painted down, never up.
+                // priority and never lazily.
+                //
+                // `sizes` is `100vw` and that is now the honest number rather
+                // than a slack one: the band bleeds to the layout box wherever
+                // the middle row is tall enough to let it, so its width IS the
+                // viewport at 768 and within ten per cent of it at 1280 and
+                // 1440. It is an upper bound at every width, so the browser is
+                // never under-served — it takes the 1920w candidate, which
+                // Next serves as the plate's own 1600x1067 because it will not
+                // upscale a source. `.heroFrame` caps the band at 2000px for
+                // the same reason, so the most the file is ever stretched is
+                // 1.25x.
                 priority
                 fetchPriority="high"
                 quality={58}
-                sizes="(max-width: 80rem) 100vw, 1280px"
+                sizes="100vw"
                 className={cx(styles.heroArt)}
               />
             </div>
@@ -196,7 +199,10 @@ export function Hero() {
               what keeps a 1920 viewport from reading as a small composition
               adrift in a large window. */}
           <div
-            className="max-w-page pb-block pt-stack gap-stack relative flex w-full flex-col items-center gap-y-6 lg:flex-row lg:items-end lg:justify-between"
+            className={cx(
+              styles.heroBand,
+              "max-w-page gap-stack relative flex w-full flex-col items-center gap-y-6 lg:flex-row lg:items-end lg:justify-between",
+            )}
             data-hero-band
           >
             <div className="max-w-prose text-center lg:text-left">

@@ -229,16 +229,68 @@
 
 /* ------------------------------------------------------------------ hero */
 
-/* The wordmark is the page's masthead: it runs the width of the stage rather
-   than sitting in a column, which is what stops the composition floating in
-   the middle of a 1920 viewport. */
+/* The wordmark is the page's masthead, and above 48rem its size is bought
+   from the picture.
+
+   It ran `min(78vw, 72rem)` on a desktop, which at 1920 is 1152px wide and —
+   the mask is 784:139 — 204px TALL. The hero stage is exactly one screen, so
+   every one of those 204 pixels came off the middle grid row, and the middle
+   grid row is what the band's width is derived from. At 1920x900 that left a
+   370px row and a 961px band under a 1152px wordmark: a small plate beneath a
+   big logo, which is the founder's report written as geometry.
+
+   So the wordmark is now sized against the window's HEIGHT as well as its
+   width. 42rem is the cap and `14svh` of drawn height is the term that bites
+   on a short window — which is exactly where the row has nothing to spare.
+   Below 48rem nothing changes: the phone's band is contained rather than
+   bled, so the wordmark there is not competing with it for the same pixels.
+
+   Measured, wordmark and the row it leaves, before -> after:
+     1280x800   998x177 -> 632x112     row 332 -> 441
+     1920x900  1152x204 -> 672x119     row 370 -> 515
+     1920x1080 1152x204 -> 672x119     row 550 -> 688 */
 .heroWordmark {
   width: min(88vw, 68rem);
 }
 
-@media (min-width: 80rem) {
+@media (min-width: 48rem) {
   .heroWordmark {
-    width: min(78vw, 72rem);
+    width: min(62vw, 42rem, calc(14svh * 784 / 139));
+  }
+}
+
+/* ------------------------------------------------- the two type rows */
+
+/* The hero stage is a three-row grid on a viewport-height box, so these two
+   rows and the band are in a zero-sum game: a pixel of padding here is a
+   pixel the photograph cannot have, and the photograph's WIDTH comes from its
+   height. That is not true of any other block on the page, which is why the
+   hero's own padding is written here rather than taken from the generic
+   `pt-stack` / `pb-block` utilities these two rows used to carry.
+
+   The floor is legibility, not neatness. Below these values the positioning
+   line, the serve line and the two buttons start to crowd each other and the
+   bottom pair sits on the fold; `clamp(1.5rem, 4svh, 3rem)` keeps the buttons
+   off the bottom edge on a short window and gives them room on a tall one.
+   These two paddings are worth 60px of row at 1920x900; with the smaller
+   wordmark above them the middle row gains 145px there and 138px at
+   1920x1080, and the band's width is 2.6 times whatever the row gives it. */
+.heroMark {
+  padding-block: var(--spacing-stack);
+}
+
+.heroBand {
+  padding-block: var(--spacing-stack) var(--spacing-block);
+}
+
+@media (min-width: 48rem) {
+  .heroMark {
+    padding-block: calc(var(--spacing-stack) * 0.5)
+      calc(var(--spacing-stack) * 0.75);
+  }
+
+  .heroBand {
+    padding-block: calc(var(--spacing-stack) * 0.75) clamp(1.5rem, 4svh, 3rem);
   }
 }
 
@@ -255,22 +307,49 @@
  *    cannot be the thing that scales; it has to be its parent. `Hero.tsx`
  *    carries the measured overlap this removed.
  *
- * 2. IT OWNS THE HEIGHT, and the height is viewport-relative and definite
- *    before the image arrives, which is what keeps the CLS budget at 0.02.
- *    `min()` against the row is a guard, not the design: on a short window the
- *    middle row is smaller than the token and the band takes the row instead
- *    of overflowing it into the band below.
+ * 2. IT OWNS THE HEIGHT, and above 48rem the height IS the middle grid row —
+ *    `calc(100% - gap)`, not a token. A token that stopped at 30rem was
+ *    leaving 430px of row unused at 2560x1440 and 74px at 1920x1080, and the
+ *    row is what the width is made of. The row is definite before the image
+ *    arrives — it is the stage's own viewport height less two rows of type —
+ *    so the box is still definite at first layout and the CLS budget of 0.02
+ *    is unaffected. Below 48rem, and under reduced motion where the stage is
+ *    auto-height and a percentage has nothing to resolve against, the token
+ *    is still what sizes it.
  *
  * 3. IT OWNS THE MAGNIFICATION, because at and above 48rem its width is
  *    derived from that height rather than from the window. See below.
  *
- * 4. IT ESCAPES THE GUTTER, when the shape lets it. `.heroStage` carries
+ * 4. IT BLEEDS, as far as the height lets it. `.heroStage` carries
  *    `px-gutter` for the wordmark and the closing band, and only the picture
  *    is meant to run past it. The escape is `calc(100% + 2 * gutter)`, not
  *    `100vw`: the page sets `scrollbar-gutter: stable`, so `100vw` is WIDER
  *    than the layout box by the scrollbar and would put a horizontal scrollbar
  *    on the document. Measured at 1280: scrollWidth 1265, clientWidth 1265,
  *    and 100vw is 1280.
+ *
+ *    WHERE FULL BLEED IS NOT REACHED, IT IS THE HEIGHT THAT REFUSED IT, and
+ *    the arithmetic is worth writing down because the founder has now asked
+ *    for full bleed twice and the honest answer at her window is no.
+ *
+ *    A band running the layout's full W paints the plate W/1.4995 tall and
+ *    shows H of it. At 1920x900 the layout is 1905, so the plate paints 1270
+ *    rows, and the middle row — after the wordmark and the closing band took
+ *    the least they can — is 515, of which the band gets 491. Full bleed
+ *    there is an aspect of 1905/491 = 3.88 and a magnification of 2.59. The
+ *    founder's PREVIOUS report was "too zoomed in on desktop", measured at
+ *    2.31, and label-band.mjs puts the hard cut at 3.65, where the panels
+ *    reach both edges of the band. So full bleed at 1920x900 is not merely
+ *    worse than today's crop: it is past the shape at which the labels are
+ *    cropped at all, and there is no padding left anywhere to buy the 242px
+ *    of row it would need. A 900px-tall window does not have the room, and a
+ *    band that spans the viewport by cropping the labels harder fails the
+ *    same founder twice.
+ *
+ *    Where the window is tall enough the bleed is taken in full. Measured,
+ *    band width as a share of the layout box: 768x1024 100%, 1280x900 100%,
+ *    1440x900 92%, 1920x1080 91%, 1280x800 86%, 2560x1440 79% (held by the
+ *    upscale cap, not the zoom), 1920x900 67%.
  */
 .heroFrame {
   /* Fixed, viewport-relative, and sized so the middle row can always carry it:
@@ -311,60 +390,90 @@
    * token, so the realised aspect was 3.46 and already past the 3.25 it was
    * meant to hold. `aspect-ratio` cannot drift like that. */
   --hero-band-aspect: 2.6;
+  /* The gap you can see between the picture and the copy. The clip above is
+     what makes a collision impossible; this is separation. Above 48rem it
+     comes out of the row rather than being added to it — see there. */
+  --hero-band-gap: var(--spacing-stack);
   position: relative;
   align-self: center;
   inline-size: 100%;
   block-size: min(100%, var(--hero-band-height));
-  /* Real separation from the closing band, rather than trusting the transform
-     not to reach it. The clip above is what makes a collision impossible; this
-     is the gap you can see. */
-  margin-block-end: var(--spacing-stack);
+  margin-block-end: var(--hero-band-gap);
   overflow: hidden;
 }
 
 @media (min-width: 48rem) {
   .heroFrame {
-    /* The width comes FROM the height. `block-size` above is definite, so with
-       an `auto` inline size `aspect-ratio` transfers it, and the band is
-       exactly `--hero-band-aspect` wide whatever the row gave it — no CLS,
-       since nothing here waits on the image.
+    /* THE HEIGHT IS THE WHOLE ROW, and the width still comes from the height.
+       `block-size` is definite, so with an `auto` inline size `aspect-ratio`
+       transfers it and the band is exactly `--hero-band-aspect` wide whatever
+       the row gave it — no CLS, since nothing here waits on the image.
 
-       `max-inline-size` is the two ceilings that may make the band NARROWER
-       than its aspect, never wider, so neither can raise the magnification.
+       `calc(100% - gap)` rather than `100%` because the gap to the closing
+       band is a MARGIN: box plus margin then comes to exactly the row, so a
+       band at its full height cannot push its own separation out through the
+       row's bottom edge and into the copy. `align-self: center` keeps the
+       margin box centred when a cap below makes the band shorter, so the gap
+       is a floor at every size rather than only at the tallest.
 
-       The first is the layout box, which is also the full bleed: where the
-       middle row is tall against the window's width the aspect asks for more
-       width than the page has, and the band runs edge to edge instead. This is
-       the term that keeps 768 full-bleed — 753x396 there, an aspect of 1.90,
-       magnified 1.27x.
+       This replaced `min(100%, clamp(13rem, 44svh, 30rem))`. The token was
+       written when the row was the smaller of the two and it read as a guard;
+       once the wordmark above gave its height back, the token became the thing
+       holding the band in — 480px against a 910px row at 2560x1440, and 475
+       against 550 at 1920x1080 — and the width is made of the height. The row
+       is the honest bound and it is the only one left.
 
-       The second is the served asset. `sizes` asks for 1280px above 80rem, the
-       browser takes the 1920w candidate, and Next serves that as the plate's
-       own 1600x1067 — 87.7 kB of JPEG, 65.1 kB of WebP — because it never
-       upscales a source. So at DPR 1 the real ceiling is the plate's 1600px,
-       and 80rem is inside it with room.
+       `max-inline-size` and `max-block-size` are the two ceilings. Both can
+       only make the band SMALLER than the aspect asks, so neither can raise
+       the magnification above `--hero-band-aspect` / 1.4995 = 1.734x.
 
-       That second term can no longer be reached, and saying so is the point:
-       the height tops out at the token's 30rem, so the widest shape the aspect
-       can ask for is 30rem * 2.6 = 1248px, 32px inside the ceiling. Measured at
-       2560x1440, the tallest window this page was checked on, the band is
-       1248x480. It stays because it is the honest statement of where upscaling
-       would start, and because it is the guard if the aspect is ever widened
-       again. */
+       WIDTH, first term: the layout box, which is also the full bleed. Where
+       the row is tall against the window's width the aspect asks for more
+       width than the page has and the band runs edge to edge instead. This is
+       what puts 768x1024 at 753x480, edge to edge, magnified 1.05x.
+
+       WIDTH, second term: the served asset. The plate is 1600x1067 and Next
+       will not upscale a source, so past 1600px of band the browser is
+       stretching the file. 1.25x of that is the most this allows, because a
+       photograph is soft before it is pixelated and the labels are small type:
+       2000px. It binds only past a 2000px layout box — 2560x1440 lands at
+       2000 wide rather than 2545 — and 1920 is inside it, which is the window
+       that matters. Painting the 1600px file at 1905 is a 1.19x stretch.
+
+       HEIGHT: the whole plate. A band SHORTER than 1.4995 : 1 is fine — that
+       is just less crop — but a band TALLER than the plate's own shape makes
+       `cover` crop sideways instead of down, and sideways is where the outer
+       two bottles live. 1.6 rather than 1.4995 is the margin for `100vw`
+       overstating the layout box by the stable scrollbar gutter: the realised
+       aspect is at worst (layout / 100vw) * 1.6, which is 1.57 at 768 and
+       never reaches 1.4995. It binds at 768x1024, where the row runs to
+       624px and this holds the band to 480. */
     inline-size: auto;
+    block-size: calc(100% - var(--hero-band-gap));
+    max-block-size: calc(min(100vw, 2000px) / 1.6);
     aspect-ratio: var(--hero-band-aspect);
-    max-inline-size: min(calc(100% + 2 * var(--spacing-gutter)), 80rem);
+    max-inline-size: min(calc(100% + 2 * var(--spacing-gutter)), 2000px);
+    margin-block-end: var(--hero-band-gap);
   }
 }
 
 /* The designed alternative, not the same band with the motion removed. Under
    reduced motion the stage is static and auto-height, so its middle row is
-   sized by its content and `100%` in the `min()` above has nothing definite to
-   resolve against. The token alone is definite, viewport-relative and still
-   the same band. */
+   sized by its content and a percentage height has nothing definite to resolve
+   against — it would fall back to `auto`, take the intrinsic height and crop
+   the bottles, which is a defect this file has already shipped once. A
+   viewport-relative length is definite wherever it is read, so that is what
+   both of these are. The desktop one is the row the scrubbed stage actually
+   gives the band, in the same units. */
 @media (prefers-reduced-motion: reduce) {
   .heroFrame {
     block-size: var(--hero-band-height);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) and (min-width: 48rem) {
+  .heroFrame {
+    block-size: clamp(13rem, 55svh, 40rem);
   }
 }
 

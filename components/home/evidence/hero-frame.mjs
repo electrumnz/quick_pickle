@@ -61,8 +61,11 @@
  *                                   instead. Which rule held it short is
  *                                   recorded, and a band that stops short for
  *                                   no reason still fails. At 900px of window
- *                                   height only 768 reaches the full bleed;
- *                                   1280 and up are held by the zoom rule.
+ *                                   height 768 and 1280 both reach the full
+ *                                   bleed; 1920 is held by the zoom rule,
+ *                                   because 1905px of band on a 900px window
+ *                                   is a 2.59x crop and the founder's previous
+ *                                   report was 2.31x.
  *   contained below 48rem           `object-fit: contain`, inside the gutter,
  *                                   whole plate on screen. A 3:2 picture
  *                                   covering a 375px viewport is limited by
@@ -84,11 +87,13 @@
  *
  * MAGNIFICATION is `cover`'s scale over `contain`: the painted plate's height
  * divided by the height of the window the band shows of it, which is the band's
- * own aspect divided by the plate's 1.4995. `.heroFrame` now derives its WIDTH
- * from its height with `aspect-ratio`, so that number is a constant above the
- * breakpoint rather than something the window decides, and the ceiling here is
- * the stylesheet's 2.6 : 1 turned back into a magnification, plus a hair for
- * subpixel rounding. label-band.mjs is where 2.6 comes from.
+ * own aspect divided by the plate's 1.4995. `.heroFrame` derives its WIDTH
+ * from its height with `aspect-ratio`, so the stylesheet's 2.6 : 1 is a
+ * CEILING on this number rather than a value it takes everywhere: where a cap
+ * makes the band narrower than the aspect asked for, the band is squarer and
+ * the crop is gentler — 1.05x at 768, 1.31x at 2560x1440. The ceiling here is
+ * 2.6 turned back into a magnification plus a hair for subpixel rounding.
+ * label-band.mjs is where 2.6 comes from.
  *
  * And the film is asserted ABSENT. `range.webm` was documented as a push-in and
  * measured as a pure lateral truck of 4.8% of the frame width, out and back on
@@ -138,8 +143,14 @@ const LABEL_SHARE_OF_PLATE = 0.4096;
  * take three quarters of the band's height. label-band.mjs prints the table.
  */
 const MAG_CEILING = 1.75;
-/** Where the plate would start being upscaled: `.heroFrame`'s second cap. */
-const UPSCALE_CEILING = 1280;
+/**
+ * `.heroFrame`'s second cap: the widest the band may run before the 1600x1067
+ * plate is being stretched more than the stylesheet allows. Next will not
+ * upscale a source, so past 1600px of band the browser is doing it, and
+ * `.heroFrame` permits 1.25x of that and no more. 1920 is inside it; a 2560
+ * window is not, and is held at 2000px rather than 2545.
+ */
+const UPSCALE_CEILING = 2000;
 
 mkdirSync(HERE, { recursive: true });
 
