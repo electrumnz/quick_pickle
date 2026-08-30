@@ -78,13 +78,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en-NZ" className={`h-full ${fontVariables}`}>
       {/* The padding is the demo banner's own height: it is fixed to the
           bottom of the viewport, and without the reserve it would sit on top of
-          the last line of every page. Three steps, because the sentence wraps
-          to four lines on a 375px phone and one on a laptop — measured, not
-          guessed: 99px, 59px and 37px at 375, 768 and 1440. */}
+          the last line of every page. Three steps, because the notice wraps to
+          five lines on a narrow phone and two on a laptop.
+
+          Measured, not guessed, and re-measured when the banner gained the
+          sentence about the admin being open — which grew it past the reserve
+          at every width at once: 160px at 320, 140px at 375 and 390, 99px at
+          414, 80px at 640 and 768, and 60px from 1024 up. Each step clears the
+          tallest wrap inside its own range. Grow the copy again and these are
+          wrong again, so measure them again. */}
       <body
         className={
           demo
-            ? "flex min-h-full flex-col pb-28 sm:pb-20 lg:pb-14"
+            ? "flex min-h-full flex-col pb-40 sm:pb-24 lg:pb-16"
             : "flex min-h-full flex-col"
         }
       >
