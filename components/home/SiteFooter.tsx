@@ -88,14 +88,14 @@ export function SiteFooter() {
             &copy; {new Date().getFullYear()} Half Sour
           </span>
           {/*
-            Deliberately quiet, deliberately not hidden: the staff way in sits
-            at the end of the footer row rather than announcing itself, but it
-            is a real link with real contrast and a real focus ring. See
-            components/auth/footer-admin-link.tsx.
+            The staff way in. Quiet on a live deployment and a labelled control
+            on a demonstration, where the admin is the thing worth showing and
+            is open — the component decides which, from the one demo predicate.
+            Never hidden, at either weight: `tap` and `tapSquare` give it the
+            44px floor in both axes, and it owns its own padding so nothing
+            here competes with it. See components/auth/footer-admin-link.tsx.
           */}
-          <FooterAdminLink
-            className={cx(styles.tap, styles.tapSquare, "px-2")}
-          />
+          <FooterAdminLink className={cx(styles.tap, styles.tapSquare)} />
         </div>
       </div>
     </footer>

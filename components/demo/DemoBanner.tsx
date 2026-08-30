@@ -38,6 +38,7 @@ export function DemoBanner() {
           {DEMO_BANNER.tag}
         </strong>
         <span>{DEMO_BANNER.body}</span>
+        <span>{DEMO_BANNER.admin}</span>
         <span className="opacity-80">{DEMO_BANNER.reset}</span>
       </p>
     </aside>

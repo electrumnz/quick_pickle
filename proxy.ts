@@ -2,14 +2,16 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { LOGIN_PATH } from "@/lib/auth/config";
-import { decideProxy } from "@/lib/auth/http/proxy-core";
+import { decideProxy, isAdminPath } from "@/lib/auth/http/proxy-core";
 import {
   CACHE_HEADER,
   CACHE_NO_STORE,
+  LOGIN_CSRF_HEADER,
   ROBOTS_HEADER,
   ROBOTS_NOINDEX,
 } from "@/lib/auth/proxy-headers";
 import { sessionDependencies } from "@/lib/auth/runtime";
+import { isDemoMode } from "@/lib/demo/mode";
 
 /**
  * The admin gate.
@@ -27,8 +29,22 @@ import { sessionDependencies } from "@/lib/auth/runtime";
  * not configured, the visitor is redirected to the login page rather than let
  * through — an admin surface that opens when the database is down is not a
  * surface that is protected by the database.
+ *
+ * Demo mode is the one exception, and it is an exception to "requires a
+ * session", not to any part of the authentication itself. `HALF_SOUR_DEMO=1`
+ * is the same build-time switch that puts the banner on every page and makes
+ * the whole deployment noindex three ways over; on such a deployment every row
+ * is invented, so the admin is the thing worth showing and a password in front
+ * of it protects nothing. Read `openAdmin` below as what it says: the admin is
+ * not REQUIRED to carry a session. Nothing here mints one, and `/login` still
+ * verifies a password with argon2id, still throttles, still locks out and still
+ * refuses the wrong one.
  */
 export async function proxy(request: NextRequest): Promise<NextResponse> {
+  // Read once, from the one predicate. Never from the request: a signal a
+  // client can send is a gate a client can open.
+  const openAdmin = isDemoMode();
+
   let decision;
   try {
     const deps = sessionDependencies();
@@ -36,6 +52,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
       store: deps.store,
       sessionSecret: deps.sessionSecret,
       clock: deps.clock,
+      openAdmin,
     });
   } catch (cause) {
     console.error(
@@ -53,7 +70,16 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     // is verified, and an authentication endpoint that cannot reach its own
     // configuration must refuse rather than improvise.
     if (request.nextUrl.pathname === LOGIN_PATH) {
-      return guard(NextResponse.next(), true);
+      return guard(pass(request), true);
+    }
+    // The same allowance the decision above makes, for the case where the
+    // decision could not be reached: a demo deployment need not configure
+    // ADMIN_SESSION_SECRET at all, and `sessionDependencies()` throws without
+    // it. Admin paths only — `/login/session` still refuses, because an
+    // endpoint that verifies a password and cannot reach its own configuration
+    // must refuse rather than improvise.
+    if (openAdmin && isAdminPath(request.nextUrl.pathname)) {
+      return guard(pass(request), true);
     }
     return guard(
       NextResponse.redirect(new URL(LOGIN_PATH, request.url), 307),
@@ -85,6 +111,19 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     response.headers.append("set-cookie", cookie);
   }
   return guard(response, decision.guarded);
+}
+
+/**
+ * Continue, with the proxy-to-render CSRF header stripped off the request.
+ *
+ * That header is minted by this proxy and read by the login page. On the paths
+ * below no decision was reached, so nothing stripped it; a client that sends
+ * one itself must not have it arrive looking like ours.
+ */
+function pass(request: NextRequest): NextResponse {
+  const headers = new Headers(request.headers);
+  headers.delete(LOGIN_CSRF_HEADER);
+  return NextResponse.next({ request: { headers } });
 }
 
 /** Admin surfaces are never indexed and never cached. */

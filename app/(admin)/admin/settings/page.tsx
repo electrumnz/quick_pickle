@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { DEMO_SETTINGS_NOTE } from "@/components/demo/copy";
-import { requireAdminSession } from "@/lib/auth/server";
+import { DEMO_ADMIN_OPEN, DEMO_SETTINGS_NOTE } from "@/components/demo/copy";
+import { requireAdminAccess } from "@/lib/auth/server";
 import { isDemoMode } from "@/lib/demo/mode";
 
 import { commerce, load } from "@/components/admin/data/db";
@@ -65,7 +65,10 @@ export default async function SettingsPage({
   const params = await searchParams;
   const raw = params["q"];
   const query = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? "";
-  const { session } = await requireAdminSession();
+  const access = await requireAdminAccess();
+  // On an open demonstration there is no session, so the two questions this
+  // screen asks of one — whose sessions to list, and when this one ends — have
+  // no answer. They are left unanswered rather than answered with a stand-in.
   // The one predicate, read here as it is read by the banner, the robots rules
   // and the commerce config. Never `providerName === "demo"`: that would be a
   // second way to ask the same question, and two ways eventually disagree.
@@ -75,8 +78,10 @@ export default async function SettingsPage({
     const [facts, rows, sessions, person, spend] = await Promise.all([
       companyFacts(),
       settings(),
-      operatorSessions(session.operatorId, session.id),
-      operator(session.operatorId),
+      access.kind === "session"
+        ? operatorSessions(access.session.operatorId, access.session.id)
+        : [],
+      access.kind === "session" ? operator(access.session.operatorId) : null,
       agentSpend(),
     ]);
     return {
@@ -234,28 +239,34 @@ export default async function SettingsPage({
         >
           <Card>
             <CardBody className="space-y-4">
-              <DefinitionList
-                items={[
-                  {
-                    term: "Signed in as",
-                    value: person?.name ?? "Unknown",
-                    hint: person?.email,
-                  },
-                  {
-                    term: "Last seen",
-                    value:
-                      person?.lastSeenAt === null ||
-                      person?.lastSeenAt === undefined
-                        ? "—"
-                        : ago(person.lastSeenAt),
-                  },
-                  {
-                    term: "This session ends",
-                    value: dayAndTime(session.expiresAt.toISOString()),
-                    hint: "Sooner if it sits idle for half an hour",
-                  },
-                ]}
-              />
+              {access.kind === "session" ? (
+                <DefinitionList
+                  items={[
+                    {
+                      term: "Signed in as",
+                      value: person?.name ?? "Unknown",
+                      hint: person?.email,
+                    },
+                    {
+                      term: "Last seen",
+                      value:
+                        person?.lastSeenAt === null ||
+                        person?.lastSeenAt === undefined
+                          ? "—"
+                          : ago(person.lastSeenAt),
+                    },
+                    {
+                      term: "This session ends",
+                      value: dayAndTime(access.session.expiresAt.toISOString()),
+                      hint: "Sooner if it sits idle for half an hour",
+                    },
+                  ]}
+                />
+              ) : (
+                <Callout title={DEMO_ADMIN_OPEN.title}>
+                  {DEMO_ADMIN_OPEN.body}
+                </Callout>
+              )}
               <Callout
                 title="The password is a demonstration password"
                 tone="danger"
@@ -266,7 +277,9 @@ export default async function SettingsPage({
                 storefront opens.
               </Callout>
             </CardBody>
-            <CardHeader title="Recent sign-ins" count={sessions.length} />
+            {access.kind === "session" && (
+              <CardHeader title="Recent sign-ins" count={sessions.length} />
+            )}
             <Rows>
               {sessions.map((item) => (
                 <Row key={item.id}>

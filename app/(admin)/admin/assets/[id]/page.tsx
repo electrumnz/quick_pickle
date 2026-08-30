@@ -36,7 +36,11 @@ import {
   outboundVerdict,
 } from "@/lib/assets";
 import { assetLibrary, loadAssets } from "@/lib/assets/server";
-import { ADMIN_CSRF_FIELD_NAME, requireAdminSession } from "@/lib/auth/server";
+import {
+  ADMIN_CSRF_FIELD_NAME,
+  adminFormToken,
+  requireAdminAccess,
+} from "@/lib/auth/server";
 
 import { removeAsset, saveAssetMetadata } from "../actions";
 
@@ -63,7 +67,11 @@ export default async function AssetPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { csrfToken } = await requireAdminSession();
+  // Reads on an open demonstration need no session; writes still do. When
+  // nobody is signed in there is no token to bind a form to, and
+  // `adminFormToken` returns "" — which `assertAdminCsrf` can never accept, so
+  // a submitted form lands on the sign-in page rather than in the database.
+  const csrfToken = adminFormToken(await requireAdminAccess());
   const { id } = await params;
   const query = await searchParams;
   const saved = query["saved"] === "1";

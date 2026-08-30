@@ -20,6 +20,16 @@ import {
  * approving a post — repeats those three steps exactly, and repeats them by
  * calling this file rather than by remembering to.
  *
+ * The session check is not relaxed on a demonstration deployment, and this is
+ * the one place in the admin where that is true. Demo mode opens the admin to
+ * READERS — `proxy.ts` stops requiring a session and `requireAdminAccess()`
+ * renders a page without one — because every row behind the door is invented.
+ * A write is different in kind: it lands in an append-only `audit_log` row
+ * stamped with the operator who made it, and there is no honest operator to
+ * stamp when nobody signed in. Inventing one is the exact thing this admin must
+ * never do, so instead `requireAdminSession()` sends an anonymous visitor to
+ * `/login` and brings them back afterwards. See `lib/demo/README.md`.
+ *
  * The order matters. The session check comes first because an unauthenticated
  * caller must learn nothing at all, including whether an id exists. The CSRF
  * check comes second because a state change reached by a form must carry the

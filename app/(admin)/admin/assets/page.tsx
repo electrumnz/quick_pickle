@@ -24,7 +24,11 @@ import { UploadPanel } from "@/components/assets/UploadPanel";
 import { assetHref, consentBadge, fileSize } from "@/components/assets/words";
 import { FRAME_NAMES, type AssetFilter, type ConsentState } from "@/lib/assets";
 import { assetLibrary, loadAssets } from "@/lib/assets/server";
-import { ADMIN_CSRF_FIELD_NAME, requireAdminSession } from "@/lib/auth/server";
+import {
+  ADMIN_CSRF_FIELD_NAME,
+  adminFormToken,
+  requireAdminAccess,
+} from "@/lib/auth/server";
 
 /**
  * Photos & video — the founder's own pictures, and the one place they live.
@@ -54,7 +58,11 @@ export default async function AssetsPage({
 }: {
   searchParams: Promise<Params>;
 }) {
-  const { csrfToken } = await requireAdminSession();
+  // Reads on an open demonstration need no session; writes still do. When
+  // nobody is signed in there is no token to bind a form to, and
+  // `adminFormToken` returns "" — which `assertAdminCsrf` can never accept, so
+  // a submitted form lands on the sign-in page rather than in the database.
+  const csrfToken = adminFormToken(await requireAdminAccess());
   const params = await searchParams;
   const query = params;
   // The no-JavaScript upload path carries its result in the query string,

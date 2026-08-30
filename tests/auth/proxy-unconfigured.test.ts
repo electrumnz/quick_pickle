@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 
-import { describeAuthConfigGaps, LOGIN_PATH } from "@/lib/auth/config";
+import {
+  describeAuthConfigGaps,
+  LOGIN_PATH,
+  SESSION_COOKIE_NAME,
+} from "@/lib/auth/config";
+import { DEMO_ENV_VAR } from "@/lib/demo/mode";
 import { proxy } from "@/proxy";
 
 /**
@@ -27,29 +32,45 @@ const VARS = [
   "SUPABASE_DB_URL",
 ] as const;
 
+/**
+ * Everything cleared between cases.
+ *
+ * `HALF_SOUR_DEMO` is cleared but is NOT one of `VARS`: the gap reporter has
+ * nothing to say about it and never will, and the assertions below count the
+ * gaps. It is cleared because leaving it set in a shell would silently change
+ * what every case in the first block measures — which is the same reason the
+ * second block sets it explicitly rather than assuming.
+ */
+const CLEARED = [...VARS, DEMO_ENV_VAR] as const;
+
 const ORIGIN = "https://half-sour.test";
 const saved = new Map<string, string | undefined>();
 
-function request(path: string): NextRequest {
-  return new NextRequest(new URL(path, ORIGIN));
+function request(path: string, cookie?: string): NextRequest {
+  const headers = new Headers();
+  if (cookie !== undefined) headers.set("cookie", cookie);
+  return new NextRequest(new URL(path, ORIGIN), { headers });
+}
+
+function clearEnvironment(): void {
+  for (const name of CLEARED) {
+    saved.set(name, process.env[name]);
+    delete process.env[name];
+  }
+}
+
+function restoreEnvironment(): void {
+  for (const name of CLEARED) {
+    const previous = saved.get(name);
+    if (previous === undefined) delete process.env[name];
+    else process.env[name] = previous;
+  }
+  saved.clear();
 }
 
 describe("the gate with no admin configuration", () => {
-  beforeEach(() => {
-    for (const name of VARS) {
-      saved.set(name, process.env[name]);
-      delete process.env[name];
-    }
-  });
-
-  afterEach(() => {
-    for (const name of VARS) {
-      const previous = saved.get(name);
-      if (previous === undefined) delete process.env[name];
-      else process.env[name] = previous;
-    }
-    saved.clear();
-  });
+  beforeEach(clearEnvironment);
+  afterEach(restoreEnvironment);
 
   it("lets the login page load instead of redirecting it to itself", async () => {
     const response = await proxy(request(LOGIN_PATH));
@@ -123,5 +144,95 @@ describe("the gate with no admin configuration", () => {
     );
     process.env["SUPABASE_DB_URL"] = "postgres://localhost:5432/half_sour";
     expect(describeAuthConfigGaps()).toEqual([]);
+  });
+});
+
+/**
+ * The same gate, on a demonstration deployment.
+ *
+ * `HALF_SOUR_DEMO=1` is the only difference between this block and the one
+ * above — same code, same empty environment, opposite answer on `/admin`. That
+ * is the claim worth testing, because it is the whole of the change: the admin
+ * stops REQUIRING a session on a deployment whose every row is invented.
+ *
+ * Read what is asserted here as carefully as what is not. Nothing below shows a
+ * session being created, a cookie being set, an operator appearing or a
+ * password being skipped, because none of those happen. `/login` still verifies
+ * a password, and `/login/session` — the endpoint that does the verifying —
+ * still refuses when it cannot reach its own configuration, in demo mode
+ * exactly as without it.
+ */
+describe(`the gate with ${DEMO_ENV_VAR}=1 and nothing else configured`, () => {
+  beforeEach(() => {
+    clearEnvironment();
+    process.env[DEMO_ENV_VAR] = "1";
+  });
+
+  afterEach(restoreEnvironment);
+
+  it("serves every admin path instead of redirecting it to the login page", async () => {
+    for (const path of ["/admin", "/admin/orders", "/admin/team/marlow"]) {
+      const response = await proxy(request(path));
+      expect(response.status, path).toBeLessThan(300);
+      expect(response.headers.get("location"), path).toBeNull();
+    }
+  });
+
+  it("mints nothing on the way through", async () => {
+    // The exact line an earlier attempt at this crossed. An open door is not a
+    // forged key: no cookie is set, so nothing downstream can mistake this
+    // request for a signed-in one.
+    const response = await proxy(request("/admin"));
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("mints nothing for a request carrying a cookie either", async () => {
+    // With no session secret there is nothing to open a cookie with, so this
+    // one is meaningless. It must stay meaningless: no session is set, and the
+    // request is let through as what it is — anonymous.
+    const response = await proxy(
+      request("/admin", `${SESSION_COOKIE_NAME}=not-a-real-session`),
+    );
+    expect(response.status).toBeLessThan(300);
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("keeps the open admin out of search indexes and out of every cache", async () => {
+    const response = await proxy(request("/admin"));
+    expect(response.headers.get("x-robots-tag")).toContain("noindex");
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(response.headers.get("x-frame-options")).toBe("DENY");
+  });
+
+  it("still refuses the endpoint that verifies a password", async () => {
+    const response = await proxy(request("/login/session"));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(`${ORIGIN}${LOGIN_PATH}`);
+  });
+
+  it("still lets the login page load and explain itself", async () => {
+    const response = await proxy(request(LOGIN_PATH));
+    expect(response.status).toBeLessThan(300);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("has nothing to say about the two variables a sign-in needs", async () => {
+    // Demo mode supplies a database. It does not supply, weaken or stand in for
+    // a credential, so the gap reporter reads exactly as it did — minus the one
+    // line about the database.
+    const gaps = describeAuthConfigGaps();
+    expect(gaps).toEqual([
+      expect.stringContaining("ADMIN_PASSWORD_HASH"),
+      expect.stringContaining("ADMIN_SESSION_SECRET"),
+    ]);
+  });
+
+  it("closes again the moment the variable is anything else", async () => {
+    for (const value of ["0", "true", "", " ", "yes"]) {
+      process.env[DEMO_ENV_VAR] = value;
+      const response = await proxy(request("/admin"));
+      expect(response.status, `HALF_SOUR_DEMO=${value}`).toBe(307);
+      expect(response.headers.get("location")).toBe(`${ORIGIN}${LOGIN_PATH}`);
+    }
   });
 });

@@ -45,7 +45,7 @@ import {
   defineMarketingAgent,
   defineTradeAgent,
 } from "@/lib/strategy";
-import { requireAdminSession } from "@/lib/auth/server";
+import { adminFormToken, requireAdminAccess } from "@/lib/auth/server";
 
 import { PauseForm } from "../pause-form";
 import {
@@ -96,7 +96,11 @@ export default async function AgentPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { csrfToken } = await requireAdminSession();
+  // Reads on an open demonstration need no session; writes still do. When
+  // nobody is signed in there is no token to bind a form to, and
+  // `adminFormToken` returns "" — which `assertAdminCsrf` can never accept, so
+  // a submitted form lands on the sign-in page rather than in the database.
+  const csrfToken = adminFormToken(await requireAdminAccess());
   const { slug } = await params;
   const query = await searchParams;
   const back = `/admin/team/${slug}`;

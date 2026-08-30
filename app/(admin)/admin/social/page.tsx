@@ -42,7 +42,7 @@ import {
   Th,
 } from "@/components/admin/ui/primitives";
 import { Flash } from "@/components/admin/write/flash";
-import { requireAdminSession } from "@/lib/auth/server";
+import { adminFormToken, requireAdminAccess } from "@/lib/auth/server";
 
 import { PostDeclineForm, PostDiaryForm, PostEditor } from "./post-forms";
 
@@ -98,7 +98,11 @@ export default async function SocialPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { csrfToken } = await requireAdminSession();
+  // Reads on an open demonstration need no session; writes still do. When
+  // nobody is signed in there is no token to bind a form to, and
+  // `adminFormToken` returns "" — which `assertAdminCsrf` can never accept, so
+  // a submitted form lands on the sign-in page rather than in the database.
+  const csrfToken = adminFormToken(await requireAdminAccess());
   const params = await searchParams;
   const raw = params["q"];
   const query = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? "";

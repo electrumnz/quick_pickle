@@ -37,6 +37,22 @@ export type ProxyDependencies = {
   readonly store: AuthStore;
   readonly sessionSecret: Bytes;
   readonly clock: Clock;
+  /**
+   * Whether an admin path may be served to a request that carries no session.
+   *
+   * The one caller that ever sets this is `proxy.ts`, and it sets it from
+   * `isDemoMode()` — the same build-time switch that decides the banner, the
+   * three noindex layers and which database the deployment opens. There is no
+   * second signal and deliberately no way to reach this from a request: a
+   * header, a cookie or a query parameter that could set it would be the whole
+   * gate, undone by anyone who read this file.
+   *
+   * Omitting it means closed, which is what every existing caller and every
+   * existing test does. It does not authenticate anybody: with it true and no
+   * session, the request continues with no session, no operator and no CSRF
+   * token, and every write still goes through `requireAdminSession`.
+   */
+  readonly openAdmin?: boolean;
 };
 
 export type ProxyDecision =
@@ -67,7 +83,14 @@ export function isGuardedPath(pathname: string): boolean {
   );
 }
 
-function isAdminPath(pathname: string): boolean {
+/**
+ * The admin surface, as opposed to the login pages in front of it.
+ *
+ * Exported because `proxy.ts` needs the same answer in its fail-closed catch
+ * block, where no decision has been made yet, and two spellings of "is this the
+ * admin" is one spelling too many.
+ */
+export function isAdminPath(pathname: string): boolean {
   return (
     pathname === ADMIN_ROOT_PATH || pathname.startsWith(`${ADMIN_ROOT_PATH}/`)
   );
@@ -94,6 +117,33 @@ export async function decideProxy(
     });
 
     if (auth.status === "unauthenticated") {
+      // A cookie that did not authenticate is a dead cookie either way, so it
+      // is cleared whether the visitor is turned away or let through.
+      const clearStaleCookie =
+        readCookie(request, SESSION_COOKIE_NAME) === undefined
+          ? []
+          : [
+              serializeClearCookie(SESSION_COOKIE_NAME, {
+                secure: true,
+                sameSite: "Strict",
+              }),
+            ];
+
+      // Demo mode: the admin does not REQUIRE a session. Note what does not
+      // happen here — nothing is sealed, no cookie is minted, no operator is
+      // invented and `auth` is still "unauthenticated" everywhere downstream.
+      // The request simply continues, and `requireAdminSession` still refuses
+      // every write it reaches.
+      if (deps.openAdmin === true) {
+        return {
+          kind: "continue",
+          setCookies: clearStaleCookie,
+          requestHeaders: new Map(),
+          stripRequestHeaders,
+          guarded: true,
+        };
+      }
+
       const destination = new URL(LOGIN_PATH, url.origin);
       destination.searchParams.set(
         RETURN_TO_PARAM,
@@ -103,15 +153,7 @@ export async function decideProxy(
         kind: "redirect",
         location: `${destination.pathname}${destination.search}`,
         status: 307,
-        setCookies:
-          readCookie(request, SESSION_COOKIE_NAME) === undefined
-            ? []
-            : [
-                serializeClearCookie(SESSION_COOKIE_NAME, {
-                  secure: true,
-                  sameSite: "Strict",
-                }),
-              ],
+        setCookies: clearStaleCookie,
       };
     }
 

@@ -1,6 +1,6 @@
 import { AssetError, parseRange } from "@/lib/assets";
 import { assetLibrary } from "@/lib/assets/server";
-import { getAdminSession } from "@/lib/auth/server";
+import { hasAdminReadAccess } from "@/lib/auth/server";
 
 /**
  * `GET /admin/assets/file/<key>` — the bytes.
@@ -26,10 +26,11 @@ import { getAdminSession } from "@/lib/auth/server";
  * with a filename this library generated, and `Cross-Origin-Resource-Policy:
  * same-origin` so no other site can even embed it.
  *
- * **4. It is behind the session.** The proxy guards `/admin/:path*`, and the
- * session is checked again here, because a matcher is a configuration file and
- * this is a lock. An unauthenticated request gets a 404, not a 401: whether a
- * particular file exists is itself not public.
+ * **4. It is behind the admin.** The proxy guards `/admin/:path*`, and the
+ * check runs again here, because a matcher is a configuration file and this is
+ * a lock. A request without read access gets a 404, not a 401: whether a
+ * particular file exists is itself not public. On a demonstration deployment
+ * the admin is open and so is this — the same door, opened once, not twice.
  *
  * The remaining exposure is that these bytes share an origin with the admin.
  * The complete answer to that is to serve them from somewhere else, and this
@@ -68,8 +69,10 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ key: string[] }> },
 ): Promise<Response> {
-  const session = await getAdminSession();
-  if (session.status !== "authenticated") return notFound();
+  // The same rule the asset screens run: a demonstration's admin is open, and
+  // a library whose pictures all 404 is not the library being demonstrated.
+  // Reading only — nothing here writes.
+  if (!(await hasAdminReadAccess())) return notFound();
 
   const { key: segments } = await context.params;
   const key = segments.join("/");

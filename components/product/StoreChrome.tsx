@@ -208,9 +208,9 @@ export function StoreFooter() {
             &copy; {new Date().getFullYear()} Half Sour. Prices in NZD, GST
             included.
           </span>
-          <FooterAdminLink
-            className={cx(styles.tap, styles.tapSquare, "px-2")}
-          />
+          {/* `tap` and `tapSquare` are the 44px floor in both axes. The link
+              owns its own padding, so nothing here competes with it. */}
+          <FooterAdminLink className={cx(styles.tap, styles.tapSquare)} />
         </div>
       </div>
     </footer>

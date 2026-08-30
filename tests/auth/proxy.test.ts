@@ -229,3 +229,139 @@ describe("admin route gate", () => {
     }
   });
 });
+
+/**
+ * The same gate, told it need not require a session.
+ *
+ * `openAdmin` is the flag `proxy.ts` sets from `isDemoMode()` and from nothing
+ * else. Everything here runs against the same real store and the same real
+ * session machinery as the block above, so what it measures is the difference
+ * the flag makes and nothing but.
+ *
+ * The flag means one thing: an admin path is not REQUIRED to carry a session.
+ * It is not a way in. There is no branch below where a session appears, a
+ * cookie is minted, an operator is invented or a password is passed over —
+ * `auth.status` is still `unauthenticated` for every case in it, which is
+ * exactly why the write guard downstream still refuses.
+ */
+describe("the admin gate opened for a demonstration", () => {
+  let harness: Harness;
+
+  beforeEach(async () => {
+    harness = await createHarness();
+  });
+
+  afterEach(async () => {
+    await harness.close();
+  });
+
+  const open = () => ({
+    store: harness.database.store,
+    sessionSecret: harness.secret,
+    clock: harness.clock,
+    openAdmin: true,
+  });
+
+  const closed = () => ({
+    store: harness.database.store,
+    sessionSecret: harness.secret,
+    clock: harness.clock,
+  });
+
+  function request(path: string, cookie?: string): Request {
+    const headers = new Headers();
+    if (cookie !== undefined) {
+      headers.set("cookie", `${SESSION_COOKIE_NAME}=${cookie}`);
+    }
+    return new Request(`${TEST_ORIGIN}${path}`, { headers });
+  }
+
+  it("lets an anonymous visitor through to every admin path", async () => {
+    for (const path of ["/admin", "/admin/orders", "/admin/settings?tab=x"]) {
+      const decision = await decideProxy(request(path), open());
+      expect(decision.kind, path).toBe("continue");
+    }
+  });
+
+  it("issues no cookie of any kind on the way through", async () => {
+    const decision = await decideProxy(request("/admin"), open());
+    expect(decision.kind === "continue" ? decision.setCookies : ["x"]).toEqual(
+      [],
+    );
+  });
+
+  it("keeps the open admin noindex, no-store and header-stripped", async () => {
+    const decision = await decideProxy(request("/admin/orders"), open());
+    if (decision.kind !== "continue") throw new Error("expected continue");
+    expect(decision.guarded).toBe(true);
+    expect(decision.stripRequestHeaders).toContain(LOGIN_CSRF_HEADER);
+    // Nothing is added to the request either: no operator id, no "signed in"
+    // header, nothing a page could read as an identity.
+    expect([...decision.requestHeaders.keys()]).toEqual([]);
+  });
+
+  it("clears a session cookie that did not authenticate", async () => {
+    const decision = await decideProxy(
+      request("/admin", "not-a-session"),
+      open(),
+    );
+    if (decision.kind !== "continue") throw new Error("expected continue");
+    const cookie = decision.setCookies[0] ?? "";
+    expect(cookie).toContain(SESSION_COOKIE_NAME);
+    expect(cookie).toContain("Max-Age=0");
+  });
+
+  it("changes nothing at all for a visitor who did sign in", async () => {
+    const cookie = await signInTo(harness);
+    const decision = await decideProxy(request("/admin", cookie), open());
+    expect(decision.kind).toBe("continue");
+  });
+
+  it("leaves the login pages exactly as they were", async () => {
+    // The flag is scoped to admin paths. `/login` still mints its CSRF token
+    // and `/login/session` still verifies a password.
+    const login = await decideProxy(request("/login"), open());
+    if (login.kind !== "continue") throw new Error("expected continue");
+    expect(login.requestHeaders.get(LOGIN_CSRF_HEADER)).toBeDefined();
+
+    const submit = await decideProxy(request("/login/session"), open());
+    expect(submit.kind === "continue" ? submit.guarded : false).toBe(true);
+  });
+
+  it("is closed when the flag is simply absent", async () => {
+    // The default, and the only default. Every existing caller and every
+    // existing test omits it, so omission must mean the gate as it was.
+    const decision = await decideProxy(request("/admin"), closed());
+    expect(decision.kind).toBe("redirect");
+    expect(decision.kind === "redirect" ? decision.location : "").toContain(
+      "/login",
+    );
+  });
+
+  it("is closed when the flag is false", async () => {
+    const decision = await decideProxy(request("/admin"), {
+      ...closed(),
+      openAdmin: false,
+    });
+    expect(decision.kind).toBe("redirect");
+  });
+});
+
+/** Sign in for real, so the "already signed in" case is a real session. */
+async function signInTo(harness: Harness): Promise<string> {
+  const operator = await harness.database.store.ensureOwnerOperator({
+    email: "owner@halfsour.test",
+    fullName: "Half Sour Owner",
+    now: harness.clock.now(),
+  });
+  const session = await createSession({
+    store: harness.database.store,
+    secret: harness.secret,
+    operatorId: operator.id,
+    ipAddress: null,
+    userAgent: null,
+    deviceLabel: null,
+    now: harness.clock.now(),
+  });
+  return session.cookieValue;
+}

@@ -25,6 +25,7 @@ export function AdminShell({
   operatorName,
   operatorRole,
   signOut,
+  notice,
   children,
 }: {
   counts: NavCounts;
@@ -32,6 +33,15 @@ export function AdminShell({
   operatorRole: string;
   /** The sign-out form, rendered on the server so it carries its CSRF token. */
   signOut: ReactNode;
+  /**
+   * A standing note above every page, or nothing.
+   *
+   * One slot rather than one per screen, because the thing it says today —
+   * that this is an open demonstration and nobody is signed in — is true of
+   * every screen at once, and a notice a page can forget to render is a notice
+   * that will be forgotten.
+   */
+  notice?: ReactNode;
   children: ReactNode;
 }) {
   const identity = (
@@ -119,6 +129,9 @@ export function AdminShell({
           id="admin-main"
           className="mx-auto w-full max-w-[78rem] flex-1 px-4 py-6 lg:px-8 lg:py-8"
         >
+          {notice === undefined || notice === null ? null : (
+            <div className="mb-6">{notice}</div>
+          )}
           {children}
         </main>
 
