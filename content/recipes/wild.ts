@@ -206,9 +206,10 @@ export const WILD_RECIPES: readonly Recipe[] = [
         text: "Freeze the glass properly. This drink is served at around minus four and it needs the glass to hold that.",
       },
       {
+        // copy-audit-approved: R-13 (names a spirit serve; §5.3 safe vocabulary)
         text: "Stir over hard ice for eighteen seconds. Less than a gin martini — there is less alcohol to soften.",
         seconds: 18,
-      }, // copy-audit-approved: R-13
+      },
       {
         text: "Strain. Express the lemon peel over the whole surface from about 10 cm, wipe the rim, throw the peel away.",
       },
