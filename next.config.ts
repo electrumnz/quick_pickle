@@ -1,6 +1,41 @@
+import { readFileSync, writeFileSync } from "node:fs";
 import type { NextConfig } from "next";
 
 import { isDemoMode } from "./lib/demo/mode";
+
+/**
+ * Derive the private tsconfig for a private build directory, and return its
+ * path. Null when NEXT_DIST_DIR is unset, which is the ordinary case.
+ *
+ * It is a copy rather than an `extends`, because Next rewrites the `include`
+ * of the file it is given and an `extends` child would then carry a partial
+ * include that shadows the parent's.
+ */
+function prepareScratchTsconfig(): string | null {
+  const dist = process.env.NEXT_DIST_DIR;
+  if (dist === undefined || dist.trim() === "") return null;
+  const name = "tsconfig.scratch.json";
+  try {
+    const base = readFileSync("tsconfig.json", "utf8");
+    let existing: string | null = null;
+    try {
+      existing = readFileSync(name, "utf8");
+    } catch {
+      existing = null;
+    }
+    // Only rewrite when the base has moved on, so Next's own appends survive
+    // between builds in the same scratch directory.
+    if (existing === null || !existing.includes('"compilerOptions"')) {
+      writeFileSync(name, base);
+    }
+    return name;
+  } catch {
+    // A missing or unreadable tsconfig is not this file's problem to report.
+    return null;
+  }
+}
+
+const scratchTsconfig = prepareScratchTsconfig();
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -59,6 +94,26 @@ const nextConfig: NextConfig = {
    * `.scratch/` is already gitignored. Unset, nothing changes for anyone.
    */
   distDir: process.env.NEXT_DIST_DIR || ".next",
+
+  /**
+   * Where Next writes its generated type globs.
+   *
+   * `next build` appends `<distDir>/types/**` to the `include` of whichever
+   * tsconfig it is pointed at, and it does a literal string comparison, so a
+   * wildcard cannot pre-satisfy it. With a private NEXT_DIST_DIR per agent
+   * that meant the repository's own tsconfig.json collected an entry per
+   * scratch directory — nineteen of them at the last count, plus a reformat —
+   * and every one of them had to be reverted by hand before committing.
+   *
+   * A private build therefore gets a private tsconfig to scribble on. It lives
+   * at the repository root, NOT inside `.scratch/`, because `include` and
+   * `paths` resolve relative to the directory holding the config file; moving
+   * it down a level would silently repoint every one of them.
+   *
+   * Unset NEXT_DIST_DIR and this is not set either, so the ordinary build and
+   * every editor still use tsconfig.json exactly as before.
+   */
+  ...(scratchTsconfig === null ? {} : { typescript: { tsconfigPath: scratchTsconfig } }),
 
   images: {
     /**

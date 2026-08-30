@@ -77,3 +77,6 @@ _shot.mjs
 # Postgres data directory, rebuilt from the migrations and seed that are in the
 # tree. A build artefact, not a source file.
 /lib/demo/generated/
+
+# Private tsconfig for a NEXT_DIST_DIR build; see next.config.ts.
+tsconfig.scratch.json
