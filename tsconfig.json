@@ -48,7 +48,11 @@
     ".scratch/next-demo/dev/types/**/*.ts",
     ".next/dev/dev/types/**/*.ts",
     ".scratch/next-devaudit/types/**/*.ts",
-    ".scratch/next-devaudit/dev/types/**/*.ts"
+    ".scratch/next-devaudit/dev/types/**/*.ts",
+    ".scratch/next-copyaudit/types/**/*.ts",
+    ".scratch/next-copyaudit/dev/types/**/*.ts",
+    ".scratch/next-visual/types/**/*.ts",
+    ".scratch/next-visual/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules", ".next", "out"]
 }
