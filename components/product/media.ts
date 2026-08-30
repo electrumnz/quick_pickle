@@ -111,6 +111,19 @@ export const BOTTLE_SHOTS: Readonly<Record<BrineId, Shot>> = {
  * inside it. Extending a photograph with pixels that were never photographed is
  * not a framing choice — a viewer reads the smear long before they read the
  * ratio.
+ *
+ * THE HOMEPAGE HERO DOES NOT MOUNT `film` ANY MORE, and the clip below is kept
+ * only because it is a real asset that other surfaces may still want.
+ *
+ * `range.mp4` / `range.webm` were documented as a slow push-in. They are not.
+ * Decoded at 480x320 and cross-correlated half-frame against half-frame, the
+ * zoom component is 0.0 px at every sample and the pan component runs
+ * 0 -> -23 -> 0 columns across the clip's 5.5 seconds, with no vertical
+ * component at all: a pure lateral truck of 4.8% of the frame width, out and
+ * back, looping forever. That is the "randomly moves from left to right" the
+ * founder reported. It is inherent to the file — the generation prompt asked
+ * for a drift "as the camera passes" — so no CSS could have fixed it, and the
+ * hero now runs the still alone. components/home/Hero.tsx carries the working.
  */
 export const RANGE_SHOT: Shot = {
   still: "/media/range/range.jpg",

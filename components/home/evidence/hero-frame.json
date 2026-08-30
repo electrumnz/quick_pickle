@@ -1,5 +1,5 @@
 {
-  "base": "http://127.0.0.1:3660",
+  "base": "http://localhost:3416",
   "viewportHeight": 900,
   "failures": 0,
   "rows": [
@@ -7,165 +7,385 @@
       "width": 375,
       "src": "/_next/image?url=%2Fmedia%2Frange%2Frange.jpg&w=640&q=58",
       "objectFit": "contain",
+      "objectPosition": "50% 50%",
       "intrinsicAspect": 1.5,
       "artBox": {
         "width": 330,
-        "height": 412.3,
-        "aspect": 0.8
+        "height": 396,
+        "left": 20,
+        "aspect": 0.833
+      },
+      "layout": {
+        "viewportWidth": 375,
+        "layoutWidth": 360,
+        "scrollWidth": 360,
+        "gutter": 20,
+        "contentWidth": 320,
+        "overflowsDocument": false
+      },
+      "cropWindow": {
+        "top": 0,
+        "bottom": 1,
+        "left": 0,
+        "right": 1
       },
       "paintedPhotograph": {
         "width": 330,
         "height": 220
       },
-      "film": {
-        "src": "/media/film/range.webm",
-        "intrinsic": "1152x768",
-        "aspect": 1.5,
-        "objectFit": "contain"
+      "visiblePicture": {
+        "width": 330,
+        "height": 220
       },
+      "film": null,
       "capturedWidth": 330,
       "capturedHeight": 220,
-      "medianDetail": 7.1,
-      "cut": 1.28,
+      "medianDetail": 6.76,
+      "cut": 1.22,
       "flatColsLeft": 0,
       "flatColsRight": 0,
       "flatEdgePercent": 0,
-      "longestFlatRun": 0,
-      "longestFlatRunPercent": 0,
-      "profile": "+-++######+++---+++++########++---+---++#####++++----++-+#+####+++------",
+      "longestFlatRun": 1,
+      "longestFlatRunPercent": 0.3,
+      "profile": "+++-++#######++-+--++-++######+++-------++######+++--------++###+#+++---",
+      "asset": {
+        "capturedWidth": 640,
+        "capturedHeight": 427,
+        "flatColsLeft": 0,
+        "flatColsRight": 0,
+        "longestFlatRun": 2,
+        "longestFlatRunPercent": 0.3,
+        "profile": "+++-++#######++-+---+-++#######++-------++#######++-------+++#####+++---"
+      },
       "noInventedPixels": true,
+      "fitCorrect": true,
+      "expectedFit": "contain",
+      "bleedsPastGutter": false,
+      "fullBleed": false,
+      "atFullBleed": {
+        "width": 360,
+        "cropTop": 0,
+        "cropBottom": 1
+      },
+      "fullBleedHoldsLabels": true,
+      "heldAtLabelSafetyCap": false,
+      "labelsInFrame": true,
+      "noFilmMounted": true,
+      "noDocumentOverflow": true,
+      "pass": true,
       "shot": "hero-frame-375.png",
-      "picture": "hero-frame-375-picture.png"
+      "picture": "hero-frame-375-picture.png",
+      "scrub": [
+        {
+          "stop": 0,
+          "transform": "none",
+          "gap": 32.2,
+          "overlap": 0
+        },
+        {
+          "stop": 0.5,
+          "transform": "matrix(1.0766, 0, 0, 1.0766, 0, -13.2755)",
+          "gap": 20.7,
+          "overlap": 0
+        },
+        {
+          "stop": 1,
+          "transform": "matrix(1.1596, 0, 0, 1.1596, 0, -27.6582)",
+          "gap": 8.2,
+          "overlap": 0
+        }
+      ],
+      "clearOfTheCopy": true
     },
     {
       "width": 768,
       "src": "/_next/image?url=%2Fmedia%2Frange%2Frange.jpg&w=828&q=58",
-      "objectFit": "contain",
+      "objectFit": "cover",
+      "objectPosition": "50% 63%",
       "intrinsicAspect": 1.5,
       "artBox": {
-        "width": 698.8,
-        "height": 445.9,
-        "aspect": 1.567
+        "width": 753,
+        "height": 396,
+        "left": 0,
+        "aspect": 1.902
+      },
+      "layout": {
+        "viewportWidth": 768,
+        "layoutWidth": 753,
+        "scrollWidth": 753,
+        "gutter": 27.1,
+        "contentWidth": 698.8,
+        "overflowsDocument": false
+      },
+      "cropWindow": {
+        "top": 0.133,
+        "bottom": 0.9219,
+        "left": 0,
+        "right": 1
       },
       "paintedPhotograph": {
-        "width": 668.8,
-        "height": 445.9
+        "width": 753,
+        "height": 502
       },
-      "film": {
-        "src": "/media/film/range.webm",
-        "intrinsic": "1152x768",
-        "aspect": 1.5,
-        "objectFit": "contain"
+      "visiblePicture": {
+        "width": 753,
+        "height": 396
       },
-      "capturedWidth": 669,
-      "capturedHeight": 446,
-      "medianDetail": 4.2,
-      "cut": 0.76,
+      "film": null,
+      "capturedWidth": 753,
+      "capturedHeight": 396,
+      "medianDetail": 4.85,
+      "cut": 0.87,
       "flatColsLeft": 0,
       "flatColsRight": 0,
       "flatEdgePercent": 0,
-      "longestFlatRun": 0,
-      "longestFlatRunPercent": 0,
-      "profile": "+-++#######++---++-++######+#++---+---++#####++++----++-+++####+++------",
+      "longestFlatRun": 6,
+      "longestFlatRunPercent": 0.8,
+      "profile": "+++-++#####+#++-------+######++++-------++######+++--.-----++###+++++---",
+      "asset": {
+        "capturedWidth": 828,
+        "capturedHeight": 552,
+        "flatColsLeft": 0,
+        "flatColsRight": 0,
+        "longestFlatRun": 3,
+        "longestFlatRunPercent": 0.4,
+        "profile": "+++-++#######++-+-----+#######+++-------++#######+#-------+++####++++---"
+      },
       "noInventedPixels": true,
+      "fitCorrect": true,
+      "expectedFit": "cover",
+      "bleedsPastGutter": true,
+      "fullBleed": true,
+      "atFullBleed": {
+        "width": 753,
+        "cropTop": 0.133,
+        "cropBottom": 0.9219
+      },
+      "fullBleedHoldsLabels": true,
+      "heldAtLabelSafetyCap": false,
+      "labelsInFrame": true,
+      "noFilmMounted": true,
+      "noDocumentOverflow": true,
+      "pass": true,
       "shot": "hero-frame-768.png",
-      "picture": "hero-frame-768-picture.png"
+      "picture": "hero-frame-768-picture.png",
+      "scrub": [
+        {
+          "stop": 0,
+          "transform": "none",
+          "gap": 52,
+          "overlap": 0
+        },
+        {
+          "stop": 0.5,
+          "transform": "matrix(1.0799, 0, 0, 1.0799, 0, -13.8406)",
+          "gap": 40,
+          "overlap": 0
+        },
+        {
+          "stop": 1,
+          "transform": "matrix(1.158, 0, 0, 1.158, 0, -27.3739)",
+          "gap": 28.3,
+          "overlap": 0
+        }
+      ],
+      "clearOfTheCopy": true
     },
     {
       "width": 1280,
       "src": "/_next/image?url=%2Fmedia%2Frange%2Frange.jpg&w=1920&q=58",
-      "objectFit": "contain",
+      "objectFit": "cover",
+      "objectPosition": "50% 63%",
       "intrinsicAspect": 1.499,
       "artBox": {
-        "width": 1192.2,
-        "height": 432.3,
-        "aspect": 2.758
+        "width": 1265,
+        "height": 396,
+        "left": 0,
+        "aspect": 3.194
+      },
+      "layout": {
+        "viewportWidth": 1280,
+        "layoutWidth": 1265,
+        "scrollWidth": 1265,
+        "gutter": 36.4,
+        "contentWidth": 1192.2,
+        "overflowsDocument": false
+      },
+      "cropWindow": {
+        "top": 0.3343,
+        "bottom": 0.8037,
+        "left": 0,
+        "right": 1
       },
       "paintedPhotograph": {
-        "width": 648.2,
-        "height": 432.3
+        "width": 1265,
+        "height": 843.7
       },
-      "film": {
-        "src": "/media/film/range.webm",
-        "intrinsic": "1152x768",
-        "aspect": 1.5,
-        "objectFit": "contain"
+      "visiblePicture": {
+        "width": 1265,
+        "height": 396
       },
-      "capturedWidth": 648,
-      "capturedHeight": 432,
-      "medianDetail": 4.33,
-      "cut": 0.78,
+      "film": null,
+      "capturedWidth": 1265,
+      "capturedHeight": 396,
+      "medianDetail": 3.7,
+      "cut": 0.67,
       "flatColsLeft": 0,
       "flatColsRight": 0,
       "flatEdgePercent": 0,
-      "longestFlatRun": 0,
-      "longestFlatRunPercent": 0,
-      "profile": "+++#######++---++++++#######++-------++######++++-----+-++#####+++------",
+      "longestFlatRun": 92,
+      "longestFlatRunPercent": 7.3,
+      "profile": "----++#####+#++.--.--.+#######+++.-.....+######+#++......-+#######+++...",
+      "asset": {
+        "capturedWidth": 1600,
+        "capturedHeight": 1067,
+        "flatColsLeft": 0,
+        "flatColsRight": 0,
+        "longestFlatRun": 2,
+        "longestFlatRunPercent": 0.1,
+        "profile": "+++-++#######++-------++######+++----+--++######+++-------+++####++++---"
+      },
       "noInventedPixels": true,
+      "fitCorrect": true,
+      "expectedFit": "cover",
+      "bleedsPastGutter": true,
+      "fullBleed": true,
+      "atFullBleed": {
+        "width": 1265,
+        "cropTop": 0.3343,
+        "cropBottom": 0.8037
+      },
+      "fullBleedHoldsLabels": true,
+      "heldAtLabelSafetyCap": false,
+      "labelsInFrame": true,
+      "noFilmMounted": true,
+      "noDocumentOverflow": true,
+      "pass": true,
       "shot": "hero-frame-1280.png",
-      "picture": "hero-frame-1280-picture.png"
+      "picture": "hero-frame-1280-picture.png",
+      "scrub": [
+        {
+          "stop": 0,
+          "transform": "none",
+          "gap": 49.2,
+          "overlap": 0
+        },
+        {
+          "stop": 0.5,
+          "transform": "matrix(1.0791, 0, 0, 1.0791, 0, -13.706)",
+          "gap": 37.3,
+          "overlap": 0
+        },
+        {
+          "stop": 1,
+          "transform": "matrix(1.1588, 0, 0, 1.1588, 0, -27.5081)",
+          "gap": 25.4,
+          "overlap": 0
+        }
+      ],
+      "clearOfTheCopy": true
     },
     {
       "width": 1920,
       "src": "/_next/image?url=%2Fmedia%2Frange%2Frange.jpg&w=1920&q=58",
-      "objectFit": "contain",
+      "objectFit": "cover",
+      "objectPosition": "50% 63%",
       "intrinsicAspect": 1.499,
       "artBox": {
-        "width": 1809,
+        "width": 1280,
         "height": 369.6,
-        "aspect": 4.894
+        "left": 312.5,
+        "aspect": 3.463
+      },
+      "layout": {
+        "viewportWidth": 1920,
+        "layoutWidth": 1905,
+        "scrollWidth": 1905,
+        "gutter": 48,
+        "contentWidth": 1809,
+        "overflowsDocument": false
+      },
+      "cropWindow": {
+        "top": 0.3572,
+        "bottom": 0.7902,
+        "left": 0,
+        "right": 1
       },
       "paintedPhotograph": {
-        "width": 554.2,
+        "width": 1280,
+        "height": 853.7
+      },
+      "visiblePicture": {
+        "width": 1280,
         "height": 369.6
       },
-      "film": {
-        "src": "/media/film/range.webm",
-        "intrinsic": "1152x768",
-        "aspect": 1.5,
-        "objectFit": "contain"
-      },
-      "capturedWidth": 554,
+      "film": null,
+      "capturedWidth": 1280,
       "capturedHeight": 370,
-      "medianDetail": 4.91,
-      "cut": 0.88,
+      "medianDetail": 3.84,
+      "cut": 0.69,
       "flatColsLeft": 0,
       "flatColsRight": 0,
       "flatEdgePercent": 0,
-      "longestFlatRun": 0,
-      "longestFlatRunPercent": 0,
-      "profile": "+++#######++-+-+++-++#######++----+--++#######++-------+++#####+++------",
+      "longestFlatRun": 123,
+      "longestFlatRunPercent": 9.6,
+      "profile": "----++#####+#++.....-.########+++.......+######+#++......-+#######++-...",
+      "asset": {
+        "capturedWidth": 1600,
+        "capturedHeight": 1067,
+        "flatColsLeft": 0,
+        "flatColsRight": 0,
+        "longestFlatRun": 2,
+        "longestFlatRunPercent": 0.1,
+        "profile": "+++-++#######++-------++######+++----+--++######+++-------+++####++++---"
+      },
       "noInventedPixels": true,
+      "fitCorrect": true,
+      "expectedFit": "cover",
+      "bleedsPastGutter": false,
+      "fullBleed": false,
+      "atFullBleed": {
+        "width": 1905,
+        "cropTop": 0.4467,
+        "cropBottom": 0.7376
+      },
+      "fullBleedHoldsLabels": false,
+      "heldAtLabelSafetyCap": true,
+      "labelsInFrame": true,
+      "noFilmMounted": true,
+      "noDocumentOverflow": true,
+      "pass": true,
       "shot": "hero-frame-1920.png",
-      "picture": "hero-frame-1920-picture.png"
+      "picture": "hero-frame-1920-picture.png",
+      "scrub": [
+        {
+          "stop": 0,
+          "transform": "none",
+          "gap": 36,
+          "overlap": 0
+        },
+        {
+          "stop": 0.5,
+          "transform": "matrix(1.079, 0, 0, 1.079, 0, -12.7755)",
+          "gap": 24.1,
+          "overlap": 0
+        },
+        {
+          "stop": 1,
+          "transform": "matrix(1.159, 0, 0, 1.159, 0, -25.7129)",
+          "gap": 12.1,
+          "overlap": 0
+        }
+      ],
+      "clearOfTheCopy": true
     },
     {
       "width": 1280,
       "layer": "film",
-      "film": {
-        "src": "/media/film/range.webm",
-        "intrinsic": "1152x768",
-        "aspect": 1.5,
-        "playing": true,
-        "opacity": 1,
-        "currentTime": 2.04
-      },
-      "paintedPhotograph": {
-        "width": 648.5,
-        "height": 432.3
-      },
-      "capturedWidth": 649,
-      "capturedHeight": 432,
-      "medianDetail": 4.3,
-      "cut": 0.77,
-      "flatColsLeft": 0,
-      "flatColsRight": 0,
-      "flatEdgePercent": 0,
-      "longestFlatRun": 0,
-      "longestFlatRunPercent": 0,
-      "profile": "+++#######++---++++++#######++-------++######++++----++-++#####+++------",
-      "noInventedPixels": true,
-      "picture": "hero-frame-film.png"
+      "heroVideos": 0,
+      "src": null,
+      "noFilmMounted": true,
+      "pass": true
     }
   ]
 }

@@ -242,12 +242,113 @@
   }
 }
 
-/* The artwork fills the middle row of the stage and is centred in it. Anchored
-   to the bottom it left a 290px hole under the masthead at 375, where the
-   line-up is width-constrained and the row is not. */
+/* ------------------------------------------------------------- the art band */
+
+/* The cinematic band the photograph runs in, and the box that clips the zoom.
+ *
+ * Three jobs, in the order they matter.
+ *
+ * 1. IT CLIPS. The scrub scales `[data-hero-art]` — this element's child — to
+ *    1.16, and a transform does not affect layout, so the scaled art used to
+ *    grow over the closing band. `.heroStage` clips at the stage edge, which
+ *    is nowhere near. An element clips to its OWN border box, so the clipper
+ *    cannot be the thing that scales; it has to be its parent. `Hero.tsx`
+ *    carries the measured overlap this removed.
+ *
+ * 2. IT OWNS THE HEIGHT, and the height is viewport-relative and definite
+ *    before the image arrives, which is what keeps the CLS budget at 0.02.
+ *    `min()` against the row is a guard, not the design: on a short window the
+ *    middle row is smaller than the token and the band takes the row instead
+ *    of overflowing it into the band below.
+ *
+ * 3. IT ESCAPES THE GUTTER. `.heroStage` carries `px-gutter` for the wordmark
+ *    and the closing band, and only the picture is meant to run past it. The
+ *    escape is `calc(100% + 2 * gutter)` on the item, not `100vw`: the page
+ *    sets `scrollbar-gutter: stable`, so `100vw` is WIDER than the layout box
+ *    by the scrollbar and would put a horizontal scrollbar on the document.
+ *    Measured at 1280: scrollWidth 1265, clientWidth 1265, and 100vw is 1280.
+ */
+.heroFrame {
+  /* Fixed, viewport-relative, and sized so the middle row can always carry it:
+     the smallest that row gets across the four measured widths is 370px on a
+     900px-tall window, at 1920, where the wordmark is at its largest. */
+  --hero-band-height: clamp(13rem, 44svh, 30rem);
+  /* The widest this band may be before a centred `cover` crop starts cutting a
+     label off the top and bottom of the frame.
+
+     Measured, not chosen: evidence/label-band.mjs finds the four cream label
+     panels occupying rows 396–832 of the 1067-row plate — 40.9% of the frame,
+     centred at 57.5% of its height. A `cover` crop of a band W wide and H tall
+     shows H * 1600/W rows of the plate, so keeping the whole label band plus a
+     margin needs W/H at or under about 3.25. Past that the band is held at its
+     cap and sits centred on the page ground instead, which is the same rule
+     components/product/media.ts already states for the picture inside the row.
+
+     The second term is the served asset: `sizes` fetches the 1280px cut and
+     the plate is only 1600px wide, so a band wider than 80rem would be an
+     upscale of an upscale. Both terms bind on real windows — the aspect one on
+     a short window, the 80rem one on a tall 1920. */
+  max-inline-size: min(calc(var(--hero-band-height) * 3.25), 80rem);
+  position: relative;
+  align-self: center;
+  inline-size: 100%;
+  block-size: min(100%, var(--hero-band-height));
+  /* Real separation from the closing band, rather than trusting the transform
+     not to reach it. The clip above is what makes a collision impossible; this
+     is the gap you can see. */
+  margin-block-end: var(--spacing-stack);
+  overflow: hidden;
+}
+
+@media (min-width: 48rem) {
+  .heroFrame {
+    inline-size: calc(100% + 2 * var(--spacing-gutter));
+  }
+}
+
+/* The designed alternative, not the same band with the motion removed. Under
+   reduced motion the stage is static and auto-height, so its middle row is
+   sized by its content and `100%` in the `min()` above has nothing definite to
+   resolve against. The token alone is definite, viewport-relative and still
+   the same band. */
+@media (prefers-reduced-motion: reduce) {
+  .heroFrame {
+    block-size: var(--hero-band-height);
+  }
+}
+
+/* `contain` letterboxes; `cover` fills the band and crops top and bottom.
+ *
+ * The vertical origin is 63%, not 50%, because the labels sit below the middle
+ * of the plate: evidence/label-band.json puts them in rows 396–832 of 1067,
+ * with 37% of near-black headroom above them and 22% of bar top below.
+ * Cropping from the true centre throws away label to keep headroom.
+ *
+ * 63% is not the band's centre either, and that difference is the whole reason
+ * this number needed working out. `object-position: 50% P` aligns the P point
+ * of the IMAGE with the P point of the BOX, so where a fraction b of the
+ * plate's height is visible the window runs from (1-b)P to (1-b)P + b and its
+ * centre is at (1-b)P + b/2 — which equals P only when P is 50%. Requiring
+ * that window to hold rows 396–832 at every band shape this page produces
+ * gives P at or above 0.612 and at or below 0.654 at 1920, and a wider range
+ * at every other width; 63% sits in the middle of the tightest one. The
+ * residual condition is just that the band show at least 41.1% of the plate's
+ * height, which is the label band's own 40.9% plus a hair.
+ *
+ * BELOW 48rem THIS STAYS `contain`, and that is not an oversight. The band is
+ * taller than it is wide relative to the plate at 375, so `cover` there is
+ * limited by HEIGHT and crops sideways — it loses the outer two bottles, and
+ * four legible labels is the picture's entire job. */
 .heroArt {
   object-fit: contain;
   object-position: center;
+}
+
+@media (min-width: 48rem) {
+  .heroArt {
+    object-fit: cover;
+    object-position: 50% 63%;
+  }
 }
 
 /* ---------------------------------------------------------------- buttons */

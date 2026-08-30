@@ -1,0 +1,65 @@
+{
+  "$note": "copy-audit-ignore-file — generated evidence; see label-band.mjs",
+  "plate": "public/media/range/range.jpg",
+  "width": 1600,
+  "height": 1067,
+  "labelBand": {
+    "topRow": 396,
+    "bottomRow": 832,
+    "heightRows": 437,
+    "topFraction": 0.3711,
+    "bottomFraction": 0.7807,
+    "heightFraction": 0.4096,
+    "centreFraction": 0.5754
+  },
+  "panels": [
+    {
+      "fromColumn": 78,
+      "toColumn": 202
+    },
+    {
+      "fromColumn": 482,
+      "toColumn": 576
+    },
+    {
+      "fromColumn": 882,
+      "toColumn": 991
+    },
+    {
+      "fromColumn": 1285,
+      "toColumn": 1509
+    }
+  ],
+  "panelSpanColumns": {
+    "from": 78,
+    "to": 1509
+  },
+  "objectPosition": {
+    "chosen": 0.63,
+    "allowedAt": [
+      {
+        "b": 0.79,
+        "minP": -0.0443,
+        "maxP": 1.7673
+      },
+      {
+        "b": 0.5,
+        "minP": 0.5614,
+        "maxP": 0.7423
+      },
+      {
+        "b": 0.47,
+        "minP": 0.5862,
+        "maxP": 0.7003
+      },
+      {
+        "b": 0.43,
+        "minP": 0.6153,
+        "maxP": 0.6511
+      }
+    ],
+    "minVisibleHeightFraction": 0.4109,
+    "maxBandAspect": 3.649,
+    "note": "At 50% P the crop keeps headroom and loses label; these are the bounds that keep rows topRow..bottomRow inside the window."
+  }
+}

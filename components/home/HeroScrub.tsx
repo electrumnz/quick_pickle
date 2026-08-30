@@ -27,11 +27,16 @@ import { useMotionProfile } from "./use-motion";
  *     momentum and iOS elastic overscroll where a JS pin detaches.
  *  3. The positioning line is split by line and staggered in, once.
  *
- * What it does NOT do is touch the film. The clip in the hero PLAYS; it is
- * never seeked. `Hero.tsx` carries the measurement that settled that, and the
- * consequence here is the useful one: every property this file animates is a
- * transform or an opacity, so the whole sequence stays on the compositor and
- * none of it can be starved by a video decode.
+ * There is no film in the hero to touch. The clip that used to sit over the
+ * still was measured as a lateral truck rather than the push-in it was
+ * documented as, which is the drift the founder reported; `Hero.tsx` carries
+ * the numbers. Every property this file animates is a transform or an opacity,
+ * so the whole sequence stays on the compositor.
+ *
+ * The art's tween is `yPercent` and a symmetric `scale`, and it has no
+ * horizontal component at all — `tx` is 0 in the computed matrix at every
+ * scrub position at every width. The zoom is clipped by `.heroFrame`, the
+ * art's parent, so growing to 1.16 can no longer reach the closing band.
  *
  * The four layers, and the rates that make them read as depth rather than as
  * four things sliding at once — nearer moves further, which is the only rule:

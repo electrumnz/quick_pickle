@@ -1,6 +1,5 @@
 import Image from "next/image";
 
-import { FilmMount } from "@/components/product/FilmMount";
 import { RANGE_SHOT } from "@/components/product/media";
 
 import { HERO_SERVE_LINE } from "@/components/site/copy";
@@ -29,24 +28,37 @@ import { isLive } from "./routes";
  *
  * The range photograph runs in its place — the same four bottles, carrying the
  * same drawn labels, wrapped onto a real frame. It is the LCP element and it is
- * a STILL: `Film` layers the clip over it only on a desktop pointer with motion
- * allowed, so the phone Lighthouse audits never fetches a frame of video. How
- * the label artwork got onto the glass is documented in
- * components/product/media.ts.
+ * a STILL, on every device, with no film over it. How the label artwork got
+ * onto the glass is documented in components/product/media.ts.
  *
- * THE CLIP PLAYS; IT IS NOT SCRUBBED. That was measured, not assumed, and the
- * numbers are in evidence/seek-bench.json. Every clip in public/media/film is
- * encoded as one long GOP — `range.mp4` carries a single sync sample, at frame
- * 1 of 132, and `range.webm` has two cue points, 0.0s and 5.333s. Seeking into
- * a GOP that shape means decoding forward from the head every time, and the
- * measured cost of one `currentTime` seek was 85ms median and 264ms at the 95th
- * percentile unthrottled, rising to 159ms/251ms at 6x CPU. A scrub needs a
- * frame every 16ms. Straight playback of the same file dropped 0 frames of 128
- * at every throttle. The clip is also a push-in that returns to where it
- * started, so there is no 0→1 arc for a scroll to map onto even if seeking
- * were free.
+ * THERE IS NO FILM IN THE HERO, and that is the fix for a defect the founder
+ * reported as "the image randomly moves from left to right".
  *
- * So what the SCROLL drives is the composition, and every property it touches
+ * The clip was the thing moving, and it was measured rather than argued. Decode
+ * `range.webm` at 480x320, take a column gradient-energy profile of each frame
+ * and cross-correlate the left half and the right half of the frame against
+ * frame 0 separately. A push-in moves those two halves in OPPOSITE directions;
+ * a truck moves them the same way and by the same amount. Measured, over the
+ * clip's own 5.5 seconds:
+ *
+ *   zoom component (right - left)/2   0.0 px at every sample
+ *   pan  component (right + left)/2   0 -> -23 px -> 0
+ *   vertical                          0 px at every sample
+ *
+ * So it is a pure lateral truck of 23 of 480 columns — 4.8% of the frame, about
+ * 50 px on screen at 1038 px wide — out and back, on a loop, forever. It was
+ * never a push-in. The clip only mounted on a desktop fine pointer with motion
+ * allowed, which is why it read as intermittent.
+ *
+ * The still is clean, it is already the LCP element, and it is what every phone
+ * has always been served. The honest fix was to stop mounting the film here
+ * rather than to chase the drift through CSS, and `[data-hero-art]`'s computed
+ * matrix confirms CSS was never the cause: `tx` is 0 at every scrub position at
+ * every width, and the scale is symmetric. `components/product/Film` is
+ * untouched and still runs on the product pages, where the clips are the bottle
+ * shots rather than this one.
+ *
+ * What the SCROLL drives is the composition, and every property it touches
  * is a compositor transform: the masthead lifts and thins, the line-up rises
  * and comes forward, the wash behind it drifts at a third of that rate, and
  * the closing band holds. Four layers at four rates is where the depth comes
@@ -124,11 +136,30 @@ export function Hero() {
           </h1>
 
           {/*
-            The box owns the geometry, so the photograph cannot shift the page
-            as it decodes — the CLS budget here is 0.02. `fill` gives the image
-            `position: absolute; inset: 0` inside this positioned parent, which
-            is a definite box before a byte of the file has arrived, and
-            object-contain does the rest.
+            TWO boxes, and the outer one is the whole of defect 3.
+
+            The scrub scales `[data-hero-art]` to 1.16. A transform does not
+            affect layout, so the scaled art used to grow straight over the
+            closing band: measured at the top of this file's sibling evidence
+            script, the art's visible bottom edge crossed the positioning
+            line's own text box by 11.6px at 375, 10.2px at 768, 7.4px at 1280
+            and 3.6px at 1920 at the end of the scrub. `.heroStage` has
+            `overflow: hidden`, but that clips at the STAGE edge — there was
+            nothing between the art and the band.
+
+            `.heroFrame` is that something. It owns the geometry and it clips,
+            so the zoom is kept — the founder's call — and it now grows inside
+            its own bounds. It cannot be `[data-hero-art]` itself: an element
+            clips to its own BORDER box, so scaling the clipper scales the clip
+            with it and nothing is contained. The clipper has to be the parent
+            of the thing that moves.
+
+            The frame also owns the height, which is why the photograph cannot
+            shift the page as it decodes — the CLS budget here is 0.02. Its
+            height is viewport-relative and its width is a `calc` on its own
+            grid area, so the box is definite before a byte of the file has
+            arrived. `fill` then gives the image `position: absolute; inset: 0`
+            inside it.
 
             Absolute rather than `h-full` in flow, and that was not a style
             choice: a percentage height on a child of a flex item whose height
@@ -136,22 +167,24 @@ export function Hero() {
             the intrinsic height, blew past the viewport and cropped the
             bottles.
           */}
-          <div className="relative h-full w-full" data-hero-art>
-            <Image
-              src={RANGE_SHOT.still}
-              alt={RANGE_SHOT.alt}
-              fill
-              // The LCP element on this page, so it is fetched at high priority
-              // and never lazily. `sizes` stops a phone pulling the desktop
-              // cut: the stage runs the full viewport width until the page
-              // reaches its own maximum.
-              priority
-              fetchPriority="high"
-              quality={58}
-              sizes="(max-width: 80rem) 100vw, 1280px"
-              className={cx(styles.heroArt)}
-            />
-            <FilmMount shot={RANGE_SHOT} fit="contain" />
+          <div className={cx(styles.heroFrame)} data-hero-frame>
+            <div className="relative h-full w-full" data-hero-art>
+              <Image
+                src={RANGE_SHOT.still}
+                alt={RANGE_SHOT.alt}
+                fill
+                // The LCP element on this page, so it is fetched at high
+                // priority and never lazily. `sizes` stops a phone pulling the
+                // desktop cut: the band runs the full viewport width until the
+                // page reaches its own maximum, and `.heroFrame` caps it at
+                // 80rem so the served 1280px cut is never upscaled.
+                priority
+                fetchPriority="high"
+                quality={58}
+                sizes="(max-width: 80rem) 100vw, 1280px"
+                className={cx(styles.heroArt)}
+              />
+            </div>
           </div>
 
           {/* The closing band. It runs the full width of the stage, which is
