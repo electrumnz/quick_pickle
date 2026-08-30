@@ -91,6 +91,17 @@ The order below is the order to do them in.
       point of committing evidence at all. Fix by seeding the run id and dropping
       the timestamp — evidence should record what happened, not when.
 
+      **It is not only the clock.** Some captures change with the ambient
+      environment too, so seeding the run id is necessary and not sufficient.
+      `lib/agents/roster/evidence/14-ward-security.txt` is the clearest case:
+      run with `HALF_SOUR_DEMO=1` its headline is "This admin opens without a
+      password", and run without it the same code reports "7 credentials are not
+      configured" and names them. Both are correct; they are answers to different
+      questions. `11-b2c-b2b-separation.txt` drifts a different way — its seeded
+      dates are anchored on `now()`, so "58 days ago" becomes "57" simply by
+      running tomorrow. A capture has to pin the environment it describes, or say
+      in the file which one it was taken in.
+
 ## Built and verified
 
 - [x] Brand identity — 39 drawn glyphs, palette with 23/23 sanctioned pairs passing AA
