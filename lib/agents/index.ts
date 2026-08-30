@@ -69,6 +69,8 @@ export {
   centsToMicros,
   costMicrosFor,
   formatMicrosNzd,
+  isPricedModel,
+  isPromotionalModel,
   microsToCents,
   type ModelPrice,
 } from "./cost/pricing";
@@ -81,11 +83,37 @@ export {
 export {
   DEFAULT_AGENT_MODEL,
   createAnthropicResolver,
+  createGatewayResolver,
   createScriptedResolver,
+  hasGatewayCredential,
+  liveModelUnavailableReason,
   modelIdFromEnv,
   resolverFromEnv,
+  type ModelBackend,
   type ModelResolver,
 } from "./model/provider";
+export {
+  FREE_TIER_MODELS,
+  FREE_WINDOW_ENDS,
+  FREE_WINDOW_ENDS_WORDS,
+  FREE_WINDOW_SOURCE,
+  MINIMAX_M2_7_FREE,
+  MINIMAX_M3_FREE,
+  MODEL_ENV_VAR,
+  ROSTER_MODEL_DEFAULTS,
+  freeWindowStatus,
+  isFreeTierModel,
+  isModelOverridden,
+  modelEnvVarFor,
+  modelUnavailableReason,
+  rosterModelFor,
+  rosterModelNotice,
+  rosterModels,
+  type FreeWindowStatus,
+  type ModelEnv,
+  type ModelNotice,
+} from "./model/roster-models";
+export { StandbyModel, createStandbyResolver } from "./model/standby";
 
 export { InMemoryAgentStore } from "./store/memory-store";
 export {

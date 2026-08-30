@@ -1,25 +1,28 @@
 /**
  * The one call that makes the roster runnable.
  *
- * `app/api/inngest/route.ts` says, in its own comment, that "the unit that
+ * `app/api/inngest/route.ts` said, in its own comment, that "the unit that
  * defines the company's agents replaces the registry here and calls
- * `platform.runtime.register(...)` for each role". This is that call, kept here
- * rather than in the route so the wiring is a two-line import wherever the app
- * decides to do it:
+ * `platform.runtime.register(...)` for each role". This is that call, and the
+ * route now makes it:
  *
  * ```ts
  * const { platform } = await createRosterPlatform({
- *   sql: createPgExecutor(process.env.SUPABASE_DB_URL),
+ *   sql: createPgExecutor(databaseUrl),
  *   outbox: new RecordingOutbox(),
  * });
  * ```
  *
  * Two things it deliberately does NOT do:
  *
- *  - **It does not invent a model.** `createProductionRuntime` throws when
- *    `ANTHROPIC_API_KEY` is absent, and that is the right behaviour: an agent
- *    platform with no model behind it should fail loudly at wiring time rather
- *    than at three in the morning on a schedule.
+ *  - **It does not invent a model.** It does not refuse to build without one
+ *    either. `createProductionRuntime` resolves whatever the environment is
+ *    configured for — the Vercel AI Gateway, Anthropic, or an offline standby
+ *    model that fails every call with the reason written out. Refusing to build
+ *    was the old behaviour and it was wrong in one specific way: this is wired
+ *    at module scope in a route, so throwing here does not stop one run, it
+ *    takes the Inngest endpoint down for a reason that has nothing to do with
+ *    the endpoint.
  *  - **It does not pick an outbox.** The caller passes one. Today the only
  *    implementation is `RecordingOutbox`, which does not deliver anything —
  *    this build is not authorised for live outbound — and giving a channel a

@@ -29,14 +29,17 @@ to the day it is loaded, and that is the data changing rather than the code.
 | `08-pip-product.txt`          | Product: ninety days of sales next to review ratings, one concept written from a recipe that already exists.                   |
 | `09-cass-analyst.txt`         | Analyst: the week against the week before, and the sentence the admin opens with.                                              |
 | `10-approval-gate-bypass.txt` | Eight deliberate attempts to make a roster agent send something without an approved row. All refused.                          |
+| `13-live-gateway-run.txt`     | One role driven end to end on a real model through the Vercel AI Gateway, and the gate attacked with that model behind it.     |
 | `11-b2c-b2b-separation.txt`   | M38: the two audiences are two agents — prompts, tools, memory, measures, and what each actually wrote.                        |
 | `team-*.png`, `agent-*.png`   | The Team and two agent records, at 1440 and 375, light and dark, through a real sign-in.                                       |
+| `model-window-*.png`          | The admin's model notice in its two live states: the free window counting down, and no credential configured at all.           |
 | `screenshots.json`            | What was measured on each screenshot: title, headings, console errors, horizontal overflow.                                    |
 
 ## Mocked versus live
 
-**Mocked: the model, and only the model.** There is no `ANTHROPIC_API_KEY` in
-this environment, and no live model call was made in producing anything here.
+**Mocked: the model, and only the model.** No live model call was made in
+producing anything here except `13-live-gateway-run.txt`, which is the live
+counterpart and says on its own first line whether it has been recorded.
 `tests/roster/support/planner-model.ts` implements the AI SDK's
 `LanguageModelV4` interface directly. It:
 
@@ -68,6 +71,35 @@ plane, transcript persistence, `replay`, and `runToCompletion`.
 and the Inngest server. Runs are recorded in `InMemoryAgentStore`, which enforces
 the same invariants the SQL check constraints do, so an evidence run leaves the
 business database exactly as it found it.
+
+## The live counterpart
+
+`13-live-gateway-run.txt` is the same runtime with a real model behind it, over
+the network, through the Vercel AI Gateway. It needs a credential the repository
+does not contain, so its test skips without one and the file says so rather than
+going stale in silence:
+
+```bash
+AI_GATEWAY_API_KEY=… npx vitest run tests/roster/live-gateway.test.ts
+```
+
+The two `model-window-*.png` captures are the operational half of the same
+story: what the admin says while the free window is open, and what it says with
+no credential at all. Both were taken against a demo-mode server, which is why
+the open-demonstration notice sits above them — that is the notice slot
+stacking, not a second banner system.
+
+Two things it proves that a scripted planner cannot. That a real model's tool
+calls are gated, priced and recorded the same way — and that the approval gate
+still refuses when the thing being refused had the option of trying something
+else. A scripted planner can only attempt what its script contains.
+
+`tests/roster/gateway-wire.test.ts` covers the half of that which needs no
+credential: it substitutes `fetch` and asserts what the real gateway client
+actually posts — the model id in the routing header, the role's granted tools as
+callable tool definitions, the framed tool result carried back on the next turn —
+then drives a returned tool call through the real gate, meter and outbox. It is
+not a live run and does not claim to be one.
 
 **Nothing left the company.** Every `external` and `storefront_write` tool ends
 in `RecordingOutbox`, which writes the approved action down and returns a receipt

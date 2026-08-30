@@ -13,7 +13,12 @@ import { StoreControlPlane, type ControlPlane } from "./control/kill-switch";
 import { CostMeter } from "./cost/meter";
 import { AgentRuntimeError } from "./errors";
 import { createConsoleLogger, type AgentLogger } from "./logger";
-import { resolverFromEnv, type ModelResolver } from "./model/provider";
+import {
+  liveModelUnavailableReason,
+  resolverFromEnv,
+  type ModelResolver,
+} from "./model/provider";
+import { createStandbyResolver } from "./model/standby";
 import {
   SupabaseAgentStore,
   createServiceClient,
@@ -89,25 +94,45 @@ export function createAgentRuntime(
 }
 
 /**
- * The real runtime: Supabase for storage, Anthropic for inference.
+ * The real runtime: Supabase for storage, the AI Gateway for inference.
  *
- * @throws AgentRuntimeError when `ANTHROPIC_API_KEY` is absent. The runtime is
- * fully testable without it, but it will not pretend to run live work without a
- * model behind it.
+ * It does not throw when there is no model.
+ *
+ * That used to be the behaviour, and the reasoning was sound as far as it went:
+ * an agent platform with nothing behind it should fail at wiring time rather
+ * than at three in the morning. What it missed is *where* the wiring happens.
+ * `app/api/inngest/route.ts` builds this at module scope, so a throw does not
+ * fail one run — it takes the endpoint down, and a deployment with no gateway
+ * key looks broken in a way that has nothing to do with the thing that is
+ * actually missing.
+ *
+ * So it degrades instead, to {@link createStandbyResolver}: every run opens,
+ * every run's first model call fails with the reason written out in full, and
+ * the reason lands in `agent_runs.error` and `context.halt` where the admin
+ * already reads it. Nothing reaches the network and nothing is billed. The
+ * distinction that matters is preserved on the record either way — a standby
+ * run is `modelProvider: "scripted"`, so it can never be mistaken for a live
+ * one.
+ *
+ * Set `requireLiveModel` when a caller genuinely cannot continue without a
+ * model — a script whose whole purpose is a live call, say — and it throws as
+ * before.
  */
 export function createProductionRuntime(options: {
   readonly registry: ToolRegistry;
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly logger?: AgentLogger;
+  /** Throw rather than degrade when no live model is configured. */
+  readonly requireLiveModel?: boolean;
 }): AgentPlatform {
   const env = options.env ?? process.env;
-  const models = resolverFromEnv(env);
-  if (models === null) {
-    throw new AgentRuntimeError(
-      "invalid_agent_definition",
-      "ANTHROPIC_API_KEY is not set; the production runtime has no model to call.",
-    );
+  const unavailable = liveModelUnavailableReason(env);
+  if (unavailable !== null && options.requireLiveModel === true) {
+    throw new AgentRuntimeError("model_unavailable", unavailable);
   }
+  const models =
+    resolverFromEnv(env) ??
+    createStandbyResolver(unavailable ?? UNKNOWN_MODEL_REASON);
   return createAgentRuntime({
     store: new SupabaseAgentStore(createServiceClient(env)),
     registry: options.registry,
@@ -115,3 +140,8 @@ export function createProductionRuntime(options: {
     ...(options.logger === undefined ? {} : { logger: options.logger }),
   });
 }
+
+/** Belt and braces: `resolverFromEnv` returned null with no reason to give. */
+const UNKNOWN_MODEL_REASON =
+  "No model is configured for this deployment, and the reason could not be " +
+  "determined. Set AI_GATEWAY_API_KEY to run the roster on the Vercel AI Gateway.";

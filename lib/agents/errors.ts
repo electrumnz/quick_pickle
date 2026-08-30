@@ -26,6 +26,7 @@ export const RUNTIME_ERROR_CODES = [
   "grant_missing",
   "invalid_tool_input",
   "cost_cap_exceeded",
+  "model_unavailable",
   "kill_switch_engaged",
   "agent_paused",
   "run_not_found",

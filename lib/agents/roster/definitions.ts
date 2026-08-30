@@ -9,8 +9,15 @@
  * Two of them are not defined here at all. Ari (marketing) and Vic (trade) come
  * from `lib/strategy/agents.ts`, because their prompts are composed from the
  * BrandScript, Flight Plan and market model as they stand in the database at the
- * moment the run starts. The roster widens their tool grants and leaves their
- * prompts exactly as the strategy layer built them.
+ * moment the run starts. The roster widens their tool grants, sets the model
+ * they run on, and leaves their prompts exactly as the strategy layer built
+ * them.
+ *
+ * Which model each of the eight runs on is one decision made in one place —
+ * `lib/agents/model/roster-models.ts` — and every role here reads it through
+ * `rosterModelFor`. It is per role because the roles are not alike: Dot drafting
+ * a reply a customer will read and Cass comparing this week's takings to last
+ * week's are not the same job and do not want the same model.
  *
  * **M38 — the consumer and trade sides are genuinely separate.** Ari and Vic
  * have different prompts, different tools, different memory and different
@@ -34,6 +41,7 @@ import { composeStrategyBriefing } from "@/lib/strategy";
 import type { Strategy } from "@/content/strategy/types";
 
 import { defineAgent } from "../definition";
+import { rosterModelFor } from "../model/roster-models";
 import type { AgentDefinition } from "../types";
 import { COVER_WARNING_DAYS, MARGIN_FLOOR_PCT } from "./sql-reads";
 import type { RosterRole } from "./types";
@@ -161,7 +169,7 @@ export function defineOpsAgent(strategy: Strategy): AgentDefinition {
     jobTitle: "Head of Brine Ops",
     purpose:
       "Watches stock against days of cover, plans what goes in the fermenter next, and drafts the orders that keep both moving.",
-    model: "claude-sonnet-5",
+    model: rosterModelFor("brine-ops"),
     systemPrompt: withStrategy(
       OPS_ROLE_PROMPT,
       composeStrategyBriefing(strategy, {
@@ -203,7 +211,7 @@ export function defineSocialAgent(strategy: Strategy): AgentDefinition {
     jobTitle: "Social and Content Lead",
     purpose:
       "Writes the feed from the BrandScript and from what actually landed last fortnight, and never publishes anything the founder has not seen.",
-    model: "claude-opus-5",
+    model: rosterModelFor("social"),
     systemPrompt: withStrategy(
       SOCIAL_ROLE_PROMPT,
       composeStrategyBriefing(strategy, {
@@ -236,7 +244,7 @@ export function defineConciergeAgent(strategy: Strategy): AgentDefinition {
     jobTitle: "Customer Concierge",
     purpose:
       "Reads what every waiting customer actually said, drafts the easy replies, and hands anything unhappy or unresolved straight to the founder.",
-    model: "claude-opus-5",
+    model: rosterModelFor("concierge"),
     systemPrompt: withStrategy(
       CONCIERGE_ROLE_PROMPT,
       composeStrategyBriefing(strategy, {
@@ -275,7 +283,7 @@ export function defineFinanceAgent(strategy: Strategy): AgentDefinition {
     jobTitle: "Finance and Pricing",
     purpose:
       "Recomputes unit cost from the batches that actually ran, separates the GST out of every figure, and flags a margin before it becomes a problem.",
-    model: "claude-opus-5",
+    model: rosterModelFor("ledger"),
     systemPrompt: withStrategy(
       FINANCE_ROLE_PROMPT,
       composeStrategyBriefing(strategy, {
@@ -307,7 +315,7 @@ export function defineProductAgent(strategy: Strategy): AgentDefinition {
     jobTitle: "Product Development",
     purpose:
       "Turns real sales and real reviews into the next thing worth making, and says plainly what would have to be true for it to work.",
-    model: "claude-opus-5",
+    model: rosterModelFor("product"),
     systemPrompt: withStrategy(
       PRODUCT_ROLE_PROMPT,
       composeStrategyBriefing(strategy, {
@@ -334,7 +342,7 @@ export function defineAnalystAgent(strategy: Strategy): AgentDefinition {
     jobTitle: "Analyst",
     purpose:
       "Writes the weekly briefing in plain English, including the sentence the admin opens with on a Monday morning.",
-    model: "claude-sonnet-5",
+    model: rosterModelFor("analyst"),
     systemPrompt: withStrategy(
       ANALYST_ROLE_PROMPT,
       composeStrategyBriefing(strategy, {
@@ -384,6 +392,16 @@ export function grantRosterTools(
     readonly dailyCents: number;
     /** A caption is not four thousand tokens. Lower is cheaper and truer. */
     readonly maxOutputTokens: number;
+    /**
+     * Which model this role runs on.
+     *
+     * Set here for the same reason the tools are: `lib/strategy`'s job is the
+     * prompt, and the strategy layer has no view on what the roster can afford
+     * to call or on a promotion that ends next week. `rosterModelFor` is the one
+     * answer for all eight roles, so Ari and Vic are chosen the same way as the
+     * six defined in this file rather than a second way.
+     */
+    readonly model: string;
   },
 ): AgentDefinition {
   return defineAgent({
@@ -391,7 +409,7 @@ export function grantRosterTools(
     name: base.name,
     jobTitle: base.jobTitle,
     purpose: base.purpose,
-    model: base.model,
+    model: limits.model,
     systemPrompt: base.systemPrompt,
     tools: [...tools],
     autonomy: base.autonomy,
@@ -629,6 +647,7 @@ export function marketingRole(base: AgentDefinition): RosterRole {
       perRunCents: 140,
       dailyCents: 600,
       maxOutputTokens: 1_500,
+      model: rosterModelFor("marketing"),
     }),
     audience: "b2c",
     capabilities: ["b2c_campaign", "catalogue_facts"],
@@ -681,6 +700,7 @@ export function tradeRole(base: AgentDefinition): RosterRole {
       perRunCents: 140,
       dailyCents: 600,
       maxOutputTokens: 1_500,
+      model: rosterModelFor("trade"),
     }),
     audience: "b2b",
     capabilities: ["wholesale_outreach", "catalogue_facts"],

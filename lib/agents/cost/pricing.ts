@@ -21,12 +21,46 @@ export interface ModelPrice {
 
 /**
  * Cached list prices. Source: the Anthropic pricing table current at the time
- * of writing (2026-06-24 snapshot). Unknown models fall back to
- * {@link FALLBACK_PRICE}, which is deliberately the most expensive tier so an
- * unpriced model over-reports rather than silently costing nothing.
+ * of writing (2026-06-24 snapshot), and for the gateway models the Vercel AI
+ * Gateway catalogue (`GET https://ai-gateway.vercel.sh/v1/models`, read
+ * 2026-08-30). Unknown models fall back to {@link FALLBACK_PRICE}, which is
+ * deliberately the most expensive tier so an unpriced model over-reports rather
+ * than silently costing nothing.
+ *
+ * ## The free models are priced anyway, and that is deliberate
+ *
+ * `minimax/minimax-m3-free` and `minimax/minimax-m2.7-free` bill at zero while
+ * the GMI Cloud promotion runs. They are entered here at the list price of their
+ * paid twins — `minimax/minimax-m3` and `minimax/minimax-m2.7`, both
+ * $0.30/$1.20 per million in the same catalogue — because a cap measured against
+ * zero is not a cap. Every ceiling in `cost/meter.ts` multiplies tokens by a
+ * price; price the tokens at nothing and all four ceilings quietly stop existing
+ * on the exact day the company first lets a real model call real tools.
+ *
+ * So the meter charges what the tokens *would* cost. Two consequences worth
+ * being plain about: the ledger over-states actual spend for as long as the
+ * promotion lasts, and every cost row for a promotional model says so in its
+ * note (see {@link isPromotionalModel}). What it buys is that nothing about the
+ * budgets changes on the day the promotion ends — the caps were already sized
+ * for the real price.
  */
 export const MODEL_PRICES: Readonly<Record<string, ModelPrice>> = Object.freeze(
   {
+    // MiniMax, via the Vercel AI Gateway. The `-free` ids are shadow-priced at
+    // their paid twins' rate; see the note above.
+    "minimax/minimax-m3": { inputUsdPerMillion: 0.3, outputUsdPerMillion: 1.2 },
+    "minimax/minimax-m3-free": {
+      inputUsdPerMillion: 0.3,
+      outputUsdPerMillion: 1.2,
+    },
+    "minimax/minimax-m2.7": {
+      inputUsdPerMillion: 0.3,
+      outputUsdPerMillion: 1.2,
+    },
+    "minimax/minimax-m2.7-free": {
+      inputUsdPerMillion: 0.3,
+      outputUsdPerMillion: 1.2,
+    },
     "claude-fable-5": { inputUsdPerMillion: 10, outputUsdPerMillion: 50 },
     "claude-mythos-5": { inputUsdPerMillion: 10, outputUsdPerMillion: 50 },
     "claude-opus-5": { inputUsdPerMillion: 5, outputUsdPerMillion: 25 },
@@ -73,6 +107,17 @@ export function priceFor(model: string): ModelPrice {
 /** True when the model is priced explicitly rather than by fallback. */
 export function isPricedModel(model: string): boolean {
   return Object.hasOwn(MODEL_PRICES, model);
+}
+
+/**
+ * True when the model bills at zero today but is charged here at list price.
+ *
+ * Used to mark the cost row, so a ledger that says NZ$0.004 against a call that
+ * cost nothing explains itself on the row rather than in a comment nobody
+ * reading the books will see.
+ */
+export function isPromotionalModel(model: string): boolean {
+  return model.endsWith("-free");
 }
 
 /**

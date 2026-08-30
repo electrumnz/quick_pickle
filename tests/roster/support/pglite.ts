@@ -25,13 +25,22 @@ import {
  * rather than from a fixture written to agree with it. No live Postgres, no
  * network, and it takes about a second.
  *
- * The order is deliberate: migrations, then the seed, then the roster migration
+ * The order is deliberate: migrations, then the seed, then the roster migrations
  * a second time. `seed.sql` truncates `public.agents`, so re-applying the roster
  * registration afterwards is exactly what a developer has to do locally, and
- * running it twice also proves the migration is idempotent.
+ * running them twice also proves both migrations are idempotent.
+ *
+ * Both, in order: the registration writes the eight rows, and the model
+ * migration moves them onto the gateway ids the code now declares. Re-applying
+ * only the first would leave the table naming models the runtime never resolves,
+ * and `registration.test.ts` would fail on exactly the field this pair exists to
+ * keep honest.
  */
 
-const ROSTER_MIGRATION = "20260103000000_agent_roster.sql";
+const ROSTER_MIGRATIONS = [
+  "20260103000000_agent_roster.sql",
+  "20260108000000_roster_gateway_models.sql",
+] as const;
 
 const SUPABASE_AUTH_STUB = `
   create schema if not exists auth;
@@ -83,9 +92,11 @@ export async function createSeededBusiness(): Promise<RosterTestDatabase> {
   }
   await db.exec(readFileSync(repoPath("supabase/seed.sql"), "utf8"));
   // The seed truncates public.agents; register the roster back over it.
-  await db.exec(
-    readFileSync(repoPath(`supabase/migrations/${ROSTER_MIGRATION}`), "utf8"),
-  );
+  for (const name of ROSTER_MIGRATIONS) {
+    await db.exec(
+      readFileSync(repoPath(`supabase/migrations/${name}`), "utf8"),
+    );
+  }
 
   const sql: RosterSqlClient & StrategySqlClient = {
     async query<R extends RosterSqlRow = RosterSqlRow>(

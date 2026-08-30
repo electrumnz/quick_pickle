@@ -38,6 +38,7 @@ export {
   configureAgentPlatform,
   getAgentPlatform,
   resetAgentPlatform,
+  type AgentPlatformFactory,
 } from "./platform";
 export {
   runAgentWorkflow,

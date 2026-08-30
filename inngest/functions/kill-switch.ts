@@ -22,7 +22,7 @@ export const killSwitchSweepFunction = inngest.createFunction(
     retries: 3,
   },
   async ({ event, step }) => {
-    const platform = getAgentPlatform();
+    const platform = await getAgentPlatform();
     return step.run("cancel-live-runs", async () => {
       const live = await platform.store.listRuns({ status: LIVE_STATUSES });
       for (const run of live) {
@@ -45,7 +45,7 @@ export const agentPausedSweepFunction = inngest.createFunction(
     retries: 3,
   },
   async ({ event, step }) => {
-    const platform = getAgentPlatform();
+    const platform = await getAgentPlatform();
     return step.run("cancel-agent-runs", async () => {
       const live = await platform.store.listRuns({
         status: LIVE_STATUSES,

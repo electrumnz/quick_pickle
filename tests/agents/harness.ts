@@ -69,6 +69,14 @@ export interface HarnessOptions {
   readonly singleActionCents?: number;
   readonly maxSteps?: number;
   readonly startAt?: string;
+  /**
+   * The model id the fixture role declares. Defaults to `claude-opus-5`.
+   *
+   * The scripted model answers whatever it is asked for, so this changes one
+   * thing only: which row of the price book the cost meter uses. That is
+   * exactly what a test about a differently-priced model needs to vary.
+   */
+  readonly model?: string;
 }
 
 export const ALL_REFERENCE_TOOLS = [
@@ -163,7 +171,8 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
     tools.sendExternalMessage,
   ]);
 
-  const model = new ScriptedModel(options.script, { modelId: "claude-opus-5" });
+  const modelId = options.model ?? "claude-opus-5";
+  const model = new ScriptedModel(options.script, { modelId });
 
   const platform = createAgentRuntime({
     store,
@@ -181,7 +190,7 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
     name: "Test Role",
     jobTitle: "Runtime fixture",
     purpose: "Exercise the runtime end to end against a scripted model.",
-    model: "claude-opus-5",
+    model: modelId,
     systemPrompt: "Do the job you are given. Use tools rather than guessing.",
     tools: [...(options.tools ?? ALL_REFERENCE_TOOLS)],
     autonomy,

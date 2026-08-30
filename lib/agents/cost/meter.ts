@@ -22,6 +22,7 @@ import {
   centsToMicros,
   costMicrosFor,
   formatMicrosNzd,
+  isPromotionalModel,
   projectedCostMicros,
   type TokenUsage,
 } from "./pricing";
@@ -86,6 +87,14 @@ export interface RecordedUsage extends TokenUsage {
   readonly model: string;
   readonly note: string | null;
   readonly toolCallId?: string | null;
+  /**
+   * Which backend answered — `gateway`, `anthropic` or `scripted`.
+   *
+   * Recorded rather than assumed: the same model id can be reached two ways,
+   * and a ledger that says `anthropic` against a MiniMax call through the
+   * gateway is a ledger that cannot be reconciled with anybody's invoice.
+   */
+  readonly provider?: string;
 }
 
 export class CostMeter {
@@ -237,13 +246,20 @@ export class CostMeter {
   }): Promise<number> {
     const now = this.clock.now();
     const micros = costMicrosFor(params.usage.model, params.usage, this.fx);
+    // A promotional model bills at zero today and at list price the day the
+    // promotion ends. The meter charges list either way, so the row says which
+    // it was rather than leaving the books unexplainable later.
+    const base = params.usage.note ?? `fx nzd/usd ${this.fx}`;
+    const note = isPromotionalModel(params.usage.model)
+      ? `${base}; charged at list price (this model is free while its promotion runs)`
+      : base;
     await this.store.recordCost({
       agentId: params.agentId,
       runId: params.runId,
       toolCallId: params.usage.toolCallId ?? null,
       incurredAt: now.toISOString(),
       incurredOn: ledgerDate(now, this.timeZone),
-      provider: "anthropic",
+      provider: params.usage.provider ?? "anthropic",
       model: params.usage.model,
       kind: "inference",
       inputTokens: params.usage.inputTokens,
@@ -252,7 +268,7 @@ export class CostMeter {
       cacheWriteTokens: params.usage.cacheWriteTokens,
       costMicros: micros,
       currency: "NZD",
-      note: params.usage.note ?? `fx nzd/usd ${this.fx}`,
+      note,
     });
     await this.store.updateRun(params.runId, {
       addInputTokens: params.usage.inputTokens,

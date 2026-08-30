@@ -412,6 +412,12 @@ export class AgentRuntime {
         stopWhen: stepCountIs(1),
         abortSignal: watcher.signal,
         timeout: MODEL_CALL_TIMEOUT_MS,
+        // Whatever the backend needs and the runtime does not understand. The
+        // gateway carries its routing policy here — including whether a
+        // provider that trains on prompt data may serve this call at all.
+        ...(this.deps.models.providerOptions === undefined
+          ? {}
+          : { providerOptions: this.deps.models.providerOptions }),
         ...(definition.temperature === undefined
           ? {}
           : { temperature: definition.temperature }),
@@ -462,6 +468,7 @@ export class AgentRuntime {
       usage: {
         ...usage,
         model: definition.model,
+        provider: this.deps.models.kind,
         note: `step ${assistantTurns + 1}; provider ${this.deps.models.kind}`,
       },
     });

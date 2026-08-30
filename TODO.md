@@ -17,6 +17,23 @@ Updated 2026-08-27. Honest status, not a summary.
       the dashboard. Neither Vercel token in the environment is valid, so an agent cannot
       do this — the API rejects both with `invalidToken`. Once flipped, drop the
       dual-pushing paragraph from CLAUDE.md.
+- [ ] **An AI Gateway API key.** The eight roles now call real models through the
+      Vercel AI Gateway, and the one thing that cannot be created from here is the
+      key. Mint it at Vercel → AI → API Keys and paste it into the project as
+      `AI_GATEWAY_API_KEY`. Without it nothing breaks — the site, the shop and the
+      admin all work — but every agent run stops at its first model call and the
+      admin carries a banner saying so. **The default models are free only until
+      Sunday 6 September 2026**; after that the roster refuses to call them rather
+      than spending money nobody approved, and resuming means setting
+      `HALF_SOUR_AGENT_MODEL` to a model you have chosen to pay for
+      (`minimax/minimax-m3` is the paid twin, USD 0.30/1.20 per million).
+- [ ] **Decide whether customer prose may train a third party.** The concierge and
+      the trade role send what customers and venues wrote to MiniMax through the
+      gateway. The gateway's catalogue reports `no_training: "none"` for both free
+      model ids, so the gateway filter that would refuse such a provider cannot be turned on while
+      those are the models. `AI_GATEWAY_DISALLOW_PROMPT_TRAINING=1` plus a paid id
+      is the combination that does; it is a decision about customers, not code.
+
 - [ ] **Trademark filing.** HALF SOUR is clear in NZ class 32 (checked via TMview, 27 Aug
       2026 — IPONZ blocks non-browser clients). Two conditions from that search:
       file the **composite** mark (drawn wordmark + device) rather than the plain words,

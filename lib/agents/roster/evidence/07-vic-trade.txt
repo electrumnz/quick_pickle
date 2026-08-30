@@ -95,5 +95,5 @@ WHAT IT REPORTED
    [written under: Brine is a bar ingredient, and the person pouring it is the hero of every sentence we write.]
 
 ------------------------------------------------------------------------------
-COST $0.22 across 4 model calls and 3 tool calls.
+COST $0.01 across 4 model calls and 3 tool calls.
 Run status: succeeded.

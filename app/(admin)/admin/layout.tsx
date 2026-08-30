@@ -10,6 +10,7 @@ import { navCounts } from "@/components/admin/data/search";
 import { operator } from "@/components/admin/data/queries";
 import { Callout } from "@/components/admin/ui/primitives";
 import { DEMO_ADMIN_OPEN } from "@/components/demo/copy";
+import { rosterModelNotice } from "@/lib/agents";
 import { requireAdminAccess } from "@/lib/auth/server";
 
 /**
@@ -27,11 +28,16 @@ import { requireAdminAccess } from "@/lib/auth/server";
  * mode the second answer cannot occur; the call redirects instead, exactly as
  * it always did.
  *
- * The shell's `notice` slot carries what the founder needs to know before she
- * reads the page under it — today, only that this is an open demonstration and
- * nobody is signed in. A `Callout` in that slot rather than a second banner
- * system: the storefront's `DemoBanner` is fixed to the bottom of every page
- * and speaks to a customer, and this speaks to whoever is at the desk.
+ * The shell's `notice` slot carries whatever the founder needs to know before
+ * she reads the page under it. Today that is at most two things: that this is an
+ * open demonstration, and that the models behind the team are on a clock. Both
+ * are `Callout`s in the same slot rather than a second banner system — the
+ * storefront's `DemoBanner` is fixed to the bottom of every page and there is no
+ * reason for a customer to see an operational note about model billing.
+ *
+ * `rosterModelNotice` returns `null` in the ordinary case, so the slot is empty
+ * unless something is actually true. A banner that is always there is a banner
+ * nobody reads.
  */
 
 export const metadata: Metadata = {
@@ -56,6 +62,9 @@ export default async function AdminLayout({
 }) {
   const access = await requireAdminAccess();
   const signedIn = access.kind === "session";
+  // Reads the environment and the clock only — no database, so it still says
+  // what it needs to say on a deployment whose Postgres is unreachable.
+  const modelNotice = rosterModelNotice();
 
   // The shell must render even when the database is unreachable, or a failed
   // connection would take the navigation down with it and leave her with no
@@ -85,6 +94,22 @@ export default async function AdminLayout({
     counts = {};
   }
 
+  // Built as a list so the shell's slot stays genuinely empty when there is
+  // nothing to say: an always-rendered fragment is truthy, and would leave a
+  // margin above every page for a notice that is not there.
+  const notices = [
+    signedIn ? null : (
+      <Callout key="demo" title={DEMO_ADMIN_OPEN.title}>
+        {DEMO_ADMIN_OPEN.body}
+      </Callout>
+    ),
+    modelNotice === null ? null : (
+      <Callout key="models" title={modelNotice.title} tone={modelNotice.tone}>
+        {modelNotice.body}
+      </Callout>
+    ),
+  ].filter((node) => node !== null);
+
   return (
     <>
       <script
@@ -103,10 +128,8 @@ export default async function AdminLayout({
           )
         }
         notice={
-          signedIn ? null : (
-            <Callout title={DEMO_ADMIN_OPEN.title}>
-              {DEMO_ADMIN_OPEN.body}
-            </Callout>
+          notices.length === 0 ? null : (
+            <div className="space-y-3">{notices}</div>
           )
         }
       >

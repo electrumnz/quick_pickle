@@ -71,7 +71,9 @@ deliberate bypass attempts, all refused.
 | `cost/meter.ts`              | Per-run, per-day, per-month and company-wide caps                 |
 | `control/kill-switch.ts`     | The kill switch, the per-agent pause, the in-flight watcher       |
 | `store/`                     | The persistence port, plus in-memory and Supabase implementations |
-| `model/`                     | Anthropic via the AI SDK, and the scripted model used for tests   |
+| `model/provider.ts`          | The three backends: the Vercel AI Gateway, Anthropic, scripted    |
+| `model/roster-models.ts`     | Which model each role runs on, and when the free one stops        |
+| `model/standby.ts`           | The offline model a deployment with no credential falls back to   |
 | `runtime/runtime.ts`         | The runner: one method per unit of work                           |
 | `runtime/replay.ts`          | `replay(runId)` and `renderReplay`                                |
 | `runtime/history.ts`         | Typed run history and `explain(runId)` for the admin              |
@@ -117,9 +119,42 @@ each model call, before the next step begins. Caps are checked _before_ the call
 using a worst-case projection, so a run that would blow its budget stops before
 the money is spent, and again after using the real usage.
 
+## Which model, and for how long
+
+Every role calls its model through the **Vercel AI Gateway**, authenticated by
+`AI_GATEWAY_API_KEY` or, on Vercel, by the `VERCEL_OIDC_TOKEN` the platform mints
+for the deployment. One endpoint in front of every provider is what makes the
+model a role runs on an environment variable rather than a code change.
+
+`model/roster-models.ts` names one model per role, because the roles are not
+alike — Dot drafting a reply a customer will read and Cass comparing two weeks of
+takings do not want the same thing. Five roles are on `minimax/minimax-m3-free`
+and three on `minimax/minimax-m2.7-free`; `HALF_SOUR_AGENT_MODEL` moves all
+eight and `HALF_SOUR_AGENT_MODEL_<SLUG>` moves one.
+
+**Both defaults are free only until Sunday 6 September 2026**, via GMI Cloud.
+That date is one exported constant, `FREE_WINDOW_ENDS`, and the code fails closed
+past it: the gateway resolver refuses a free-tier id, the platform degrades to
+`StandbyModel`, every run halts with the reason on its own row, and the admin
+carries a banner saying which model the team is on, how many days are left, and
+what to set when they run out. An id somebody deliberately chose to pay for is
+never refused, before or after — the cutoff stops an accident, not a decision.
+
+Two consequences worth knowing:
+
+- **Free tokens are still priced.** `cost/pricing.ts` charges both `-free` ids at
+  the list rate of their paid twins. A cap measured against zero is not a cap,
+  and all four ceilings are `tokens x price`.
+- **Prompt training is off by default because it has to be.** The gateway can
+  refuse to route to a provider that trains on prompt data
+  (`AI_GATEWAY_DISALLOW_PROMPT_TRAINING=1`) or retains it
+  (`AI_GATEWAY_ZERO_DATA_RETENTION=1`), but the gateway catalogue reports
+  `no_training: "none"` for both free ids, so turning either on while they are
+  the model leaves nothing able to answer. Set them together with a paid id.
+
 ## Testing without a key
 
-`ANTHROPIC_API_KEY` is not required. `ScriptedModel` implements the AI SDK's
+No credential is required. `ScriptedModel` implements the AI SDK's
 `LanguageModelV4` interface directly and replays a fixed script. Everything below
 the model — the registry, the gate, the meter, the control plane, persistence —
 is the real code in both cases.

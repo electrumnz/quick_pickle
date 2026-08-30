@@ -22,6 +22,7 @@ import {
   createAgentRuntime,
   createScriptedResolver,
   type AgentPlatform,
+  type ModelResolver,
   type ApprovalRecord,
   type BrandRuleRecord,
   type RunSummary,
@@ -113,6 +114,14 @@ export async function openRun(
   harness: RosterHarness,
   role: RosterRole,
   goal = role.goal,
+  /**
+   * The backend behind the role. Defaults to the deterministic planner, which
+   * is what every committed piece of evidence uses. A live run passes a gateway
+   * resolver here and gets the identical runtime, tools, gate and meter — which
+   * is the point: the safety properties belong to the runtime, so proving them
+   * against a real model must not need a second code path.
+   */
+  models?: ModelResolver,
 ): Promise<OpenedRun> {
   const clock = new FixedClock(new Date("2026-08-31T08:00:00.000Z"));
   const store = new InMemoryAgentStore(clock);
@@ -123,7 +132,7 @@ export async function openRun(
   const platform = createAgentRuntime({
     store,
     registry: tools.registry,
-    models: createScriptedResolver(model),
+    models: models ?? createScriptedResolver(model),
     clock,
     logger: new MemoryLogger(),
     controlPollIntervalMs: 5,
@@ -173,6 +182,8 @@ export async function runRole(
     readonly policy?: DecisionPolicy;
     readonly startAt?: string;
     readonly bannedWords?: readonly string[];
+    /** See {@link openRun}. Defaults to the deterministic planner. */
+    readonly models?: ModelResolver;
   } = {},
 ): Promise<RoleRun> {
   const clock = new FixedClock(
@@ -193,7 +204,7 @@ export async function runRole(
   const platform = createAgentRuntime({
     store,
     registry: tools.registry,
-    models: createScriptedResolver(model),
+    models: options.models ?? createScriptedResolver(model),
     clock,
     logger,
     controlPollIntervalMs: 5,

@@ -31,7 +31,7 @@ export const agentRunFunction = inngest.createFunction(
     ],
   },
   async ({ event, step }) => {
-    const platform = getAgentPlatform();
+    const platform = await getAgentPlatform();
     const durable: DurableStep = {
       run: async (id: string, fn: () => Promise<unknown>) => step.run(id, fn),
       waitForEvent: async (id: string, options: WaitForEventOptions) =>
