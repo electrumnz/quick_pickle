@@ -113,7 +113,9 @@ const nextConfig: NextConfig = {
    * Unset NEXT_DIST_DIR and this is not set either, so the ordinary build and
    * every editor still use tsconfig.json exactly as before.
    */
-  ...(scratchTsconfig === null ? {} : { typescript: { tsconfigPath: scratchTsconfig } }),
+  ...(scratchTsconfig === null
+    ? {}
+    : { typescript: { tsconfigPath: scratchTsconfig } }),
 
   images: {
     /**
