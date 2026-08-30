@@ -189,7 +189,10 @@ describe("a real run whose inbound text carries an injection", () => {
          where id = (
            select id from public.reviews
             where reply_body is null and rating >= 4
-            order by created_at limit 1
+            -- Ordered on the seed's own text, not on created_at or id: both of
+            -- those are fresh per database, and evidence that changes when
+            -- nothing changed is evidence nobody reads.
+            order by author_name, title limit 1
          );
       `);
 
@@ -292,6 +295,26 @@ function boundaryOf(framedResult: string): string {
   return typeof value === "string" ? value : "";
 }
 
+/**
+ * Stable placeholders for anything with a fresh uuid in it.
+ *
+ * Same rule the roster's evidence generator follows: re-running produces the
+ * same file unless the behaviour changed.
+ */
+function stabilise(body: string): string {
+  const seen = new Map<string, string>();
+  return body.replace(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+    (match) => {
+      const known = seen.get(match);
+      if (known !== undefined) return known;
+      const label = `id#${String(seen.size + 1)}`;
+      seen.set(match, label);
+      return label;
+    },
+  );
+}
+
 /** Write the transcript extract the founder would read. */
 function writeEvidence(evidence: Evidence): void {
   const path = resolve(EVIDENCE_DIR, "01-injection-framed.txt");
@@ -360,5 +383,5 @@ function writeEvidence(evidence: Evidence): void {
     "",
   ].join("\n");
 
-  writeFileSync(path, `${body.trimEnd()}\n`, "utf8");
+  writeFileSync(path, `${stabilise(body).trimEnd()}\n`, "utf8");
 }
