@@ -52,7 +52,9 @@
     ".scratch/next-copyaudit/types/**/*.ts",
     ".scratch/next-copyaudit/dev/types/**/*.ts",
     ".scratch/next-visual/types/**/*.ts",
-    ".scratch/next-visual/dev/types/**/*.ts"
+    ".scratch/next-visual/dev/types/**/*.ts",
+    ".scratch/next-hero/types/**/*.ts",
+    ".scratch/next-hero/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules", ".next", "out"]
 }
