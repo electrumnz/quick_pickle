@@ -62,6 +62,42 @@ Chromium build. Do not "upgrade" these without checking why they are held back.
 - No `any`, no `@ts-ignore`, no unjustified `eslint-disable`.
 - Commerce is behind `lib/commerce/provider.ts`. A conformance suite written once runs
   against both the mock and Shopify providers; `COMMERCE_PROVIDER` switches them.
+- **Take a private build directory.** Two `next build`s sharing `.next` do not fail
+  loudly — they interleave, and a running `next start` then serves HTML pointing at CSS
+  the other build deleted, which looks like a styling bug and is not one. Use
+  `NEXT_DIST_DIR=.scratch/next-<something>`. It also gets its own gitignored
+  `tsconfig.scratch.json`, so private builds cannot dirty the repo's.
+- **Next 16 allows one `next dev` per directory.** A crashed run leaves the server
+  holding the lock and every later run in that directory fails with "Another next dev
+  server is already running" — kill it by the PID the message gives you. A stale server
+  on port 3000 caused three wrong diagnoses in one session, because Playwright's
+  `reuseExistingServer` picks it up silently.
+- **Never `pkill -f` on a broad pattern.** It has killed servers belonging to other work,
+  and once killed the shell that ran it, because the pattern matched its own command
+  line. Kill by PID.
+
+## How it runs today
+
+`HALF_SOUR_DEMO=1` is set in production. The whole deployment is served from a PGlite
+image compiled into the build — **no Supabase, no database credential**. `SUPABASE_DB_URL`
+is answered by `pglite://half-sour-demo`, which nothing dials.
+
+Demo mode is opt-in and one variable. Unset it and everything reverts exactly: the proxy
+fails closed, `/admin` redirects to `/login`, and argon2id, the throttle, the lockout and
+the sealed cookie all behave as they always did. Tests assert both directions.
+
+Two things it changes, deliberately, because every row in that database is invented:
+
+- **The admin is open** — no password to look, and none to ask the team. Gated on
+  `demoOpensAdmin()`, not bare `isDemoMode()`: the latter is also true when
+  `HALF_SOUR_DEMO=1` sits beside a real `SUPABASE_DB_URL`, and Server Actions are
+  reachable by POST without rendering a page. Writes with nobody signed in are stamped
+  `actor_type = 'system'` against a row that says what it is, never against the founder.
+- **The approval gate still holds.** Deciding needs the password.
+
+The agents run on the Vercel AI Gateway via `AI_GATEWAY_API_KEY`. A deployment fixes its
+environment at build time, so a variable added after a deploy does not reach it until the
+next one — redeploy rather than debugging the code.
 
 ## Deploying
 

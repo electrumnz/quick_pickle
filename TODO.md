@@ -75,6 +75,14 @@ The order below is the order to do them in.
 
 ## Repo hygiene worth fixing
 
+- [x] **Private builds no longer scribble on `tsconfig.json`.** `next build` appended
+      `<distDir>/types/**` to `include` with a literal string check, so a wildcard could
+      not pre-satisfy it and every agent's private `NEXT_DIST_DIR` left another entry —
+      nineteen at the worst. `next.config.ts` now hands a private build its own
+      gitignored `tsconfig.scratch.json`. An ordinary `.next` build still REFORMATS
+      `tsconfig.json` (whitespace, no new entries); that is Next's own behaviour and is
+      left alone.
+
 - [ ] **Evidence files churn on every test run.** `lib/agents/evidence/*.txt`,
       `lib/auth/evidence/*.txt` and `components/strategy/evidence/*.txt` embed a
       wall-clock timestamp and a fresh run UUID, so running the suite dirties the
@@ -153,25 +161,93 @@ The order below is the order to do them in.
       server component with no client JavaScript.
       `components/home/routes.ts` filters out the eight nav destinations whose routes do
       not exist yet rather than linking to 404s.
+- [x] Storefront, live and audited — homepage, shop, four product pages, recipes,
+      wholesale, delivery. The hero band spans 67% of a 1920x900 window and 91% at
+      1920x1080, at a magnification capped below what the founder called too zoomed;
+      full bleed at 768 and at 1280x900. CLS 0.000.
+- [x] Demo mode — `HALF_SOUR_DEMO=1` serves the whole deployment from a PGlite image
+      compiled into the build. No Supabase, no credential. Opt-in: unset, nothing changes.
+- [x] Simulated checkout — `/checkout/mock/[id]`. A demo visitor completes a purchase and
+      the order appears in `/admin/orders`. It cannot be mistaken for a payment page, and
+      that is asserted structurally: no field a card could go in, no `cc-*` autocomplete.
+      Shopify's hosted checkout is untouched behind two independent locks.
+- [x] Agent roster on the Vercel AI Gateway — eight roles on `minimax-m3-free` and
+      `minimax-m2.7-free`, free until 6 September 2026. After that the roster refuses to
+      call them rather than spending money nobody approved, and says so on every run.
+- [x] Ask the team — a capability-routed chat at `/admin/chat` with a floating dock, plus
+      `hand_off` so one agent can ask another. The approval gate was attacked nine ways
+      and refused every one, including the founder asking for the bypass directly with a
+      model scripted to comply.
+- [x] Social calendar — `/admin/social/calendar`, month and week over `social_posts`, with
+      the gaps named in words. It uncovered a live bug: scheduling parsed the field with
+      `Date.parse` against a UTC server, so 5pm stored as 5am next morning in Auckland —
+      every post ever scheduled was out by 12 or 13 hours. Fixed, with both DST mornings
+      handled explicitly.
+- [x] Go live — `/admin/go-live`, the founder's remaining list with a copy button per task.
+- [x] The overlay trap — clicking outside the chat dock, the command palette or MobileNav
+      never dismissed them, because the backdrop covered the wrapper the handler was on.
+      Escape saved a laptop; a phone has no Escape key, so the page would not scroll and
+      no link answered until a reload. Fixed in all three, with a test that fails 4
+      against the old code.
 
 ## In progress
 
-- [ ] Content — 20+ cocktail and food recipes, supplier stories, wholesale front door
-- [ ] Commerce adapter — conformance suite runs against both providers
-- [ ] Agent runtime — durable runs, cost caps, replayable transcripts, approval gate
+Nothing. The tree has no uncommitted changes and `main` is deployed.
 
 ## Not started
 
-Product and collection pages · the funnel (quiz, order bump, upsell, abandoned cart) ·
-motion system and page transitions · the admin shell and its nine destinations ·
-orders and delivery · stock, batches and recipes · money and customers · brand hub ·
-social approvals · the agent roster (B2C and B2B are separate agents — see M38) ·
-the wholesale rail on Shopify draft orders · onboarding · performance and a11y pass
+- **The funnel** — quiz, order bump, upsell, abandoned cart. None of it exists.
+- **Onboarding** — there is no first-run path; the admin assumes the business is
+  already there.
+- **The wholesale rail on Shopify draft orders** — `/wholesale` is a front door that
+  captures interest; it does not raise a draft order.
+- **Drag-and-drop rescheduling** on the social calendar. Deliberately not built: a form
+  works from a keyboard and with scripting off. An addition, not a replacement.
+- **Quarter view** on the calendar, and a "fill this gap" hand-off to the social agent.
 
 ## Known issues
 
-- The copy scanner's TH-02 rule was over-broad, flagging "cured" — correct food
-  vocabulary here. Narrowing was requested; verify before trusting a clean scan.
-- The brand guide header still lists three products; WILD was added afterwards.
+- **The copy scanner is not actually enforced anywhere automatic.** `CLAUDE.md` calls it
+  machine-enforced and gives the command, but `.github/workflows/ci.yml` does not run it
+  and no test invokes it — it is a manual gate that depends on somebody remembering. It
+  passed over `app components content lib` at the last run (480 files, 0 findings), but
+  that is a fact about today, not a guarantee about tomorrow. Wiring it into CI needs a
+  scope decision first: `brand/brand-guide.md` carries 12 RESTRICTED findings that are
+  the brand's own vocabulary, so a naive `audit-copy.mjs .` would fail on day one.
+- **`CLAUDE.md` and `TODO.md` themselves do not pass the scanner**, and should not be
+  expected to: both enumerate the forbidden terms in order to forbid them, the same
+  meta-document case as `legal/COPY-RULES.md` and `lib/assets/README.md`. Neither is in
+  the scanned scope today. If the scan is ever widened to the repository root, register
+  them rather than rewording them.
+
+- **The brand guide still lists three products.** `brand/brand-guide.md` names HOUSE,
+  DIRTY and SMOKE in both its intro (lines 171-176) and its range table (417-419); No 04
+  WILD is in neither, though it is a live SKU at $26. This is what agents read for voice,
+  so WILD has no brand copy to write from — and it is the bottle whose copy carries the
+  most claim risk, because kawakawa has strong rongoa associations. Writing it needs a
+  human decision about positioning, not a patch.
+- **The demo database is per-process.** `lib/demo/database.ts` memoises PGlite on
+  `globalThis`, so every serverless instance opens its own copy of the compiled-in image.
+  Measured against production: 10 sequential add-to-cart requests all saw the cart; 14
+  parallel requests with the same cookie saw it twice and lost it twelve times. Reads
+  agree because every instance opens the same image; writes do not. One visitor at a time
+  can complete a purchase. Fixing it means a real `SUPABASE_DB_URL`, which by design
+  closes the open admin (`demoOpensAdmin` requires the compiled-in image) — a deliberate
+  decision, not a patch.
+- **Nothing resumes a parked approval.** Approving stamps the row, but the halted run
+  only picks up again under Inngest's `waitForEvent`, which no deployment wires. The
+  admin no longer claims otherwise.
+- **`queue_social_post` never creates a `social_posts` row.** It writes to the outbox
+  (`lib/agents/roster/outbox.ts`); nothing anywhere inserts into `public.social_posts`.
+  So the social agent raises an approval and cannot put a draft on the calendar.
+- **`tests/strategy/storefront-audit.test.ts` fails against an unstocked database.** It
+  starts its own `next dev` and audits the running storefront, so with a local Postgres
+  whose products have zero inventory the pages render their sold-out state and the buy
+  control it looks for is absent. Three checks fail for that reason and not for any
+  defect. It passes in demo mode, which is what production runs.
+- **`agents.schedule_cron` is decorative** — nothing reads it, on any deployment.
+- **`STATE.checkoutNotLive` is unreachable.** `checkoutKind()` only returns `unavailable`
+  when the provider throws, and that same condition makes the catalogue degraded, which
+  wins first. Correct defence; nothing exercises it.
 - Vercel tracks `main`, and `vercel.json` disables deployments for the working branch,
   so only a push to `main` reaches production.
