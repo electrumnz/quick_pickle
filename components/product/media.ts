@@ -75,13 +75,33 @@ export const BOTTLE_SHOTS: Readonly<Record<BrineId, Shot>> = {
   },
 };
 
-/** The four bottles in one frame, cut from the same four hero shots. */
+/**
+ * The four bottles in one frame, cut from the same four hero frames.
+ *
+ * Two versions of one picture live in public/media, and the difference is the
+ * frame, not the photograph:
+ *
+ *   range.jpg / range.mp4 / range.webm   the plate as composed, 3:2. This is
+ *       the range shot itself, and what components/home/evidence/seek-bench.mjs
+ *       measures.
+ *   range-hero.*                          the same plate with its dark ground
+ *       extended sideways to 2.4:1. The homepage's art row is close to 3:1, and
+ *       a 3:2 picture contained in it renders small enough that the four labels
+ *       stop being readable — which is the only reason to put photography there
+ *       at all. Nothing is added to the extended area but the background the
+ *       shot already had, so there is no new bottle, prop or claim in it, and
+ *       the wider cut is the SMALLER file: near-black compresses to nothing.
+ *
+ * The hero clip is the 3:2 clip composited back into the wide frame over a
+ * still of its own first frame, so the moving part is the photograph and the
+ * extension stays put — which is also what a locked-off camera would do.
+ */
 export const RANGE_SHOT: Shot = {
-  still: "/media/range/range.jpg",
+  still: "/media/range/range-hero.jpg",
   width: 1600,
-  height: 1067,
+  height: 667,
   alt: "No. 01 HOUSE, No. 02 DIRTY, No. 03 SMOKE and No. 04 WILD, 500 ml each, on a dark slate bar top.",
-  film: film("range"),
+  film: film("range-hero"),
 };
 
 export function bottleShot(id: BrineId): Shot {
