@@ -91,4 +91,6 @@ export const UNAUDITED_ROUTES: Readonly<Record<string, string>> = {
     "One agent's detail page, rendered by the same components as /admin/team, which is audited. Auditing it needs a live agent slug and measures the same markup twice.",
   "/admin/assets/[id]":
     "One asset's detail page, rendered by the same components as /admin/assets, which is audited. It needs a seeded asset id to reach.",
+  "/checkout/mock/[id]":
+    "The simulated checkout. It is audited — the form, a refused submission and the receipt are all in the `a11y buy states` block of e2e/a11y.spec.ts — but it cannot be audited from THIS list: the path is one cart's id and the query string is that cart's bearer token, so it only exists after a bottle has been put in a cart, and no static path can carry it.",
 };

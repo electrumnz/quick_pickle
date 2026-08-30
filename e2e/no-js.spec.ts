@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { LIST, WHOLESALE } from "@/components/site/copy";
+import { CHECKOUT } from "@/components/checkout/copy";
 import { STATE } from "@/components/product/copy";
 
 import { PUBLIC_ROUTES } from "./support/routes";
@@ -59,6 +60,65 @@ test.describe("no JavaScript", () => {
     await expect(page.getByText(STATE.added)).toBeVisible();
     // The badge is server-rendered from the cart the provider holds.
     await expect(page.getByText(/Cart 1/)).toBeVisible();
+  });
+
+  /**
+   * The whole purchase, with nothing running.
+   *
+   * This is the claim the simulated checkout makes about itself — a plain
+   * `<form>` posting to a Server Action, answered by a redirect — and it is the
+   * one place on the site where "it degrades" is worth more than a comment: a
+   * checkout that needs a bundle is a checkout that fails for the person whose
+   * bundle did not arrive, at the exact moment they were about to order.
+   *
+   * Skipped on a provider with a real hosted checkout, where there is no button
+   * of ours to press and the next screen is somebody else's.
+   */
+  test("a bottle can be bought through the simulated checkout", async ({
+    page,
+  }) => {
+    await page.goto("/products/no-01-house");
+    await Promise.all([
+      page.waitForURL(/added=no-01-house/),
+      page
+        .getByRole("button", { name: /Add to cart/ })
+        .first()
+        .click({ force: true }),
+    ]);
+
+    const checkout = page.getByRole("button", { name: STATE.checkout });
+    test.skip(
+      (await checkout.count()) === 0,
+      "this provider offers no simulated checkout",
+    );
+
+    await Promise.all([
+      page.waitForURL(/\/checkout\/mock\/[^/]+\?/),
+      checkout.click({ force: true }),
+    ]);
+    await expect(
+      page.getByRole("heading", { level: 1, name: CHECKOUT.heading }),
+    ).toBeVisible();
+
+    await page.getByLabel(CHECKOUT.emailLabel).fill("no-js@half-sour.test");
+    await page.getByLabel(CHECKOUT.firstNameLabel).fill("Ngaire");
+    await page.getByLabel(CHECKOUT.lastNameLabel).fill("Hollis");
+    await page.getByLabel(CHECKOUT.line1Label).fill("18 Wallace Street");
+    await page.getByLabel(CHECKOUT.cityLabel).fill("Wellington");
+    await page.getByLabel(CHECKOUT.postcodeLabel).fill("6021");
+
+    await Promise.all([
+      page.waitForURL(/placed=/),
+      page
+        .getByRole("button", { name: CHECKOUT.submit })
+        .click({ force: true }),
+    ]);
+
+    await expect(
+      page.getByRole("heading", { level: 1, name: CHECKOUT.placedHeading }),
+    ).toBeVisible();
+    // Server-rendered from the order the provider wrote, not from the form.
+    await expect(page.locator("#order-number")).not.toBeEmpty();
   });
 
   test("the menu below 768 opens without script", async ({ page }) => {

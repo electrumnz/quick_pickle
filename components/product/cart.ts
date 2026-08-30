@@ -69,23 +69,38 @@ export async function currentCart(): Promise<Cart | null> {
 }
 
 /**
- * Whether pressing "checkout" leads anywhere.
+ * What is on the other side of the checkout button, in the provider's own words.
  *
- * `simulatesCheckout` is the provider's own statement that it stands in for a
- * hosted checkout rather than being one: it is true on the mock and false on
- * Shopify. The mock's `checkoutUrl` therefore points at a simulator route that
- * the deployed app does not serve, and sending a buyer to it would end the
- * purchase on a 404.
+ * Three answers, and the storefront says which one it has rather than showing
+ * the same button for all of them:
  *
- * So the storefront asks first and says so plainly. This is not a feature flag
- * to be flipped by hand — it flips itself the moment `COMMERCE_PROVIDER` is set
- * to `shopify` and the tokens exist. See TODO.md, "Shopify API tokens".
+ *   hosted       a real hosted checkout on another origin. Shopify's, once it
+ *                is implemented and holds tokens. GST, payment, fraud and
+ *                shipping rates are its business; this application's last act
+ *                is a redirect to `cart.checkoutUrl`.
+ *   simulated    the provider stands in for that hosted checkout, and
+ *                `app/(site)/checkout/mock/[id]` is the route it advertises.
+ *                It records a real order and moves no money, and every screen
+ *                on the way says so.
+ *   unavailable  no provider could be built at all, so there is nothing to
+ *                press. The storefront withdraws the button and states why.
+ *
+ * `simulatesCheckout` is the provider's own capability flag, so this is not a
+ * feature switch to be flipped by hand: it changes the moment
+ * `COMMERCE_PROVIDER` changes. See TODO.md, "Shopify API tokens".
+ *
+ * The route this names is served ONLY for `simulated`. A provider with a real
+ * hosted checkout never reaches it — the route 404s, and the Server Action
+ * behind it refuses — because a page of ours standing in for a checkout that
+ * really takes money is the one thing this seam must never allow.
  */
-export function checkoutIsLive(): boolean {
+export type CheckoutKind = "hosted" | "simulated" | "unavailable";
+
+export function checkoutKind(): CheckoutKind {
   try {
-    return provider().capabilities.simulatesCheckout === false;
+    return provider().capabilities.simulatesCheckout ? "simulated" : "hosted";
   } catch {
-    return false;
+    return "unavailable";
   }
 }
 

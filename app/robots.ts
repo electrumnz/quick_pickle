@@ -24,7 +24,11 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/admin/", "/api/"],
+        // `/checkout` is the simulated checkout the mock provider advertises.
+        // It is a 404 on a Shopify deployment, and where it does exist its URL
+        // carries a cart's bearer token in the query string — neither is
+        // anything a crawler should be following or an index should be holding.
+        disallow: ["/admin", "/admin/", "/api/", "/checkout", "/checkout/"],
       },
     ],
     sitemap: `${base}/sitemap.xml`,

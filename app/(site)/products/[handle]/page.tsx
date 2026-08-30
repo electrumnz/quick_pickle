@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { checkoutIsLive, currentCart } from "@/components/product/cart";
+import { checkoutKind, currentCart } from "@/components/product/cart";
 import { loadCatalogue, loadEntry } from "@/components/product/catalogue";
 import {
   ADDED_PARAM,
@@ -114,7 +114,7 @@ export default async function ProductPage({
         cart={cart}
         added={added}
         problem={problem ?? null}
-        checkoutLive={checkoutIsLive()}
+        checkout={checkoutKind()}
       />
     </>
   );

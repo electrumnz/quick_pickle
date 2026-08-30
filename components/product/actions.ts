@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 
+import { checkoutPathFromUrl } from "@/components/checkout/link";
 import { CommerceError } from "@/lib/commerce";
 
 import { provider, readCartId, writeCartId } from "./cart";
@@ -143,6 +144,21 @@ export async function addToCart(form: FormData): Promise<void> {
  * The last thing this application does is redirect. GST, payment, fraud and
  * shipping rates belong to the hosted checkout, and there is no payment type
  * anywhere in this codebase — see the note at the top of `lib/commerce/types`.
+ *
+ * ## Absolute for Shopify, a path for our own
+ *
+ * `beginCheckout` hands back an absolute URL, because on Shopify it is a URL on
+ * somebody else's origin and that is the whole point. The simulating providers
+ * build theirs from `NEXT_PUBLIC_SITE_URL`, and an absolute URL is the wrong
+ * thing to redirect to when the destination is this very server: a deployment
+ * whose `NEXT_PUBLIC_SITE_URL` names another host — a preview, a local server
+ * on a different port, a domain that has moved — would send a buyer holding a
+ * live cart off to a machine that has never heard of it.
+ *
+ * So a checkout URL this app recognises as its own simulated route is reduced
+ * to a same-origin path, and anything else is followed exactly as given.
+ * `checkoutPathFromUrl` returns null for a hosted checkout, so the Shopify
+ * handoff is byte-for-byte what it was.
  */
 export async function goToCheckout(form: FormData): Promise<void> {
   const handle = readString(form, "handle");
@@ -156,7 +172,8 @@ export async function goToCheckout(form: FormData): Promise<void> {
       outcome = "cart-gone";
     } else {
       const handoff = await provider().beginCheckout(cartId);
-      destination = handoff.checkoutUrl;
+      destination =
+        checkoutPathFromUrl(handoff.checkoutUrl) ?? handoff.checkoutUrl;
     }
   } catch (error) {
     outcome = outcomeFor(error);

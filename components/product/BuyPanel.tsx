@@ -8,6 +8,7 @@ import { recipeHref } from "@/components/site/recipes";
 import { formatMoney } from "@/lib/commerce";
 
 import { addToCart, goToCheckout } from "./actions";
+import type { CheckoutKind } from "./cart";
 import { formatPrice, type CatalogueEntry } from "./catalogue";
 import { ADDED, PRODUCT, SHOP_PATH, STATE } from "./copy";
 import { AvailabilityChip, PriceBlock } from "./bits";
@@ -183,13 +184,17 @@ export function AddedStrip({
   cart,
   handle,
   quantity,
-  checkoutLive,
+  checkout,
 }: {
   cart: Cart | null;
   handle: string;
   quantity: number;
-  /** False while the store has no hosted checkout behind it. Stated, not hidden. */
-  checkoutLive: boolean;
+  /**
+   * What is on the other side of the button — see `checkoutKind` in `./cart`.
+   * A simulated checkout gets the button AND a sentence saying what it is; a
+   * provider with nothing behind it gets neither, and the reason instead.
+   */
+  checkout: CheckoutKind;
 }) {
   const line = cart?.lines.find(
     (candidate) => candidate.merchandise.product.handle === handle,
@@ -221,21 +226,7 @@ export function AddedStrip({
         </div>
       )}
 
-      {checkoutLive ? (
-        <form action={goToCheckout}>
-          <input type="hidden" name="handle" value={handle} />
-          <button
-            type="submit"
-            className={cx(
-              styles.button,
-              styles.buttonSecondary,
-              styles.buttonBlock,
-            )}
-          >
-            {STATE.checkout}
-          </button>
-        </form>
-      ) : (
+      {checkout === "unavailable" ? (
         <>
           <p
             className={cx(
@@ -249,6 +240,27 @@ export function AddedStrip({
           <p className="text-caption text-primary">
             {STATE.checkoutNotLiveNote}
           </p>
+        </>
+      ) : (
+        <>
+          <form action={goToCheckout}>
+            <input type="hidden" name="handle" value={handle} />
+            <button
+              type="submit"
+              className={cx(
+                styles.button,
+                styles.buttonSecondary,
+                styles.buttonBlock,
+              )}
+            >
+              {STATE.checkout}
+            </button>
+          </form>
+          {checkout === "simulated" ? (
+            <p className="text-caption text-primary">
+              {STATE.checkoutSimulatedNote}
+            </p>
+          ) : null}
         </>
       )}
 
@@ -360,7 +372,7 @@ export function BuyPanel({
   cart,
   added,
   problem,
-  checkoutLive,
+  checkout,
 }: {
   entry: CatalogueEntry;
   returnTo: string;
@@ -368,7 +380,7 @@ export function BuyPanel({
   cart: Cart | null;
   added: number | null;
   problem: string | null;
-  checkoutLive: boolean;
+  checkout: CheckoutKind;
 }) {
   return (
     <div className="gap-stack flex flex-col">
@@ -400,7 +412,7 @@ export function BuyPanel({
           cart={cart}
           handle={entry.handle}
           quantity={added}
-          checkoutLive={checkoutLive}
+          checkout={checkout}
         />
       ) : (
         <BuyForm entry={entry} returnTo={returnTo} />

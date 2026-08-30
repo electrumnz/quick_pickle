@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Cart } from "@/lib/commerce";
 
 import { AddedStrip, BuyForm, DeliveryLine } from "./BuyPanel";
+import type { CheckoutKind } from "./cart";
 import { BottlePlate } from "./BottlePlate";
 import {
   formatPrice,
@@ -224,13 +225,13 @@ export function ShopView({
   cart,
   added,
   problem,
-  checkoutLive,
+  checkout,
 }: {
   catalogue: Catalogue;
   cart: Cart | null;
   added: { readonly handle: string; readonly quantity: number } | null;
   problem: string | null;
-  checkoutLive: boolean;
+  checkout: CheckoutKind;
 }) {
   const bottles = catalogue.entries.filter((entry) => entry.kind !== "set");
   const set = catalogue.entries.find((entry) => entry.kind === "set") ?? null;
@@ -274,7 +275,7 @@ export function ShopView({
                   cart={cart}
                   handle={added.handle}
                   quantity={added.quantity}
-                  checkoutLive={checkoutLive}
+                  checkout={checkout}
                 />
               </div>
             </div>

@@ -38,3 +38,23 @@ export function deliveryCharge(): Money {
 export function deliveryFreeFrom(): Money {
   return money(NZ_DELIVERY_FREE_FROM_CENTS);
 }
+
+/**
+ * What this cart's parcel costs, by the rule the page publishes.
+ *
+ * The simulated checkout shows a buyer a line for delivery before it asks them
+ * to place the order, and this is where that figure comes from — the
+ * storefront's own rate card, not the provider's internals. The provider still
+ * computes the charge it actually writes onto the order
+ * (`defaultShippingCents` in `lib/commerce/mock/pricing.ts`, applied inside the
+ * transaction that converts the cart), and `tests/site/delivery-rate.test.ts`
+ * is the join that fails if the two ever say different things — including the
+ * boundary, which is "at or above the threshold" and not "over" it.
+ *
+ * Integer minor units in, integer minor units out. Nothing here divides.
+ */
+export function deliveryChargeFor(merchandiseTotal: Money): Money {
+  return merchandiseTotal.amountInMinorUnits >= NZ_DELIVERY_FREE_FROM_CENTS
+    ? money(0, merchandiseTotal.currencyCode)
+    : money(NZ_DELIVERY_CENTS, merchandiseTotal.currencyCode);
+}

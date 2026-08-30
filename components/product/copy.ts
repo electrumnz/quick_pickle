@@ -216,6 +216,18 @@ export const STATE = {
   checkoutNotLive: "Checkout is not connected",
   checkoutNotLiveNote:
     "The cart is real and the total above is what the catalogue says. Payment is Shopify's hosted checkout, and this store is not connected to it yet, so there is nothing behind this button to send you to.",
+
+  /**
+   * Under the checkout button when the provider stands in for a hosted
+   * checkout rather than being one.
+   *
+   * Said HERE, before the button is pressed, rather than only on the page it
+   * leads to. Somebody who has just put a bottle in a cart is entitled to know
+   * what the next screen is before they go to it, and "checkout" is the one
+   * word on a shop that carries an assumption about money.
+   */
+  checkoutSimulatedNote:
+    "This shop is a demonstration. That button opens a simulated checkout: no card is asked for, nothing is charged, and no money moves. It records an invented order so you can watch it arrive in the admin.",
   keepShopping: "Keep shopping",
   quantity: "Quantity",
   size: "Size",

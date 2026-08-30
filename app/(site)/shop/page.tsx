@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { checkoutIsLive, currentCart } from "@/components/product/cart";
+import { checkoutKind, currentCart } from "@/components/product/cart";
 import { loadCatalogue } from "@/components/product/catalogue";
 import {
   ADDED_PARAM,
@@ -68,7 +68,7 @@ export default async function ShopPage({
         cart={cart}
         added={added}
         problem={first(params[ERROR_PARAM])}
-        checkoutLive={checkoutIsLive()}
+        checkout={checkoutKind()}
       />
     </>
   );

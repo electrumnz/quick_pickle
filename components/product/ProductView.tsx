@@ -4,6 +4,7 @@ import type { Cart } from "@/lib/commerce";
 
 import { AvailabilityChip, Eyebrow } from "./bits";
 import { BuyForm, BuyPanel } from "./BuyPanel";
+import type { CheckoutKind } from "./cart";
 import {
   formatPrice,
   inWords,
@@ -433,7 +434,7 @@ export function ProductView({
   cart,
   added,
   problem,
-  checkoutLive,
+  checkout,
 }: {
   entry: CatalogueEntry;
   /** The other bottles in the range, in range order. */
@@ -444,7 +445,7 @@ export function ProductView({
   cart: Cart | null;
   added: number | null;
   problem: string | null;
-  checkoutLive: boolean;
+  checkout: CheckoutKind;
 }) {
   const isSet = entry.kind === "set";
   const plate = isSet ? "set" : (entry.brine?.id ?? "plain");
@@ -479,7 +480,7 @@ export function ProductView({
                 cart={cart}
                 added={added}
                 problem={problem}
-                checkoutLive={checkoutLive}
+                checkout={checkout}
               />
             </div>
           </div>
