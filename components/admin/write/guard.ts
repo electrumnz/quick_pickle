@@ -270,14 +270,23 @@ export function readDateTime(formData: FormData, name: string): string {
  * Where to send her back to.
  *
  * Only a path inside the admin is accepted, so a crafted `back` field cannot
- * turn one of these forms into an open redirect.
+ * turn one of these forms into an open redirect. It must begin `/admin`, which
+ * also rules out the protocol-relative `//evil.example` a bare leading slash
+ * would otherwise allow.
+ *
+ * A query string is permitted because some admin pages keep their whole state
+ * in one — the social calendar is at `?view=month&on=2026-09-01` — and landing
+ * her back on the default month after she moved a post is losing her place.
+ * The characters allowed in it are the ones a query is made of and nothing
+ * else: no backslash, no colon, no angle bracket.
  */
+const RETURN_PATH =
+  /^\/admin(?:\/[A-Za-z0-9\-_/]*)?(?:\?[A-Za-z0-9\-_=&%.+]*)?(?:#[A-Za-z0-9\-_]+)?$/;
+
 export function readReturnPath(formData: FormData, fallback: string): string {
   const value = formData.get("back");
   if (typeof value !== "string") return fallback;
-  return /^\/admin(?:\/[A-Za-z0-9\-_/]*)?(?:#[A-Za-z0-9\-_]+)?$/.test(value)
-    ? value
-    : fallback;
+  return RETURN_PATH.test(value) ? value : fallback;
 }
 
 /* ------------------------------------------------------- refusing in words */
@@ -351,6 +360,10 @@ export const FLASH_SENTENCES = {
     "That post has already gone out, so it cannot be changed from here.",
   "schedule-in-the-past":
     "That is a time that has already been. Pick one that is still ahead.",
+  // The one morning a year the clocks go forward, 2am to 3am does not happen
+  // in New Zealand at all. Storing it would quietly move the post an hour.
+  "schedule-no-such-time":
+    "There is no such time in New Zealand that morning — the clocks go forward and that hour is skipped. Pick a time before 2am or after 3am.",
   // Starting an agent by hand. The page beside the button says all of this in
   // more words and with the specifics — which model, which limit — but a
   // submission that somehow reaches the server anyway still comes back saying

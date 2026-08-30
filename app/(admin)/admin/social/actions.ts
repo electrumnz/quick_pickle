@@ -2,7 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 
-import { adminSql, text, textOrNull } from "@/components/admin/data/db";
+import {
+  adminSql,
+  isoOrNull,
+  text,
+  textOrNull,
+} from "@/components/admin/data/db";
+import { dayAndTime } from "@/components/admin/data/format";
+import { instantFromNzWallClock } from "@/lib/social";
 import {
   audit,
   authorise,
@@ -85,7 +92,17 @@ export async function schedulePostAction(formData: FormData): Promise<void> {
   const postId = readId(formData, "postId");
   const when = readDateTime(formData, "scheduledFor");
   const note = readOptionalText(formData, "note", 300);
-  if (Date.parse(when) < Date.now()) refuse(back, "schedule-in-the-past");
+  // `<input type="datetime-local">` submits a wall clock with no zone on it,
+  // and this server runs UTC. Reading "2026-09-03T17:00" with `Date.parse`
+  // stored 5am the following morning in Auckland, which is where she would
+  // have found the post. It is resolved against Pacific/Auckland explicitly,
+  // and the one hour a year that does not exist there is refused rather than
+  // silently shifted. See lib/social/calendar.ts.
+  const resolved = instantFromNzWallClock(when);
+  if (resolved === null) refuse(back, "schedule-in-the-past");
+  if (resolved.kind === "skipped") refuse(back, "schedule-no-such-time");
+  const instant = resolved.iso;
+  if (Date.parse(instant) < Date.now()) refuse(back, "schedule-in-the-past");
 
   const before = await postRow(postId);
   if (before === null) refuse(back, "post-gone");
@@ -98,7 +115,7 @@ export async function schedulePostAction(formData: FormData): Promise<void> {
         set status = 'scheduled', scheduled_for = $2::timestamptz,
             approval_id = $3, error = null, updated_at = now()
       where id = $1`,
-    [postId, when, approvalId],
+    [postId, instant, approvalId],
   );
 
   await audit({
@@ -107,11 +124,12 @@ export async function schedulePostAction(formData: FormData): Promise<void> {
     entityType: "social_posts",
     entityId: postId,
     entityLabel: `${before.platform} post`,
-    summary: `Approved the ${before.platform} post and put it in the diary for ${when.replace("T", " ")}. Nothing sends it: no account is connected to this admin, so it waits, written down.`,
+    summary: `${before.status === "scheduled" ? "Moved" : "Approved"} the ${before.platform} post ${before.status === "scheduled" ? "to" : "and put it in the diary for"} ${dayAndTime(instant)} New Zealand time. Nothing sends it: no account is connected to this admin, so it waits, written down.`,
     before: { status: before.status, scheduled_for: before.scheduledFor },
     after: {
       status: "scheduled",
-      scheduled_for: when,
+      scheduled_for: instant,
+      scheduled_for_nz: when,
       approval_id: approvalId,
     },
     approvalId,
@@ -196,8 +214,11 @@ async function postRow(postId: string): Promise<PostRow | null> {
     platform: text(row, "platform"),
     status: text(row, "status"),
     caption: text(row, "caption"),
-    scheduledFor:
-      row["scheduled_for"] === null ? null : String(row["scheduled_for"]),
+    // `isoOrNull`, not `String(...)`: `pg` hands back a `Date`, and stringifying
+    // one puts "Tue Sep 01 2026 09:15:49 GMT+0000 (Coordinated Universal Time)"
+    // into the audit row's `before_data` beside an ISO string in `after_data`,
+    // so the two halves of a move cannot be compared by eye or by query.
+    scheduledFor: isoOrNull(row, "scheduled_for"),
     agentName: textOrNull(row, "agent_name"),
     agentId: textOrNull(row, "created_by_agent_id"),
     approvalId: textOrNull(row, "approval_id"),
@@ -268,6 +289,7 @@ async function approveOrRaise(
 
 function revalidateSocial(): void {
   revalidatePath("/admin/social");
+  revalidatePath("/admin/social/calendar");
   revalidatePath("/admin");
   revalidatePath("/admin/team");
 }

@@ -8,6 +8,7 @@
  * | -------------- | ------------------------------------------------------- |
  * | `platforms.ts` | The enum mirror, the per-surface limits, and the sources |
  * | `measure.ts`   | Counting, folding and cropping, the way each one does it |
+ * | `calendar.ts`  | New Zealand time, the civil calendar, and where the gaps are |
  *
  * The components that draw it are in `components/admin/social`. Nothing in
  * either directory posts anything: there is no credential in this deployment
@@ -18,10 +19,14 @@ export {
   DEVICE_VIEWPORT,
   DEVICE_WORDS,
   DEVICES,
+  PLATFORM_SHORT,
+  PLATFORM_WORDS,
   PREVIEW_SURFACES,
   SOCIAL_PLATFORMS,
   SURFACES,
   isSocialPlatform,
+  platformShort,
+  platformWord,
   surfacesFor,
   surfacesForPost,
   type CaptionRule,
@@ -51,3 +56,40 @@ export {
   type CropPlan,
   type Truncation,
 } from "./measure";
+
+export {
+  NZ_ZONE,
+  WEEKDAY_NAMES,
+  WEEKDAY_SHORT,
+  addDays,
+  addMonths,
+  dayOfMonth,
+  daysBetween,
+  emptyRuns,
+  entriesByDay,
+  instantFromNzWallClock,
+  isNzDay,
+  longestRun,
+  monthDays,
+  monthGridDays,
+  monthKey,
+  monthTitle,
+  nzDay,
+  nzMinuteOfDay,
+  nzOffsetMinutes,
+  nzToday,
+  nzWallClock,
+  placeOnDiary,
+  startOfMonth,
+  startOfWeek,
+  weekDays,
+  weekdayIndex,
+  weekdayName,
+  weekdayShort,
+  type CalendarEntry,
+  type DiaryPost,
+  type EmptyRun,
+  type NzDay,
+  type ResolvedWallClock,
+  type WallClockKind,
+} from "./calendar";

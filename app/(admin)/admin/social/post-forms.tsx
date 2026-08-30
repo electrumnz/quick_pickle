@@ -81,12 +81,31 @@ export function PostDiaryForm({
   post,
   csrfToken,
   back,
+  defaultWhen,
+  scope = "queue",
 }: {
   post: SocialPostItem;
   csrfToken: string;
   back: string;
+  /**
+   * The time already in the box, as a New Zealand wall clock
+   * (`2026-09-03T17:00`).
+   *
+   * Moving a post is the same form as diarising one, and a move starts from
+   * where the post already is: an empty field would make her retype a time she
+   * is only nudging by a day.
+   */
+  defaultWhen?: string;
+  /**
+   * Which part of the page this copy is in. The calendar can show the same
+   * post in a cell and again in the panel below it, and two fields with the
+   * same `id` point every second `<label for>` at the first one.
+   */
+  scope?: string;
 }) {
   const scheduled = post.status === "scheduled";
+  const field = `when-post-${scope}-${post.id}`;
+  const noteField = `post-note-${scope}-${post.id}`;
   return (
     <Disclosure
       label={
@@ -100,23 +119,21 @@ export function PostDiaryForm({
           values={{ postId: post.id }}
         />
         <Field
-          label="When should it go out?"
-          htmlFor={`when-post-${post.id}`}
-          hint="Saying yes is recorded against this post for good. Nothing posts it: there is no account connected to this admin, so the time is a note for whoever does."
+          label="When should it go out? (New Zealand time)"
+          htmlFor={field}
+          hint="Read as Auckland time and stored as the moment it means, so it stays right either side of the clocks changing. Saying yes is recorded against this post for good. Nothing posts it: there is no account connected to this admin, so the time is a note for whoever does."
         >
           <TextInput
-            id={`when-post-${post.id}`}
+            id={field}
             name="scheduledFor"
             type="datetime-local"
+            defaultValue={defaultWhen}
             required
           />
         </Field>
-        <Field
-          label="Anything to add? (optional)"
-          htmlFor={`post-note-${post.id}`}
-        >
+        <Field label="Anything to add? (optional)" htmlFor={noteField}>
           <TextInput
-            id={`post-note-${post.id}`}
+            id={noteField}
             name="note"
             maxLength={300}
             placeholder="Good — but not the same morning as the market post"

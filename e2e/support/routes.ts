@@ -61,6 +61,14 @@ export const ADMIN_ROUTES: readonly AuditRoute[] = [
   { name: "orders", path: "/admin/orders", signedIn: true },
   { name: "stock", path: "/admin/stock", signedIn: true },
   { name: "social", path: "/admin/social", signedIn: true },
+  { name: "social calendar", path: "/admin/social/calendar", signedIn: true },
+  // The week is a different layout from the month — seven rows against a
+  // seven-column grid — so the month pass does not audit it.
+  {
+    name: "social calendar week",
+    path: "/admin/social/calendar?view=week",
+    signedIn: true,
+  },
   { name: "customers", path: "/admin/customers", signedIn: true },
   { name: "money", path: "/admin/money", signedIn: true },
   { name: "assets", path: "/admin/assets", signedIn: true },

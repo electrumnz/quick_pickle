@@ -75,6 +75,59 @@ export function isSocialPlatform(value: string): value is SocialPlatform {
 }
 
 /**
+ * Each platform spelled the way it spells itself.
+ *
+ * `social_posts.platform` is a lower-case enum value and no screen should ever
+ * print one. This is the one table that turns it into a name, so "tiktok" is
+ * not rendered as "Tiktok" on one page and "TikTok" on the next.
+ */
+export const PLATFORM_WORDS: Readonly<Record<SocialPlatform, string>> = {
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  facebook: "Facebook",
+  threads: "Threads",
+  x: "X",
+  linkedin: "LinkedIn",
+  youtube: "YouTube",
+  pinterest: "Pinterest",
+};
+
+/**
+ * Two letters, for a calendar cell about 120px wide.
+ *
+ * Only ever drawn beside the time, and never as the whole of the accessible
+ * name: wherever one of these appears, the full word from
+ * {@link PLATFORM_WORDS} is what a screen reader is given.
+ */
+export const PLATFORM_SHORT: Readonly<Record<SocialPlatform, string>> = {
+  instagram: "IG",
+  tiktok: "TT",
+  facebook: "FB",
+  threads: "TH",
+  x: "X",
+  linkedin: "LI",
+  youtube: "YT",
+  pinterest: "PI",
+};
+
+/**
+ * A platform value from the database, as a name.
+ *
+ * A row could in principle carry a value added to the enum after this file was
+ * last read. Rather than render nothing, the raw value is returned — which is
+ * ugly on screen and is meant to be, because it is the signal that this table
+ * has fallen behind the schema.
+ */
+export function platformWord(value: string): string {
+  return isSocialPlatform(value) ? PLATFORM_WORDS[value] : value;
+}
+
+/** The same, two letters wide. */
+export function platformShort(value: string): string {
+  return isSocialPlatform(value) ? PLATFORM_SHORT[value] : value;
+}
+
+/**
  * A surface is a platform *and a place on it*. Instagram is two surfaces: a
  * feed post reads its caption and a story does not, and a preview that drew one
  * for the other would be lying about the thing that matters most.

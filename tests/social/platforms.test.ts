@@ -21,9 +21,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEVICES,
+  PLATFORM_SHORT,
+  PLATFORM_WORDS,
   PREVIEW_SURFACES,
   SOCIAL_PLATFORMS,
   SURFACES,
+  platformShort,
+  platformWord,
   surfacesForPost,
 } from "@/lib/social";
 
@@ -221,6 +225,28 @@ describe("the limits this unit was built around", () => {
       expect(word.startsWith("…"), `${id}: ${word}`).toBe(true);
       expect(word.slice(1)).not.toContain("…");
     }
+  });
+
+  it("spells every platform the way the platform spells itself", () => {
+    // The calendar prints these in a cell about 120px wide and the Social page
+    // prints them in full; both read this one table, so a screen cannot say
+    // "Tiktok" while another says "TikTok".
+    for (const platform of SOCIAL_PLATFORMS) {
+      expect(PLATFORM_WORDS[platform], platform).not.toBe("");
+      expect(PLATFORM_SHORT[platform].length, platform).toBeLessThanOrEqual(2);
+      expect(platformWord(platform)).toBe(PLATFORM_WORDS[platform]);
+      expect(platformShort(platform)).toBe(PLATFORM_SHORT[platform]);
+    }
+    expect(PLATFORM_WORDS.tiktok).toBe("TikTok");
+    expect(PLATFORM_WORDS.linkedin).toBe("LinkedIn");
+    expect(PLATFORM_WORDS.youtube).toBe("YouTube");
+  });
+
+  it("returns an unknown platform value unchanged rather than blank", () => {
+    // A value added to the enum after this table was last read should look
+    // wrong on screen, which is the signal that the table has fallen behind.
+    expect(platformWord("mastodon")).toBe("mastodon");
+    expect(platformShort("mastodon")).toBe("mastodon");
   });
 
   it("the four frames the brief names are all reachable", () => {

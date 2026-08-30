@@ -21,6 +21,7 @@ import { ApprovalQueue } from "@/components/admin/approvals/ApprovalCard";
 import { PostPreview } from "@/components/admin/social";
 import { Disclosure } from "@/components/admin/ui/controls";
 import {
+  ActionLink,
   DataUnavailable,
   NotBuiltYet,
   PageHeader,
@@ -45,6 +46,7 @@ import {
 } from "@/components/admin/ui/primitives";
 import { Flash } from "@/components/admin/write/flash";
 import { adminFormToken, requireAdminAccess } from "@/lib/auth/server";
+import { platformWord } from "@/lib/social";
 
 import { PostDeclineForm, PostDiaryForm, PostEditor } from "./post-forms";
 
@@ -71,17 +73,6 @@ export const metadata: Metadata = {
  * model of this build.
  */
 
-const PLATFORM_WORDS: Readonly<Record<string, string>> = {
-  instagram: "Instagram",
-  tiktok: "TikTok",
-  facebook: "Facebook",
-  threads: "Threads",
-  x: "X",
-  linkedin: "LinkedIn",
-  youtube: "YouTube",
-  pinterest: "Pinterest",
-};
-
 const STATUS_WORDS: Readonly<Record<string, string>> = {
   draft: "Draft",
   pending_approval: "Waiting on you",
@@ -91,8 +82,14 @@ const STATUS_WORDS: Readonly<Record<string, string>> = {
   archived: "Archived",
 };
 
+/**
+ * A platform value, as a name.
+ *
+ * The table lives in `lib/social/platforms.ts` beside the enum it mirrors, so
+ * "tiktok" is not rendered as "Tiktok" here and "TikTok" on the calendar.
+ */
 function platform(value: string): string {
-  return PLATFORM_WORDS[value] ?? value;
+  return platformWord(value);
 }
 
 /**
@@ -236,12 +233,17 @@ export default async function SocialPage({
           </>
         }
         actions={
-          <SearchForm
-            action="/admin/social"
-            value={query}
-            placeholder="What a post says"
-            label="Search posts"
-          />
+          <>
+            <ActionLink href="/admin/social/calendar">
+              See the calendar
+            </ActionLink>
+            <SearchForm
+              action="/admin/social"
+              value={query}
+              placeholder="What a post says"
+              label="Search posts"
+            />
+          </>
         }
       />
 
@@ -474,10 +476,10 @@ export default async function SocialPage({
             "Declining a post with a reason, which answers the agent that asked",
             "Approving several waiting decisions at once",
             "Failures with the platform's own reason",
+            "A month and a week of everything with a date on it, on the calendar, with the gaps between them said in words",
           ]}
           coming={[
             "Actually posting: nothing here is connected to Instagram or TikTok, so a scheduled post waits for a person",
-            "A calendar view of the fortnight ahead",
             "The preview showing the photograph itself rather than its shape: the files sit on a CDN this admin does not fetch from, so the crop is drawn from the recorded dimensions",
             "Uploading the picture or video with the caption",
             "Replying to comments without leaving the admin",
