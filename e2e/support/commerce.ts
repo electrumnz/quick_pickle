@@ -7,6 +7,11 @@ import {
   type CommerceProvider,
   type Order,
 } from "@/lib/commerce";
+import {
+  DEMO_ENV_VAR,
+  isDemoDatabaseUrl,
+  resolveDatabaseUrl,
+} from "@/lib/demo/mode";
 
 /**
  * The commerce seam, as the browser journey needs it.
@@ -61,11 +66,44 @@ const CART_COOKIE = "hs_cart";
  * overridden rather than read, because the test runner's own environment names
  * whichever provider was set for the whole run, not the one this project is
  * driving.
+ *
+ * ## Same database, and why that has to be checked
+ *
+ * "Same database" is the load-bearing word and it is not free. This process is
+ * not the server: Playwright starts `next` as a child, the browser's cart is
+ * created and stored there, and the only reason a provider built HERE can see
+ * that cart is that both processes dial one Postgres named by
+ * `SUPABASE_DB_URL`.
+ *
+ * Demo mode breaks that, quietly. With `HALF_SOUR_DEMO=1` and no
+ * `SUPABASE_DB_URL`, `resolveDatabaseUrl` hands every process the compiled-in
+ * PGlite image, and `lib/demo/database.ts` is explicit that the result "lands
+ * in the memory of whichever instance served that request". Two processes, two
+ * images, no shared row. The provider built here would then be asked for a cart
+ * it never held, and would answer — correctly, and misleadingly —
+ * `CART_NOT_FOUND` from inside `requireLiveCart`, a hundred lines and one
+ * process away from the actual problem.
+ *
+ * So the impossibility is stated here, at the seam, instead of being discovered
+ * as a phantom cart-lifecycle bug. `e2e/purchase.spec.ts` carries the message
+ * into the failure it reports.
  */
 export function providerUnderTest(name: string): CommerceProvider {
-  return createCommerceProvider(
-    readCommerceConfig({ ...process.env, COMMERCE_PROVIDER: name }),
-  );
+  const env = { ...process.env, COMMERCE_PROVIDER: name };
+  const database = resolveDatabaseUrl(env);
+  if (database !== null && isDemoDatabaseUrl(database)) {
+    throw new Error(
+      "The purchase journey needs one database that this test process and the " +
+        "Next server both read. " +
+        `${DEMO_ENV_VAR}=1 with no SUPABASE_DB_URL gives each process its own ` +
+        "copy of the compiled-in demo image, so the cart the browser just " +
+        "created is not visible from here and the checkout would fail as " +
+        "CART_NOT_FOUND. Set SUPABASE_DB_URL to a Postgres both processes can " +
+        "reach — CI's e2e job starts one, and supabase/tests/run_local.sh " +
+        "seeds a local one.",
+    );
+  }
+  return createCommerceProvider(readCommerceConfig(env));
 }
 
 /** The cart id the storefront put in its httpOnly cookie, or null. */
