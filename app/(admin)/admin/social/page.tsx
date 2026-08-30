@@ -18,6 +18,8 @@ import {
   type SocialPostItem,
 } from "@/components/admin/data/queries";
 import { ApprovalQueue } from "@/components/admin/approvals/ApprovalCard";
+import { PostPreview } from "@/components/admin/social";
+import { Disclosure } from "@/components/admin/ui/controls";
 import {
   DataUnavailable,
   NotBuiltYet,
@@ -93,6 +95,21 @@ function platform(value: string): string {
   return PLATFORM_WORDS[value] ?? value;
 }
 
+/**
+ * The line under the account name in a preview.
+ *
+ * It says a time and it never says "posting". A diarised post is a post with a
+ * time written beside it and a person still to do it, and the preview is the
+ * one place on this page where the layout might otherwise imply otherwise.
+ */
+function whenWords(post: SocialPostItem): string {
+  if (post.publishedAt !== null) return `Published ${day(post.publishedAt)}`;
+  if (post.scheduledFor !== null) {
+    return `Pencilled in for ${dayAndTime(post.scheduledFor)} — nothing sends it`;
+  }
+  return "Not in the diary yet";
+}
+
 export default async function SocialPage({
   searchParams,
 }: {
@@ -135,6 +152,13 @@ export default async function SocialPage({
 
   const { accounts, posts: everything, best, decisions } = result.data;
   const byId = new Map(everything.map((post) => [post.id, post]));
+  // The handle a preview shows in its account row. Null where no account for
+  // that platform exists, or where one exists and is not connected — which is
+  // the truthful answer and the one the preview prints.
+  const handles: Record<string, string | null> = {};
+  for (const account of accounts) {
+    handles[account.platform] = account.isActive ? account.handle : null;
+  }
   // A decision about a post is editable in place: the card holds the same
   // caption box the queue below uses, so "change it first" is one control
   // rather than a trip to another section.
@@ -154,6 +178,28 @@ export default async function SocialPage({
                 back={back}
                 scope="decide"
                 bare
+              />,
+            ] as const,
+          ];
+    }),
+  );
+  // What the post will look like, inside the decision about it. Same card, same
+  // place, so there is one approval surface rather than two.
+  const previews = new Map(
+    decisions.flatMap((decision) => {
+      const post =
+        decision.subjectId === null ? undefined : byId.get(decision.subjectId);
+      return post === undefined
+        ? []
+        : [
+            [
+              decision.id,
+              <PostPreview
+                key={post.id}
+                post={post}
+                handles={handles}
+                scope="decide"
+                whenWords={whenWords(post)}
               />,
             ] as const,
           ];
@@ -211,6 +257,7 @@ export default async function SocialPage({
             csrfToken={csrfToken}
             back={back}
             editors={editors}
+            previews={previews}
             id="approve-ticked-social"
             emptyHeadline="Nobody is waiting on you"
             emptyFills="Vinnie drafts the fortnight's posts on a schedule, and each one stops here with its caption before it can go anywhere."
@@ -287,6 +334,7 @@ export default async function SocialPage({
                     post={post}
                     csrfToken={csrfToken}
                     back={back}
+                    handles={handles}
                   />
                 ))}
               </Rows>
@@ -420,6 +468,7 @@ export default async function SocialPage({
           blurb="Approving, rewording, diarising and declining a post all change the real database, permanently, with your name on them. None of them post anything: no Instagram or TikTok account is connected to this admin, so an approved post is a post written down and waiting for a person."
           works={[
             "Every post, its state, and the numbers the platform reported",
+            "Seeing what a post will look like on each platform at a phone, tablet and desktop width, with the caption cut where that platform cuts it and every character, hashtag and crop counted against its real limits",
             "Approving a post and giving it a time, which is recorded against it for good",
             "Changing the wording before you say yes",
             "Declining a post with a reason, which answers the agent that asked",
@@ -429,6 +478,7 @@ export default async function SocialPage({
           coming={[
             "Actually posting: nothing here is connected to Instagram or TikTok, so a scheduled post waits for a person",
             "A calendar view of the fortnight ahead",
+            "The preview showing the photograph itself rather than its shape: the files sit on a CDN this admin does not fetch from, so the crop is drawn from the recorded dimensions",
             "Uploading the picture or video with the caption",
             "Replying to comments without leaving the admin",
           ]}
@@ -442,10 +492,12 @@ function PostRow({
   post,
   csrfToken,
   back,
+  handles,
 }: {
   post: SocialPostItem;
   csrfToken: string;
   back: string;
+  handles: Readonly<Record<string, string | null>>;
 }) {
   return (
     <Row>
@@ -469,6 +521,18 @@ function PostRow({
             ? " · failed the brand rule check"
             : ""}
       </p>
+      <div className="mt-3">
+        {/* Folded here, open inside the decision above. A row is a list to
+            scan; a decision is a thing to look at. */}
+        <Disclosure label="See how it will look">
+          <PostPreview
+            post={post}
+            handles={handles}
+            scope="queue"
+            whenWords={whenWords(post)}
+          />
+        </Disclosure>
+      </div>
       {csrfToken === "" ? null : (
         <div className="mt-3 flex flex-wrap items-start gap-2">
           <PostEditor

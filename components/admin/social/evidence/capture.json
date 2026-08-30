@@ -1,0 +1,64 @@
+{
+  "base": "http://localhost:3814",
+  "shots": [
+    {
+      "file": "approval-card.png",
+      "what": "the decision, with the preview inside it"
+    },
+    {
+      "file": "instagram-feed-phone.png",
+      "surface": "Instagram feed",
+      "width": "Phone, 390px",
+      "panelWidthPx": 390
+    },
+    {
+      "file": "instagram-story-phone.png",
+      "surface": "Instagram story",
+      "width": "Phone, 390px",
+      "panelWidthPx": 390
+    },
+    {
+      "file": "x-desktop.png",
+      "surface": "X",
+      "width": "Desktop, 1,280px",
+      "panelWidthPx": 600
+    },
+    {
+      "file": "facebook-desktop.png",
+      "surface": "Facebook",
+      "width": "Desktop, 1,280px",
+      "panelWidthPx": 500
+    },
+    {
+      "file": "linkedin-phone.png",
+      "surface": "LinkedIn",
+      "width": "Phone, 390px",
+      "panelWidthPx": 390
+    },
+    {
+      "file": "tiktok-phone.png",
+      "surface": "TikTok",
+      "width": "Phone, 390px",
+      "panelWidthPx": 390
+    },
+    {
+      "file": "threads-desktop.png",
+      "surface": "Threads",
+      "width": "Desktop, 1,280px",
+      "panelWidthPx": 535
+    },
+    {
+      "file": "youtube-desktop.png",
+      "surface": "YouTube",
+      "width": "Desktop, 1,280px",
+      "panelWidthPx": 640
+    },
+    {
+      "file": "pinterest-desktop.png",
+      "surface": "Pinterest",
+      "width": "Desktop, 1,280px",
+      "panelWidthPx": 508
+    }
+  ],
+  "problems": []
+}

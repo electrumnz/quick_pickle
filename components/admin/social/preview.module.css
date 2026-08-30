@@ -1,0 +1,206 @@
+/*
+ * The post preview's switching, and only its switching.
+ *
+ * Everything a Tailwind utility can express is a Tailwind utility in the TSX
+ * beside this file. What is here is the one thing utilities cannot do: pick a
+ * panel and a width from a radio button with no JavaScript at all.
+ *
+ * That constraint is deliberate and it is the admin's, not this unit's — see
+ * the note at the top of `components/admin/ui/controls.tsx`. A preview that
+ * needed a script would be the only part of this screen that did, it would be
+ * blank in a printout, and it would be one more thing between the founder and
+ * a decision she has to make either way.
+ *
+ * The mechanism: every radio and every panel lives inside `.root`, and
+ * `:has()` reads the checked one from above. Nine rules for the nine surfaces,
+ * three for the three widths. No pigment is named anywhere in this file; every
+ * colour is a semantic token, per the rule in CLAUDE.md.
+ */
+
+.root {
+  container-type: inline-size;
+}
+
+/*
+ * Visually hidden, still focusable, still in the accessibility tree. The label
+ * beside it is the visible control; removing the input with `display: none`
+ * would take the radio group off the keyboard entirely.
+ */
+.pick {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.25rem;
+  padding-inline: 0.7rem;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  font-size: var(--text-caption);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.chip:hover {
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+}
+
+.pick:checked + .chip {
+  background: var(--surface-accent);
+  border-color: var(--accent-edge);
+  color: var(--text-on-accent);
+  font-weight: 600;
+}
+
+/* The build's single focus ring, reproduced here because the input that owns
+   the focus is not the box that shows it. */
+.pick:focus-visible + .chip {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* ------------------------------------------------------------- the panels */
+
+.panel {
+  display: none;
+}
+
+.root:has(.pick[data-pick="instagram_feed"]:checked)
+  .panel[data-panel="instagram_feed"],
+.root:has(.pick[data-pick="instagram_story"]:checked)
+  .panel[data-panel="instagram_story"],
+.root:has(.pick[data-pick="x"]:checked) .panel[data-panel="x"],
+.root:has(.pick[data-pick="facebook"]:checked) .panel[data-panel="facebook"],
+.root:has(.pick[data-pick="linkedin"]:checked) .panel[data-panel="linkedin"],
+.root:has(.pick[data-pick="tiktok"]:checked) .panel[data-panel="tiktok"],
+.root:has(.pick[data-pick="threads"]:checked) .panel[data-panel="threads"],
+.root:has(.pick[data-pick="youtube"]:checked) .panel[data-panel="youtube"],
+.root:has(.pick[data-pick="pinterest"]:checked) .panel[data-panel="pinterest"] {
+  display: block;
+}
+
+/* -------------------------------------------------------------- the width */
+
+/*
+ * Each panel carries the three column widths it renders at as custom
+ * properties, so the numbers live once, in `lib/social/platforms.ts`, and this
+ * file only chooses between them. Instagram's column stops at 470px whatever
+ * the window is; Facebook's is 500; X's is 600. That is why a desktop preview
+ * is a different shape rather than a bigger one.
+ */
+.frame {
+  inline-size: min(100%, var(--pv-phone));
+  transition: inline-size 140ms ease;
+}
+
+.root:has(.pick[data-device="tablet"]:checked) .frame {
+  inline-size: min(100%, var(--pv-tablet));
+}
+
+.root:has(.pick[data-device="desktop"]:checked) .frame {
+  inline-size: min(100%, var(--pv-desktop));
+}
+
+/* The caption is cut at a different point per device, so it is rendered three
+   times and one is shown. Only the text differs; the layout around it does not. */
+.forDevice {
+  display: none;
+}
+
+.root:has(.pick[data-device="phone"]:checked) .forDevice[data-device="phone"],
+.root:has(.pick[data-device="tablet"]:checked) .forDevice[data-device="tablet"],
+.root:has(.pick[data-device="desktop"]:checked)
+  .forDevice[data-device="desktop"] {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame,
+  .chip {
+    transition: none;
+  }
+}
+
+/* --------------------------------------------------------------- the crop */
+
+/*
+ * The picture, drawn from its own recorded dimensions.
+ *
+ * `.shot` is the whole photograph at the ratio it was shot in. `.kept` is the
+ * part of it the platform's frame leaves behind, centred, because platforms
+ * cover-crop and take the overflow evenly off both edges. Everything outside
+ * `.kept` is hatched: that is what is lost, and it is drawn to scale rather
+ * than described.
+ */
+.shot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-sunken);
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 6px,
+    var(--border-hairline) 6px 7px
+  );
+}
+
+.kept {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  display: grid;
+  place-items: center;
+  padding: 0.5rem;
+  text-align: center;
+  border: 1px solid var(--accent-edge);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+
+/* The bands Instagram's own controls sit over on a story. Drawn, not claimed:
+   they are approximate, and the panel says so in words beside them. */
+.storyBand {
+  position: absolute;
+  inset-inline: 0;
+  background: var(--surface-deep);
+  opacity: 0.28;
+}
+
+.storyBandTop {
+  top: 0;
+}
+
+.storyBandBottom {
+  bottom: 0;
+}
+
+/* ------------------------------------------------------------ the caption */
+
+/* A caption cut where the platform cuts it. The hidden tail is not deleted —
+   it is shown struck through underneath, because "what is missing" is the
+   thing she is here to see. */
+.hiddenTail {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--danger);
+}

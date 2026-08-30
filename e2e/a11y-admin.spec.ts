@@ -53,6 +53,31 @@ test.describe("a11y admin overlays", () => {
     await auditPage(page, testInfo, "/admin command palette");
   });
 
+  test("the post preview, switched off its default surface", async ({
+    page,
+  }, testInfo) => {
+    // The preview renders nine surfaces and hides eight of them, so the route
+    // pass above only ever audits the first. This opens the copy that is folded
+    // away in the queue row — DOM the route pass never reaches at all — and
+    // moves both radio groups off their defaults, so a heading, a label or a
+    // contrast pair that only exists on another surface cannot hide here.
+    await page.setViewportSize(DESKTOP);
+    await page.goto("/admin/social", { waitUntil: "load" });
+    await page
+      .locator("summary")
+      .filter({ hasText: "See how it will look" })
+      .first()
+      .click();
+    const preview = page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: "How it would look" }) })
+      .last();
+    await preview.getByText("LinkedIn", { exact: true }).click();
+    await preview.getByText("Desktop, 1,280px", { exact: true }).click();
+    await expect(preview.getByText("Against LinkedIn’s limits")).toBeVisible();
+    await auditPage(page, testInfo, "/admin/social preview on LinkedIn");
+  });
+
   test("the drawer that is the only navigation on a phone", async ({
     page,
   }, testInfo) => {

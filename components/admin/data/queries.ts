@@ -772,11 +772,37 @@ export async function socialAccounts(): Promise<readonly SocialAccount[]> {
   }));
 }
 
+/**
+ * A picture or clip already attached to a post, as `social_post_assets` has it.
+ *
+ * Enough to draw the crop truthfully and nothing more: the shape it was shot
+ * in, the words describing it, and how long it runs. The bytes themselves live
+ * on a CDN this admin does not fetch from, which is why there is no URL here —
+ * see `components/admin/social/PostPreview.tsx` for what the frame draws
+ * instead.
+ */
+export type PostMedia = {
+  readonly title: string;
+  /** `image`, `video`, `carousel`… straight off `content_asset_type`. */
+  readonly kind: string;
+  /** The alt text on the record. Empty when nobody has written one. */
+  readonly alt: string;
+  readonly width: number | null;
+  readonly height: number | null;
+  readonly seconds: number | null;
+};
+
 export type SocialPostItem = {
   readonly id: string;
   readonly platform: string;
   readonly status: string;
   readonly caption: string;
+  /** Kept in their own column, and appended to the caption on the way out. */
+  readonly hashtags: readonly string[];
+  readonly linkUrl: string | null;
+  readonly firstComment: string | null;
+  /** What it would go out with, in the order it was attached. */
+  readonly media: readonly PostMedia[];
   readonly scheduledFor: string | null;
   readonly publishedAt: string | null;
   readonly impressions: number;
@@ -792,12 +818,45 @@ export type SocialPostItem = {
   readonly approvalPending: boolean;
 };
 
+/** A dimension from `json_agg`, which hands back numbers, strings or null. */
+function positiveOrNull(value: unknown): number | null {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseFloat(value)
+        : Number.NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : null;
+}
+
+function toMedia(value: unknown): readonly PostMedia[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry): readonly PostMedia[] => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const record = entry as Record<string, unknown>;
+    return [
+      {
+        title: text(record, "title"),
+        kind: text(record, "kind"),
+        alt: text(record, "alt"),
+        width: positiveOrNull(record["width"]),
+        height: positiveOrNull(record["height"]),
+        seconds: positiveOrNull(record["seconds"]),
+      },
+    ];
+  });
+}
+
 function toPost(row: Record<string, unknown>): SocialPostItem {
   return {
     id: text(row, "id"),
     platform: text(row, "platform"),
     status: text(row, "status"),
     caption: text(row, "caption"),
+    hashtags: textArray(row, "hashtags"),
+    linkUrl: textOrNull(row, "link_url"),
+    firstComment: textOrNull(row, "first_comment"),
+    media: toMedia(row["media"]),
     scheduledFor: isoOrNull(row, "scheduled_for"),
     publishedAt: isoOrNull(row, "published_at"),
     impressions: int(row, "impressions"),
@@ -813,7 +872,20 @@ function toPost(row: Record<string, unknown>): SocialPostItem {
 }
 
 const POST_SELECT = `
-  select p.*, a.name as agent_name, ap.status as approval_status
+  select p.*, a.name as agent_name, ap.status as approval_status,
+         (select coalesce(
+                   json_agg(json_build_object(
+                     'title',   ca.title,
+                     'kind',    ca.asset_type,
+                     'alt',     coalesce(ca.alt_text, ''),
+                     'width',   ca.width_px,
+                     'height',  ca.height_px,
+                     'seconds', ca.duration_seconds)
+                   order by spa.position, ca.title),
+                   '[]'::json)
+            from public.social_post_assets spa
+            join public.content_assets ca on ca.id = spa.asset_id
+           where spa.post_id = p.id) as media
     from public.social_posts p
     left join public.agents a on a.id = p.created_by_agent_id
     left join public.approvals ap on ap.id = p.approval_id`;

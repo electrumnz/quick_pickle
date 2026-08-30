@@ -49,6 +49,7 @@ export function ApprovalCard({
   back,
   bulkFormId,
   edit,
+  preview,
 }: {
   approval: ApprovalItem;
   csrfToken: string;
@@ -58,6 +59,16 @@ export function ApprovalCard({
   bulkFormId?: string;
   /** A way to change what the agent wrote, where there is one. */
   edit?: ReactNode;
+  /**
+   * What the thing being decided will look like, where that can be drawn.
+   *
+   * A social post is the case this was added for: approving a caption in a
+   * table row is a judgement about a string, and a judgement about a post
+   * needs the post. It goes inside this card rather than beside it because the
+   * approval card is the one interaction model in this admin and she learns it
+   * once — a second approval surface would be a second thing to learn.
+   */
+  preview?: ReactNode;
 }) {
   const changes = readChanges(approval.preview, approval.payload);
   const effect = approval.payload["effect"];
@@ -175,6 +186,8 @@ export function ApprovalCard({
           : ""}
       </p>
 
+      {preview !== undefined && <div className="mt-3">{preview}</div>}
+
       <div className="mt-3 flex flex-wrap items-start gap-2">
         {isPost ? (
           <Disclosure label="Approve and put it in the diary">
@@ -275,6 +288,7 @@ export function ApprovalQueue({
   csrfToken,
   back,
   editors,
+  previews,
   emptyHeadline,
   emptyFills,
   children,
@@ -287,6 +301,8 @@ export function ApprovalQueue({
   id?: string;
   /** An approval id to the way its subject can be reworded, where there is one. */
   editors?: ReadonlyMap<string, ReactNode>;
+  /** An approval id to a rendering of what it will look like, where there is one. */
+  previews?: ReadonlyMap<string, ReactNode>;
   emptyHeadline: string;
   emptyFills: string;
   /** What this queue is for, shown when it is empty. */
@@ -339,6 +355,7 @@ export function ApprovalQueue({
             back={back}
             bulkFormId={approvals.length > 1 ? bulkFormId : undefined}
             edit={editors?.get(approval.id)}
+            preview={previews?.get(approval.id)}
           />
         ))}
       </ul>
