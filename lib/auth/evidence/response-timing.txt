@@ -3,9 +3,9 @@ Wall-clock response time by sign-in outcome, real handler, real clock
 Configured floor: 400 ms
 
 outcome          samples  min      median   max     (milliseconds)
-wrong_password   5        401      402      410
-locked_out       5        400      404      408
-csrf_failed      5        401      404      407
+wrong_password   5        401      404      405
+locked_out       5        401      402      418
+csrf_failed      5        401      402      407
 
 spread between medians: 2.0 ms
 
