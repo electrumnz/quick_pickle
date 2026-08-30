@@ -49,13 +49,14 @@ import {
   createStrategyDatabase,
   type StrategyTestDatabase,
 } from "./support/pglite";
+import { generatedBy, stabiliseIds } from "@/tests/support/evidence";
 
 const EVIDENCE_DIR = resolve(process.cwd(), "components/strategy/evidence");
 
 function write(name: string, body: string): void {
   const path = resolve(EVIDENCE_DIR, name);
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${body.trimEnd()}\n`, "utf8");
+  writeFileSync(path, `${stabiliseIds(body).trimEnd()}\n`, "utf8");
 }
 
 /** Ports that record instead of acting. Nothing leaves the test. */
@@ -386,7 +387,7 @@ function evidence(input: {
     bar,
     input.note,
     "",
-    `generated: ${new Date().toISOString()} (npx vitest run tests/strategy/agent-wiring.test.ts)`,
+    generatedBy("npx vitest run tests/strategy/agent-wiring.test.ts"),
     "model: BriefingModel — deterministic, composes only from the system prompt.",
     "Everything below the model is the real runtime and the real strategy tables.",
     "",

@@ -6,8 +6,8 @@ THE AVATAR AUDIT — THE LIVE STOREFRONT, CHECK BY CHECK
 Every line below was produced by fetching a real URL and reading the HTML a
 browser would have been served. Nothing here reads content/strategy.
 
-base URL:  http://localhost:4711  (env)
-run at:    2026-08-30T03:22:19.654Z
+base URL:  http://localhost:4755  (env)
+run at:    2026-08-30T03:31:00.167Z
 command:   npx vitest run tests/strategy/storefront-audit.test.ts
 
 SCORE: 17/17 checks pass.

@@ -27,13 +27,14 @@ import { MemoryDurableStep, WorkflowParked, runAgentWorkflow } from "@/inngest";
 import { EVENT_NAMES } from "@/inngest/events";
 
 import { createHarness, toolTurn } from "./harness";
+import { generatedBy, stabiliseIds } from "@/tests/support/evidence";
 
 const EVIDENCE_DIR = resolve(process.cwd(), "lib/agents/evidence");
 
 function write(name: string, body: string): string {
   const path = resolve(EVIDENCE_DIR, name);
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${body.trimEnd()}\n`, "utf8");
+  writeFileSync(path, `${stabiliseIds(body).trimEnd()}\n`, "utf8");
   return path;
 }
 
@@ -43,7 +44,7 @@ function heading(title: string, note: string): string {
     title,
     "=".repeat(78),
     note,
-    `generated: ${new Date().toISOString()} (npx vitest run tests/agents/evidence.test.ts)`,
+    generatedBy("npx vitest run tests/agents/evidence.test.ts"),
     "model: SCRIPTED (lib/agents/model/mock.ts). Everything below the model is the real runtime.",
     "",
   ].join("\n");
