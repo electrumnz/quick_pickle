@@ -1,30 +1,27 @@
 /**
  * "What it's for", read out of the recipe library rather than reinvented.
  *
- * `content/recipes/` already holds twenty-five drinks and dishes, each one
- * written against the ASA alcohol code and carrying its own audit markers. A
- * product page that wrote its own serve copy would be a second, unaudited
- * source of the same sentences. So this module indexes what is there and hands
- * the product page a short, ordered set: drinks first, because the bottle is a
- * bar ingredient before it is anything else, then the kitchen.
+ * The library is a set of typed records in `content/recipes/`, each one written
+ * against the ASA alcohol code and carrying its own audit markers. A product
+ * page that wrote its own serve copy would be a second, unaudited source of the
+ * same sentences. So this module reads the index and hands the product page a
+ * short, ordered set: drinks first, because the bottle is a bar ingredient
+ * before it is anything else, then the kitchen.
  *
- * Nothing here is a link. `/recipes` is another unit's route and does not exist
- * yet, and a product page full of dead links is worse than one that simply
- * prints the build.
+ * **One index, not two.** `ALL` used to be a second concatenation of the four
+ * recipe files, assembled here. It is now `ALL_RECIPES` from
+ * `components/site/recipes.ts`, which is also what the library index and the
+ * library's own count read — so the "7 in the recipe library" line on a product
+ * page and the number of pages under /recipes cannot disagree. Two lists of the
+ * same thing is how a published count goes wrong.
+ *
+ * `/recipes` now exists, so the count on a product page is a link.
  */
 
-import { DIRTY_RECIPES } from "@/content/recipes/dirty";
-import { HOUSE_RECIPES } from "@/content/recipes/house";
-import { SMOKE_RECIPES } from "@/content/recipes/smoke";
-import { WILD_RECIPES } from "@/content/recipes/wild";
+import { ALL_RECIPES } from "@/components/site/recipes";
 import type { BrineId, Recipe } from "@/content/types";
 
-const ALL: readonly Recipe[] = [
-  ...HOUSE_RECIPES,
-  ...DIRTY_RECIPES,
-  ...SMOKE_RECIPES,
-  ...WILD_RECIPES,
-];
+const ALL: readonly Recipe[] = ALL_RECIPES;
 
 export type Serve = {
   readonly slug: string;
@@ -137,4 +134,31 @@ export function drinksPerBottle(
     }
   }
   return null;
+}
+
+/**
+ * The one build to show above the buy control.
+ *
+ * The audit's `b2c-price-per-drink-before-the-ask` check exists because both
+ * numbers that turn $20 into the price of a drink — how many drinks are in the
+ * bottle, and one ratio a person could follow tonight — sat below the button
+ * asking for the money. This is the second of those: the build of the recipe
+ * this bottle was made for, as a bartender writes it on a spec card.
+ *
+ * Null when the bottle has no drink recipe. A bottle that is only ever cooked
+ * with gets the pour count and no build rather than an invented one.
+ */
+export function leadBuild(brine: BrineId): {
+  readonly slug: string;
+  readonly title: string;
+  readonly build: readonly string[];
+} | null {
+  const drink = ALL.find(
+    (recipe) => recipe.brine === brine && recipe.kind === "drink",
+  );
+  if (drink === undefined) return null;
+  const serve = toServe(drink, 4);
+  return serve.build.length === 0
+    ? null
+    : { slug: serve.slug, title: serve.title, build: serve.build };
 }

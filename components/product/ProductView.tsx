@@ -11,7 +11,9 @@ import {
   setSaving,
   type CatalogueEntry,
 } from "./catalogue";
-import { PRODUCT, productPath, SHOP_PATH } from "./copy";
+import { RECIPES_HREF } from "@/components/site/copy";
+
+import { ADDED, PRODUCT, productPath, SHOP_PATH } from "./copy";
 import { ProductMedia } from "./ProductMedia";
 import { servesFor, serveCount, type Serve } from "./serves";
 import styles from "./shop.module.css";
@@ -200,8 +202,16 @@ function Serves({ entry }: { entry: CatalogueEntry }) {
             ? PRODUCT.servesHeading
             : PRODUCT.servesHeadingDish}
         </h2>
+        {/* The count was a number with nowhere to go until /recipes shipped —
+            a promise the page broke in the same sentence it made it. It is a
+            link now, and the number is counted from the same index the library
+            renders, so the two cannot disagree. */}
         <p className={cx(styles.figure, "text-caption text-muted mt-stack")}>
           {total} {PRODUCT.libraryCount}
+          {" — "}
+          <Link href={RECIPES_HREF} className={cx(styles.tap, "text-primary")}>
+            <span className={cx(styles.drawLink)}>{ADDED.libraryLink}</span>
+          </Link>
         </p>
       </div>
 

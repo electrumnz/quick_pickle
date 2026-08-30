@@ -196,15 +196,14 @@ export const SPEC_FIGURES: readonly SpecFigure[] = [
 /* -------------------------------------------------------------------- buy */
 
 /**
- * The conversion block, and the one honest thing about it.
+ * The conversion block.
  *
- * There is a shop route and there is an address. There is deliberately NO
- * `<input type="email">` on this page: the list has no delivery service behind
- * it yet, and a field that quietly discards the address it was given is worse
- * than no field. `mailto:` is the route that actually works today, in every
- * browser, with scripting switched off, and it goes to a person — which is
- * what the wholesale line has always promised. When a list exists, this block
- * gains a form and loses nothing else.
+ * It used to carry two `mailto:` links and a note explaining that there was no
+ * form behind either of them. Both are gone. The list is a real one-field form
+ * posting to a Server Action that writes to a table (`components/site/`), and
+ * the trade route is a page with the price on it rather than an invitation to
+ * write a letter and wait two working days. The honesty note that sat here was
+ * true when it was written and would be a lie now, so it went with them.
  */
 export const BUY = {
   kicker: "Getting hold of it",
@@ -214,21 +213,13 @@ export const BUY = {
   shop: {
     href: SHOP_HREF,
     label: "Shop the range",
-    line: "Every bottle, plus the set.",
-  },
-  list: {
-    href: "mailto:hello@halfsour.co.nz?subject=Put%20me%20on%20the%20list",
-    label: "Join the list",
-    heading: "Get told when a batch lands.",
-    // copy-audit-approved: R-04 (brand-guide §5 line 15 verbatim; no urgency, no countdown)
-    line: "Roughly one email a month: what's brining, what's back, and one drink worth making. There's no form here yet, so the address goes on the list by hand.",
+    line: "Every bottle, plus the box of three.",
   },
   trade: {
-    href: "mailto:hello@halfsour.co.nz?subject=Wholesale",
-    label: "Wholesale enquiry",
+    href: "/wholesale",
+    label: "See the trade price",
     heading: "For a bar or a kitchen.",
-    // copy-audit-approved: R-04 (brand-guide §5 line 10; a stated response time)
-    line: "Wholesale goes to a person, not a queue. Pricing, minimums and a sample inside two working days.",
+    line: "The trade price, the case size and the cost per pour, published on one page. No enquiry, no wait.",
   },
 } as const;
 
@@ -245,9 +236,33 @@ export const PRIMARY_NAV: readonly NavItem[] = [
   { href: "#range", label: "The range", local: true },
   { href: "#serves", label: "What it's for", local: true },
   { href: "#making", label: "How it's made", local: true },
+];
+
+/**
+ * The destinations that are not on this page.
+ *
+ * One list, rendered by BOTH mastheads — the homepage's and the shop's — so a
+ * route that ships appears in the navigation everywhere at once instead of in
+ * whichever header somebody remembered. `routes.ts` filters it, so a link here
+ * that is not deployed is simply not drawn rather than drawn at a 404.
+ *
+ * Ordered the way a visitor needs them rather than the way the site is built:
+ * the bottles first, then what to do with them, then the trade door, then the
+ * two the range still owes.
+ */
+export const SITE_NAV: readonly NavItem[] = [
+  { href: SHOP_HREF, label: "Shop" },
   { href: "/recipes", label: "Recipes" },
+  { href: "/wholesale", label: "Wholesale" },
+  { href: "/story", label: "The story" },
   { href: "/stockists", label: "Stockists" },
 ];
+
+/** What the small-screen disclosure calls itself. Never a bare icon. */
+export const NAV_MENU_LABEL = "Menu";
+
+/** The masthead's home link, named for a screen reader and drawn as the wordmark. */
+export const NAV_HOME_LABEL = "Half Sour — home";
 
 /**
  * The masthead's one call to action, kept out of PRIMARY_NAV so it can be
@@ -278,7 +293,6 @@ export const FOOTER_NAV: readonly {
       { href: "#serves", label: "What it's for", local: true },
       { href: "/recipes", label: "Recipes" },
       { href: "/stockists", label: "Stockists" },
-      { href: BUY.list.href, label: "Join the list" },
     ],
   },
   {
@@ -287,13 +301,15 @@ export const FOOTER_NAV: readonly {
       { href: "#making", label: "How it's made", local: true },
       { href: "/story", label: "The story" },
       { href: "/suppliers", label: "Sourcing register" },
+      { href: "/delivery", label: "Delivery and returns" },
+      { href: "/terms", label: "Terms of sale" },
     ],
   },
   {
     heading: "Trade",
     items: [
       { href: "/wholesale", label: "Wholesale" },
-      { href: BUY.trade.href, label: "Wholesale enquiry" },
+      { href: "/wholesale#samples", label: "Ask for two samples" },
       { href: "mailto:hello@halfsour.co.nz", label: "hello@halfsour.co.nz" },
     ],
   },

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 
+import { ALL_RECIPES, recipeHref } from "@/components/site/recipes";
 import { ALL_BRINES } from "@/content/brines";
 import { siteUrl } from "@/lib/site";
 
@@ -36,5 +37,39 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly" as const,
       priority: 0.8,
     })),
+    {
+      url: `${base}/wholesale`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    },
+    {
+      url: `${base}/recipes`,
+      lastModified,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    },
+    // One entry per recipe, from the same index the library renders. A recipe
+    // is the thing on this site somebody searches for by name — "dirty martini
+    // ratio" — and an unlisted page is a page that search never sends anyone
+    // to.
+    ...ALL_RECIPES.map((recipe) => ({
+      url: `${base}${recipeHref(recipe.slug)}`,
+      lastModified: new Date(recipe.updated ?? recipe.published),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
+    {
+      url: `${base}/delivery`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.4,
+    },
+    {
+      url: `${base}/terms`,
+      lastModified,
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
+    },
   ];
 }

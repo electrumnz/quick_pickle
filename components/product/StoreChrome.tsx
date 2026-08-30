@@ -1,25 +1,90 @@
 import Link from "next/link";
 
 import { FooterAdminLink } from "@/components/auth/footer-admin-link";
+import {
+  NAV_HOME_LABEL,
+  NAV_MENU_LABEL,
+  SITE_NAV,
+  type NavItem,
+} from "@/components/home/data";
+import { liveNav } from "@/components/home/routes";
 
 import { cartCount } from "./cart";
 import { cx } from "./cx";
-import { SHOP_PATH } from "./copy";
+import { SHOP_PATH, STORE_FOOTER } from "./copy";
 import styles from "./shop.module.css";
 
 /**
- * The shop's masthead and footer.
+ * The masthead and footer for every route outside the homepage.
  *
  * `components/home/SiteHeader` is not reused here on purpose, and the reason is
- * in that component's own docstring: its navigation is a list of the HOMEPAGE's
- * sections — `#range`, `#serves`, `#making` — so mounting it on a product page
- * would fill the chrome with anchors that resolve to nothing. Same for the
- * footer, whose first column is those same anchors. The vocabulary is identical
- * (sticky, hairline-ruled, translucent, the masked mark, drawn underlines);
- * only the destinations differ, and here they are all routes that exist.
+ * in that component's own docstring: its first list is the HOMEPAGE's sections
+ * — `#range`, `#serves`, `#making` — so mounting it on a product page would
+ * fill the chrome with anchors that resolve to nothing there. What the two DO
+ * share is `SITE_NAV`, the list of destinations that are not on any one page,
+ * so a route that ships appears in both mastheads at once instead of in
+ * whichever one somebody remembered. Both filter it through `liveNav`, so a
+ * link is never drawn at a 404.
+ *
+ * The home link is the wordmark rather than the bare circular mark: a visitor
+ * looking at the live site read that mark as a light/dark control, and an
+ * accessible name does not fix a shape that looks like a switch.
+ *
+ * Below 768 the navigation is a `<details>` disclosure whose summary says the
+ * word "Menu". It opens by tap, by Enter and with JavaScript switched off.
  */
 
-export async function StoreHeader({ here }: { here?: "shop" | "product" }) {
+type Here = "shop" | "product" | "wholesale" | "recipes" | "policy";
+
+/** Which nav item, if any, is the page being looked at. */
+function currentHref(here: Here | undefined): string | null {
+  switch (here) {
+    case "shop":
+    case "product":
+      return SHOP_PATH;
+    case "wholesale":
+      return "/wholesale";
+    case "recipes":
+      return "/recipes";
+    default:
+      return null;
+  }
+}
+
+function NavLinks({
+  items,
+  current,
+  className,
+  row = false,
+}: {
+  items: readonly NavItem[];
+  current: string | null;
+  className: string;
+  /** True inside the disclosure panel, where a link is a full-width menu row. */
+  row?: boolean;
+}) {
+  return (
+    <ul className={className}>
+      {items.map((item) => (
+        <li key={item.href}>
+          <Link
+            href={item.href}
+            aria-current={item.href === current ? "page" : undefined}
+            className={cx(
+              styles.tap,
+              row ? styles.navRow : styles.navLink,
+              "text-body-sm text-primary px-1",
+            )}
+          >
+            <span className={cx(styles.drawLink)}>{item.label}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export async function StoreHeader({ here }: { here?: Here }) {
   // A cart badge that is not wired to a real cart is a lie, so it reads the
   // cart through the provider and shows nothing at all when there is none.
   let count = 0;
@@ -29,42 +94,59 @@ export async function StoreHeader({ here }: { here?: "shop" | "product" }) {
     count = 0;
   }
 
+  const items = liveNav(SITE_NAV);
+  const current = currentHref(here);
+
   return (
     <header className={cx(styles.masthead, "px-gutter py-3")}>
       <div className="max-w-page mx-auto flex items-center justify-between gap-4">
         <Link
           href="/"
-          className={cx(styles.tap, styles.tapSquare, "text-primary shrink-0")}
-          aria-label="Half Sour — home"
+          className={cx(styles.tap, "text-primary shrink-0")}
+          aria-label={NAV_HOME_LABEL}
         >
           <span
-            className={cx(styles.mark)}
-            style={{ width: "1.75rem" }}
+            className={cx(styles.wordmark)}
+            style={{ width: "6rem" }}
             aria-hidden="true"
           />
         </Link>
 
-        <nav aria-label="Shop" className="min-w-0">
-          <ul className="gap-stack flex items-center justify-end">
-            <li>
-              <Link
-                href={SHOP_PATH}
-                aria-current={here === "shop" ? "page" : undefined}
-                className={cx(styles.tap, "text-body-sm text-primary px-1")}
-              >
-                <span className={cx(styles.drawLink)}>All bottles</span>
-              </Link>
-            </li>
-            <li>
-              <span
-                className={cx(styles.chip, styles.figure, styles.chipStocked)}
-                aria-live="polite"
-              >
-                {count === 0 ? "Cart empty" : `Cart ${String(count)}`}
-              </span>
-            </li>
-          </ul>
+        <nav aria-label="Main" className="hidden min-w-0 md:block">
+          <NavLinks
+            items={items}
+            current={current}
+            className="gap-stack flex flex-wrap items-center justify-end"
+          />
         </nav>
+
+        <div className="gap-inline flex shrink-0 items-center">
+          <details className={cx(styles.disclosure, "md:hidden")}>
+            <summary
+              className={cx(styles.tap, "text-body-sm text-primary px-1")}
+            >
+              {NAV_MENU_LABEL}
+              <span className={cx(styles.disclosureIcon)} aria-hidden="true">
+                +
+              </span>
+            </summary>
+            <nav aria-label="Pages" className={cx(styles.navPanel)}>
+              <NavLinks
+                items={items}
+                current={current}
+                row
+                className="max-w-page gap-inline mx-auto flex flex-col"
+              />
+            </nav>
+          </details>
+
+          <span
+            className={cx(styles.chip, styles.figure, styles.chipStocked)}
+            aria-live="polite"
+          >
+            {count === 0 ? "Cart empty" : `Cart ${String(count)}`}
+          </span>
+        </div>
       </div>
     </header>
   );
@@ -77,62 +159,48 @@ export function StoreFooter() {
     >
       <div className="max-w-page mx-auto">
         <span
-          className={cx(styles.mark)}
-          style={{ width: "2rem" }}
+          className={cx(styles.wordmark)}
+          style={{ width: "8rem" }}
           role="img"
           aria-label="Half Sour"
         />
 
         <nav
-          aria-label="Shop footer"
-          className="gap-block mt-block grid grid-cols-2 md:grid-cols-3"
+          aria-label="Site footer"
+          className="gap-block mt-block grid grid-cols-2 md:grid-cols-4"
         >
-          <div>
-            <h2 className="text-eyebrow font-mono uppercase">Bottles</h2>
-            <ul className="gap-inline mt-stack flex flex-col">
-              <li>
-                <Link
-                  href={SHOP_PATH}
-                  className={cx(styles.tap, "text-body-sm")}
-                >
-                  <span className={cx(styles.drawLink)}>All bottles</span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/products/the-full-set"
-                  className={cx(styles.tap, "text-body-sm")}
-                >
-                  <span className={cx(styles.drawLink)}>The Full Set</span>
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h2 className="text-eyebrow font-mono uppercase">The house</h2>
-            <ul className="gap-inline mt-stack flex flex-col">
-              <li>
-                <Link href="/" className={cx(styles.tap, "text-body-sm")}>
-                  <span className={cx(styles.drawLink)}>Home</span>
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h2 className="text-eyebrow font-mono uppercase">Trade</h2>
-            <ul className="gap-inline mt-stack flex flex-col">
-              <li>
-                <a
-                  href="mailto:hello@halfsour.co.nz"
-                  className={cx(styles.tap, "text-body-sm")}
-                >
-                  <span className={cx(styles.drawLink)}>
-                    hello@halfsour.co.nz
-                  </span>
-                </a>
-              </li>
-            </ul>
-          </div>
+          {STORE_FOOTER.map((column) => (
+            <div key={column.heading}>
+              <h2 className="text-eyebrow font-mono uppercase">
+                {column.heading}
+              </h2>
+              <ul className="gap-inline mt-stack flex flex-col">
+                {column.items.map((item) => (
+                  <li key={item.href}>
+                    {item.href.startsWith("mailto:") ? (
+                      <a
+                        href={item.href}
+                        className={cx(styles.tap, "text-body-sm")}
+                      >
+                        <span className={cx(styles.drawLink)}>
+                          {item.label}
+                        </span>
+                      </a>
+                    ) : (
+                      <Link
+                        href={item.href}
+                        className={cx(styles.tap, "text-body-sm")}
+                      >
+                        <span className={cx(styles.drawLink)}>
+                          {item.label}
+                        </span>
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </nav>
 
         <div className="mt-section gap-stack text-caption flex flex-wrap items-center justify-between">

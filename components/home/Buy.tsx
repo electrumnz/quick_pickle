@@ -1,3 +1,6 @@
+import { LIST } from "@/components/site/copy";
+import { JoinTheList, type SignupState } from "@/components/site/SignupForm";
+
 import { BUY, FULL_SET, price } from "./data";
 import { cx } from "./cx";
 import styles from "./home.module.css";
@@ -9,20 +12,27 @@ import { isLive } from "./routes";
  * A page that lists five prices and offers no way to act on any of them is not
  * a storefront, and until this section existed that is what this one was.
  *
- * Everything here resolves today. The shop link renders only when `routes.ts`
- * says the catalogue is deployed — see that file — and the two mail routes are
- * plain `mailto:` anchors, which work in every browser, on a phone, and with
- * scripting switched off. There is deliberately no `<input type="email">`:
- * there is no list service behind it yet, and a field that silently discards
- * the address it was given is a worse thing to ship than an honest address.
- * The copy says so rather than pretending otherwise, which is the house style
- * for the unglamorous moment (`brand/brand-guide.md` §5.5).
+ * ## What changed, and why the old note had to go
  *
- * Each route is a 48px control sitting under the reason to use it, rather than
- * a row of buttons at the top with the reasons somewhere else.
+ * This block used to carry two `mailto:` links and a paragraph explaining that
+ * there was no form behind either of them. That was honest when it was written
+ * and it is not true any more:
+ *
+ *   * The list is a real one-field form posting to a Server Action that writes
+ *     to `public.list_signups`. The avatar audit's `reorder-without-an-inbox`
+ *     check exists because two bottles a year is the whole direct plan, so the
+ *     second order is half the revenue — and a list joined by composing an
+ *     email is a list joined by nobody.
+ *   * The trade route is `/wholesale`, which publishes the price rather than
+ *     promising one inside two working days.
+ *
+ * Both still work with JavaScript switched off: the form posts, the action
+ * runs, and the answer comes back as a redirect carrying a query parameter,
+ * which is the same mechanism the buy path uses.
  */
-export function Buy() {
+export function Buy({ signup }: { signup: SignupState }) {
   const shopLive = isLive({ href: BUY.shop.href, label: BUY.shop.label });
+  const tradeLive = isLive({ href: BUY.trade.href, label: BUY.trade.label });
 
   return (
     <section
@@ -79,42 +89,37 @@ export function Buy() {
 
         <div className="gap-block grid content-start">
           <div className="border-hairline border-t pt-6" data-reveal>
-            <h3 className="text-heading-3 text-primary">{BUY.list.heading}</h3>
+            <h3 className="text-heading-3 text-primary">{LIST.heading}</h3>
             <p className="text-body-sm text-muted mt-stack max-w-prose">
-              {BUY.list.line}
+              {LIST.line}
             </p>
-            <a
-              href={BUY.list.href}
-              className={cx(
-                styles.button,
-                shopLive ? styles.buttonSecondary : styles.buttonPrimary,
-                "mt-block w-fit",
-              )}
-              data-cursor="link"
-              data-cursor-label="One a month"
-            >
-              {BUY.list.label}
-            </a>
+            <div className="mt-block">
+              <JoinTheList state={signup} sourcePath="/" />
+            </div>
           </div>
 
-          <div className="border-hairline border-t pt-6" data-reveal>
-            <h3 className="text-heading-3 text-primary">{BUY.trade.heading}</h3>
-            <p className="text-body-sm text-muted mt-stack max-w-prose">
-              {BUY.trade.line}
-            </p>
-            <a
-              href={BUY.trade.href}
-              className={cx(
-                styles.button,
-                styles.buttonSecondary,
-                "mt-block w-fit",
-              )}
-              data-cursor="link"
-              data-cursor-label="Two days"
-            >
-              {BUY.trade.label}
-            </a>
-          </div>
+          {tradeLive ? (
+            <div className="border-hairline border-t pt-6" data-reveal>
+              <h3 className="text-heading-3 text-primary">
+                {BUY.trade.heading}
+              </h3>
+              <p className="text-body-sm text-muted mt-stack max-w-prose">
+                {BUY.trade.line}
+              </p>
+              <a
+                href={BUY.trade.href}
+                className={cx(
+                  styles.button,
+                  styles.buttonSecondary,
+                  "mt-block w-fit",
+                )}
+                data-cursor="link"
+                data-cursor-label={BUY.trade.label}
+              >
+                {BUY.trade.label}
+              </a>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

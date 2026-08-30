@@ -658,3 +658,39 @@
   outline: var(--focus-ring-width) solid var(--focus-ring);
   outline-offset: var(--focus-ring-offset);
 }
+
+/* ------------------------------------------------------------- nav panel */
+
+/* The small-screen navigation, opened by the <details> in the masthead.
+   Absolutely positioned, so opening it cannot change --masthead-height — the
+   hero stage is padded by that number and a bar that grew on tap would shove
+   the whole composition down the screen.
+
+   The masthead is `position: fixed`, which makes it the containing block, so
+   `top: 100%` puts the panel immediately under the rule. */
+.navPanel {
+  position: absolute;
+  inset-inline: 0;
+  top: 100%;
+  background-color: var(--surface-page);
+  border-block-end: 1px solid var(--border-hairline);
+  padding-inline: var(--spacing-gutter);
+  padding-block: var(--spacing-stack);
+  max-height: calc(100svh - var(--masthead-height));
+  overflow-y: auto;
+}
+
+/* A masthead link that is a target in BOTH axes.
+   `.tap` gives 44px of height; a short label like "Shop" is only 35px wide, and
+   a 35px target is a miss on a phone. In the horizontal bar the link is
+   centred inside a 44px minimum; in the disclosure panel it runs the full width
+   of the panel, which is what a menu row should do anyway. */
+.navLink {
+  min-inline-size: var(--size-touch-min);
+  justify-content: center;
+}
+
+.navRow {
+  inline-size: 100%;
+  justify-content: flex-start;
+}

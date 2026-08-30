@@ -2,11 +2,16 @@ import Link from "next/link";
 
 import type { Cart } from "@/lib/commerce";
 
+import { fill, DELIVERY } from "@/components/site/copy";
+import { deliveryCharge, deliveryFreeFrom } from "@/components/site/delivery";
+import { recipeHref } from "@/components/site/recipes";
+import { formatMoney } from "@/lib/commerce";
+
 import { addToCart, goToCheckout } from "./actions";
 import { formatPrice, type CatalogueEntry } from "./catalogue";
-import { PRODUCT, SHOP_PATH, STATE } from "./copy";
+import { ADDED, PRODUCT, SHOP_PATH, STATE } from "./copy";
 import { AvailabilityChip, PriceBlock } from "./bits";
-import { drinksPerBottle } from "./serves";
+import { drinksPerBottle, leadBuild } from "./serves";
 import { SubmitButton } from "./SubmitButton";
 import styles from "./shop.module.css";
 import { cx } from "./cx";
@@ -261,6 +266,93 @@ export function AddedStrip({
  * The whole right-hand column of a product page: identity, price, the control
  * and whatever the current state has to say about it.
  */
+/**
+ * What the bottle makes, ABOVE the button that asks for the money.
+ *
+ * This block used to sit two sections down the page, and the avatar audit
+ * measured the gap: the first build was 740 characters below the buy control on
+ * No. 02 and 759 below it on No. 01. A shopper prices a $20 bottle against a
+ * $24 drink at a bar, and the two things that make $20 obvious — how many
+ * drinks are in it, and one ratio she could follow tonight — were both being
+ * shown after she had been asked to decide.
+ *
+ * Neither number is written down anywhere. The pour count is a division, and
+ * the build is the recipe this bottle was made for, read out of the library.
+ */
+function Makes({ entry }: { entry: CatalogueEntry }) {
+  if (entry.brine === null) return null;
+  const yieldInfo = drinksPerBottle(entry.brine.id, entry.volumeMl);
+  const lead = leadBuild(entry.brine.id);
+  if (yieldInfo === null && lead === null) return null;
+
+  return (
+    <div className="border-hairline border-t pt-4">
+      <p className="text-eyebrow text-muted font-mono uppercase">
+        {ADDED.makesLead}
+      </p>
+
+      {yieldInfo === null ? null : (
+        <p className="text-body text-primary mt-2">
+          {PRODUCT.yieldLead}{" "}
+          <span className={cx(styles.figure)}>{yieldInfo.count}</span> ×{" "}
+          {yieldInfo.title}, at{" "}
+          <span className={cx(styles.figure)}>{yieldInfo.perServeMl} ml</span>{" "}
+          {PRODUCT.yieldTail}.
+        </p>
+      )}
+
+      {lead === null ? null : (
+        <>
+          <p className="text-eyebrow text-muted mt-stack font-mono uppercase">
+            {ADDED.buildLead}
+          </p>
+          <ul className="mt-2">
+            {lead.build.map((buildLine) => (
+              <li
+                key={buildLine}
+                className={cx(
+                  styles.figure,
+                  "border-hairline text-caption text-primary border-t py-1.5",
+                )}
+              >
+                {buildLine}
+              </li>
+            ))}
+          </ul>
+          <Link
+            href={recipeHref(lead.slug)}
+            className={cx(styles.tap, "text-body-sm text-primary")}
+          >
+            <span className={cx(styles.drawLink)}>{ADDED.recipeLink}</span>
+          </Link>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The courier charge, beside the price rather than at step three of a checkout.
+ *
+ * A courier charge on an $18 bottle can be half the price of the bottle, and
+ * discovering it at the last step of a checkout already committed to is the
+ * commonest abandoned cart in New Zealand direct-to-consumer. The figure comes
+ * from `components/site/delivery.ts`, which is the same one the delivery page
+ * and the shop masthead read.
+ */
+export function DeliveryLine({ className }: { className?: string }) {
+  return (
+    <p className={cx("text-body-sm text-muted", className)}>
+      <span className="text-primary">{DELIVERY.shortLead}: </span>
+      {fill(DELIVERY.shortLine, {
+        charge: formatMoney(deliveryCharge()),
+        threshold: formatMoney(deliveryFreeFrom()),
+      })}{" "}
+      {DELIVERY.dispatchLine}
+    </p>
+  );
+}
+
 export function BuyPanel({
   entry,
   returnTo,
@@ -278,17 +370,14 @@ export function BuyPanel({
   problem: string | null;
   checkoutLive: boolean;
 }) {
-  const yieldInfo =
-    entry.brine === null
-      ? null
-      : drinksPerBottle(entry.brine.id, entry.volumeMl);
-
   return (
     <div className="gap-stack flex flex-col">
       <div className="gap-stack flex flex-wrap items-end justify-between">
         <PriceBlock entry={entry} size="lg" />
         <AvailabilityChip entry={entry} />
       </div>
+
+      <Makes entry={entry} />
 
       {problem === null ? null : (
         <p
@@ -341,15 +430,7 @@ export function BuyPanel({
         </>
       )}
 
-      {yieldInfo === null ? null : (
-        <p className="text-body-sm text-primary">
-          {PRODUCT.yieldLead}{" "}
-          <span className={cx(styles.figure)}>{yieldInfo.count}</span> ×{" "}
-          {yieldInfo.title}, at{" "}
-          <span className={cx(styles.figure)}>{yieldInfo.perServeMl} ml</span>{" "}
-          {PRODUCT.yieldTail}.
-        </p>
-      )}
+      <DeliveryLine />
 
       <dl className="mt-stack border-hairline text-body-sm border-t">
         {entry.variant === null ? null : (

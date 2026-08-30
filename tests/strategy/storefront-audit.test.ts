@@ -5,13 +5,20 @@
  * real server, fetches the pages a customer would be served, and asks each of
  * the checks in `lib/strategy/audit.ts` its one binary question.
  *
- * **Red here is not a broken test — it is the finding.** Eleven of the
- * seventeen checks fail today, and each failure names the page, the avatar it
- * costs and the fix. The way to turn one green is to change the storefront;
- * changing the check to accommodate the storefront is the one edit this file
- * exists to prevent. `components/strategy/evidence/06-storefront-audit.txt` is
- * written on every run, passing or failing, so the score is inspectable without
- * running anything.
+ * **Red here is not a broken test — it is the finding.** Each failure names the
+ * page, the avatar it costs and the fix. The way to turn one green is to change
+ * the storefront; changing the check to accommodate the storefront is the one
+ * edit this file exists to prevent.
+ * `components/strategy/evidence/06-storefront-audit.txt` is written on every
+ * run, passing or failing, so the score is inspectable without running
+ * anything.
+ *
+ * It was 6/17 when the checks were written and it is 17/17 now, which is what
+ * the storefront unit was for. The three tests in "the audit itself" below used
+ * to assert the live run was STILL failing; that was a test which turned into a
+ * bug the day the work landed, so it now proves the same thing permanently —
+ * that the checks are capable of failing — against a synthetic storefront where
+ * every page is a 404. Not one of the seventeen was weakened to get there.
  *
  *   npx vitest run tests/strategy/storefront-audit.test.ts
  *   AUDIT_BASE_URL=https://half-sour.vercel.app npx vitest run tests/strategy/storefront-audit.test.ts
@@ -99,31 +106,79 @@ describe("the live storefront, against the two avatars", () => {
 });
 
 describe("the audit itself", () => {
-  it("is not a formality — it is finding real things today", () => {
-    // If every check passed on the first run against a storefront with no
-    // trade page and no recipe library, the checks would be measuring nothing.
-    const failed = run.findings.filter((finding) => !finding.passed);
-    expect(failed.length).toBeGreaterThan(0);
-    // And it is not simply failing everything either, which would be the same
-    // uselessness upside down.
-    expect(run.passed).toBeGreaterThan(0);
+  /**
+   * A storefront where nothing resolves.
+   *
+   * These three tests used to assert that the LIVE run was still failing —
+   * "eleven of the seventeen fail today" — which was true when they were
+   * written and stopped being true the moment the storefront was fixed. That
+   * is a test that decays into a bug the day the work it is measuring lands,
+   * and it would have made the only way to a green build a worse storefront.
+   *
+   * What the three were actually protecting is worth keeping, so it is kept
+   * exactly, and made permanent: **the checks have to be capable of failing.**
+   * A suite of seventeen predicates that pass on a site with no trade page, no
+   * recipe library and no pages at all is measuring nothing, and would go on
+   * passing forever. So the capability is proved against a storefront where
+   * every page is a 404 rather than against whatever the real one happens to
+   * be doing this week.
+   *
+   * The live run is still asserted in full — every one of the seventeen, above.
+   */
+  const nothing: StorefrontPages = {
+    baseUrl: "https://example.invalid",
+    fetchedAt: new Date(0).toISOString(),
+    pages: auditPaths().map((path) => ({
+      path,
+      status: 404,
+      ok: false,
+      title: "",
+      text: "",
+      html: "",
+      links: [],
+      error: null,
+    })),
+  };
+
+  it("is not a formality — every check can fail, and does on an empty site", () => {
+    const empty = runAudit(nothing);
+    expect(empty.findings.length).toBe(AUDIT_CHECKS.length);
+
+    // Named rather than counted. Sixteen of the seventeen are unconditional and
+    // fail against a page with no bytes in it — a check that cannot tell a
+    // storefront from a 404 is measuring nothing. The seventeenth is
+    // conditional by design: `b2b-menu-promise-has-a-door` passes when the
+    // homepage makes no trade claim, because a page that promises a venue
+    // nothing owes a venue no destination, and a page with no words on it
+    // promises nothing.
+    const passing = empty.findings
+      .filter((finding) => finding.passed)
+      .map((finding) => finding.id);
+    expect(passing).toEqual(["b2b-menu-promise-has-a-door"]);
   });
 
-  it("has something red for both avatars, and a fix for each", () => {
+  it("has enough to say to both avatars, and a fix for every failure", () => {
     for (const score of run.scores) {
       expect(score.total).toBeGreaterThan(4);
     }
-    for (const finding of run.findings) {
-      if (finding.passed) continue;
+    // Against the empty storefront all but one check is failing, so this reads
+    // every fix and every detail line the audit owns rather than only the ones
+    // the live site happens to be tripping today.
+    for (const finding of runAudit(nothing).findings) {
       expect(finding.fix.length).toBeGreaterThan(20);
       expect(finding.detail.length).toBeGreaterThan(20);
     }
   });
 
   it("puts the one route that clears the most checks first", () => {
-    const first = run.fixFirst[0];
+    const first = runAudit(nothing).fixFirst[0];
     expect(first).toBeDefined();
     expect(first?.severity).toBe("blocking");
+    // And on a storefront with nothing left to fix, there is nothing to
+    // prioritise — an empty queue rather than a made-up first item.
+    expect(run.fixFirst.length).toBe(
+      run.findings.filter((finding) => !finding.passed).length === 0 ? 0 : 1,
+    );
   });
 });
 

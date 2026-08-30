@@ -246,3 +246,68 @@ export const STATE = {
   emptyHeading: "Nothing to show",
   emptyNote: "The catalogue answered, and it is empty.",
 } as const;
+
+/* ------------------------------------------------------------- the chrome */
+
+/**
+ * The footer on every route outside the homepage.
+ *
+ * Four columns, and the two new ones are the point: a buyer sending $54 to a
+ * company she has never heard of can reach the delivery charge and the terms of
+ * sale from any page she lands on, and a venue can reach the trade price
+ * without composing an email. Both were missing, and both were audit findings
+ * rather than opinions.
+ *
+ * The box is called what it is — three bottles — rather than by a name that is
+ * being reconsidered elsewhere in the build.
+ */
+export const STORE_FOOTER: readonly {
+  readonly heading: string;
+  readonly items: readonly { readonly href: string; readonly label: string }[];
+}[] = [
+  {
+    heading: "Bottles",
+    items: [
+      { href: SHOP_PATH, label: "All bottles" },
+      { href: `/products/${FULL_SET_HANDLE}`, label: "The box of three" },
+    ],
+  },
+  {
+    heading: "Behind the bar",
+    items: [{ href: "/recipes", label: "Recipes" }],
+  },
+  {
+    heading: "Trade",
+    items: [
+      { href: "/wholesale", label: "Wholesale" },
+      { href: "/wholesale#samples", label: "Ask for two samples" },
+    ],
+  },
+  {
+    heading: "The house",
+    items: [
+      { href: "/", label: "Home" },
+      { href: "/delivery", label: "Delivery and returns" },
+      { href: "/terms", label: "Terms of sale" },
+      { href: "mailto:hello@halfsour.co.nz", label: "hello@halfsour.co.nz" },
+    ],
+  },
+];
+
+/* -------------------------------------------------- what the pages added */
+
+/**
+ * The two lines the avatar audit found missing from the buying path.
+ *
+ * `libraryLink` turns the recipe count on a product page from a number into a
+ * destination — it counted seven recipes and sent nobody anywhere until
+ * /recipes shipped. `makesLead` heads the block that now sits ABOVE the buy
+ * control rather than below it: the pour count and one build, which are the two
+ * things that turn $20 into the price of a drink.
+ */
+export const ADDED = {
+  libraryLink: "Read them all",
+  makesLead: "What it makes",
+  buildLead: "The build",
+  recipeLink: "The full recipe",
+} as const;

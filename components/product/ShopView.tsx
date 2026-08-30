@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import type { Cart } from "@/lib/commerce";
 
-import { AddedStrip, BuyForm } from "./BuyPanel";
+import { AddedStrip, BuyForm, DeliveryLine } from "./BuyPanel";
 import { BottlePlate } from "./BottlePlate";
 import {
   formatPrice,
@@ -59,6 +59,9 @@ function Masthead({ count }: { count: number }) {
         >
           {count} {SHOP.productsWord} · {SHOP.rangeNote}
         </p>
+        {/* The courier charge, on the page a shopper compares prices on rather
+            than at the last step of a checkout she has already committed to. */}
+        <DeliveryLine className="mt-stack max-w-prose" />
       </div>
     </section>
   );

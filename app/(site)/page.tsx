@@ -21,6 +21,7 @@ import {
 import { isLive } from "@/components/home/routes";
 import { cx } from "@/components/home/cx";
 import styles from "@/components/home/home.module.css";
+import { signupParams } from "@/components/site/SignupForm";
 
 /**
  * HALF SOUR — the homepage.
@@ -33,6 +34,17 @@ import styles from "@/components/home/home.module.css";
  * for, how it is made, and the route to buy. Everything under [data-reveal]
  * starts visible and is hidden by MotionRoot in JavaScript on the way in,
  * which is what keeps the page whole with scripting switched off.
+ *
+ * ## Why this page reads `searchParams`
+ *
+ * The list sign-up in the Buy section is a plain `<form>` posting to a Server
+ * Action, and the action answers by redirecting back here with the outcome in
+ * the query string. That is what makes the form work with JavaScript switched
+ * off — no client component, no optimistic state, no toast that a browser
+ * without script never shows. The cost is that this route renders per request
+ * rather than being prerendered. It reads nothing from a database and nothing
+ * from the network, so what that buys the visitor is a confirmation they can
+ * actually see; what it costs is a render.
  */
 
 const SEAL_CLASS: Readonly<Record<SealTone, string | undefined>> = {
@@ -42,7 +54,22 @@ const SEAL_CLASS: Readonly<Record<SealTone, string | undefined>> = {
   secondary: styles.toneSecondary,
 };
 
-export default function HomePage() {
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function first(value: string | string[] | undefined): string | null {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value[0] ?? null;
+  return null;
+}
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const signup = signupParams((key) => first(params[key]));
+
   return (
     <>
       <MotionRoot />
@@ -379,7 +406,7 @@ export default function HomePage() {
             </dl>
           </div>
         </section>
-        <Buy />
+        <Buy signup={signup} />
       </main>
 
       <SiteFooter />

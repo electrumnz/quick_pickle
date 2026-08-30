@@ -3,6 +3,8 @@ import Image from "next/image";
 import { FilmMount } from "@/components/product/FilmMount";
 import { RANGE_SHOT } from "@/components/product/media";
 
+import { HERO_SERVE_LINE } from "@/components/site/copy";
+
 import { BUY } from "./data";
 import { HeroScrub } from "./HeroScrub";
 import { cx } from "./cx";
@@ -172,6 +174,15 @@ export function Hero() {
                 Pickle brine built as an ingredient in its own right — measured,
                 consistent, and good enough to put on a menu.
               </p>
+              {/*
+                The serve, named in the first screen. A stranger who reads three
+                lines of this site without meeting a drink files it beside the
+                imported bottle in the running shop — in the supplement aisle —
+                and the whole culinary position is lost before she scrolls. The
+                audit measures this: `b2c-serve-named-early` reads the first 300
+                characters of the page and looks for a glass or a dish.
+              */}
+              <p className="text-body text-muted mt-stack">{HERO_SERVE_LINE}</p>
             </div>
 
             <div

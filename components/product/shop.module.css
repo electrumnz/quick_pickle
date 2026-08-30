@@ -780,3 +780,79 @@
   inline-size: 100%;
   block-size: 100%;
 }
+
+/* -------------------------------------------------------------- wordmark */
+
+/* The company's name as drawn artwork, masked so one file serves every ground
+   and takes its colour from currentColor — the same technique as `.mark`.
+   It replaces the bare circular mark in the masthead: a visitor read that mark
+   as a light/dark toggle, and an accessible name does not fix a shape that
+   looks like a control. A wordmark cannot be mistaken for one. */
+.wordmark {
+  display: block;
+  aspect-ratio: 784 / 139;
+  background-color: currentColor;
+  -webkit-mask: url("/brand/wordmark.svg") no-repeat center / contain;
+  mask: url("/brand/wordmark.svg") no-repeat center / contain;
+}
+
+/* ------------------------------------------------------------- nav panel */
+
+/* Small-screen navigation. A <details> rather than a scripted drawer: it opens
+   by tap, by Enter and with JavaScript switched off, and the summary carries
+   the word "Menu" rather than an icon a visitor has to guess at. */
+.disclosure > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-inline);
+  min-height: var(--size-touch-min);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosureIcon {
+  transition: transform var(--motion-duration-quick) var(--motion-ease-standard);
+}
+
+.disclosure[open] .disclosureIcon {
+  transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosureIcon {
+    transition: none;
+  }
+}
+
+/* The masthead is `position: sticky`, which is a containing block for an
+   absolutely positioned child, so `top: 100%` sits the panel under the rule
+   without changing the bar's height. */
+.navPanel {
+  position: absolute;
+  inset-inline: 0;
+  top: 100%;
+  background-color: var(--surface-page);
+  border-block-end: 1px solid var(--border-hairline);
+  padding-inline: var(--spacing-gutter);
+  padding-block: var(--spacing-stack);
+  max-height: 70svh;
+  overflow-y: auto;
+}
+
+/* A masthead link that is a target in both axes. See the note beside the same
+   pair in components/home/home.module.css: `.tap` gives 44px of height, and a
+   short label like "Shop" is only 35px wide. */
+.navLink {
+  min-inline-size: var(--size-touch-min);
+  justify-content: center;
+}
+
+.navRow {
+  inline-size: 100%;
+  justify-content: flex-start;
+}
