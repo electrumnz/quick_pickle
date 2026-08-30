@@ -61,7 +61,18 @@ import type {
   ProductListQuery,
 } from "./types";
 
-export const COMMERCE_PROVIDER_NAMES = ["mock", "shopify"] as const;
+/**
+ * Every implementation name that can exist on this seam.
+ *
+ * `demo` is the mock provider pointed at a Postgres compiled into the build
+ * rather than at one over the network — see `lib/commerce/demo/provider.ts`. It
+ * is a third entry on the seam, not a fork: the same class, the same SQL, the
+ * same conformance suite. It is only *selectable* when `HALF_SOUR_DEMO=1`, which
+ * is why {@link COMMERCE_PROVIDER_NAMES} and the set a human may put in
+ * `COMMERCE_PROVIDER` are two different lists — see `selectableProviderNames`
+ * in `./config`.
+ */
+export const COMMERCE_PROVIDER_NAMES = ["mock", "shopify", "demo"] as const;
 export type CommerceProviderName = (typeof COMMERCE_PROVIDER_NAMES)[number];
 
 /**

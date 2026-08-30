@@ -13,6 +13,7 @@ import {
   type CommerceConfig,
   type EnvSource,
 } from "./config";
+import { createDemoProvider } from "./demo/provider";
 import { commerceErrors } from "./errors";
 import { MockProvider } from "./mock/provider";
 import { createPgExecutor } from "./sql/pg";
@@ -35,6 +36,13 @@ export const commerceProviderFactories: Readonly<
       currencyCode: config.currencyCode,
     });
   },
+
+  // The same class as `mock`, over the Postgres image the build compiled in.
+  // `assertProviderConfigured` has already refused if `HALF_SOUR_DEMO` is not
+  // 1, and `demoSqlExecutor` refuses again inside the factory, because a
+  // database that opens itself on the strength of one caller's say-so is the
+  // kind of thing that is only wrong once.
+  demo: createDemoProvider,
 
   // Unit C1 replaces this single line with `new ShopifyProvider(...)`. Until it
   // does, selecting `shopify` fails at construction with the exact list of

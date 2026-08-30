@@ -7,6 +7,7 @@
 import { resolveCommerceProviderName } from "../config";
 import { commerceErrors } from "../errors";
 import type { CommerceProviderName } from "../provider";
+import { createDemoHarness } from "./demo-harness";
 import type { ConformanceHarness } from "./harness";
 import { createMockHarness } from "./mock-harness";
 
@@ -14,6 +15,10 @@ export const conformanceHarnesses: Readonly<
   Record<CommerceProviderName, () => ConformanceHarness>
 > = {
   mock: createMockHarness,
+
+  // The same cases, against the Postgres image demo mode ships. See
+  // `./demo-harness.ts` for why that is worth a run of its own.
+  demo: createDemoHarness,
 
   // Unit C1 replaces this with `createShopifyHarness`. Until then, running the
   // suite with COMMERCE_PROVIDER=shopify fails loudly rather than reporting a
@@ -32,7 +37,11 @@ export const conformanceHarnesses: Readonly<
 export function createHarnessForEnv(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): ConformanceHarness {
+  // The whole environment is forwarded, not just `COMMERCE_PROVIDER`, because
+  // `demo` is only a selectable provider when `HALF_SOUR_DEMO=1` — running the
+  // suite against the image takes both variables, exactly as a deployment does.
   const name = resolveCommerceProviderName({
+    ...env,
     COMMERCE_PROVIDER: env.COMMERCE_PROVIDER ?? "mock",
   });
   return conformanceHarnesses[name]();

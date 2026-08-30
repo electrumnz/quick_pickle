@@ -39,6 +39,7 @@ import {
 import type {
   CheckoutSimulator,
   CommerceProvider,
+  CommerceProviderName,
   ProviderCapabilities,
   SimulatedCheckoutAddress,
   SimulatedCheckoutInput,
@@ -245,6 +246,15 @@ export type MockProviderOptions = {
   /** Injectable clock, so expiry can be tested without waiting 30 days. */
   readonly now?: () => Date;
   readonly cartTtlDays?: number;
+  /**
+   * Which name this instance reports as {@link CommerceProvider.name}.
+   *
+   * Defaults to `mock`. Demo mode passes `demo`, because the same class over a
+   * Postgres compiled into the build is a different deployment answer to "what
+   * am I reading from" and the admin's settings screen says so. It is a label,
+   * not a mode: nothing below this line branches on it.
+   */
+  readonly name?: CommerceProviderName;
 };
 
 // ---------------------------------------------------------------------------
@@ -417,7 +427,7 @@ function productOrderBy(
 // ---------------------------------------------------------------------------
 
 export class MockProvider implements CommerceProvider, CheckoutSimulator {
-  readonly name = "mock" as const;
+  readonly name: CommerceProviderName;
   readonly currencyCode: CurrencyCode;
   readonly capabilities: ProviderCapabilities;
 
@@ -427,6 +437,7 @@ export class MockProvider implements CommerceProvider, CheckoutSimulator {
   private readonly cartTtlDays: number;
 
   constructor(options: MockProviderOptions) {
+    this.name = options.name ?? "mock";
     this.sql = options.sql;
     this.siteUrl = options.siteUrl.replace(/\/+$/, "");
     this.currencyCode = options.currencyCode ?? DEFAULT_CURRENCY;

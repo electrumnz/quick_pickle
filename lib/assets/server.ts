@@ -17,6 +17,7 @@ import "server-only";
  */
 
 import { createPgExecutor, type SqlExecutor } from "@/lib/commerce";
+import { resolveDatabaseUrl } from "@/lib/demo/mode";
 
 import { assetIdsIn } from "./approvals";
 import { getDescriptionDrafter, type DescriptionDrafter } from "./describe";
@@ -30,8 +31,10 @@ import type { MarketingAsset } from "./types";
 type AssetGlobal = { __halfSourAssetSql?: SqlExecutor };
 
 export function assetSql(): SqlExecutor {
-  const url = process.env.SUPABASE_DB_URL?.trim();
-  if (url === undefined || url === "") {
+  // One answer to "which database", shared with the admin and the commerce
+  // layer: `lib/demo/mode.ts` substitutes the in-process image in demo mode.
+  const url = resolveDatabaseUrl();
+  if (url === null) {
     throw new AssetError(
       "storage_unavailable",
       "SUPABASE_DB_URL is not set, so the asset library cannot reach the business database.",

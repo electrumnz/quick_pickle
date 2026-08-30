@@ -6,6 +6,7 @@ import {
   type CommerceProvider,
   type SqlExecutor,
 } from "@/lib/commerce";
+import { resolveDatabaseUrl } from "@/lib/demo/mode";
 
 /**
  * The admin's two doors onto the business.
@@ -30,8 +31,13 @@ type DbGlobal = { __halfSourAdminSql?: SqlExecutor };
 
 /** One pool per server process, kept across hot reloads in development. */
 export function adminSql(): SqlExecutor {
-  const url = process.env.SUPABASE_DB_URL?.trim();
-  if (url === undefined || url === "") {
+  // `resolveDatabaseUrl`, not `process.env.SUPABASE_DB_URL`: demo mode answers
+  // this question with the image compiled into the deployment, and there is one
+  // place that decides. Reading the variable directly here is what made the
+  // admin's own screens the only part of a demo deployment still saying it
+  // could not reach a database.
+  const url = resolveDatabaseUrl();
+  if (url === null) {
     throw new Error(
       "SUPABASE_DB_URL is not set, so the admin cannot read the business database.",
     );

@@ -7,8 +7,9 @@
  * order whose totals do not add up. It needs no Docker, no network and no
  * Supabase project, which is what makes it usable in CI.
  *
- * Test-only. `@electric-sql/pglite` is a devDependency and nothing under `app/`
- * imports this module.
+ * Test-only: nothing under `app/` imports this module. `@electric-sql/pglite`
+ * is a runtime dependency rather than a devDependency because demo mode ships
+ * it — see `lib/demo/README.md`.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -16,7 +17,8 @@ import path from "node:path";
 
 import { PGlite } from "@electric-sql/pglite";
 
-import type { SqlExecutor, SqlResult, SqlRow } from "../sql/executor";
+import type { SqlExecutor } from "../sql/executor";
+import { createPgliteExecutor } from "../sql/pglite";
 
 /**
  * Supabase-provided objects the migrations reference but that PGlite does not
@@ -44,63 +46,6 @@ end
 $$;
 set check_function_bodies = off;
 `;
-
-class PgliteExecutor implements SqlExecutor {
-  private depth = 0;
-
-  constructor(private readonly db: PGlite) {}
-
-  async query<R extends SqlRow = SqlRow>(
-    text: string,
-    params: readonly unknown[] = [],
-  ): Promise<SqlResult<R>> {
-    const result = await this.db.query<R>(text, [...params]);
-    // PGlite reports UPDATE/DELETE counts on `affectedRows`; `rows` is empty
-    // for a statement with no RETURNING clause.
-    return {
-      rows: result.rows,
-      rowCount: result.affectedRows ?? result.rows.length,
-    };
-  }
-
-  async transaction<T>(fn: (tx: SqlExecutor) => Promise<T>): Promise<T> {
-    if (this.depth === 0) {
-      await this.db.exec("begin");
-      this.depth = 1;
-      try {
-        const value = await fn(this);
-        await this.db.exec("commit");
-        return value;
-      } catch (error) {
-        await this.db.exec("rollback");
-        throw error;
-      } finally {
-        this.depth = 0;
-      }
-    }
-    const name = `sp_${String(this.depth)}`;
-    this.depth += 1;
-    await this.db.exec(`savepoint ${name}`);
-    try {
-      const value = await fn(this);
-      await this.db.exec(`release savepoint ${name}`);
-      return value;
-    } catch (error) {
-      await this.db.exec(`rollback to savepoint ${name}`);
-      throw error;
-    } finally {
-      this.depth -= 1;
-    }
-  }
-
-  async execScript(text: string): Promise<void> {
-    await this.db.exec(text);
-  }
-
-  async close(): Promise<void> {
-    await this.db.close();
-  }
-}
 
 export type PgliteDatabase = {
   readonly sql: SqlExecutor;
@@ -133,5 +78,9 @@ export async function createSchemaDatabase(
     }
   }
 
-  return { sql: new PgliteExecutor(db), appliedMigrations: files };
+  // The executor itself lives in `../sql/pglite`, alongside the node-postgres
+  // one, because demo mode serves a deployment through the same code — see
+  // `lib/demo/database.ts`. There is one PGlite executor, not a test copy and a
+  // production copy that can drift.
+  return { sql: createPgliteExecutor(db), appliedMigrations: files };
 }

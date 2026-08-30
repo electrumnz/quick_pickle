@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node lib/demo/scripts/build-image.mts",
     "build": "next build",
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
@@ -15,13 +16,16 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:a11y": "playwright test --project=chromium --project=admin e2e/a11y.spec.ts e2e/a11y-admin.spec.ts",
     "lhci": "lhci autorun",
     "auth:hash-password": "node lib/auth/scripts/hash-password.mts",
     "auth:new-session-secret": "node lib/auth/scripts/new-session-secret.mts",
-    "auth:unlock": "node lib/auth/scripts/unlock.mts"
+    "auth:unlock": "node lib/auth/scripts/unlock.mts",
+    "demo:build-image": "node lib/demo/scripts/build-image.mts --force"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.44",
+    "@electric-sql/pglite": "^0.3.16",
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
     "@supabase/supabase-js": "^2.112.4",
@@ -40,7 +44,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.3.16",
+    "@axe-core/playwright": "4.13.0",
     "@lhci/cli": "0.15.1",
     "@playwright/test": "1.56.1",
     "@tailwindcss/postcss": "4.3.3",

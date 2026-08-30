@@ -1,5 +1,7 @@
 import "server-only";
 
+import { resolveDatabaseUrl } from "@/lib/demo/mode";
+
 import type { Bytes } from "./crypto/encoding";
 import { AuthConfigError } from "./errors";
 
@@ -249,7 +251,14 @@ export function describeAuthConfigGaps(): readonly string[] {
     );
   }
 
-  if (readEnv("SUPABASE_DB_URL") === undefined) {
+  // Demo mode supplies a database and only a database. It does not appear in
+  // either branch above and it never will: the two gaps that decide whether
+  // anyone can sign in are the password hash and the session secret, and demo
+  // mode has nothing to say about them. A deployment running with
+  // HALF_SOUR_DEMO=1 and no ADMIN_PASSWORD_HASH still lands on this list and
+  // still refuses, which is the intended behaviour and is covered by
+  // `tests/demo/switch.test.ts`.
+  if (resolveDatabaseUrl() === null) {
     gaps.push(
       "SUPABASE_DB_URL is not set. Sessions are stored in Postgres so they can be revoked, so there is no sign-in without it.",
     );
@@ -287,9 +296,16 @@ function decodeSecret(value: string): Bytes {
   return Uint8Array.from(Buffer.from(value, "base64"));
 }
 
-/** Postgres connection string used by the auth store. */
+/**
+ * Postgres connection string used by the auth store.
+ *
+ * In demo mode, and only when nothing else names a database, this is the
+ * in-process image's stand-in. What it is not is a way in: the session store it
+ * opens is empty of anything a cookie could match, and every sign-in still goes
+ * through the same argon2id verification against `ADMIN_PASSWORD_HASH`.
+ */
 export function getDatabaseUrl(): string {
-  const value = readEnv("SUPABASE_DB_URL");
+  const value = resolveDatabaseUrl() ?? undefined;
   if (value === undefined) {
     throw new AuthConfigError(
       "SUPABASE_DB_URL is not set. Admin auth is fail-closed: without a database there is no revocable session store and no durable throttle.",

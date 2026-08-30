@@ -72,3 +72,8 @@ _shot.mjs
 # the marketing asset library's local storage (photos and video the founder
 # uploads; never committed, never inside public/)
 .assets/
+
+# the demo database image (`npm run demo:build-image`): 4.4 MB of gzipped
+# Postgres data directory, rebuilt from the migrations and seed that are in the
+# tree. A build artefact, not a source file.
+/lib/demo/generated/

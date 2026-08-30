@@ -1,7 +1,48 @@
 import type { NextConfig } from "next";
 
+import { isDemoMode } from "./lib/demo/mode";
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+
+  /**
+   * PGlite is Postgres compiled to WebAssembly. It loads its own `.wasm` and
+   * `.data` from its package directory at runtime, which a bundled copy cannot
+   * do, so it stays external and is required from `node_modules` on the server.
+   * Listing it is harmless when demo mode is off: nothing imports it then, and
+   * the import that exists is dynamic.
+   */
+  serverExternalPackages: ["@electric-sql/pglite"],
+
+  /**
+   * The demo database image is read with `fs` at runtime, so Next's tracer
+   * cannot see it from the import graph and has to be told. The glob matches
+   * nothing when demo mode is off, which is not an error.
+   */
+  outputFileTracingIncludes: {
+    "/**/*": ["./lib/demo/generated/**"],
+  },
+
+  /**
+   * `X-Robots-Tag` on every response in demo mode.
+   *
+   * The third and broadest of the three noindex layers — `app/layout.tsx` sets
+   * the meta tag and `app/robots.ts` disallows everything, but a meta tag only
+   * reaches HTML and robots.txt is only a request. A header covers the JSON,
+   * the images and the feeds too, and a crawler that has already fetched a URL
+   * still honours it.
+   */
+  async headers() {
+    if (!isDemoMode()) return [];
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "x-robots-tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
+    ];
+  },
   /**
    * Where the build lands. `.next` unless something asks for somewhere else.
    *

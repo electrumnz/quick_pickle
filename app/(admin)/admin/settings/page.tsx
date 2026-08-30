@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
+import { DEMO_SETTINGS_NOTE } from "@/components/demo/copy";
 import { requireAdminSession } from "@/lib/auth/server";
+import { isDemoMode } from "@/lib/demo/mode";
 
 import { commerce, load } from "@/components/admin/data/db";
 import {
@@ -64,6 +66,10 @@ export default async function SettingsPage({
   const raw = params["q"];
   const query = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? "";
   const { session } = await requireAdminSession();
+  // The one predicate, read here as it is read by the banner, the robots rules
+  // and the commerce config. Never `providerName === "demo"`: that would be a
+  // second way to ask the same question, and two ways eventually disagree.
+  const demo = isDemoMode();
 
   const result = await load(async () => {
     const [facts, rows, sessions, person, spend] = await Promise.all([
@@ -189,7 +195,9 @@ export default async function SettingsPage({
                     value:
                       providerName === "shopify"
                         ? "Shopify, live"
-                        : "The local mirror of the shop",
+                        : demo
+                          ? "The demonstration database, built into this deployment"
+                          : "The local mirror of the shop",
                     hint:
                       providerName === "shopify"
                         ? "Orders and stock come straight from Shopify."
@@ -198,7 +206,17 @@ export default async function SettingsPage({
                   { term: "Shop", value: facts.shopDomain },
                 ]}
               />
-              {providerName !== "shopify" && (
+              {demo && (
+                // The banner at the bottom of every page already says this.
+                // It is said again here because this is the screen someone
+                // opens to find out what the admin is connected to, and
+                // because "my change vanished" is the first thing the demo
+                // will make somebody think is a bug.
+                <Callout title={DEMO_SETTINGS_NOTE.title}>
+                  {DEMO_SETTINGS_NOTE.body}
+                </Callout>
+              )}
+              {providerName !== "shopify" && !demo && (
                 <Callout title="Not connected to Shopify yet">
                   The API tokens have not been created — only the founder can
                   make them, in Shopify under Apps and sales channels. Until

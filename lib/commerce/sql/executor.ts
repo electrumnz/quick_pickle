@@ -7,10 +7,12 @@
  * a customer charged for stock that was never taken. Everything here goes
  * through one Postgres connection so `begin`/`commit` mean what they say.
  *
- * Two implementations exist: `PgSqlExecutor` (node-postgres, production and
- * local Supabase) and the PGlite executor in `lib/commerce/testing`, which runs
- * the real migrations in-process so the conformance suite tests against the
- * actual schema constraints rather than a fake.
+ * Two implementations exist, both in this directory: `./pg` (node-postgres,
+ * production and local Supabase) and `./pglite` (Postgres compiled to
+ * WebAssembly, in this process). The second serves two callers — the
+ * conformance suite, which applies the real migrations so it tests the actual
+ * schema constraints rather than a fake, and demo mode, which opens an image
+ * the build compiled in. See `lib/demo/README.md`.
  */
 
 export type SqlRow = Record<string, unknown>;

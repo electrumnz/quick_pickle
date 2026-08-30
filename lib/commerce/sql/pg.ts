@@ -11,6 +11,9 @@
 
 import { Pool, type PoolClient } from "pg";
 
+import { demoSqlExecutor } from "@/lib/demo/database";
+import { isDemoDatabaseUrl } from "@/lib/demo/mode";
+
 import type { SqlExecutor, SqlResult, SqlRow } from "./executor";
 
 class PoolExecutor implements SqlExecutor {
@@ -89,7 +92,20 @@ class ClientExecutor implements SqlExecutor {
   }
 }
 
+/**
+ * A `SqlExecutor` for a connection string.
+ *
+ * This is the one door onto `SUPABASE_DB_URL` — the commerce provider, the
+ * admin's own queries, the storefront's list sign-ups and the marketing asset
+ * library all come through here — which is why demo mode is answered here and
+ * nowhere else. `pglite://half-sour-demo` is not a DSN and nothing dials it; it
+ * is the stand-in `lib/demo/mode.ts` substitutes when `HALF_SOUR_DEMO=1` and no
+ * real database is named, and it resolves to the image compiled into the build.
+ * `demoSqlExecutor` refuses unless the switch is actually on, so a stray value
+ * in the variable cannot conjure a database.
+ */
 export function createPgExecutor(connectionString: string): SqlExecutor {
+  if (isDemoDatabaseUrl(connectionString)) return demoSqlExecutor();
   const pool = new Pool({
     connectionString,
     max: 10,

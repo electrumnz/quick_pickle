@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createPgExecutor, type SqlExecutor } from "@/lib/commerce";
+import { resolveDatabaseUrl } from "@/lib/demo/mode";
 
 import type { SignupKind } from "./list";
 
@@ -20,8 +21,10 @@ import type { SignupKind } from "./list";
 type ListSqlGlobal = { __halfSourListSql?: SqlExecutor };
 
 function listSql(): SqlExecutor {
-  const url = process.env.SUPABASE_DB_URL?.trim();
-  if (url === undefined || url === "") {
+  // One answer to "which database", shared with the admin and the commerce
+  // layer: `lib/demo/mode.ts` substitutes the in-process image in demo mode.
+  const url = resolveDatabaseUrl();
+  if (url === null) {
     throw new Error("SUPABASE_DB_URL is not set, so the list cannot be read.");
   }
   const store = globalThis as unknown as ListSqlGlobal;
