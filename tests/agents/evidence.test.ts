@@ -27,7 +27,7 @@ import { MemoryDurableStep, WorkflowParked, runAgentWorkflow } from "@/inngest";
 import { EVENT_NAMES } from "@/inngest/events";
 
 import { createHarness, toolTurn } from "./harness";
-import { generatedBy, stabiliseIds } from "@/tests/support/evidence";
+import { bucketMs, generatedBy, stabiliseIds } from "@/tests/support/evidence";
 
 const EVIDENCE_DIR = resolve(process.cwd(), "lib/agents/evidence");
 
@@ -636,7 +636,11 @@ describe("evidence artefacts", () => {
       `  ${JSON.stringify(await harness.platform.control.readKillSwitch(), null, 2)}`,
       "",
       "AFTER",
-      `  in-flight call aborted after   ${stoppedAfterMs} ms`,
+      // The finding is that the abort is immediate, not that it took 5ms
+      // rather than 7ms. Recording the raw sample rewrote this file on every
+      // run; the bucket says the same thing and holds still. The test below
+      // still asserts the real number.
+      `  in-flight call aborted within  ${bucketMs(stoppedAfterMs)}`,
       `  modelStep outcome              ${JSON.stringify(outcome)}`,
       `  agent_runs.status              ${after?.status}`,
       `  agent_runs.error               ${after?.error}`,
