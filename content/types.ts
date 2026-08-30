@@ -57,8 +57,8 @@ export type Difficulty = "easy" | "some-practice" | "practised";
 // The spirits this library actually uses. Named as ingredients only. Checked against the
 // ASA alcohol code: nothing here encourages excessive or rapid consumption, nothing is
 // aimed at under-18s, and nothing claims a drink offsets the effects of alcohol.
-// copy-audit-approved: R-13
 export type Spirit =
+  // copy-audit-approved: R-13 (ingredient names in a type, not copy)
   "gin" | "vodka" | "whiskey" | "tequila" | "mezcal" | "beer" | "none";
 
 export type Occasion =

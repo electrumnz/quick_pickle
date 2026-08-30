@@ -61,10 +61,10 @@ export const BRINES: Readonly<Record<BrineId, Brine>> = {
       "Cumin",
       "Heat, three seconds later",
     ],
-    // copy-audit-approved: WILD-02 (mānuka named as the smoking wood, an ingredient fact)
     run: [
       "Chipotle",
       "Manzano chilli",
+      // copy-audit-approved: WILD-02 (mānuka named as the smoking wood, an ingredient fact)
       "Manuka smoke",
       "Cumin",
       "Bay",

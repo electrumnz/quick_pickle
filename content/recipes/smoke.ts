@@ -204,8 +204,9 @@ export const SMOKE_RECIPES: readonly Recipe[] = [
     ],
     steps: [
       {
+        // copy-audit-approved: R-13 (names a spirit serve; §5.3 safe vocabulary)
         text: "Brine in the fridge an hour ahead. Same rule as every pickleback: the temperature gap is the drink.",
-      }, // copy-audit-approved: R-13
+      },
       { text: "Mezcal first, then the brine inside two seconds.", seconds: 2 }, // copy-audit-approved: R-13
       {
         text: "The orange afterwards, if you want it. In Oaxaca it would be orange and sal de gusano; this is not that, and it is not pretending to be.",
