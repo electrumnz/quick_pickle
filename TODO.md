@@ -4,19 +4,33 @@ Updated 2026-08-27. Honest status, not a summary.
 
 ## Needs the founder — nobody else can do these
 
-- [ ] **Shopify API tokens.** The deployed app cannot talk to Shopify without them, and
-      creating them is refused to AI tools as access escalation. Shopify admin →
-      Settings → Apps and sales channels → Develop apps. Exact scopes are listed in
-      `.claude/god-of-war/runs/20260827-121931/decisions.md`. Paste both tokens into the
-      Vercel project env vars, then set `COMMERCE_PROVIDER=shopify`.
-- [ ] **Vercel production branch → `main`.** Settings → Environments → Production →
-      Branch Tracking. Still tracks `claude/pickle-juice-brand-site-qu6jrr`. **This is now
-      the single thing standing between the built homepage and the live site**: `main`
-      carries it and deploys green, but `half-sour.vercel.app` serves whatever the tracked
-      branch last built, which is still the scaffold. Flip it, then redeploy `main` from
-      the dashboard. Neither Vercel token in the environment is valid, so an agent cannot
-      do this — the API rejects both with `invalidToken`. Once flipped, drop the
-      dual-pushing paragraph from CLAUDE.md.
+This section is one half of a pair. The other half is `content/go-live.ts`, which the
+admin renders at `/admin/go-live` with a message she can paste into Claude Code for each
+one. **Both have to change together**: `tests/admin/go-live.test.ts` fails when the items
+here and the entries there disagree on what exists, what it is called, or what is done.
+The order below is the order to do them in.
+
+- [ ] **Verify the kawakawa supplier.** No 04 WILD's live Shopify description names a
+      Tairāwhiti kawakawa grower who is not a relationship. That is a false
+      place-of-origin claim under Fair Trading Act s 13(j), it is published to real
+      customers right now, and it is the only item here with legal exposure. Take the
+      paragraph out or make it true. `legal/COPY-RULES.md` Group G carries the full note.
+- [ ] **Shopify API tokens.** The deployed app cannot talk to Shopify without them, so no
+      money can be taken, and creating them is refused to AI tools as access escalation.
+      Shopify admin → Settings → Apps and sales channels → Develop apps. Exact scopes are
+      listed in `.claude/god-of-war/runs/20260827-121931/decisions.md`. Paste both tokens
+      into the Vercel project env vars, then set `COMMERCE_PROVIDER=shopify`.
+- [ ] **Point the live site at the finished build.** Vercel → Settings → Environments →
+      Production → Branch Tracking still tracks `claude/pickle-juice-brand-site-qu6jrr`.
+      **This is the single thing standing between the built homepage and the live site**:
+      `main` carries it and deploys green, but `half-sour.vercel.app` serves whatever the
+      tracked branch last built, which is still the scaffold. Flip it, then redeploy
+      `main` from the dashboard. Neither Vercel token in the environment is valid, so an
+      agent cannot do this — the API rejects both with `invalidToken`. Once flipped, drop
+      the dual-pushing paragraph from CLAUDE.md.
+- [ ] **Change the admin password.** The current one follows the most predictable human
+      pattern — a word, a year, a punctuation mark. It is the only thing between the
+      internet and the whole business. `lib/auth/scripts/` generates a new argon2id hash.
 - [ ] **An AI Gateway API key.** The eight roles now call real models through the
       Vercel AI Gateway, and the one thing that cannot be created from here is the
       key. Mint it at Vercel → AI → API Keys and paste it into the project as
@@ -27,42 +41,37 @@ Updated 2026-08-27. Honest status, not a summary.
       than spending money nobody approved, and resuming means setting
       `HALF_SOUR_AGENT_MODEL` to a model you have chosen to pay for
       (`minimax/minimax-m3` is the paid twin, USD 0.30/1.20 per million).
-- [ ] **Decide whether customer prose may train a third party.** The concierge and
-      the trade role send what customers and venues wrote to MiniMax through the
+- [ ] **Decide whether customer writing may train someone else's model.** The concierge
+      and the trade role send what customers and venues wrote to MiniMax through the
       gateway. The gateway's catalogue reports `no_training: "none"` for both free
-      model ids, so the gateway filter that would refuse such a provider cannot be turned on while
-      those are the models. `AI_GATEWAY_DISALLOW_PROMPT_TRAINING=1` plus a paid id
-      is the combination that does; it is a decision about customers, not code.
-
+      model ids, so the gateway filter that would refuse such a provider cannot be turned
+      on while those are the models. `AI_GATEWAY_DISALLOW_PROMPT_TRAINING=1` plus a paid
+      id is the combination that does; it is a decision about customers, not code.
+- [ ] **Delivery rates confirmed with a courier.** `legal/shipping-returns.md` still
+      carries `[$X]` for standard, rural and overnight, and for the value above which
+      postage stops being charged. Nothing has been quoted by a carrier, so the delivery
+      page, the terms and the checkout are all quoting a number the build invented.
+- [ ] **The legal entity, NZBN and address.** `legal/terms-of-sale.md` still has these
+      unresolved, which is why `/terms` publishes only the settled half — the rights a
+      buyer has — and names no company. An invoice without an NZBN is one a trade
+      customer will send back.
+- [ ] **Your own Vercel, GitHub and Shopify accounts.** The three accounts this business
+      runs on. Check for each who owns it, who is billed, and whether the founder can
+      sign in unaided. Any answer of "no" is a day she cannot reach her own business.
+- [ ] **A domain of your own.** `halfsour.co.nz` and `halfsour.nz` are available;
+      `halfsour.com` is registered but parked. Not purchased — deliberately.
 - [ ] **Trademark filing.** HALF SOUR is clear in NZ class 32 (checked via TMview, 27 Aug
       2026 — IPONZ blocks non-browser clients). Two conditions from that search:
       file the **composite** mark (drawn wordmark + device) rather than the plain words,
       because "half sour" is the category term and would likely fail on distinctiveness;
       and file **class 32 first**, because class 33 contains SOURZ (Jim Beam).
-- [ ] **Verify the kawakawa supplier.** WILD's description names a Tairāwhiti grower who
-      does not yet exist as a relationship. That is a place-of-origin claim under Fair
-      Trading Act s 13(j). Make it true or change the copy before launch.
-- [ ] **Domain.** `halfsour.co.nz` and `halfsour.nz` are available; `halfsour.com` is
-      registered but parked. Not purchased — deliberately.
-- [x] **No. 04 WILD is a first-class product.** `brand/assets/label-04-wild.svg` is
-      drawn by `brand/_src/build_labels.py` alongside the other three — same grid, same
-      outlined letterforms, no live `<text>` — with Dill, the second accent, as its seal
-      and foot band rather than a recolour of SMOKE. `bottles.svg` is regenerated from
-      the same SKU list and is now four bottles at 1500x900. The catalogue carries it
-      too: HS-04-500 at 2600c NZD in `supabase/seed.sql`, `lib/commerce/seed/` and
-      `supabase/migrations/20260103000100_catalogue_no_04_wild.sql` (the migration is how
-      a database that already exists gets it, since the seed truncates). Stock is 17
-      bottles off one 40-bottle run, which is a real low-stock state and not a posed one.
-      Still short: the brand guide's own header and label strip (`brand/_src/build_guide.py`)
-      list three products, and Shopify holds no image for HS-04-500, so the mirror row
-      carries a null `hero_image_url`.
+- [ ] **The Instagram and TikTok accounts.** Neither exists. The handles are free until
+      somebody else takes them, and the admin's social screen has nowhere to post until
+      they do.
 - [ ] **Real product photography.** Every AI image service was unreachable during the
       build (connector blocks invoke, ZeroGPU needs a token, FLUX spaces returned 503).
       The bottle line-up and labels are authored vector art instead, which is better than
       AI-garbled label text but is not photography.
-- [ ] **Change the admin password.** The current one follows the most predictable human
-      pattern — a word, a year, a punctuation mark. It is the only thing between the
-      internet and the whole business. `lib/auth/scripts/` generates a new argon2id hash.
 
 ## Repo hygiene worth fixing
 
@@ -118,6 +127,18 @@ Updated 2026-08-27. Honest status, not a summary.
       The **Lint step is still red and always was** — 27 ESLint errors plus a Prettier
       failure in `components/3d/` and `lib/commerce/`, untouched by the homepage work.
 - [x] Vercel project, live and public
+- [x] **No. 04 WILD is a first-class product.** `brand/assets/label-04-wild.svg` is
+      drawn by `brand/_src/build_labels.py` alongside the other three — same grid, same
+      outlined letterforms, no live `<text>` — with Dill, the second accent, as its seal
+      and foot band rather than a recolour of SMOKE. `bottles.svg` is regenerated from
+      the same SKU list and is now four bottles at 1500x900. The catalogue carries it
+      too: HS-04-500 at 2600c NZD in `supabase/seed.sql`, `lib/commerce/seed/` and
+      `supabase/migrations/20260103000100_catalogue_no_04_wild.sql` (the migration is how
+      a database that already exists gets it, since the seed truncates). Stock is 17
+      bottles off one 40-bottle run, which is a real low-stock state and not a posed one.
+      Still short: the brand guide's own header and label strip (`brand/_src/build_guide.py`)
+      list three products, and Shopify holds no image for HS-04-500, so the mirror row
+      carries a null `hero_image_url`.
 - [x] **Homepage** — hero, the range as a back-bar spec sheet, the four serves, the
       kitchen band and the four-step process. Renders `components/home/data.ts` and
       `content/brines.ts`; carries no copy of its own. Checked in Chromium at 1440 and

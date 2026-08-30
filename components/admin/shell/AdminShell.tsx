@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import {
@@ -113,6 +114,32 @@ export function AdminShell({
           />
           <Breadcrumbs />
           <div className="ml-auto flex shrink-0 items-center gap-2">
+            {/*
+              The way out.
+              Reported by the founder: once she is in the admin, the only exit
+              is typing the storefront address by hand. So there is one
+              permanent link to it, in the masthead where it is on every screen
+              at every width — not in the sidebar footer, which is where the
+              sign-out control lives and which would make leaving to look at
+              the shop read as leaving the admin altogether. It navigates in
+              this tab, because she goes back and forth.
+            */}
+            <Link
+              href="/"
+              className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-caption text-link underline underline-offset-4 hover:no-underline sm:min-h-8"
+            >
+              {/*
+                Two words on a phone, four on anything wider. The masthead is
+                shared with the breadcrumb trail, and a fixed-width link this
+                far right truncates the trail on a 390px screen. The shorter
+                label keeps the full destination in its accessible name.
+              */}
+              <span className="sm:hidden">
+                Shop
+                <span className="sr-only"> — view the storefront</span>
+              </span>
+              <span className="hidden sm:inline">View the shop</span>
+            </Link>
             <span className="hidden text-caption text-muted sm:inline">
               New Zealand time
             </span>

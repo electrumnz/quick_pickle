@@ -70,6 +70,7 @@ export const ADMIN_ROUTES: readonly AuditRoute[] = [
   { name: "brand plan", path: "/admin/brand/plan", signedIn: true },
   { name: "team", path: "/admin/team", signedIn: true },
   { name: "settings", path: "/admin/settings", signedIn: true },
+  { name: "go live", path: "/admin/go-live", signedIn: true },
   { name: "search", path: "/admin/search?q=smoke", signedIn: true },
   { name: "not found", path: "/admin/no-such-page", signedIn: true },
 ];

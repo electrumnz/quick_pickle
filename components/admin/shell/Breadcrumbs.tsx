@@ -5,6 +5,12 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 import { destinationFor } from "./destinations";
 
+/** Pages that are somewhere without being one of the nine destinations. */
+const BESIDE_THE_NINE: Readonly<Record<string, string | undefined>> = {
+  "/admin/search": "Search",
+  "/admin/go-live": "Go live",
+};
+
 /**
  * The trail in the top bar: Half Sour, then where you are.
  *
@@ -17,10 +23,10 @@ export function Breadcrumbs() {
   const params = useSearchParams();
   const destination = destinationFor(pathname);
   const query = params.get("q");
-  // /admin/search is not one of the nine, but it is somewhere, and a trail
-  // that stops at "Half Sour" leaves her without a name for where she is.
-  const label =
-    destination?.label ?? (pathname === "/admin/search" ? "Search" : null);
+  // /admin/search and /admin/go-live are not among the nine, but they are
+  // somewhere, and a trail that stops at "Half Sour" leaves her without a name
+  // for where she is.
+  const label = destination?.label ?? BESIDE_THE_NINE[pathname] ?? null;
   const back = destination?.href ?? "/admin/search";
 
   return (
