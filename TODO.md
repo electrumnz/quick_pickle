@@ -20,7 +20,7 @@ The order below is the order to do them in.
       Shopify admin → Settings → Apps and sales channels → Develop apps. Exact scopes are
       listed in `.claude/god-of-war/runs/20260827-121931/decisions.md`. Paste both tokens
       into the Vercel project env vars, then set `COMMERCE_PROVIDER=shopify`.
-- [ ] **Point the live site at the finished build.** Vercel → Settings → Environments →
+- [x] **Point the live site at the finished build.** Vercel → Settings → Environments →
       Production → Branch Tracking still tracks `claude/pickle-juice-brand-site-qu6jrr`.
       **This is the single thing standing between the built homepage and the live site**:
       `main` carries it and deploys green, but `half-sour.vercel.app` serves whatever the
@@ -31,7 +31,7 @@ The order below is the order to do them in.
 - [ ] **Change the admin password.** The current one follows the most predictable human
       pattern — a word, a year, a punctuation mark. It is the only thing between the
       internet and the whole business. `lib/auth/scripts/` generates a new argon2id hash.
-- [ ] **An AI Gateway API key.** The eight roles now call real models through the
+- [x] **An AI Gateway API key.** The eight roles now call real models through the
       Vercel AI Gateway, and the one thing that cannot be created from here is the
       key. Mint it at Vercel → AI → API Keys and paste it into the project as
       `AI_GATEWAY_API_KEY`. Without it nothing breaks — the site, the shop and the
@@ -173,5 +173,5 @@ the wholesale rail on Shopify draft orders · onboarding · performance and a11y
 - The copy scanner's TH-02 rule was over-broad, flagging "cured" — correct food
   vocabulary here. Narrowing was requested; verify before trusting a clean scan.
 - The brand guide header still lists three products; WILD was added afterwards.
-- `main` and the working branch are kept identical by dual-pushing. Once Vercel tracks
-  `main`, drop the second push.
+- Vercel tracks `main`, and `vercel.json` disables deployments for the working branch,
+  so only a push to `main` reaches production.

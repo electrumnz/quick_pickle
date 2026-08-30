@@ -65,9 +65,9 @@ Chromium build. Do not "upgrade" these without checking why they are held back.
 
 ## Deploying
 
-Production is `half-sour.vercel.app`. Push to both `main` and the working branch — the
-Vercel project's production branch is still set to the working branch, so dual-pushing
-keeps production current until that setting is changed.
+Production is `half-sour.vercel.app`, and it tracks `main`. A push to `main` builds and
+publishes; nothing else does. `vercel.json` turns deployments off for the working branch,
+so pushing there is free — use it to park work that is not ready to be seen.
 
 Never push a red build to main: Vercel keeps the last good deployment, so a failed build
 silently freezes production rather than breaking it, which is harder to notice.

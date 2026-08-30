@@ -163,7 +163,7 @@ export const GO_LIVE_TASKS: readonly GoLiveTask[] = [
       "",
       "When it is done, mark it done: set done: true on the vercel-production-branch entry in content/go-live.ts and tick its box in TODO.md.",
     ].join("\n"),
-    done: false,
+    done: true,
   },
   {
     id: "admin-password",
@@ -222,7 +222,7 @@ export const GO_LIVE_TASKS: readonly GoLiveTask[] = [
       "",
       "When it is done, mark it done: set done: true on the ai-gateway-key entry in content/go-live.ts and tick its box in TODO.md.",
     ].join("\n"),
-    done: false,
+    done: true,
   },
   {
     id: "customer-prose-training",
