@@ -788,6 +788,10 @@ export class AgentRuntime {
         status: "rejected",
         error: `approval_${status}: ${note}`,
         approvalId: call.approvalId,
+        // Same constraint as `refuseToolCall`: a call the founder declined
+        // never ran, and the schema still wants a start time on anything that
+        // has finished.
+        startedAt: call.startedAt ?? finishedAt,
         finishedAt,
       });
       await this.appendToolMessage(runId, call, {
@@ -1058,6 +1062,12 @@ export class AgentRuntime {
     await this.deps.store.updateToolCall(call.id, {
       status,
       error: reason,
+      // `agent_tool_calls_finish_needs_start`: a call that finished must have
+      // started. A refused call never ran, so it started and finished in the
+      // same instant — which is the truth, and is what lets the refusal be
+      // recorded at all. `InMemoryAgentStore` does not mirror this constraint,
+      // so it went unnoticed until a run wrote to Postgres.
+      startedAt: call.startedAt ?? finishedAt,
       finishedAt,
     });
     await this.appendToolMessage(runId, call, { refused: true, reason });

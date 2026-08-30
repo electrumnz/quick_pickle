@@ -31,6 +31,8 @@
 
 import type { AgentPlatform } from "../factory";
 import { createProductionRuntime } from "../factory";
+import type { ModelResolver } from "../model/provider";
+import type { AgentStore } from "../store/types";
 import type { StrategyStore } from "@/lib/strategy";
 import { SqlStrategyStore } from "@/lib/strategy";
 
@@ -55,6 +57,19 @@ export async function createRosterPlatform(options: {
   /** Defaults to the strategy in `strategy_documents`. */
   readonly strategy?: StrategyStore;
   readonly env?: Readonly<Record<string, string | undefined>>;
+  /**
+   * Where the transcript lands. Defaults to the Supabase REST store, which is
+   * what the Inngest endpoint has. The admin's "Run now" passes a
+   * `SqlAgentStore` over the same connection it reads the Team page from, so
+   * the run it started is the run she then reads.
+   */
+  readonly store?: AgentStore;
+  /**
+   * What answers. Defaults to the environment's own resolver; see
+   * `createProductionRuntime`. Passed by the tests that drive the real gateway
+   * client with only `fetch` substituted.
+   */
+  readonly models?: ModelResolver;
 }): Promise<RosterPlatform> {
   const roster = await loadRoster(
     options.strategy ?? new SqlStrategyStore(options.sql),
@@ -66,6 +81,8 @@ export async function createRosterPlatform(options: {
   const platform = createProductionRuntime({
     registry: tools.registry,
     ...(options.env === undefined ? {} : { env: options.env }),
+    ...(options.store === undefined ? {} : { store: options.store }),
+    ...(options.models === undefined ? {} : { models: options.models }),
   });
   const agentIds = await registerRoster(platform.runtime, roster);
   return { platform, roster, tools, agentIds };

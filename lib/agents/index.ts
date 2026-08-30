@@ -116,6 +116,7 @@ export {
 export { StandbyModel, createStandbyResolver } from "./model/standby";
 
 export { InMemoryAgentStore } from "./store/memory-store";
+export { SqlAgentStore } from "./store/sql-store";
 export {
   SupabaseAgentStore,
   createServiceClient,

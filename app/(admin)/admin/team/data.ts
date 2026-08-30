@@ -147,6 +147,49 @@ export async function teamMember(slug: string): Promise<TeamMember | null> {
 
 /* --------------------------------------------------------------------- runs */
 
+/**
+ * The halt record on a run, in the shape `AgentRuntime.halt` writes it.
+ *
+ * Money stays in micros here, exactly as the cost meter recorded it. It is
+ * converted for display in one place, at the edge, and never recomputed from
+ * tokens — the meter is the only thing that knows what a call actually cost.
+ */
+export type RunHalt = {
+  /** `cost_cap_exceeded`, `model_call_failed`, `kill_switch_engaged`, … */
+  readonly code: string;
+  readonly reason: string;
+  /** Which ceiling, when the code is `cost_cap_exceeded`. */
+  readonly cap: string | null;
+  readonly limitMicros: number | null;
+  readonly spentMicros: number | null;
+};
+
+function toHalt(context: unknown): RunHalt | null {
+  if (typeof context !== "object" || context === null) return null;
+  const raw = (context as Record<string, unknown>)["halt"];
+  if (typeof raw !== "object" || raw === null) return null;
+  const halt = raw as Record<string, unknown>;
+  const code = halt["code"];
+  const reason = halt["reason"];
+  if (typeof code !== "string" || typeof reason !== "string") return null;
+  const micros = (key: string): number | null => {
+    const value = halt[key];
+    if (typeof value === "number") return Math.trunc(value);
+    if (typeof value === "string" && value.trim() !== "") {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
+    }
+    return null;
+  };
+  return {
+    code,
+    reason,
+    cap: typeof halt["cap"] === "string" ? halt["cap"] : null,
+    limitMicros: micros("limitMicros"),
+    spentMicros: micros("spentMicros"),
+  };
+}
+
 /** One job the agent ran, with what it said and what it called. */
 export type AgentRun = {
   readonly id: string;
@@ -161,6 +204,16 @@ export type AgentRun = {
   readonly costCents: number;
   readonly toolCallCount: number;
   readonly blockingApprovalId: string | null;
+  /**
+   * Why the runtime stopped it, when it did.
+   *
+   * `agent_runs.context.halt` is written by `AgentRuntime.halt` at the moment
+   * it happens, and it carries more than the error string does: which ceiling
+   * was hit, what the ceiling was, and what had already been spent. Read back
+   * here so the screen can say "it stopped at its own limit, having spent
+   * $1.20 of $1.00" instead of a code.
+   */
+  readonly halt: RunHalt | null;
   /** Every sentence it gave as its reason for acting, in order. */
   readonly reasoning: readonly string[];
   readonly actions: readonly {
@@ -188,7 +241,7 @@ export async function runsForAgent(
   const runs = await sql.query(
     `select r.id, r.status, r.trigger, r.goal, r.outcome, r.error, r.queued_at,
             r.finished_at, r.duration_ms, r.cost_micros, r.tool_call_count,
-            r.blocking_approval_id
+            r.blocking_approval_id, r.context
        from public.agent_runs r
       where r.agent_id = $1
       order by r.queued_at desc
@@ -251,6 +304,7 @@ export async function runsForAgent(
       costCents: Math.round(int(row, "cost_micros") / 10_000),
       toolCallCount: int(row, "tool_call_count"),
       blockingApprovalId: textOrNull(row, "blocking_approval_id"),
+      halt: toHalt(row["context"]),
       reasoning: reasoningByRun.get(id) ?? [],
       actions: actionsByRun.get(id) ?? [],
     };
@@ -294,10 +348,99 @@ export async function recentTeamRuns(limit = 8): Promise<readonly TeamRun[]> {
     costCents: Math.round(int(row, "cost_micros") / 10_000),
     toolCallCount: int(row, "tool_call_count"),
     blockingApprovalId: textOrNull(row, "blocking_approval_id"),
+    halt: null,
     reasoning:
       textOrNull(row, "last_reason") === null ? [] : [text(row, "last_reason")],
     actions: [],
   }));
+}
+
+/**
+ * The "Run now" job this agent already has in flight, if any.
+ *
+ * The two live statuses are exactly the ones `agent_runs_one_live_manual_run`
+ * indexes, so this and the database's own refusal always agree about what
+ * "already going" means. This one exists to produce a sentence; the index is
+ * what makes a double submit impossible.
+ *
+ * `awaiting_approval` is deliberately not one of them. A parked run is a
+ * decision waiting in her queue, not work in flight, and treating it as live
+ * would leave the button dead until she answered — see the migration.
+ */
+export async function liveManualRun(
+  agentId: string,
+): Promise<{ readonly id: string; readonly queuedAt: string } | null> {
+  const result = await adminSql().query(
+    `select id, queued_at from public.agent_runs
+      where agent_id = $1 and trigger = 'manual'
+        and status in ('queued', 'running')
+      order by queued_at desc
+      limit 1`,
+    [agentId],
+  );
+  const row = result.rows[0];
+  return row === undefined
+    ? null
+    : { id: text(row, "id"), queuedAt: iso(row, "queued_at") };
+}
+
+/**
+ * Close off a manual run that nothing is driving any more.
+ *
+ * A run is opened, driven and finished inside the request that pressed the
+ * button. If that request dies — a platform timeout, a redeploy, a browser
+ * closed mid-run — the row stays marked live, and
+ * `agent_runs_one_live_manual_run` would then refuse every future press for
+ * that agent, for ever. This is the sweep that stops one dead request costing
+ * the founder the button.
+ *
+ * It writes the truth rather than tidying up: the run is `cancelled`, with an
+ * error saying what actually happened to it, and whatever it managed to write
+ * down before it died is still on its record. `started_at` is backfilled from
+ * `queued_at` where a run never got as far as starting, because
+ * `agent_runs_finish_needs_start` will not let a run finish without one.
+ */
+export async function closeStrandedManualRuns(
+  agentId: string,
+  olderThanMinutes: number,
+): Promise<number> {
+  const result = await adminSql().query(
+    `update public.agent_runs
+        set status = 'cancelled'::public.agent_run_status,
+            started_at = coalesce(started_at, queued_at),
+            finished_at = now(),
+            blocking_approval_id = null,
+            error = 'run_abandoned: nothing was driving this job any more. It was '
+                    || 'started by hand and the request that was running it never '
+                    || 'reported back, so it has been closed off. Whatever it wrote '
+                    || 'down before that is below.',
+            updated_at = now()
+      where agent_id = $1
+        and trigger = 'manual'
+        and status in ('queued', 'running')
+        and queued_at < now() - make_interval(mins => $2::int)
+      returning id`,
+    [agentId, olderThanMinutes],
+  );
+  return result.rows.length;
+}
+
+/**
+ * Stamp the operator who pressed the button onto the run.
+ *
+ * `agent_runs.triggered_by_operator_id` has been in the schema since the first
+ * migration and nothing has ever written it. A manual run is the one case where
+ * there is a person to name, and naming her is what makes `trigger = 'manual'`
+ * mean "the founder, at 9:14" rather than just "not the schedule".
+ */
+export async function stampRunOperator(
+  runId: string,
+  operatorId: string,
+): Promise<void> {
+  await adminSql().query(
+    `update public.agent_runs set triggered_by_operator_id = $2 where id = $1`,
+    [runId, operatorId],
+  );
 }
 
 /* ----------------------------------------------------------------- the team */

@@ -117,6 +117,13 @@ export function createAgentRuntime(
  * Set `requireLiveModel` when a caller genuinely cannot continue without a
  * model — a script whose whole purpose is a live call, say — and it throws as
  * before.
+ *
+ * `store` is the one part a caller may supply. It defaults to
+ * {@link SupabaseAgentStore}, which needs `NEXT_PUBLIC_SUPABASE_URL` and a
+ * service-role key; a deployment whose database is a Postgres it holds a
+ * connection to rather than a REST endpoint passes `SqlAgentStore` instead.
+ * Everything above the port is identical either way — same runtime, same gate,
+ * same meter, same transcript — which is the whole reason the port exists.
  */
 export function createProductionRuntime(options: {
   readonly registry: ToolRegistry;
@@ -124,6 +131,18 @@ export function createProductionRuntime(options: {
   readonly logger?: AgentLogger;
   /** Throw rather than degrade when no live model is configured. */
   readonly requireLiveModel?: boolean;
+  /** Where the transcript lands. Defaults to the Supabase REST store. */
+  readonly store?: AgentStore;
+  /**
+   * What answers. Defaults to whatever the environment is configured for.
+   *
+   * Supplied only where the environment cannot express what is wanted: a test
+   * that needs the REAL gateway client with `fetch` substituted, so that the
+   * model id, the credential and the tool definitions on the wire are the ones
+   * this code actually sends. Reaching into the runtime's private dependencies
+   * to do that would prove something about a different object.
+   */
+  readonly models?: ModelResolver;
 }): AgentPlatform {
   const env = options.env ?? process.env;
   const unavailable = liveModelUnavailableReason(env);
@@ -131,10 +150,11 @@ export function createProductionRuntime(options: {
     throw new AgentRuntimeError("model_unavailable", unavailable);
   }
   const models =
+    options.models ??
     resolverFromEnv(env) ??
     createStandbyResolver(unavailable ?? UNKNOWN_MODEL_REASON);
   return createAgentRuntime({
-    store: new SupabaseAgentStore(createServiceClient(env)),
+    store: options.store ?? new SupabaseAgentStore(createServiceClient(env)),
     registry: options.registry,
     models,
     ...(options.logger === undefined ? {} : { logger: options.logger }),

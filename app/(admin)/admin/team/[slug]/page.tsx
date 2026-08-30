@@ -46,13 +46,19 @@ import {
   defineTradeAgent,
 } from "@/lib/strategy";
 import { adminFormToken, requireAdminAccess } from "@/lib/auth/server";
+import { formatMicrosNzd } from "@/lib/agents";
 
 import { PauseForm } from "../pause-form";
+import { RunNowPanel } from "../run-now-panel";
+import { runNowBlockers } from "../run-readiness";
 import {
   approvalsForAgent,
+  liveManualRun,
   runsForAgent,
   teamMember,
+  teamTotals,
   type AgentRun,
+  type RunHalt,
   type TeamMember,
 } from "../data";
 
@@ -100,7 +106,11 @@ export default async function AgentPage({
   // nobody is signed in there is no token to bind a form to, and
   // `adminFormToken` returns "" — which `assertAdminCsrf` can never accept, so
   // a submitted form lands on the sign-in page rather than in the database.
-  const csrfToken = adminFormToken(await requireAdminAccess());
+  // The access, not just the token: this page has one control that needs a
+  // session and several that do not, and it has to say which is which before
+  // anything is pressed rather than after.
+  const access = await requireAdminAccess();
+  const csrfToken = adminFormToken(access);
   const { slug } = await params;
   const query = await searchParams;
   const back = `/admin/team/${slug}`;
@@ -108,13 +118,15 @@ export default async function AgentPage({
   const result = await load(async () => {
     const member = await teamMember(slug);
     if (member === null) return { member: null } as const;
-    const [role, runs, approvals, open] = await Promise.all([
+    const [role, runs, approvals, open, totals, live] = await Promise.all([
       roleFor(slug),
       runsForAgent(member.id, 6),
       approvalsForAgent(member.id, 8),
       pendingApprovalsBy(member.id),
+      teamTotals(),
+      liveManualRun(member.id),
     ]);
-    return { member, role, runs, approvals, open } as const;
+    return { member, role, runs, approvals, open, totals, live } as const;
   });
 
   if (!result.ok) {
@@ -132,8 +144,14 @@ export default async function AgentPage({
     notFound();
   }
 
-  const { member, role, runs, approvals, open } = result.data;
+  const { member, role, runs, approvals, open, totals, live } = result.data;
   const waiting = approvals.filter((approval) => approval.status === "pending");
+  const blockers = runNowBlockers({
+    member,
+    signedIn: access.kind === "session",
+    killSwitchOn: totals.killSwitchOn,
+    alreadyRunning: live !== null,
+  });
 
   return (
     <>
@@ -354,6 +372,26 @@ export default async function AgentPage({
         </Section>
 
         <Section
+          id="run-now-section"
+          title="Make it work now"
+          description="It runs to a schedule on its own. This starts the same job by hand, against the real business, on the real model — and the transcript underneath fills in the moment it stops."
+        >
+          <RunNowPanel
+            member={member}
+            model={role?.definition.model ?? member.model}
+            goal={role?.goal ?? member.purpose}
+            routineTools={
+              role === null
+                ? member.tools
+                : [...new Set(role.routine.map((step) => step.tool))]
+            }
+            csrfToken={csrfToken}
+            blockers={blockers}
+            back={`${back}#run-now`}
+          />
+        </Section>
+
+        <Section
           title="What it did, and why"
           description="Every job it has run, newest first, with the sentence it gave before each action. This is read back out of what was written as it happened."
         >
@@ -446,11 +484,13 @@ export default async function AgentPage({
             `Approving or declining any of the ${plural(waiting.length, "decision")} it is waiting on you for`,
             "Moving what it may decide alone, which the runtime reads before every job",
             "Pausing it, which stops it mid-run",
+            "Starting it by hand and watching it work, which needs your password because it spends money",
             "The reasoning behind every action it took, as it was written at the time",
             "What it has spent against its own limits",
           ]}
           coming={[
-            "Running it now rather than waiting for its schedule",
+            "Running it to a schedule without you — that needs Inngest Cloud, which this deployment has no account for",
+            "Picking a job back up by itself once you have said yes to what it asked",
             "The full transcript, message by message, including what it was told",
             "Changing its budget, its schedule or its tool list from here",
             "Rewriting what it proposed before you approve it, except for posts, which can be reworded on Social",
@@ -538,6 +578,10 @@ function RunCard({ run, member }: { run: AgentRun; member: TeamMember }) {
           </div>
         )}
 
+        {run.halt !== null && (
+          <WhyItStopped halt={run.halt} name={member.name} />
+        )}
+
         {run.status === "awaiting_approval" && (
           <Callout title="This job is not finished">
             It stopped and asked you before doing something it is not allowed to
@@ -547,5 +591,68 @@ function RunCard({ run, member }: { run: AgentRun; member: TeamMember }) {
         )}
       </CardBody>
     </Card>
+  );
+}
+
+/** Which ceiling, in the words the founder would use for it. */
+const CAP_WORDS: Readonly<Record<string, string>> = {
+  run: "what one job is allowed to cost",
+  agent_daily: "what it is allowed to spend in a day",
+  agent_monthly: "what it is allowed to spend in a month",
+  global_monthly: "what the whole team is allowed to spend in a month",
+};
+
+/**
+ * Why a job stopped short, said once, with the numbers the meter recorded.
+ *
+ * A halt is the most important thing on a run and the easiest to swallow. The
+ * error string alone says `cost_cap_exceeded: …`; `context.halt` says which of
+ * the four ceilings bit, what the ceiling was and what had already been spent
+ * when it did — and those are the two figures that tell her whether to raise a
+ * limit or leave it exactly where it is.
+ *
+ * The money is `formatMicrosNzd` over the meter's own integers. Nothing here
+ * re-derives a price from tokens: the meter is the only thing that knows what a
+ * call cost, and a second opinion would eventually be a different one.
+ */
+function WhyItStopped({ halt, name }: { halt: RunHalt; name: string }) {
+  if (halt.code === "cost_cap_exceeded") {
+    const cap = halt.cap === null ? null : CAP_WORDS[halt.cap];
+    return (
+      <Callout title="It stopped itself at a spending limit" tone="danger">
+        {name} stopped before the next question because it would have gone past{" "}
+        {cap ?? "one of its spending limits"}
+        {halt.limitMicros === null
+          ? ""
+          : `, which is ${formatMicrosNzd(halt.limitMicros)}`}
+        .{" "}
+        {halt.spentMicros === null
+          ? "Nothing else was spent."
+          : `It had spent ${formatMicrosNzd(halt.spentMicros)} by then, and nothing more was spent after it stopped.`}{" "}
+        Everything above is what it actually managed to do. Raise the limit on
+        this agent, or leave it — stopping is the limit working.
+      </Callout>
+    );
+  }
+  if (halt.code === "model_call_failed") {
+    return (
+      <Callout title="It could not think" tone="danger">
+        {name} opened the job and then could not ask its model anything, so it
+        stopped rather than pretending to have worked. {halt.reason}
+      </Callout>
+    );
+  }
+  if (halt.code === "kill_switch_engaged" || halt.code === "agent_paused") {
+    return (
+      <Callout title="You stopped it" tone="danger">
+        {name} was stopped mid-job, which is what the pause and the company stop
+        are for. Whatever it had written down by then is above. {halt.reason}
+      </Callout>
+    );
+  }
+  return (
+    <Callout title="It did not finish" tone="danger">
+      {halt.reason}
+    </Callout>
   );
 }

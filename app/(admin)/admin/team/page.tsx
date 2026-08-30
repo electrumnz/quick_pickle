@@ -403,11 +403,12 @@ export default async function TeamPage({
             "Moving what each agent may decide alone, which takes effect on its next job",
             "Pausing and restarting any agent, which stops it mid-run",
             "Every job it has run, with the reasoning it gave before each action",
+            "Starting one by hand from its own page and watching it work — the one control in here that needs your password, because it spends real money",
             "A warning on any agent whose database row disagrees with the code",
           ]}
           coming={[
             "Stopping all eight at once from here; the kill switch is a settings row today",
-            "Starting a job on demand rather than waiting for its schedule",
+            "Running them to their schedules without you; that needs Inngest Cloud, which this deployment has no account for",
             "Changing an agent's budget from this page",
             "Rewriting what an agent proposed before you approve it, except for posts, which can be reworded on Social",
           ]}
