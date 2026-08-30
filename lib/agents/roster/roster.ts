@@ -14,6 +14,13 @@
 import type { Strategy } from "@/content/strategy/types";
 import { loadStrategyAgents, type StrategyStore } from "@/lib/strategy";
 
+import {
+  StaticCapabilityDirectory,
+  type Capability,
+  type CapabilityAdvertisement,
+  type CapabilityDirectory,
+} from "../boundary/handoff";
+
 import type { AgentRuntime } from "../runtime/runtime";
 import type { AgentDefinition } from "../types";
 import {
@@ -114,6 +121,32 @@ export function grantedToolNames(roster: Roster): readonly string[] {
   const names = new Set<string>();
   for (const role of roster.roles) {
     for (const tool of role.definition.tools) names.add(tool);
+  }
+  return [...names].sort((left, right) => left.localeCompare(right));
+}
+
+/**
+ * The phone book: who advertises what.
+ *
+ * Built from the roster rather than hand-written, so a role added to
+ * `buildRoster` is routable the moment it exists and a role removed stops being
+ * routable at the same instant. This is what lets a handoff name a capability
+ * instead of an agent.
+ */
+export function capabilityDirectory(roster: Roster): CapabilityDirectory {
+  const ads: CapabilityAdvertisement[] = roster.roles.map((role) => ({
+    agentSlug: role.definition.slug,
+    agentName: role.definition.name,
+    capabilities: [...role.capabilities],
+  }));
+  return new StaticCapabilityDirectory(ads);
+}
+
+/** Every capability advertised by anyone in the roster, deduplicated and sorted. */
+export function advertisedCapabilities(roster: Roster): readonly Capability[] {
+  const names = new Set<Capability>();
+  for (const role of roster.roles) {
+    for (const capability of role.capabilities) names.add(capability);
   }
   return [...names].sort((left, right) => left.localeCompare(right));
 }

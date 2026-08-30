@@ -13,6 +13,7 @@
  * entry, never a new code path.
  */
 
+import type { Capability } from "../boundary/handoff";
 import type { AgentDefinition } from "../types";
 import type { JsonObject } from "../json";
 
@@ -70,6 +71,19 @@ export type RoutineStep =
 export interface RosterRole {
   readonly definition: AgentDefinition;
   readonly audience: Audience;
+  /**
+   * What this role can be asked for, by capability rather than by name.
+   *
+   * `handsOverTo` below says where a role stops, in prose, for a human. This is
+   * the machine-readable half: the handoff router in
+   * `lib/agents/boundary/handoff.ts` resolves a capability to whoever advertises
+   * it, so "send this to whoever handles wholesale" survives Vic being renamed.
+   *
+   * Every capability here must be backed by a tool this role was actually
+   * granted — a test holds that, so an advertised skill cannot drift from what
+   * the agent can really do.
+   */
+  readonly capabilities: readonly Capability[];
   /** What it does, in one sentence a non-technical person understands. */
   readonly plainJob: string;
   /** What it may do on its own, in words rather than jargon. */

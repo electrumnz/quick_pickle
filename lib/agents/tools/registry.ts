@@ -19,6 +19,7 @@
 import type { FlexibleSchema } from "@ai-sdk/provider-utils";
 import type { z } from "zod";
 
+import type { UntrustedSource } from "../boundary/inbound";
 import {
   AgentRuntimeError,
   ApprovalGateError,
@@ -95,6 +96,17 @@ export interface ToolDefinition {
   /** Handed to the model as the tool's parameter schema. */
   readonly inputSchema: FlexibleSchema<unknown>;
   readonly approval: ToolApprovalMeta | null;
+  /**
+   * Set when this tool's result carries text the company did not write — a
+   * review body, the name a customer typed, a note on a trade account.
+   *
+   * The runtime frames such a result before it reaches a prompt
+   * (`lib/agents/boundary/inbound.ts`). Declaring it here rather than at the
+   * call site means the framing travels with the tool: a role granted this tool
+   * cannot be given the raw text by accident, and a new read that surfaces
+   * customer prose is one field away from being safe.
+   */
+  readonly untrustedSource: UntrustedSource | null;
   /** Validate raw model-supplied arguments. Throws `invalid_tool_input`. */
   readonly parse: (raw: unknown) => unknown;
   /** Describe a specific call for the approvals queue. Null for read-only tools. */
@@ -109,6 +121,8 @@ export interface ToolSpec<TInput, TOutput> {
   readonly effect: ToolEffect;
   readonly inputSchema: z.ZodType<TInput>;
   readonly approval?: ToolApprovalSpec<TInput>;
+  /** Declare when the result contains text written outside the company. */
+  readonly untrustedSource?: UntrustedSource;
   readonly execute: (
     input: TInput,
     context: ToolExecutionContext,
@@ -184,6 +198,7 @@ export function defineTool<TInput, TOutput>(
     description: spec.description,
     effect: spec.effect,
     inputSchema: spec.inputSchema,
+    untrustedSource: spec.untrustedSource ?? null,
     approval:
       approvalSpec === undefined
         ? null

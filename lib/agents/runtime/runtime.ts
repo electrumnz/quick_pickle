@@ -9,10 +9,17 @@
  *
  * The order of checks inside a turn never varies:
  *   1. control plane   — kill switch / agent pause
- *   2. cost caps       — projected, before the money is spent
- *   3. model call      — one call, persisted immediately
- *   4. cost recorded   — before the next step begins
- *   5. per tool call: authorisation -> approval gate -> execute
+ *   2. step ceiling    — this run's own maxSteps
+ *   3. conversation    — the turn cap across a chain of runs
+ *   4. cost caps       — projected, before the money is spent
+ *   5. model call      — one call, persisted immediately
+ *   6. cost recorded   — before the next step begins
+ *   7. per tool call: authorisation -> approval gate -> execute
+ *
+ * Two edges sit around that order, from `lib/agents/boundary`: a tool result
+ * carrying text the company did not write is framed as untrusted before it
+ * reaches a prompt, and a run started from a webhook has its input framed the
+ * same way.
  */
 
 import {
@@ -24,6 +31,17 @@ import {
 } from "ai";
 
 import type { ApprovalService } from "../approvals/service";
+import {
+  InMemoryConversationLedger,
+  checkConversationContext,
+  conversationContextValue,
+  readConversationContext,
+  resolveTurnCap,
+  CONVERSATION_CONTEXT_KEY,
+  type ConversationLedger,
+  type ConversationRef,
+} from "../boundary/conversation";
+import { frameUntrusted, frameUntrustedJson } from "../boundary/inbound";
 import type { Clock } from "../clock";
 import { MODEL_CALL_TIMEOUT_MS } from "../constants";
 import type { ControlPlane } from "../control/kill-switch";
@@ -71,6 +89,11 @@ export interface AgentRuntimeDeps {
   readonly logger: AgentLogger;
   /** Poll interval for the in-flight kill-switch watcher. Lowered in tests. */
   readonly controlPollIntervalMs?: number;
+  /**
+   * Counts turns across a chain of runs. In-process by default, which is what
+   * the company is; the interface is what lets that stop being true.
+   */
+  readonly conversations?: ConversationLedger;
 }
 
 export interface StartRunInput {
@@ -80,6 +103,11 @@ export interface StartRunInput {
   /** Everything the run was handed. Persisted so "what did it see?" is answerable. */
   readonly input?: JsonObject;
   readonly parentRunId?: string | null;
+  /**
+   * The conversation this run belongs to, when it was opened by a handoff.
+   * Absent for every run a schedule or the founder started.
+   */
+  readonly conversation?: ConversationRef;
 }
 
 export interface StartedRun {
@@ -128,7 +156,17 @@ const HALT_CONTEXT_KEY = "halt";
 export class AgentRuntime {
   private readonly definitions = new Map<string, AgentDefinition>();
 
-  constructor(private readonly deps: AgentRuntimeDeps) {}
+  /**
+   * Turns taken per conversation.
+   *
+   * Public because the handoff router has to consult the same ledger the
+   * runtime writes to — two counters would be one counter that lies.
+   */
+  readonly conversations: ConversationLedger;
+
+  constructor(private readonly deps: AgentRuntimeDeps) {
+    this.conversations = deps.conversations ?? new InMemoryConversationLedger();
+  }
 
   /** Make a role known to the runtime and reconcile it into `public.agents`. */
   async register(definition: AgentDefinition): Promise<string> {
@@ -184,6 +222,17 @@ export class AgentRuntime {
     const systemPrompt = composeSystemPrompt(definition, brandRules);
     const runInput: JsonObject = input.input ?? {};
 
+    // A run's position in its conversation is fixed here, once, so every later
+    // check is pure and a replay reaches the same verdict as the live run.
+    const conversation =
+      input.conversation === undefined
+        ? null
+        : {
+            id: input.conversation.id,
+            turn: await this.conversations.take(input.conversation.id),
+            turnCap: resolveTurnCap(input.conversation.turnCap),
+          };
+
     const run = await this.deps.store.createRun({
       agentId: agent.id,
       trigger: input.trigger,
@@ -203,6 +252,12 @@ export class AgentRuntime {
         },
         brandRules: brandRules.map((rule) => rule.slug),
         input: runInput,
+        ...(conversation === null
+          ? {}
+          : {
+              [CONVERSATION_CONTEXT_KEY]:
+                conversationContextValue(conversation),
+            }),
       },
     });
 
@@ -212,7 +267,15 @@ export class AgentRuntime {
       content: systemPrompt,
       contentJson: { role: "system", content: systemPrompt },
     });
-    const goalText = composeGoalMessage(input.goal, runInput);
+    // A webhook body is written by whoever called the webhook. `AgentRunTrigger`
+    // names that case, and `agent/run.requested` carries an arbitrary `input`
+    // record straight through, so this is the one run-opening path where the
+    // goal and its inputs are external text rather than the company's own.
+    const composed = composeGoalMessage(input.goal, runInput);
+    const goalText =
+      input.trigger === "webhook"
+        ? frameUntrusted("webhook", composed)
+        : composed;
     await this.deps.store.appendMessage({
       runId: run.id,
       role: "user",
@@ -276,6 +339,34 @@ export class AgentRuntime {
       const reason = `Step ceiling of ${definition.maxSteps} model calls reached.`;
       await this.halt(runId, "max_steps_exceeded", reason, "failed");
       return { type: "halted", code: "max_steps_exceeded", reason };
+    }
+
+    // `maxSteps` bounds this run. It does not bound A asking B asking A, so a
+    // run opened inside a conversation is checked against the conversation's
+    // own ceiling too — recorded in the shape the cost caps use, before a
+    // single model call is spent.
+    const conversation = readConversationContext(run.context);
+    if (conversation !== null) {
+      const turns = checkConversationContext(conversation);
+      if (!turns.ok) {
+        await this.halt(
+          runId,
+          "conversation_turn_cap_exceeded",
+          turns.reason,
+          "failed",
+          {
+            cap: turns.cap,
+            conversationId: turns.conversationId,
+            limitTurns: turns.limitTurns,
+            usedTurns: turns.usedTurns,
+          },
+        );
+        return {
+          type: "halted",
+          code: "conversation_turn_cap_exceeded",
+          reason: turns.reason,
+        };
+      }
     }
 
     const promptTokens = estimateTokens(system + JSON.stringify(messages));
@@ -588,7 +679,17 @@ export class AgentRuntime {
         grant,
       );
 
-      const result = toJsonValue(output);
+      // The inbound edge. A tool that reads customer or trade prose declares
+      // where it came from, and the result is defanged and wrapped in a named
+      // boundary before it is stored or shown to a model. Framing here rather
+      // than in `appendToolMessage` means the stored
+      // `agent_tool_calls.result` is exactly what the model saw, so replay
+      // stays byte-identical and the admin shows the founder the same thing.
+      const raw = toJsonValue(output);
+      const result =
+        toolDefinition.untrustedSource === null
+          ? raw
+          : frameUntrustedJson(toolDefinition.untrustedSource, raw);
       const finishedAt = this.deps.clock.now().toISOString();
       const updated = await this.deps.store.updateToolCall(call.id, {
         status: "succeeded",

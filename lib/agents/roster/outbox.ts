@@ -15,7 +15,8 @@
  * that channel and nothing else — no role changes, no new authorisation rule.
  */
 
-import type { JsonObject } from "../json";
+import { looksLikeEmail, redact, redactJson } from "../boundary/outbound";
+import type { JsonObject, JsonValue } from "../json";
 
 /** What kind of write this is. One per non-read tool in the roster. */
 export type OutboxKind =
@@ -100,4 +101,57 @@ export class RecordingOutbox implements DraftSink {
     ];
     return this.written.filter((entry) => external.includes(entry.kind)).length;
   }
+}
+
+/**
+ * Payload keys that hold the address a send is *for*.
+ *
+ * These are the one exemption from redaction, and the reason is delivery: a
+ * `customer_reply` whose `to` reads `[redacted:email]` is a draft nobody can
+ * ever send. Every other address in the same entry — one customer's address
+ * quoted into another's copy, a list scraped into a campaign body — is scrubbed.
+ * Only values that are themselves a bare address are honoured, so a credential
+ * cannot be smuggled out by putting it in a routing field.
+ */
+export const OUTBOX_ADDRESS_KEYS: readonly string[] = ["to"];
+
+function addressesIn(payload: JsonObject): readonly string[] {
+  const found: string[] = [];
+  for (const key of OUTBOX_ADDRESS_KEYS) {
+    const value: JsonValue | undefined = payload[key];
+    if (typeof value === "string" && looksLikeEmail(value)) {
+      found.push(value.trim());
+    }
+  }
+  return found;
+}
+
+/**
+ * Scrub an entry on its way into a sink.
+ *
+ * Wrapping the port rather than editing {@link RecordingOutbox} is the whole
+ * point: the wrapping happens once, where the roster's tools are handed their
+ * outbox, so a real channel adapter written next year inherits the scrubber
+ * instead of having to remember it. That was the gap — `grep -rni "redact"
+ * lib/agents` returned nothing.
+ */
+export function redactingSink(inner: DraftSink): DraftSink {
+  return {
+    async write(entry: OutboxEntry, at: Date): Promise<OutboxReceipt> {
+      const allow = addressesIn(entry.payload);
+      const payload = redactJson(entry.payload, { allow });
+      const scrubbed: OutboxEntry = {
+        ...entry,
+        reference: redact(entry.reference, { allow }),
+        summary: redact(entry.summary, { allow }),
+        payload:
+          payload !== null &&
+          typeof payload === "object" &&
+          !Array.isArray(payload)
+            ? payload
+            : entry.payload,
+      };
+      return inner.write(scrubbed, at);
+    },
+  };
 }

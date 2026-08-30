@@ -21,6 +21,18 @@
  * Not present, deliberately: any tool that posts to a live account, sends a
  * live email, or places a live order. Every external tool ends in
  * `outbox.ts`, which records and does not deliver.
+ *
+ * Both edges are declared here rather than enforced here, for the same reason
+ * authorisation is not:
+ *
+ *   - A read whose result carries prose the company did not write declares
+ *     `untrustedSource`. The runtime defangs and frames it before it reaches a
+ *     prompt (`lib/agents/boundary/inbound.ts`). Five of the thirteen reads do:
+ *     open conversations, one customer's history, the trade list, one account's
+ *     memory, and the range signals — which quote reviews verbatim.
+ *   - Every write goes through `redactingSink`, which scrubs credential-shaped
+ *     strings before the entry is recorded. Wrapping the port means the rule
+ *     cannot be forgotten by a tool added later.
  */
 
 import { z } from "zod";
@@ -32,7 +44,7 @@ import {
 } from "../tools/registry";
 import type { BusinessReads } from "./reads";
 import { nzd } from "./sql-reads";
-import type { DraftSink } from "./outbox";
+import { redactingSink, type DraftSink } from "./outbox";
 
 /** How far back a read looks, in days. Bounded so a run cannot scan forever. */
 const windowSchema = z
@@ -76,7 +88,11 @@ export interface RosterTools {
 }
 
 export function createRosterTools(ports: RosterToolPorts): RosterTools {
-  const { reads, outbox } = ports;
+  const { reads } = ports;
+  // The outbound edge, applied once at the port rather than at twenty call
+  // sites: every tool below writes through the scrubber, whichever sink the
+  // caller passed in. A real `DraftSink` inherits it without knowing it exists.
+  const outbox = redactingSink(ports.outbox);
 
   /* --------------------------------------------------------------- reads */
 
@@ -146,6 +162,9 @@ export function createRosterTools(ports: RosterToolPorts): RosterTools {
     description:
       "Reviews with no reply and paid orders not yet sent, with how long each has been waiting and whether the person is unhappy. Read-only.",
     effect: "read",
+    // Review titles, review bodies and the name a customer typed at checkout.
+    // All of it is written by someone outside the company.
+    untrustedSource: "customer_message",
     inputSchema: z.object({}).describe("No arguments."),
     execute: async () => reads.openConversations(),
   });
@@ -156,6 +175,8 @@ export function createRosterTools(ports: RosterToolPorts): RosterTools {
     description:
       "Everything on file for one person: orders, what was in them, and any review they left. Read-only.",
     effect: "read",
+    // Their own name, their own standing note, the titles of their reviews.
+    untrustedSource: "customer_record",
     inputSchema: z.object({
       email: z.string().min(3).describe("The customer's email address."),
     }),
@@ -188,6 +209,8 @@ export function createRosterTools(ports: RosterToolPorts): RosterTools {
     description:
       "Every wholesale account: what they have bought, how often they reorder, and which of them are past their own pattern. Read-only.",
     effect: "read",
+    // Venue name, contact name and the standing note on the account.
+    untrustedSource: "trade_account_record",
     inputSchema: z.object({}).describe("No arguments."),
     execute: async () => reads.tradeAccounts(),
   });
@@ -198,6 +221,8 @@ export function createRosterTools(ports: RosterToolPorts): RosterTools {
     description:
       "One trade account's whole history: every order, every message already sent to them and whether it was opened, every decision made about them, and the standing note. Read-only.",
     effect: "read",
+    // The account's own details and note travel with its correspondence.
+    untrustedSource: "trade_account_record",
     inputSchema: z.object({
       customerId: z
         .string()
@@ -213,6 +238,8 @@ export function createRosterTools(ports: RosterToolPorts): RosterTools {
     description:
       "Sales per product, what reviewers actually said, the recipes on file and the ingredients on hand. Read-only.",
     effect: "read",
+    // `themes[].quotes` is review prose, quoted verbatim.
+    untrustedSource: "customer_review",
     inputSchema: windowSchema,
     execute: async (input) => reads.rangeSignals(input.windowDays),
   });

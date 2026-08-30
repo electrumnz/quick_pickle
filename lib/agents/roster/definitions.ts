@@ -435,6 +435,7 @@ export function opsRole(strategy: Strategy): RosterRole {
   return {
     definition: defineOpsAgent(strategy),
     audience: "internal",
+    capabilities: ["stock_and_supply", "supplier_ordering", "catalogue_facts"],
     plainJob:
       "Watches how many days of stock you have left and tells you what to order before it runs out.",
     autonomyWords:
@@ -482,6 +483,7 @@ export function socialRole(strategy: Strategy): RosterRole {
   return {
     definition: defineSocialAgent(strategy),
     audience: "b2c",
+    capabilities: ["social_content", "catalogue_facts"],
     plainJob:
       "Writes the posts, working from the brand script and from which posts actually earned attention last time.",
     autonomyWords:
@@ -529,6 +531,7 @@ export function conciergeRole(strategy: Strategy): RosterRole {
   return {
     definition: defineConciergeAgent(strategy),
     audience: "b2c",
+    capabilities: ["customer_reply", "catalogue_facts"],
     plainJob:
       "Reads everyone waiting on a reply, drafts the straightforward ones, and puts anything unhappy in front of you.",
     autonomyWords:
@@ -577,6 +580,7 @@ export function financeRole(strategy: Strategy): RosterRole {
   return {
     definition: defineFinanceAgent(strategy),
     audience: "internal",
+    capabilities: ["pricing_and_margin", "catalogue_facts"],
     plainJob:
       "Works out what each bottle really costs to make, keeps the GST separate from the takings, and tells you when a margin has slipped.",
     autonomyWords:
@@ -627,6 +631,7 @@ export function marketingRole(base: AgentDefinition): RosterRole {
       maxOutputTokens: 1_500,
     }),
     audience: "b2c",
+    capabilities: ["b2c_campaign", "catalogue_facts"],
     plainJob:
       "Plans and drafts the campaigns that go to the customer list, working only from the brand script and what is selling.",
     autonomyWords:
@@ -678,6 +683,7 @@ export function tradeRole(base: AgentDefinition): RosterRole {
       maxOutputTokens: 1_500,
     }),
     audience: "b2b",
+    capabilities: ["wholesale_outreach", "catalogue_facts"],
     plainJob:
       "Works the list of bars, restaurants and shops: who is due a restock, who has gone quiet, and what was already said to them.",
     autonomyWords:
@@ -720,6 +726,7 @@ export function productRole(strategy: Strategy): RosterRole {
   return {
     definition: defineProductAgent(strategy),
     audience: "internal",
+    capabilities: ["product_development", "catalogue_facts"],
     plainJob:
       "Reads what sold and what reviewers said, and writes up the next flavour worth trying — with the evidence attached.",
     autonomyWords:
@@ -755,6 +762,7 @@ export function analystRole(strategy: Strategy): RosterRole {
   return {
     definition: defineAnalystAgent(strategy),
     audience: "internal",
+    capabilities: ["business_reporting"],
     plainJob:
       "Writes the weekly briefing: what the week took, what changed, and what is about to bite.",
     autonomyWords:

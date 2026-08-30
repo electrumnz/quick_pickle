@@ -47,7 +47,9 @@ export {
 
 export {
   ROSTER_SLUGS,
+  advertisedCapabilities,
   buildRoster,
+  capabilityDirectory,
   grantedToolNames,
   loadRoster,
   registerRoster,
@@ -65,7 +67,9 @@ export {
 } from "./tools";
 
 export {
+  OUTBOX_ADDRESS_KEYS,
   RecordingOutbox,
+  redactingSink,
   type DraftSink,
   type OutboxEntry,
   type OutboxKind,
