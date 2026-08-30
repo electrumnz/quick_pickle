@@ -46,7 +46,9 @@ import {
   defineMarketingAgent,
   defineTradeAgent,
 } from "@/lib/strategy";
+import { rosterModelNotice } from "@/lib/agents";
 import { adminFormToken, requireAdminAccess } from "@/lib/auth/server";
+import { isDemoMode } from "@/lib/demo/mode";
 
 import { PauseForm } from "./pause-form";
 import {
@@ -139,6 +141,8 @@ export default async function TeamPage({
   }
 
   const { members, roles, waiting, decided, runs, totals } = result.data;
+  // See the comment beside where this is rendered, below.
+  const modelNotice = isDemoMode() ? rosterModelNotice() : null;
   const roleBySlug = new Map(roles.map((role) => [role.definition.slug, role]));
 
   const registered = members.filter((member) => roleBySlug.has(member.slug));
@@ -185,6 +189,24 @@ export default async function TeamPage({
 
       <PageSections>
         <Flash searchParams={params} />
+
+        {/*
+          The models the team runs on, in full.
+
+          It used to stand above every admin screen, put there by
+          `app/(admin)/admin/layout.tsx`. On a demonstration it is now one
+          clause in the bar at the bottom of every page — the founder asked for
+          it there — and that clause is a link to this page, so this is where
+          the model ids, the reason and the environment variable that changes
+          them have to be readable. Rendered only in demo mode, because outside
+          it the layout still carries the full notice above every screen and two
+          copies on one page is a page that has said it twice.
+        */}
+        {modelNotice === null ? null : (
+          <Callout title={modelNotice.title} tone={modelNotice.tone}>
+            {modelNotice.body}
+          </Callout>
+        )}
 
         <Section
           id="decisions"

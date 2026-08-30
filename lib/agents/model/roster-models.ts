@@ -44,6 +44,17 @@ export const FREE_WINDOW_ENDS = new Date("2026-09-07T00:00:00.000Z");
 /** Human form of {@link FREE_WINDOW_ENDS}, for copy that a person reads. */
 export const FREE_WINDOW_ENDS_WORDS = "Sunday 6 September 2026";
 
+/**
+ * The same date with the weekday and the year taken off, for the one line the
+ * demonstration bar has room for.
+ *
+ * Not a second source of truth: it is the same instant, said shorter, and both
+ * forms are derived from {@link FREE_WINDOW_ENDS} by hand in this one file.
+ * The bar links to The Team, where the full form is on screen, so the short one
+ * only has to be unambiguous for the week it is being read in.
+ */
+export const FREE_WINDOW_ENDS_SHORT = "6 September";
+
 /** Where {@link FREE_WINDOW_ENDS} came from, quoted in the admin. */
 export const FREE_WINDOW_SOURCE =
   "vercel.com/changelog/minimax-m3-and-m2-7-are-free-on-ai-gateway";
@@ -292,6 +303,21 @@ export interface ModelNotice {
   readonly tone: "neutral" | "danger";
   readonly title: string;
   readonly body: string;
+  /**
+   * The same fact in one clause, for the fixed bar at the bottom of every page.
+   *
+   * On a demonstration this notice no longer has a panel of its own — the
+   * founder asked for the two standing admin warnings to be folded into the one
+   * bar that is already on screen, and that bar has room for a clause, not a
+   * paragraph. So the short form carries the only part that is useless without
+   * it — the date the window closes — and `components/demo/DemoBanner.tsx`
+   * links it to The Team, where {@link ModelNotice.body} is rendered in full.
+   *
+   * It lives on the same object as `title` and `body` rather than in a second
+   * function so that the three states cannot drift apart: one decision, three
+   * lengths.
+   */
+  readonly short: string;
 }
 
 function modelList(env: ModelEnv): string {
@@ -326,6 +352,7 @@ export function rosterModelNotice(
     return {
       tone: "danger",
       title: "The team cannot think",
+      short: "The team has no model to think with",
       body:
         "No model is configured, so every agent run stops at its first model " +
         "call and records why. Nothing else is affected: the shop, the orders " +
@@ -343,6 +370,7 @@ export function rosterModelNotice(
     return {
       tone: "danger",
       title: "The team has stopped thinking — its free models expired",
+      short: `Free models ended ${FREE_WINDOW_ENDS_SHORT}`,
       body:
         `${modelList(env)} was free on the Vercel AI Gateway through ` +
         `${window.endsOn}. That window has closed, so the roster refuses to ` +
@@ -360,6 +388,7 @@ export function rosterModelNotice(
   return {
     tone: "neutral",
     title: `The team is running on free models for another ${days}`,
+    short: `Free models until ${FREE_WINDOW_ENDS_SHORT}`,
     body:
       `${modelList(env)} on the Vercel AI Gateway, free via GMI Cloud through ` +
       `${window.endsOn}. After that the roster stops calling them rather than ` +

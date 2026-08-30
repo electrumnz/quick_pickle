@@ -79,18 +79,25 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       {/* The padding is the demo banner's own height: it is fixed to the
           bottom of the viewport, and without the reserve it would sit on top of
           the last line of every page. Three steps, because the notice wraps to
-          five lines on a narrow phone and two on a laptop.
+          several lines on a narrow phone and two on a laptop.
 
-          Measured, not guessed, and re-measured when the banner gained the
-          sentence about the admin being open — which grew it past the reserve
-          at every width at once: 160px at 320, 140px at 375 and 390, 99px at
-          414, 80px at 640 and 768, and 60px from 1024 up. Each step clears the
-          tallest wrap inside its own range. Grow the copy again and these are
-          wrong again, so measure them again. */}
+          Measured, not guessed, and re-measured every time the copy moves. The
+          bar has just taken on both of the standing admin warnings and come out
+          SHORTER at every width, because each clause was rewritten to fit one
+          line: 158px at 320 and 360, 119px at 375 and 390, 98px at 414 to 480,
+          78px at 540 to 700, 58px from 768, 59px at 1920. It was 160/140/99/80/
+          60 before. Each step below clears the tallest wrap inside its own
+          range with a couple of pixels to spare, and `sm` came down from 24 to
+          20 so the shorter bar does not leave a gap under a laptop page.
+
+          `components/admin/chat/ChatDock.tsx` anchors its floating panel to
+          these same three numbers plus a gutter. Change one and change both.
+          Grow the copy again and these are wrong again, so measure them
+          again — `components/demo/DemoBanner.tsx` says how. */}
       <body
         className={
           demo
-            ? "flex min-h-full flex-col pb-40 sm:pb-24 lg:pb-16"
+            ? "flex min-h-full flex-col pb-40 sm:pb-20 lg:pb-16"
             : "flex min-h-full flex-col"
         }
       >

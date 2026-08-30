@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { load } from "@/components/admin/data/db";
 import { Card, DataUnavailable, PageHeader } from "@/components/admin";
 import { ChatPanel } from "@/components/admin/chat/ChatPanel";
-import { chatView } from "@/components/admin/chat/data";
+import { canAsk, chatReaderId, chatView } from "@/components/admin/chat/data";
 import { Flash } from "@/components/admin/write/flash";
 import { adminFormToken, requireAdminAccess } from "@/lib/auth/server";
 
@@ -25,12 +25,13 @@ export const metadata: Metadata = {
  * The page and the floating panel draw the same component over the same read.
  * There is one conversation, not two.
  *
- * **Reads are open on a demonstration; asking is not.** Everything below is
- * visible without a session, because a conversation with no messages in it is
- * not a secret. The composer is replaced by the sentence saying why this one
- * asks for a password — it starts a real job and spends real money — rather
- * than bouncing her to a login page with nothing said. See
- * `components/admin/chat/actions.ts`.
+ * **On a demonstration, asking is open too.** This page used to replace the
+ * composer with a sentence explaining why asking — unlike reading — wanted the
+ * password: it starts a real job and spends real money. The founder met that on
+ * the one surface built for her to use and reported it as a defect, so the box
+ * is open on a demonstration and the record says plainly that nobody was signed
+ * in. `components/admin/write/open-demo.ts` carries the whole argument, and
+ * with `HALF_SOUR_DEMO` unset nothing about the old behaviour has moved.
  */
 export default async function ChatPage({
   searchParams,
@@ -43,14 +44,12 @@ export default async function ChatPage({
   const raw = params["s"];
   const sessionId = (Array.isArray(raw) ? raw[0] : raw)?.trim();
 
-  const result = await load(async () =>
-    access.kind === "session"
-      ? chatView(
-          access.session.operatorId,
-          sessionId === "" ? undefined : sessionId,
-        )
-      : null,
-  );
+  const result = await load(async () => {
+    const reader = await chatReaderId(access);
+    return reader === null
+      ? null
+      : chatView(reader, sessionId === "" ? undefined : sessionId);
+  });
 
   return (
     <>
@@ -74,6 +73,7 @@ export default async function ChatPage({
               }
             }
             csrfToken={csrfToken}
+            canAsk={canAsk(access)}
             back="/admin/chat"
           />
         </Card>

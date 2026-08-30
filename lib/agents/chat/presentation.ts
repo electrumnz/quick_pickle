@@ -35,10 +35,16 @@ export function stoppedWords(
   switch (code) {
     case "model_call_failed":
       // The runtime's own reason names environment variables, which is right
-      // where it lands — `agent_runs.error`, and the notice at the top of every
-      // admin screen. It is not right in a sentence she reads mid-conversation,
-      // and repeating it here would say the same thing to her twice.
-      return "Nobody could answer this one: the team has no model connected on this deployment, so the job stopped at its first thought. The notice at the top of the screen says what to set.";
+      // where it lands — `agent_runs.error`, and the standing notice about the
+      // models. It is not right in a sentence she reads mid-conversation, and
+      // repeating it here would say the same thing to her twice.
+      //
+      // "The notice on this screen", not "at the top of the screen": on a
+      // demonstration that notice is now the bar along the bottom of every
+      // page, and off one it is still the callout above every admin screen.
+      // Naming a position that is only true on one of them sends her looking
+      // in the wrong place.
+      return "Nobody could answer this one: the team has no model connected on this deployment, so the job stopped at its first thought. The notice on this screen about the team's models says what to set.";
     case "cost_cap_exceeded":
       return `That agent has spent what it is allowed to spend for now, so it stopped before answering. ${reason ?? ""}`.trim();
     case "conversation_turn_cap_exceeded":

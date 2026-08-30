@@ -33,10 +33,26 @@ import type { ChatView } from "./data";
  * The two forms are siblings rather than nested, and the second button reaches
  * its form by `form=` — a form inside a form is not valid HTML, and this is the
  * same join `ApprovalQueue` uses for its bulk bar.
+ *
+ * ## Who gets the box
+ *
+ * Two states, and `canAsk` below is the whole of the difference. A signed-in
+ * founder always gets it. On an open demonstration so does a visitor who has
+ * not signed in — the founder reported the refusal as a defect, and
+ * `components/admin/write/open-demo.ts` carries the whole account of what
+ * stands in for her name in the record. With `HALF_SOUR_DEMO` unset,
+ * `demoOpensAdmin()` is false and this is exactly the sign-in prompt it always
+ * was.
+ *
+ * The approval cards inside the log are a separate question and the answer has
+ * not moved: they are drawn from `csrfToken`, which is empty without a session,
+ * so a run that parks on a decision still needs the password to decide. Asking
+ * is open; changing what the answer proposes is not.
  */
 export function ChatPanel({
   view,
   csrfToken,
+  canAsk,
   back,
   /** Compact enough for the floating panel; roomier on the page. */
   variant = "page",
@@ -44,16 +60,25 @@ export function ChatPanel({
   view: ChatView;
   /** Empty string when nobody is signed in. */
   csrfToken: string;
+  /**
+   * Whether this request may use the composer at all.
+   *
+   * Handed in rather than derived from `csrfToken`, because the two stopped
+   * meaning the same thing: an open demonstration has no token and may still
+   * ask. `canAsk` in `./data.ts` is the one place that decides, and it is a
+   * pure function of `AdminAccess` so both directions of the switch are pinned
+   * by a unit test rather than by reading this file.
+   */
+  canAsk: boolean;
   back: string;
   variant?: "page" | "dock";
 }) {
-  const signedIn = csrfToken !== "";
   const composerId = `ask-${variant}`;
   const newFormId = `new-conversation-${variant}`;
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {signedIn && (
+      {canAsk && (
         <div className="shrink-0 border-b border-hairline px-4 py-2.5">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
             <p className="text-eyebrow uppercase text-muted">
@@ -88,7 +113,7 @@ export function ChatPanel({
       </div>
 
       <div className="shrink-0 border-t border-hairline px-4 py-3">
-        {signedIn ? (
+        {canAsk ? (
           <form action={askAction} className="space-y-2.5">
             {/*
               Asking from the floating panel must not move her off the page she

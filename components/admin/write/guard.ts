@@ -76,6 +76,18 @@ export type AuditAction =
 
 export type AuditEntry = {
   readonly operator: Operator;
+  /**
+   * What kind of actor `operator` names. `operator` — a signed-in human —
+   * unless something says otherwise, which is every write in this admin bar
+   * one.
+   *
+   * The exception is asking the team from an open demonstration, where nobody
+   * signed in and `components/admin/write/open-demo.ts` supplies a stand-in
+   * that is explicitly not a person. `system` is the honest column value for
+   * that: `public.actor_type` already carries it, and a row that said
+   * `operator` would be a row claiming a human did this.
+   */
+  readonly actorType?: "operator" | "system";
   readonly action: AuditAction;
   /** The table the row lives in, e.g. `orders`. Lower snake case. */
   readonly entityType: string;
@@ -100,8 +112,8 @@ export async function audit(entry: AuditEntry): Promise<void> {
     `insert into public.audit_log
        (actor_type, actor_id, actor_label, action, entity_type, entity_id,
         entity_label, summary, before_data, after_data, approval_id)
-     values ('operator', $1, $2, $3::public.audit_action, $4, $5, $6, $7,
-             $8::jsonb, $9::jsonb, $10)`,
+     values ($11::public.actor_type, $1, $2, $3::public.audit_action, $4, $5,
+             $6, $7, $8::jsonb, $9::jsonb, $10)`,
     [
       entry.operator.id,
       entry.operator.label,
@@ -113,6 +125,7 @@ export async function audit(entry: AuditEntry): Promise<void> {
       entry.before === null ? null : JSON.stringify(entry.before),
       entry.after === null ? null : JSON.stringify(entry.after),
       entry.approvalId ?? null,
+      entry.actorType ?? "operator",
     ],
   );
 }

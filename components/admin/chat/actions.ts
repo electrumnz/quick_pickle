@@ -5,12 +5,15 @@ import { revalidatePath } from "next/cache";
 import { adminSql } from "@/components/admin/data/db";
 import {
   audit,
-  authorise,
   done,
   readOptionalText,
   readReturnPath,
   refuse,
 } from "@/components/admin/write/guard";
+import {
+  authoriseAsk,
+  stampUnauthenticated,
+} from "@/components/admin/write/open-demo";
 import {
   askTheTeam,
   createChatPlatform,
@@ -25,16 +28,21 @@ import {
  * `components/admin/write/guard.ts`'s `authorise` is the first two and `audit`
  * is the third, exactly as packing an order or approving a post does it.
  *
- * **The session check is not relaxed here, and this is the screen where that
- * matters most.** Reading this admin needs no password on a demonstration
- * deployment because every row behind it is invented. Asking the team is
- * different in kind: it opens a real run, spends real money against a real
- * gateway credential on a URL anyone can reach, and writes an append-only audit
- * row that has to be stamped with somebody. There is nobody to stamp when
- * nobody has signed in, and inventing one is the exact thing this admin must
- * never do. So `requireAdminSession()` sends an anonymous visitor to `/login` —
- * and the surface says why before she gets there, rather than bouncing her to a
- * password box with no explanation. See `WHY_SIGN_IN`.
+ * **On an open demonstration the session check is the one thing that is
+ * relaxed, and only here.** It used to hold on this screen too, on the argument
+ * that asking opens a real run and writes an audit row that has to be stamped
+ * with somebody. The founder met that argument as a locked box on the one
+ * surface built for her — *"asking the team seems to need sign in, remove
+ * this"* — so the box is open, and the stamp is honest instead of absent:
+ * `components/admin/write/open-demo.ts` supplies an actor that says in words it
+ * is the demonstration and not a person, and the row is written
+ * `actor_type = 'system'` and prefixed with `stampUnauthenticated`.
+ *
+ * With `HALF_SOUR_DEMO` unset none of that exists: `requireAdminAccess()`
+ * redirects an anonymous visitor to `/login` exactly as `requireAdminSession()`
+ * did, and a signed-in founder goes through `authorise` — session, then CSRF —
+ * unchanged. Every other write in the admin still goes through `authorise`
+ * whatever the environment.
  *
  * **Nothing in here approves anything.** The run this starts is an ordinary
  * run: a `storefront_write` or `external` tool inside it still needs an
@@ -48,7 +56,7 @@ import {
 const MESSAGE_LIMIT = 2000;
 
 export async function askAction(formData: FormData): Promise<void> {
-  const operator = await authorise(formData);
+  const { operator, actorType, unauthenticated } = await authoriseAsk(formData);
   const back = readReturnPath(formData, "/admin/chat");
   const message = readOptionalText(formData, "message", MESSAGE_LIMIT);
   if (message === null) refuse(back, "nothing-asked");
@@ -68,11 +76,14 @@ export async function askAction(formData: FormData): Promise<void> {
 
   await audit({
     operator,
+    actorType,
     action: "create",
     entityType: "chat_turns",
     entityId: result.turnId,
     entityLabel: titleFrom(message),
-    summary: result.summary,
+    summary: unauthenticated
+      ? stampUnauthenticated(result.summary)
+      : result.summary,
     before: null,
     after: {
       session_id: sessionId,
@@ -96,17 +107,19 @@ export async function askAction(formData: FormData): Promise<void> {
 
 /** Start again on a new subject, without scrolling past yesterday. */
 export async function newConversationAction(formData: FormData): Promise<void> {
-  const operator = await authorise(formData);
+  const { operator, actorType, unauthenticated } = await authoriseAsk(formData);
   const back = readReturnPath(formData, "/admin/chat");
   const sql = adminSql();
   const id = await openSession(sql, operator.id, "A new conversation");
+  const started = "Started a new conversation with the team.";
   await audit({
     operator,
+    actorType,
     action: "create",
     entityType: "chat_sessions",
     entityId: id,
     entityLabel: "A new conversation",
-    summary: "Started a new conversation with the team.",
+    summary: unauthenticated ? stampUnauthenticated(started) : started,
     before: null,
     after: { status: "open" },
   });

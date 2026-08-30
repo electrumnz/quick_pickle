@@ -53,11 +53,24 @@ export function MobileNav({
         <div
           className="fixed inset-0 z-[var(--z-overlay)] lg:hidden"
           role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setOpen(false);
-          }}
         >
-          <div aria-hidden="true" className="absolute inset-0 bg-black/45" />
+          {/*
+            The dismiss handler belongs on the backdrop, not on its parent.
+            The parent is covered by this element, so a
+            `event.target === event.currentTarget` guard up there is never
+            true and tapping outside the drawer does nothing — the same defect
+            `components/admin/chat/ChatDock.tsx` documents at length. This
+            drawer is the only navigation below 1024 and there is no `Escape`
+            key on a phone, so a drawer that will not close on a tap outside is
+            a phone that cannot leave the page it is on.
+          */}
+          <div
+            aria-hidden="true"
+            onMouseDown={() => {
+              setOpen(false);
+            }}
+            className="absolute inset-0 bg-black/45"
+          />
           <div
             role="dialog"
             aria-modal="true"

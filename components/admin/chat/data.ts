@@ -5,6 +5,9 @@ import {
   approvalById,
   type ApprovalItem,
 } from "@/components/admin/data/queries";
+import { openDemoActorId } from "@/components/admin/write/open-demo";
+import type { AdminAccess } from "@/lib/auth/server";
+import { demoOpensAdmin } from "@/lib/demo/mode";
 import {
   latestOpenSession,
   listSessions,
@@ -85,6 +88,42 @@ export async function chatView(
 }
 
 /**
+ * Whether this request may use the composer, in one place.
+ *
+ * A live session always may, and always did. A request with no session may only
+ * on an open demonstration, which is the founder's report — *"asking the team
+ * seems to need sign in, remove this"* — and `demoOpensAdmin()` is the same
+ * narrowing of the one environment variable that let her read these screens
+ * without a password in the first place. With `HALF_SOUR_DEMO` unset this is
+ * `false` for every request that is not signed in, which is exactly what the
+ * chat did before.
+ *
+ * A pure function of the access, deliberately: `ChatPanel` takes the answer as
+ * a prop rather than working it out, so both directions of the switch are
+ * pinned by a unit test instead of by reading a component.
+ */
+export function canAsk(access: AdminAccess): boolean {
+  return access.kind === "session" || demoOpensAdmin();
+}
+
+/**
+ * Whose conversation this request is looking at, or nobody's.
+ *
+ * A live session reads her own. A request with no session reads the open
+ * demonstration's, which exists only once something has been asked from it —
+ * `openDemoActorId` looks the actor up and never creates it, because a page
+ * load must not write an identity into the database. `null` means there is
+ * nothing to read: no session, and no demonstration that has been used yet.
+ */
+export async function chatReaderId(
+  access: AdminAccess,
+): Promise<string | null> {
+  return access.kind === "session"
+    ? access.session.operatorId
+    : await openDemoActorId();
+}
+
+/**
  * The chat view, or an empty one when the database is unreachable.
  *
  * The floating panel is rendered by the admin layout, on every page. A failed
@@ -92,11 +131,12 @@ export async function chatView(
  * working so she can get somewhere else.
  */
 export async function chatViewOrEmpty(
-  operatorId: string,
+  access: AdminAccess,
   sessionId?: string,
 ): Promise<ChatView> {
   try {
-    return await chatView(operatorId, sessionId);
+    const reader = await chatReaderId(access);
+    return reader === null ? EMPTY : await chatView(reader, sessionId);
   } catch {
     return EMPTY;
   }

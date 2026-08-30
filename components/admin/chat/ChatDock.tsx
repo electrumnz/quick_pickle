@@ -39,13 +39,14 @@ import {
  * of the viewport would be drawn under it, and a button in the bottom-right
  * corner would sit behind it. Rather than fight the stacking order, both sit
  * clear: the offsets below are the banner's own height reserve from
- * `app/layout.tsx` (160px under 640, 96px from 640, 64px from 1024) plus a
+ * `app/layout.tsx` (160px under 640, 80px from 640, 64px from 1024) plus a
  * gutter. With demo mode off there is no bar and the ordinary gutter applies.
  *
  * Measured against that reserve rather than guessed, and it is the reserve that
  * is authoritative: if the banner's copy grows again, `app/layout.tsx` changes
- * and so must this. Measured on a real page: 43px of clear space above the bar
- * at 1440, 77px at 390.
+ * and so must this. The middle step came down from `sm:bottom-28` to
+ * `sm:bottom-24` when the bar took on the two admin warnings and got shorter
+ * rather than taller — the reserve it tracks went from 96px to 80px.
  *
  * The panel's own ceiling is set below the space that is left rather than to a
  * round fraction of the viewport, because a panel anchored above the bar and
@@ -54,7 +55,7 @@ import {
  */
 
 /** Bottom offset when the demo banner is on screen: its reserve, plus a gutter. */
-const CLEAR_OF_BANNER = "bottom-44 sm:bottom-28 lg:bottom-20";
+const CLEAR_OF_BANNER = "bottom-44 sm:bottom-24 lg:bottom-20";
 /** And when it is not. */
 const ORDINARY = "bottom-4";
 
@@ -172,14 +173,37 @@ export function ChatDock({
       </button>
 
       {open && (
-        <div
-          className="fixed inset-0 z-[var(--z-modal)]"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) close();
-          }}
-        >
-          <div aria-hidden="true" className="absolute inset-0 bg-black/45" />
+        <div className="fixed inset-0 z-[var(--z-modal)]" role="presentation">
+          {/*
+            Tapping the dark part closes it, and the handler is on the dark
+            part itself.
+
+            It used to sit on the wrapper above, guarded by
+            `event.target === event.currentTarget`. That guard could never be
+            true: this backdrop is `inset-0` and covers the wrapper completely,
+            so every pointer-down outside the panel landed HERE and the wrapper
+            never saw one. Tapping outside did nothing, on every screen this
+            has ever run on.
+
+            On a laptop that was a nuisance — `Escape` still worked. On a phone
+            there is no `Escape`, and this panel holds the page still
+            (`overflow: hidden` above) while intercepting every click behind
+            it. So the only way out was the Close button, and to anyone who did
+            not find it the whole site was frozen until they reloaded it. That
+            is the founder's report, reproduced at 390: three taps outside, the
+            panel still open, the page unable to scroll, the menu button
+            unreachable.
+
+            `onMouseDown` rather than `onClick`, and only here: a press that
+            starts inside the panel and drifts out — selecting the text of an
+            answer, dragging the scrollbar — never touches this element, so it
+            does not close.
+          */}
+          <div
+            aria-hidden="true"
+            onMouseDown={close}
+            className="absolute inset-0 bg-black/45"
+          />
           <div
             ref={dialogRef}
             role="dialog"

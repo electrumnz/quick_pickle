@@ -251,11 +251,21 @@ export function CommandPalette() {
     <div
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center px-4 py-[8vh]"
       role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) close();
-      }}
     >
-      <div aria-hidden="true" className="fixed inset-0 bg-black/45" />
+      {/*
+        On the backdrop, because the backdrop is what the pointer lands on: it
+        covers this element completely, so the
+        `event.target === event.currentTarget` guard that used to live on the
+        parent could never be true and clicking outside the palette did
+        nothing. See `components/admin/chat/ChatDock.tsx` for the whole
+        account — the palette is the third overlay in this admin that shipped
+        with the same dead check.
+      */}
+      <div
+        aria-hidden="true"
+        onMouseDown={close}
+        className="fixed inset-0 bg-black/45"
+      />
       <div
         ref={dialogRef}
         role="dialog"
