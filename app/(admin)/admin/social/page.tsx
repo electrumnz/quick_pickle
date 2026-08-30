@@ -12,10 +12,12 @@ import {
 } from "@/components/admin/data/format";
 import {
   bestPosts,
+  pendingApprovalsOf,
   socialAccounts,
   socialPosts,
   type SocialPostItem,
 } from "@/components/admin/data/queries";
+import { ApprovalQueue } from "@/components/admin/approvals/ApprovalCard";
 import {
   DataUnavailable,
   NotBuiltYet,
@@ -26,6 +28,7 @@ import {
 import { FilterNotice, SearchForm } from "@/components/admin/ui/search-form";
 import {
   Badge,
+  Callout,
   Card,
   CardHeader,
   Dot,
@@ -38,6 +41,10 @@ import {
   Td,
   Th,
 } from "@/components/admin/ui/primitives";
+import { Flash } from "@/components/admin/write/flash";
+import { requireAdminSession } from "@/lib/auth/server";
+
+import { PostDeclineForm, PostDiaryForm, PostEditor } from "./post-forms";
 
 export const metadata: Metadata = {
   title: "Social",
@@ -50,6 +57,16 @@ export const metadata: Metadata = {
  * The one number that matters to a small food brand is reach, so posts are
  * ranked by it rather than by likes. Everything drafted by an agent says so,
  * and anything that failed says why in the words the platform used.
+ *
+ * The queue at the top is the same approval card that appears on Today, on The
+ * Team and on an agent's own page, because every queue in this admin is one
+ * filter over `public.approvals` and she should only have to learn it once.
+ *
+ * Approving a post here is real and permanent, and it publishes nothing. No
+ * account is connected to this deployment, so a scheduled post is a post with a
+ * time written beside it. Every control on this page says so, in those words,
+ * because the difference between "approved" and "sent" is the whole safety
+ * model of this build.
  */
 
 const PLATFORM_WORDS: Readonly<Record<string, string>> = {
@@ -81,17 +98,23 @@ export default async function SocialPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const { csrfToken } = await requireAdminSession();
   const params = await searchParams;
   const raw = params["q"];
   const query = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? "";
+  const back =
+    query === ""
+      ? "/admin/social"
+      : `/admin/social?q=${encodeURIComponent(query)}`;
 
   const result = await load(async () => {
-    const [accounts, posts, best] = await Promise.all([
+    const [accounts, posts, best, decisions] = await Promise.all([
       socialAccounts(),
       socialPosts(20),
       bestPosts(3),
+      pendingApprovalsOf("social_post"),
     ]);
-    return { accounts, posts, best };
+    return { accounts, posts, best, decisions };
   });
 
   if (!result.ok) {
@@ -106,7 +129,32 @@ export default async function SocialPage({
     );
   }
 
-  const { accounts, posts: everything, best } = result.data;
+  const { accounts, posts: everything, best, decisions } = result.data;
+  const byId = new Map(everything.map((post) => [post.id, post]));
+  // A decision about a post is editable in place: the card holds the same
+  // caption box the queue below uses, so "change it first" is one control
+  // rather than a trip to another section.
+  const editors = new Map(
+    decisions.flatMap((decision) => {
+      const post =
+        decision.subjectId === null ? undefined : byId.get(decision.subjectId);
+      return post === undefined
+        ? []
+        : [
+            [
+              decision.id,
+              <PostEditor
+                key={post.id}
+                post={post}
+                csrfToken={csrfToken}
+                back={back}
+                scope="decide"
+                bare
+              />,
+            ] as const,
+          ];
+    }),
+  );
   const posts =
     query === ""
       ? everything
@@ -148,6 +196,26 @@ export default async function SocialPage({
       />
 
       <PageSections>
+        <Flash searchParams={params} />
+
+        <Section
+          title="Waiting on you"
+          description="A post an agent drafted stops here. Saying yes is written down against the post for good — and it still does not send it."
+        >
+          <ApprovalQueue
+            approvals={decisions}
+            csrfToken={csrfToken}
+            back={back}
+            editors={editors}
+            id="approve-ticked-social"
+            emptyHeadline="Nobody is waiting on you"
+            emptyFills="Vinnie drafts the fortnight's posts on a schedule, and each one stops here with its caption before it can go anywhere."
+          >
+            Every post an agent writes needs your yes before it can be put in
+            the diary.
+          </ApprovalQueue>
+        </Section>
+
         {query !== "" && (
           <FilterNotice
             query={query}
@@ -197,7 +265,7 @@ export default async function SocialPage({
 
         <Section
           title="Waiting to go out"
-          description="Nothing here has been published. A post drafted by Vinnie stops here until you say yes."
+          description="Nothing here has been published. A post drafted by Vinnie stops here until you say yes, and stays here after you have."
         >
           <Card>
             {waiting.length === 0 ? (
@@ -210,7 +278,12 @@ export default async function SocialPage({
             ) : (
               <Rows>
                 {waiting.map((post) => (
-                  <PostRow key={post.id} post={post} />
+                  <PostRow
+                    key={post.id}
+                    post={post}
+                    csrfToken={csrfToken}
+                    back={back}
+                  />
                 ))}
               </Rows>
             )}
@@ -340,14 +413,17 @@ export default async function SocialPage({
         </Section>
 
         <NotBuiltYet
+          blurb="Approving, rewording, diarising and declining a post all change the real database, permanently, with your name on them. None of them post anything: no Instagram or TikTok account is connected to this admin, so an approved post is a post written down and waiting for a person."
           works={[
             "Every post, its state, and the numbers the platform reported",
-            "The queue of posts waiting on your approval",
+            "Approving a post and giving it a time, which is recorded against it for good",
+            "Changing the wording before you say yes",
+            "Declining a post with a reason, which answers the agent that asked",
+            "Approving several waiting decisions at once",
             "Failures with the platform's own reason",
-            "Follower counts for each connected account",
           ]}
           coming={[
-            "Writing or editing a post here, and approving one",
+            "Actually posting: nothing here is connected to Instagram or TikTok, so a scheduled post waits for a person",
             "A calendar view of the fortnight ahead",
             "Uploading the picture or video with the caption",
             "Replying to comments without leaving the admin",
@@ -358,7 +434,15 @@ export default async function SocialPage({
   );
 }
 
-function PostRow({ post }: { post: SocialPostItem }) {
+function PostRow({
+  post,
+  csrfToken,
+  back,
+}: {
+  post: SocialPostItem;
+  csrfToken: string;
+  back: string;
+}) {
   return (
     <Row>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -381,6 +465,28 @@ function PostRow({ post }: { post: SocialPostItem }) {
             ? " · failed the brand rule check"
             : ""}
       </p>
+      {csrfToken === "" ? null : (
+        <div className="mt-3 flex flex-wrap items-start gap-2">
+          <PostEditor
+            post={post}
+            csrfToken={csrfToken}
+            back={back}
+            scope="queue"
+          />
+          {post.approvalPending ? null : (
+            <PostDiaryForm post={post} csrfToken={csrfToken} back={back} />
+          )}
+          <PostDeclineForm post={post} csrfToken={csrfToken} back={back} />
+        </div>
+      )}
+      {post.approvalPending && (
+        <div className="mt-2">
+          <Callout title="This one is in Waiting on you, above">
+            It has a decision open, so the yes and the time are set there. You
+            can still change the wording from here first.
+          </Callout>
+        </div>
+      )}
     </Row>
   );
 }

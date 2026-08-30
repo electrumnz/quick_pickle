@@ -1,5 +1,7 @@
 import "server-only";
 
+import { pgTextArray } from "@/lib/agents/roster";
+
 import { ago } from "./format";
 import {
   adminSql,
@@ -47,15 +49,25 @@ export type ApprovalItem = {
   readonly decidedAt: string | null;
   readonly decisionNote: string | null;
   readonly agentName: string | null;
+  readonly agentSlug: string | null;
   readonly agentJobTitle: string | null;
   readonly runGoal: string | null;
+  /** The table the decision is about, e.g. `social_posts`. */
+  readonly subjectTable: string;
+  /** The row it is about, when the agent named one. */
+  readonly subjectId: string | null;
+  /** What the agent wants changed, as it wrote it for a human to read. */
+  readonly preview: Readonly<Record<string, unknown>>;
+  /** The exact call to make on approval. Shown as words, never replayed here. */
+  readonly payload: Readonly<Record<string, unknown>>;
 };
 
 const APPROVAL_SELECT = `
   select a.id, a.title, a.summary, a.rationale, a.subject_type, a.risk,
          a.amount_cents, a.requested_at, a.expires_at, a.status, a.decided_at,
-         a.decision_note,
-         ag.name as agent_name, ag.job_title as agent_job_title,
+         a.decision_note, a.subject_table, a.subject_id, a.preview, a.payload,
+         ag.name as agent_name, ag.slug as agent_slug,
+         ag.job_title as agent_job_title,
          r.goal as run_goal
     from public.approvals a
     left join public.agents ag on ag.id = a.requested_by_agent_id
@@ -80,9 +92,21 @@ function toApproval(row: Record<string, unknown>): ApprovalItem {
     decidedAt: isoOrNull(row, "decided_at"),
     decisionNote: textOrNull(row, "decision_note"),
     agentName: textOrNull(row, "agent_name"),
+    agentSlug: textOrNull(row, "agent_slug"),
     agentJobTitle: textOrNull(row, "agent_job_title"),
     runGoal: textOrNull(row, "run_goal"),
+    subjectTable: text(row, "subject_table"),
+    subjectId: textOrNull(row, "subject_id"),
+    preview: jsonObject(row["preview"]),
+    payload: jsonObject(row["payload"]),
   };
+}
+
+/** `jsonb` arrives already parsed. Anything that is not an object is nothing. */
+function jsonObject(value: unknown): Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 /** Everything waiting on her, riskiest and oldest first. */
@@ -93,6 +117,41 @@ export async function pendingApprovals(): Promise<readonly ApprovalItem[]> {
       order by case a.risk when 'critical' then 0 when 'high' then 1
                            when 'medium' then 2 else 3 end,
                a.requested_at`,
+  );
+  return result.rows.map(toApproval);
+}
+
+/** One decision by id. Null when the id names nothing. */
+export async function approvalById(id: string): Promise<ApprovalItem | null> {
+  const result = await adminSql().query(`${APPROVAL_SELECT} where a.id = $1`, [
+    id,
+  ]);
+  const row = result.rows[0];
+  return row === undefined ? null : toApproval(row);
+}
+
+/** Everything waiting on her about one kind of thing. */
+export async function pendingApprovalsOf(
+  subjectType: string,
+): Promise<readonly ApprovalItem[]> {
+  const result = await adminSql().query(
+    `${APPROVAL_SELECT}
+      where a.status = 'pending' and a.subject_type = $1::public.approval_subject
+      order by a.requested_at`,
+    [subjectType],
+  );
+  return result.rows.map(toApproval);
+}
+
+/** Everything one agent is waiting on her for. */
+export async function pendingApprovalsBy(
+  agentId: string,
+): Promise<readonly ApprovalItem[]> {
+  const result = await adminSql().query(
+    `${APPROVAL_SELECT}
+      where a.status = 'pending' and a.requested_by_agent_id = $1
+      order by a.requested_at`,
+    [agentId],
   );
   return result.rows.map(toApproval);
 }
@@ -179,8 +238,14 @@ export async function team(): Promise<readonly AgentProfile[]> {
     model: text(row, "model"),
     status: text(row, "status"),
     autonomy: text(row, "autonomy"),
-    needsApprovalFor: textArray(row, "requires_approval_for"),
-    tools: textArray(row, "tools"),
+    // `requires_approval_for` is an array of an ENUM, and `pg` has no type
+    // parser for one: enum OIDs are per-database, so the driver hands the
+    // column back as the literal string `{purchase_order,discount}`. Read
+    // with `textArray` it came back empty, and every agent on the Team page
+    // said it always asks you about nothing — the most dangerous sentence
+    // this screen could get wrong. `pgTextArray` copes with both shapes.
+    needsApprovalFor: pgTextArray(row["requires_approval_for"]),
+    tools: pgTextArray(row["tools"]),
     dailyCapCents: int(row, "daily_spend_cap_cents"),
     monthlyCapCents: int(row, "monthly_spend_cap_cents"),
     singleActionCapCents:
@@ -483,6 +548,8 @@ export type BatchItem = {
   readonly productTitle: string | null;
   readonly recipeName: string | null;
   readonly locationName: string | null;
+  /** Needed by the release form, which has to put bottles somewhere. */
+  readonly locationId: string | null;
   readonly plannedFor: string | null;
   readonly producedAt: string | null;
   readonly releasedAt: string | null;
@@ -502,6 +569,7 @@ function toBatch(row: Record<string, unknown>): BatchItem {
     productTitle: textOrNull(row, "product_title"),
     recipeName: textOrNull(row, "recipe_name"),
     locationName: textOrNull(row, "location_name"),
+    locationId: textOrNull(row, "location_id"),
     plannedFor: isoOrNull(row, "planned_for"),
     producedAt: isoOrNull(row, "produced_at"),
     releasedAt: isoOrNull(row, "released_at"),
@@ -718,6 +786,10 @@ export type SocialPostItem = {
   readonly agentName: string | null;
   readonly brandCheckPassed: boolean | null;
   readonly error: string | null;
+  /** The decision attached to it, when one has been raised. */
+  readonly approvalId: string | null;
+  /** Whether that decision is still waiting on her. */
+  readonly approvalPending: boolean;
 };
 
 function toPost(row: Record<string, unknown>): SocialPostItem {
@@ -735,13 +807,16 @@ function toPost(row: Record<string, unknown>): SocialPostItem {
     agentName: textOrNull(row, "agent_name"),
     brandCheckPassed: boolOrNull(row, "brand_check_passed"),
     error: textOrNull(row, "error"),
+    approvalId: textOrNull(row, "approval_id"),
+    approvalPending: text(row, "approval_status") === "pending",
   };
 }
 
 const POST_SELECT = `
-  select p.*, a.name as agent_name
+  select p.*, a.name as agent_name, ap.status as approval_status
     from public.social_posts p
-    left join public.agents a on a.id = p.created_by_agent_id`;
+    left join public.agents a on a.id = p.created_by_agent_id
+    left join public.approvals ap on ap.id = p.approval_id`;
 
 export async function socialPosts(
   limit = 20,

@@ -24,6 +24,10 @@ import {
   Stat,
   StatGrid,
 } from "@/components/admin";
+import { ApprovalQueue } from "@/components/admin/approvals/ApprovalCard";
+import { AutonomyDial } from "@/components/admin/approvals/AutonomyDial";
+import { pendingApprovalsBy } from "@/components/admin/data/queries";
+import { Flash } from "@/components/admin/write/flash";
 import {
   audienceWords,
   autonomyWords,
@@ -87,21 +91,26 @@ async function roleFor(slug: string): Promise<RosterRole | null> {
 
 export default async function AgentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { csrfToken } = await requireAdminSession();
   const { slug } = await params;
+  const query = await searchParams;
+  const back = `/admin/team/${slug}`;
 
   const result = await load(async () => {
     const member = await teamMember(slug);
     if (member === null) return { member: null } as const;
-    const [role, runs, approvals] = await Promise.all([
+    const [role, runs, approvals, open] = await Promise.all([
       roleFor(slug),
       runsForAgent(member.id, 6),
       approvalsForAgent(member.id, 8),
+      pendingApprovalsBy(member.id),
     ]);
-    return { member, role, runs, approvals } as const;
+    return { member, role, runs, approvals, open } as const;
   });
 
   if (!result.ok) {
@@ -119,7 +128,7 @@ export default async function AgentPage({
     notFound();
   }
 
-  const { member, role, runs, approvals } = result.data;
+  const { member, role, runs, approvals, open } = result.data;
   const waiting = approvals.filter((approval) => approval.status === "pending");
 
   return (
@@ -157,6 +166,25 @@ export default async function AgentPage({
       />
 
       <PageSections>
+        <Flash searchParams={query} />
+
+        <Section
+          id="decisions"
+          title={`What ${member.name} is waiting on you for`}
+          description="Nothing here has happened. Saying yes lets the job it stopped carry on; it sends nothing, because no channel out of this company is connected to this admin."
+        >
+          <ApprovalQueue
+            approvals={open}
+            csrfToken={csrfToken}
+            back={`${back}#decisions`}
+            id={`approve-ticked-${member.slug}`}
+            emptyHeadline="It has not had to ask"
+            emptyFills={`A request appears here the moment ${member.name} reaches something its rules say you decide.`}
+          >
+            Everything {member.name} has done so far was inside its limits.
+          </ApprovalQueue>
+        </Section>
+
         {!member.isEnabled && (
           <Callout title="This agent is paused" tone="danger">
             It will not start anything new, and the control plane stops it
@@ -224,6 +252,15 @@ export default async function AgentPage({
                   },
                 ]}
               />
+              <div className="mt-4">
+                <AutonomyDial
+                  slug={member.slug}
+                  name={member.name}
+                  autonomy={member.autonomy}
+                  csrfToken={csrfToken}
+                  back={`${back}#autonomy`}
+                />
+              </div>
             </CardBody>
           </Card>
         </Section>
@@ -399,19 +436,20 @@ export default async function AgentPage({
         </Section>
 
         <NotBuiltYet
-          blurb={`This page reads the real business database, and pausing ${member.name} really does stop it. Nothing else here changes anything.`}
+          blurb={`This page changes real things. Pausing ${member.name} really does stop it, mid-run; deciding one of its requests is written into the row the runtime reads before it is allowed to act; and the dial above moves what it may settle on its own from its next job onwards.`}
           works={[
             "Everything this agent is allowed to do, read from the row the runtime uses",
+            `Approving or declining any of the ${plural(waiting.length, "decision")} it is waiting on you for`,
+            "Moving what it may decide alone, which the runtime reads before every job",
+            "Pausing it, which stops it mid-run",
             "The reasoning behind every action it took, as it was written at the time",
             "What it has spent against its own limits",
-            "Pausing it, which stops it mid-run",
-            `${plural(waiting.length, "decision")} it is waiting on you for`,
           ]}
           coming={[
-            "Deciding an approval from this page",
             "Running it now rather than waiting for its schedule",
             "The full transcript, message by message, including what it was told",
-            "Changing its budget or what it may decide alone",
+            "Changing its budget, its schedule or its tool list from here",
+            "Rewriting what it proposed before you approve it, except for posts, which can be reworded on Social",
           ]}
         />
       </PageSections>

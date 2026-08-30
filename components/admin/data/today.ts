@@ -238,7 +238,9 @@ export async function loadToday(now: Date = new Date()): Promise<TodayData> {
       amountLabel: amountLabel(approval.subjectType, approval.amountCents),
       risk: approval.risk,
       section: "Approvals",
-      href: "/admin/team",
+      // Straight to the queue, not to the top of The Team: the decision is the
+      // reason she clicked, and it is now something she can settle there.
+      href: "/admin/team#decisions",
       urgency: rank({ kind: "Decision", risk: approval.risk }),
     });
   }

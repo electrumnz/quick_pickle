@@ -50,6 +50,16 @@ import {
   Th,
 } from "@/components/admin/ui/primitives";
 import { FilterNotice, SearchForm } from "@/components/admin/ui/search-form";
+import { Flash } from "@/components/admin/write/flash";
+import { requireAdminSession } from "@/lib/auth/server";
+
+import { openableRecipes, sellableVariants, stockPlaces } from "./data";
+import {
+  AdjustStockForm,
+  OpenBatchForm,
+  ReleaseBatchForm,
+  ReorderPointForm,
+} from "./stock-forms";
 
 export const metadata: Metadata = {
   title: "Stock & Batches",
@@ -63,6 +73,14 @@ export const metadata: Metadata = {
  * so every stock line carries days of cover worked out from the last month of
  * real sales. A count with no rate attached is a number she has to do
  * arithmetic on before it means anything.
+ *
+ * Four things on this page change the business. Correcting a count goes
+ * through the commerce adapter, so it is the same call Shopify will take.
+ * Opening a batch, releasing one, and moving a reorder point are Half Sour's
+ * own production tables, and the first two carry the traceability with them:
+ * a batch is opened with the recipe's ingredients copied onto it, and released
+ * through a ledger entry that names the batch, so a bottle that ships next
+ * month can still be walked back to the dill that went into it.
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -105,9 +123,14 @@ export default async function StockPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const { csrfToken } = await requireAdminSession();
   const params = await searchParams;
   const raw = params["q"];
   const query = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? "";
+  const back =
+    query === ""
+      ? "/admin/stock"
+      : `/admin/stock?q=${encodeURIComponent(query)}`;
 
   const result = await load(async () => {
     const now = new Date();
@@ -121,6 +144,9 @@ export default async function StockPage({
       made,
       po,
       vendors,
+      recipes,
+      sites,
+      variants,
     ] = await Promise.all([
       inventoryLevels(),
       allProducts(),
@@ -131,6 +157,9 @@ export default async function StockPage({
       recentBatches(10),
       purchaseOrders(8),
       suppliers(),
+      openableRecipes(),
+      stockPlaces(),
+      sellableVariants(),
     ]);
     const sold = unitsBySku(
       between(orders, new Date(now.getTime() - 30 * DAY_MS), now),
@@ -144,6 +173,9 @@ export default async function StockPage({
       made,
       po,
       vendors,
+      recipes,
+      sites,
+      variants,
     };
   });
 
@@ -159,7 +191,20 @@ export default async function StockPage({
     );
   }
 
-  const { stock, ingredients, making, made, po, vendors } = result.data;
+  const {
+    stock,
+    ingredients,
+    making,
+    made,
+    po,
+    vendors,
+    recipes,
+    sites,
+    variants,
+  } = result.data;
+  const variantBySku = new Map(
+    variants.map((variant) => [variant.sku, variant.id]),
+  );
   const bottles = stock.reduce((sum, line) => sum + line.available, 0);
   const tightest = stock[0];
   const low = ingredients.filter(
@@ -191,6 +236,8 @@ export default async function StockPage({
       />
 
       <PageSections>
+        <Flash searchParams={params} />
+
         <Section title="Where things stand">
           <div className="rounded-lg border border-hairline bg-surface-raised px-4 py-4">
             <StatGrid>
@@ -282,6 +329,13 @@ export default async function StockPage({
                       ? ` · selling about ${quantity(Math.round(line.soldPerDay * 7))} a week`
                       : ""}
                   </p>
+                  <AdjustStockForm
+                    line={line}
+                    variantId={variantBySku.get(line.sku)}
+                    places={sites}
+                    csrfToken={csrfToken}
+                    back={back}
+                  />
                 </Row>
               ))}
             </Rows>
@@ -291,6 +345,14 @@ export default async function StockPage({
         <Section
           title="Being made now"
           description="Batches in the fermenter, conditioning, or on the bottling line."
+          action={
+            <OpenBatchForm
+              recipes={recipes}
+              places={sites}
+              csrfToken={csrfToken}
+              back={back}
+            />
+          }
         >
           <Card>
             {making.length === 0 ? (
@@ -330,6 +392,12 @@ export default async function StockPage({
                         {batch.notes}
                       </p>
                     )}
+                    <ReleaseBatchForm
+                      batch={batch}
+                      places={sites}
+                      csrfToken={csrfToken}
+                      back={back}
+                    />
                   </Row>
                 ))}
               </Rows>
@@ -361,6 +429,7 @@ export default async function StockPage({
                     <Th numeric>Reorder at</Th>
                     <Th>Supplier</Th>
                     <Th numeric>Days to arrive</Th>
+                    <Th>Reorder point</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -395,6 +464,13 @@ export default async function StockPage({
                           </Td>
                           <Td>{item.supplierName ?? "None chosen"}</Td>
                           <Td numeric>{item.supplierLeadDays ?? "—"}</Td>
+                          <Td>
+                            <ReorderPointForm
+                              ingredient={item}
+                              csrfToken={csrfToken}
+                              back={back}
+                            />
+                          </Td>
                         </tr>
                       );
                     })}
@@ -530,17 +606,21 @@ export default async function StockPage({
         </Section>
 
         <NotBuiltYet
+          blurb="This page changes real things. Correcting a count goes through the same commerce adapter the shop runs on, and opening or releasing a batch writes the production record a recall would be traced through. Nothing here contacts a supplier: a purchase order still leaves the building by you."
           works={[
             "Live stock at both locations, read through the commerce adapter",
             "Days of cover worked out from the last month of real sales",
-            "Ingredients against their reorder points, with the supplier and lead time",
+            "Correcting a count on any line, with a reason, at either location",
+            "Opening a batch, with the recipe's ingredients copied onto it and taken off the store room",
+            "Releasing a batch: the bottles go on the shelf and the ledger records which batch they came from",
+            "Moving an ingredient's reorder point and its usual order size",
             "Every batch, its cost a bottle, and what is left of it",
           ]}
           coming={[
-            "Starting a batch, and moving it through the line",
-            "Recording a stocktake or a breakage",
-            "Sending a purchase order to a supplier from here",
-            "The recipe each batch was made from, with its version history",
+            "Moving a batch through brewing, conditioning and bottling one step at a time — it goes in as fermenting and comes out released",
+            "Holding a batch that fails its check, and recalling one that has already gone out",
+            "Recording the supplier lot code against each ingredient in a batch",
+            "Sending a purchase order to a supplier from here — nothing in this admin can email anyone",
           ]}
         />
       </PageSections>

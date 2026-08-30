@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { adminSql, load } from "@/components/admin/data/db";
-import { ago, money, plural, until } from "@/components/admin/data/format";
+import { ago, money, plural } from "@/components/admin/data/format";
 import {
   decidedApprovals,
   pendingApprovals,
-  type ApprovalItem,
 } from "@/components/admin/data/queries";
 import {
   Avatar,
@@ -27,7 +26,10 @@ import {
   Stat,
   StatGrid,
 } from "@/components/admin";
+import { ApprovalQueue } from "@/components/admin/approvals/ApprovalCard";
+import { AutonomyDial } from "@/components/admin/approvals/AutonomyDial";
 import { FilterNotice, SearchForm } from "@/components/admin/ui/search-form";
+import { Flash } from "@/components/admin/write/flash";
 import {
   autonomyBadge,
   autonomyWords,
@@ -105,6 +107,8 @@ export default async function TeamPage({
   const params = await searchParams;
   const raw = params["q"];
   const query = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? "";
+  const back =
+    query === "" ? "/admin/team" : `/admin/team?q=${encodeURIComponent(query)}`;
 
   const result = await load(async () => {
     const [members, roles, waiting, decided, runs, totals] = await Promise.all([
@@ -176,27 +180,23 @@ export default async function TeamPage({
       />
 
       <PageSections>
+        <Flash searchParams={params} />
+
         <Section
+          id="decisions"
           title="Waiting on you"
-          description="Nothing here has happened. Each one is something an agent stopped at, because its rules say a human decides this."
+          description="Nothing here has happened. Each one is something an agent stopped at, because its rules say a human decides this. Saying yes lets it carry on; it does not send anything, because no channel out of this company is connected."
         >
-          <Card>
-            {waiting.length === 0 ? (
-              <EmptyState
-                headline="Nobody is waiting"
-                fills="A request appears here the moment an agent reaches something its rules say you decide — a supplier order, a price, a post, an email to a venue."
-              >
-                Every agent is inside its limits and none of them has stopped to
-                ask for anything.
-              </EmptyState>
-            ) : (
-              <Rows>
-                {waiting.map((approval) => (
-                  <ApprovalRow key={approval.id} approval={approval} />
-                ))}
-              </Rows>
-            )}
-          </Card>
+          <ApprovalQueue
+            approvals={waiting}
+            csrfToken={csrfToken}
+            back={`${back}#decisions`}
+            emptyHeadline="Nobody is waiting"
+            emptyFills="A request appears here the moment an agent reaches something its rules say you decide — a supplier order, a price, a post, an email to a venue."
+          >
+            Every agent is inside its limits and none of them has stopped to ask
+            for anything.
+          </ApprovalQueue>
         </Section>
 
         <Section
@@ -220,6 +220,7 @@ export default async function TeamPage({
                 member={member}
                 role={roleBySlug.get(member.slug) ?? null}
                 csrfToken={csrfToken}
+                back={back}
               />
             ))}
           </div>
@@ -390,19 +391,21 @@ export default async function TeamPage({
         )}
 
         <NotBuiltYet
-          blurb="This page reads the real business database, and the pause buttons really do change it: pausing an agent stops it, immediately, including mid-run. Everything else here is read-only."
+          blurb="This page changes real things. Pausing an agent stops it immediately, including mid-run; approving or declining a decision is written into the same approvals row the runtime reads before it is allowed to act; and the dial on each card moves what that agent may settle on its own. Nothing on this page sends anything out of the company."
           works={[
             "The roster read live from the database, with each agent's job, limits, budget and schedule",
+            "Approving or declining any decision, with your reason kept against it",
+            "Saying yes to several at once",
+            "Moving what each agent may decide alone, which takes effect on its next job",
             "Pausing and restarting any agent, which stops it mid-run",
             "Every job it has run, with the reasoning it gave before each action",
-            "What the team has spent today and this month, against its limits",
             "A warning on any agent whose database row disagrees with the code",
           ]}
           coming={[
-            "Approving or declining from this page — a decision is still recorded by the runtime, not by a button here",
             "Stopping all eight at once from here; the kill switch is a settings row today",
             "Starting a job on demand rather than waiting for its schedule",
-            "Changing an agent's budget or what it may decide alone",
+            "Changing an agent's budget from this page",
+            "Rewriting what an agent proposed before you approve it, except for posts, which can be reworded on Social",
           ]}
         />
       </PageSections>
@@ -411,55 +414,6 @@ export default async function TeamPage({
 }
 
 /* ------------------------------------------------------------------ pieces */
-
-function ApprovalRow({ approval }: { approval: ApprovalItem }) {
-  return (
-    <Row>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-        <div className="min-w-0">
-          <p className="text-body-sm font-medium text-primary">
-            {approval.title}
-          </p>
-          <p className="mt-1 text-caption text-muted">{approval.summary}</p>
-          {approval.rationale !== null && (
-            <p className="mt-1.5 text-caption text-muted">
-              <span className="text-primary">Why: </span>
-              {approval.rationale}
-            </p>
-          )}
-          <p className="mt-1.5 text-caption text-muted">
-            {approval.agentName ?? "The admin"}
-            {approval.agentJobTitle === null
-              ? ""
-              : `, ${approval.agentJobTitle}`}{" "}
-            · asked {ago(approval.requestedAt)}
-            {approval.expiresAt === null
-              ? ""
-              : ` · expires ${until(approval.expiresAt)}`}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:flex-col sm:items-end">
-          <Badge
-            tone={
-              approval.risk === "high" || approval.risk === "critical"
-                ? "accent"
-                : "quiet"
-            }
-          >
-            {approval.risk === "high" || approval.risk === "critical"
-              ? "Big decision"
-              : approval.risk === "medium"
-                ? "Worth a look"
-                : "Small decision"}
-          </Badge>
-          <span className="text-caption text-muted">
-            {subjectWords(approval.subjectType)}
-          </span>
-        </div>
-      </div>
-    </Row>
-  );
-}
 
 /** Where the database and the code disagree about what an agent may do. */
 function drift(member: TeamMember, role: RosterRole | null): string[] {
@@ -488,10 +442,12 @@ function AgentCard({
   member,
   role,
   csrfToken,
+  back,
 }: {
   member: TeamMember;
   role: RosterRole | null;
   csrfToken: string;
+  back: string;
 }) {
   const capFraction =
     member.dailyCapCents === 0
@@ -556,6 +512,14 @@ function AgentCard({
             what you see here is what it will do.
           </Callout>
         )}
+        <AutonomyDial
+          slug={member.slug}
+          name={member.name}
+          autonomy={member.autonomy}
+          csrfToken={csrfToken}
+          back={back}
+          id={`autonomy-${member.slug}`}
+        />
         <div>
           <div className="flex items-baseline justify-between gap-3 text-caption">
             <span className="text-muted">Spent today</span>
