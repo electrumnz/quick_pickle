@@ -25,23 +25,25 @@ import {
  * rather than from a fixture written to agree with it. No live Postgres, no
  * network, and it takes about a second.
  *
- * The order is deliberate: migrations, then the seed, then the roster migrations
- * a second time. `seed.sql` truncates `public.agents`, so re-applying the roster
- * registration afterwards is exactly what a developer has to do locally, and
- * running them twice also proves both migrations are idempotent.
+ * The order is migrations, then the seed, then the roster migrations a second
+ * time. That last step used to be a REPAIR: `seed.sql` truncated
+ * `public.agents` and took the whole registered roster with it, so anything
+ * that wanted the roster back had to re-run the migrations by hand. It does not
+ * truncate it any more — see the note at the top of `supabase/seed.sql` — so
+ * this is now purely an idempotency check: applying the roster migrations over
+ * a database that already has the roster must change nothing.
  *
- * All three, in order: the registration writes the eight rows, the model
- * migration moves them onto the gateway ids the code now declares, and the chat
- * migration grants them `hand_off`. Re-applying only the first would leave the
- * table naming models the runtime never resolves and tool grants the code no
- * longer declares, and `registration.test.ts` would fail on exactly the fields
- * this set exists to keep honest.
+ * `tests/roster/seed-preserves-roster.test.ts` deliberately does NOT re-apply
+ * them. It runs the chain a deployment actually runs — migrations, then the
+ * seed, and stop — because that is the only order that can catch the seed
+ * eating the roster again.
  */
 
 const ROSTER_MIGRATIONS = [
   "20260103000000_agent_roster.sql",
   "20260108000000_roster_gateway_models.sql",
   "20260110000000_founder_chat.sql",
+  "20260111000000_security_role.sql",
 ] as const;
 
 const SUPABASE_AUTH_STUB = `
@@ -93,7 +95,8 @@ export async function createSeededBusiness(): Promise<RosterTestDatabase> {
     );
   }
   await db.exec(readFileSync(repoPath("supabase/seed.sql"), "utf8"));
-  // The seed truncates public.agents; register the roster back over it.
+  // Applied a second time on purpose: over a database that already carries the
+  // roster, every one of these must be a no-op.
   for (const name of ROSTER_MIGRATIONS) {
     await db.exec(
       readFileSync(repoPath(`supabase/migrations/${name}`), "utf8"),

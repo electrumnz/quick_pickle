@@ -26,7 +26,7 @@ WHAT IT DID, STEP BY STEP
         - Brass and Bitters Limited (Auckland): 4 orders, NZ$2592.00 all up, last ordered 58 days ago against a 13-day pattern — overdue.
         - Green Grocer Dunedin Limited (Dunedin): 4 orders, NZ$1944.00 all up, last ordered 1 day ago against a 26.3-day pattern.
         - Salt Room Hospitality Limited (Wellington): 3 orders, NZ$1879.20 all up, last ordered 20 days ago against a 6.5-day pattern — overdue.
-        - Halliday and Sons Limited (Christchurch): 3 orders, NZ$1317.60 all up, last ordered 2 days ago against a 45.5-day pattern.
+        - Halliday and Sons Limited (Christchurch): 3 orders, NZ$1317.60 all up, last ordered 1 day ago against a 45.5-day pattern.
         - Nightjar Bar Limited (Queenstown): 2 orders, NZ$1274.40 all up, last ordered 41 days ago against a 72.8-day pattern.
         proposal: {"customerId":"id#1","account":"Brass and Bitters Limited","to":"orders@brassandbitters.co.nz","subject":"Brass and Bitters Limited — restock before the next service","body":"Kiri Ngatai,\n\nYour last order was 58 days ago, against your usual 13 days between orders.\nA case is six bottles and trade pricing is the one published number.\nSay how many cases and I will get them on the next run.","reason":"Brass and Bitters Limited is past its own reorder cadence."}
 
@@ -50,7 +50,7 @@ What I found
 - Brass and Bitters Limited (Auckland): 4 orders, NZ$2592.00 all up, last ordered 58 days ago against a 13-day pattern — overdue.
 - Green Grocer Dunedin Limited (Dunedin): 4 orders, NZ$1944.00 all up, last ordered 1 day ago against a 26.3-day pattern.
 - Salt Room Hospitality Limited (Wellington): 3 orders, NZ$1879.20 all up, last ordered 20 days ago against a 6.5-day pattern — overdue.
-- Halliday and Sons Limited (Christchurch): 3 orders, NZ$1317.60 all up, last ordered 2 days ago against a 45.5-day pattern.
+- Halliday and Sons Limited (Christchurch): 3 orders, NZ$1317.60 all up, last ordered 1 day ago against a 45.5-day pattern.
 - Nightjar Bar Limited (Queenstown): 2 orders, NZ$1274.40 all up, last ordered 41 days ago against a 72.8-day pattern.
 - Standing note: Standing trade account. Orders on the first Tuesday.
 - 2026-08-21 transactional: "Your Half Sour invoice — due the 20th" — delivered, opened.
@@ -84,7 +84,7 @@ WHAT IT REPORTED
    - Brass and Bitters Limited (Auckland): 4 orders, NZ$2592.00 all up, last ordered 58 days ago against a 13-day pattern — overdue.
    - Green Grocer Dunedin Limited (Dunedin): 4 orders, NZ$1944.00 all up, last ordered 1 day ago against a 26.3-day pattern.
    - Salt Room Hospitality Limited (Wellington): 3 orders, NZ$1879.20 all up, last ordered 20 days ago against a 6.5-day pattern — overdue.
-   - Halliday and Sons Limited (Christchurch): 3 orders, NZ$1317.60 all up, last ordered 2 days ago against a 45.5-day pattern.
+   - Halliday and Sons Limited (Christchurch): 3 orders, NZ$1317.60 all up, last ordered 1 day ago against a 45.5-day pattern.
    - Nightjar Bar Limited (Queenstown): 2 orders, NZ$1274.40 all up, last ordered 41 days ago against a 72.8-day pattern.
    - Standing note: Standing trade account. Orders on the first Tuesday.
    - 2026-08-21 transactional: "Your Half Sour invoice — due the 20th" — delivered, opened.

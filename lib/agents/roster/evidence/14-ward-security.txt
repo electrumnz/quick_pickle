@@ -1,0 +1,156 @@
+==============================================================================
+WARD — Security and IT (security)
+==============================================================================
+Watches who can get into this admin, what has been tried against it, and whether anything that should be secret has been left unset.
+Audience: internal. Measured on: You hear about a problem from Ward before you hear about it from anyone else, and nothing it reports turns out to be invented.
+model: PLANNER (tests/roster/support/planner-model.ts) — deterministic, and
+cannot write a number the tools did not return. Everything below the model is
+the real runtime, and every read is real SQL against the seeded business.
+
+GOAL          Sweep the sign-in record, the live sessions, the credentials and the change trail, and write up anything the founder needs to act on.
+AUTONOMY      propose — Watches and tells you. It cannot change a single security setting, revoke a session or touch a key — every one of those is your decision, on purpose.
+TOOLS GRANTED read_sign_in_activity, read_admin_sessions, read_secrets_configured, read_change_trail, save_internal_note, hand_off
+ALWAYS ASKS   content_asset, settings_change
+              (the next line lists rule names, not claims — copy-audit-ignore)
+BRAND RULES   no-health-claims, alcohol-adjacent, name-two-words, sku-numerals, voice-dry-not-zany, nz-spelling, gst-inclusive, photo-no-stock, batch-code-visible, trade-tone, reply-within-day
+MEMORY        Nothing between runs. Every sweep is read fresh from the sign-in record, the sessions, the environment and the change trail, because a stale all-clear is worse than none.
+
+------------------------------------------------------------------------------
+WHAT IT DID, STEP BY STEP
+------------------------------------------------------------------------------
+1. reasoning: Start with the front door: whether it has a password on it at all, and which credentials this deployment is holding. Names only — the values are not readable from here.
+   tool: read_secrets_configured {}
+   status: succeeded
+      7 credentials are not configured: ADMIN_PASSWORD_HASH, ADMIN_SESSION_SECRET, SUPABASE_DB_URL, AI_GATEWAY_API_KEY, SHOPIFY_ADMIN_ACCESS_TOKEN, SHOPIFY_STOREFRONT_ACCESS_TOKEN, INNGEST_EVENT_KEY.
+        - ADMIN_PASSWORD_HASH is not set. Generate one with `npm run auth:hash-password`. Nobody can sign in at all — and on a demonstration deployment the admin is open to anyone who has the address.
+        - ADMIN_SESSION_SECRET is not set. It needs 32 or more random bytes, base64 or hex. Sign-in is refused outright rather than issuing a cookie that could be faked.
+        - SUPABASE_DB_URL is not set. Sessions are stored in Postgres so they can be revoked, so there is no sign-in without it. There is no real database attached. On a demonstration that is deliberate; anywhere else it means the admin will not open.
+        - AI_GATEWAY_API_KEY is not set. The team stops at its first thought and says so. Nothing is exposed by it.
+        - SHOPIFY_ADMIN_ACCESS_TOKEN is not set. The shop runs on the local mirror only. Nothing here can change the live store.
+        - SHOPIFY_STOREFRONT_ACCESS_TOKEN is not set. The storefront reads the local mirror instead.
+        - INNGEST_EVENT_KEY is not set. Scheduled agent work is not queued.
+        - 1 credential is configured: SUPABASE_SERVICE_ROLE_KEY. This lists the names only — no agent in this company can read what any of them is set to.
+        … 1 more
+
+2. reasoning: See who got in, who was turned away, and whether anything is being hammered.
+   tool: read_sign_in_activity {"windowDays":7}
+   status: succeeded
+      Nobody has been turned away from the sign-in page in 7 days, and 1 sign-in went through.
+        - 1 successful sign-in and 0 refused attempts in the last 7 days.
+        - Signed in 11 minutes ago from 203.86.74.201 as Nadia Feldman.
+
+3. reasoning: See which devices are signed in right now, and when each was last used.
+   tool: read_admin_sessions {}
+   status: succeeded
+      1 device is signed in to the admin right now.
+        - MacBook Air — Grey Lynn is signed in as Nadia Feldman from 203.86.74.201, last used 11 minutes ago.
+        - iPhone — market stall is no longer signed in: signed out on a shared device at the Coastville market.
+
+4. reasoning: See what actually changed in the business, and who changed it, from the one record nobody can edit afterwards.
+   tool: read_change_trail {"windowDays":7}
+   status: succeeded
+      7 changes were recorded in the last 7 days, by 6 people and agents.
+        - Mirror (an agent) made 2 changes.
+        - Dot (an agent) made 1 change.
+        - Marlow (an agent) made 1 change.
+        - Nadia Feldman (a person) made 1 change.
+        - Teller (an agent) made 1 change.
+        - Vinnie (an agent) made 1 change.
+        - 6 minutes ago, Mirror synced webhook events — Queue drain.
+        - 52 minutes ago, Dot created approvals — Reply to a three-star review about the No 03 heat level.
+        … 4 more
+
+5. reasoning: File the sweep in plain English, worst thing first, so the founder can act on it without a translator.
+   tool: save_internal_note {"slug":"security-sweep","title":"7 credentials are not configured: ADMIN_PASSWORD_HASH, ADMIN_SESSION_SECRET, SUPABASE_DB_URL, AI_GATEWAY_API_KEY, SHOPIFY_ADMIN_ACCESS_TOKEN, SHOPIFY_STOREFR….","body":"7 credentials are not configured: ADMIN_PASSWORD_HASH, AD
+   status: succeeded (behind approval id#1)
+      recorded="security-sweep" delivered=false
+      Recorded, not sent. This deployment has no live outbound channel wired: the approved action is written down so it can be carried out by a person, or by a channel adapter that does not exist yet.
+
+6. reasoning: 7 credentials are not configured: ADMIN_PASSWORD_HASH, ADMIN_SESSION_SECRET, SUPABASE_DB_URL, AI_GATEWAY_API_KEY, SHOPIFY_ADMIN_ACCESS_TOKEN, SHOPIFY_STOREFRONT_ACCESS_TOKEN, INNGEST_EVENT_KEY. Nobody has been turned away from the sign-in page in 7 days, and 1 sign-in went through. 1 device is signed in to the admin right now. 7 changes were recorded in the last 7 days, by 6 people and agents.
+
+What I found
+- ADMIN_PASSWORD_HASH is not set. Generate one with `npm run auth:hash-password`. Nobody can sign in at all — and on a demonstration deployment the admin is open to anyone who has the address.
+- ADMIN_SESSION_SECRET is not set. It needs 32 or more random bytes, base64 or hex. Sign-in is refused outright rather than issuing a cookie that could be faked.
+- SUPABASE_DB_URL is not set. Sessions are stored in Postgres so they can be revoked, so there is no sign-in without it. There is no real database attached. On a demonstration that is deliberate; anywhere else it means the admin will not open.
+- AI_GATEWAY_API_KEY is not set. The team stops at its first thought and says so. Nothing is exposed by it.
+- SHOPIFY_ADMIN_ACCESS_TOKEN is not set. The shop runs on the local mirror only. Nothing here can change the live store.
+- SHOPIFY_STOREFRONT_ACCESS_TOKEN is not set. The storefront reads the local mirror instead.
+- INNGEST_EVENT_KEY is not set. Scheduled agent work is not queued.
+- 1 credential is configured: SUPABASE_SERVICE_ROLE_KEY. This lists the names only — no agent in this company can read what any of them is set to.
+- 2 settings rows hold something secret: commerce.shopify_admin_token_ref, commerce.webhook_secret_ref. Their contents are not readable from here either.
+- 1 successful sign-in and 0 refused attempts in the last 7 days.
+- Signed in 11 minutes ago from 203.86.74.201 as Nadia Feldman.
+- MacBook Air — Grey Lynn is signed in as Nadia Feldman from 203.86.74.201, last used 11 minutes ago.
+- iPhone — market stall is no longer signed in: signed out on a shared device at the Coastville market.
+- Mirror (an agent) made 2 changes.
+- Dot (an agent) made 1 change.
+- Marlow (an agent) made 1 change.
+- Nadia Feldman (a person) made 1 change.
+- Teller (an agent) made 1 change.
+- Vinnie (an agent) made 1 change.
+- 6 minutes ago, Mirror synced webhook events — Queue drain.
+- 52 minutes ago, Dot created approvals — Reply to a three-star review about the No 03 heat level.
+- 4 hours ago, Marlow created purchase orders — PO-0101.
+- 19 hours ago, Vinnie created social posts — No 03 SMOKE restock.
+- 2 days ago, Teller created approvals — Lift No 03 SMOKE from NZ$22.00 to NZ$23.50.
+- 2 days ago, Mirror synced webhook events — orders/create 8f2c91ab.
+
+What I did
+- save_internal_note: recorded (security-sweep), not delivered — this deployment has no live outbound channel.
+
+[written under: Brine is a bar ingredient, and the person pouring it is the hero of every sentence we write.]
+------------------------------------------------------------------------------
+DECISIONS PUT TO THE FOUNDER
+------------------------------------------------------------------------------
+   [approved] content_asset: 7 credentials are not configured: ADMIN_PASSWORD_HASH, ADMIN_SESSION_SECRET, SUPABASE_DB_URL, AI_GATEWAY_API_KEY, SHOPIFY_ADMIN_ACCESS_TOKEN, SHOPIFY_STOREFR….
+      summary: 7 credentials are not configured: ADMIN_PASSWORD_HASH, ADMIN_SESSION_SECRET, SUPABASE_DB_URL, AI_GATEWAY_API_KEY, SHOPIFY_ADMIN_ACCESS_TOKEN, SHOPIFY_STOREFRONT_ACCESS_TOKEN, INNGEST_EVENT_KEY. Nobody
+      why:     File the sweep in plain English, worst thing first, so the founder can act on it without a translator.
+      decided: founder — Approved.
+
+------------------------------------------------------------------------------
+WHAT ACTUALLY LEFT THE COMPANY
+------------------------------------------------------------------------------
+   external actions delivered: 0 (this build has no outbound channel)
+   actions recorded in the outbox: 1
+      note: 7 credentials are not configured: ADMIN_PASSWORD_HASH, ADMIN_SESSION_SECRET, SUPABASE_DB_URL, AI_GATEWAY_API_KEY, SHOPIFY_ADMIN_ACCESS_TOKEN, SHOPIFY_STOREFR….
+
+------------------------------------------------------------------------------
+WHAT IT REPORTED
+------------------------------------------------------------------------------
+   7 credentials are not configured: ADMIN_PASSWORD_HASH, ADMIN_SESSION_SECRET, SUPABASE_DB_URL, AI_GATEWAY_API_KEY, SHOPIFY_ADMIN_ACCESS_TOKEN, SHOPIFY_STOREFRONT_ACCESS_TOKEN, INNGEST_EVENT_KEY. Nobody has been turned away from the sign-in page in 7 days, and 1 sign-in went through. 1 device is signed in to the admin right now. 7 changes were recorded in the last 7 days, by 6 people and agents.
+   
+   What I found
+   - ADMIN_PASSWORD_HASH is not set. Generate one with `npm run auth:hash-password`. Nobody can sign in at all — and on a demonstration deployment the admin is open to anyone who has the address.
+   - ADMIN_SESSION_SECRET is not set. It needs 32 or more random bytes, base64 or hex. Sign-in is refused outright rather than issuing a cookie that could be faked.
+   - SUPABASE_DB_URL is not set. Sessions are stored in Postgres so they can be revoked, so there is no sign-in without it. There is no real database attached. On a demonstration that is deliberate; anywhere else it means the admin will not open.
+   - AI_GATEWAY_API_KEY is not set. The team stops at its first thought and says so. Nothing is exposed by it.
+   - SHOPIFY_ADMIN_ACCESS_TOKEN is not set. The shop runs on the local mirror only. Nothing here can change the live store.
+   - SHOPIFY_STOREFRONT_ACCESS_TOKEN is not set. The storefront reads the local mirror instead.
+   - INNGEST_EVENT_KEY is not set. Scheduled agent work is not queued.
+   - 1 credential is configured: SUPABASE_SERVICE_ROLE_KEY. This lists the names only — no agent in this company can read what any of them is set to.
+   - 2 settings rows hold something secret: commerce.shopify_admin_token_ref, commerce.webhook_secret_ref. Their contents are not readable from here either.
+   - 1 successful sign-in and 0 refused attempts in the last 7 days.
+   - Signed in 11 minutes ago from 203.86.74.201 as Nadia Feldman.
+   - MacBook Air — Grey Lynn is signed in as Nadia Feldman from 203.86.74.201, last used 11 minutes ago.
+   - iPhone — market stall is no longer signed in: signed out on a shared device at the Coastville market.
+   - Mirror (an agent) made 2 changes.
+   - Dot (an agent) made 1 change.
+   - Marlow (an agent) made 1 change.
+   - Nadia Feldman (a person) made 1 change.
+   - Teller (an agent) made 1 change.
+   - Vinnie (an agent) made 1 change.
+   - 6 minutes ago, Mirror synced webhook events — Queue drain.
+   - 52 minutes ago, Dot created approvals — Reply to a three-star review about the No 03 heat level.
+   - 4 hours ago, Marlow created purchase orders — PO-0101.
+   - 19 hours ago, Vinnie created social posts — No 03 SMOKE restock.
+   - 2 days ago, Teller created approvals — Lift No 03 SMOKE from NZ$22.00 to NZ$23.50.
+   - 2 days ago, Mirror synced webhook events — orders/create 8f2c91ab.
+   
+   What I did
+   - save_internal_note: recorded (security-sweep), not delivered — this deployment has no live outbound channel.
+   
+   [written under: Brine is a bar ingredient, and the person pouring it is the hero of every sentence we write.]
+
+------------------------------------------------------------------------------
+COST $0.02 across 6 model calls and 5 tool calls.
+Run status: succeeded.

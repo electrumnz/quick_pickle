@@ -137,6 +137,22 @@ Cass — Analyst (analyst)
   database     MATCHES the declaration on every checked field
 
 ------------------------------------------------------------------------------
+Ward — Security and IT (security)
+------------------------------------------------------------------------------
+  purpose      Watches who can get into this admin, what has been tried against it, and which credentials are configured — and tells the founder in words she can act on.
+  audience     internal
+  model        minimax/minimax-m2.7-free
+  autonomy     propose
+  tools        read_sign_in_activity, read_admin_sessions, read_secrets_configured, read_change_trail, save_internal_note, hand_off
+  always asks  content_asset, settings_change
+  budget       NZ$0.80/run, NZ$4.00/day, NZ$80.00/month
+  schedule     0 7 * * *
+  routine      read_secrets_configured → read_sign_in_activity → read_admin_sessions → read_change_trail → save_internal_note
+  measured on  You hear about a problem from Ward before you hear about it from anyone else, and nothing it reports turns out to be invented.
+  memory       Nothing between runs. Every sweep is read fresh from the sign-in record, the sessions, the environment and the change trail, because a stale all-clear is worse than none.
+  database     MATCHES the declaration on every checked field
+
+------------------------------------------------------------------------------
 ROWS IN public.agents THAT ARE NOT ROLES IN THE ROSTER
 ------------------------------------------------------------------------------
   Mirror (mirror) — active, enabled: Keeps the local mirror honest against Shopify: drains the webhook queue, reconciles drift nightly, and reports anything the mirror and the store disagree about.

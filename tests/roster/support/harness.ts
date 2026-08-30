@@ -75,7 +75,7 @@ export interface RosterHarness {
   close(): Promise<void>;
 }
 
-/** One seeded business, one tool registry, all eight roles built from it. */
+/** One seeded business, one tool registry, all nine roles built from it. */
 export async function createRosterHarness(): Promise<RosterHarness> {
   const database = await createSeededBusiness();
   const { roster, source } = await loadRosterFrom(database);

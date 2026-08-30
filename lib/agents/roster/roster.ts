@@ -6,7 +6,7 @@
  * strategy edit picks the edit up, which is the entire reason the strategy lives
  * in `strategy_documents` rather than in a constant.
  *
- * `registerRoster` then reconciles all eight into `public.agents` through the
+ * `registerRoster` then reconciles all nine into `public.agents` through the
  * runtime's own `register`, so what the admin lists is what the runtime will
  * actually run — not a card someone drew.
  */
@@ -30,6 +30,7 @@ import {
   marketingRole,
   opsRole,
   productRole,
+  securityRole,
   socialRole,
   tradeRole,
 } from "./definitions";
@@ -49,6 +50,7 @@ export const ROSTER_SLUGS = [
   "trade",
   "product",
   "analyst",
+  "security",
 ] as const;
 
 export type RosterSlug = (typeof ROSTER_SLUGS)[number];
@@ -58,7 +60,7 @@ export interface Roster {
   readonly strategy: Strategy;
 }
 
-/** Build all eight roles from one loaded strategy plus the two strategy agents. */
+/** Build all nine roles from one loaded strategy plus the two strategy agents. */
 export function buildRoster(
   strategy: Strategy,
   strategyAgents: {
@@ -75,6 +77,7 @@ export function buildRoster(
     tradeRole(strategyAgents.trade),
     productRole(strategy),
     analystRole(strategy),
+    securityRole(strategy),
   ];
   return { roles, strategy };
 }

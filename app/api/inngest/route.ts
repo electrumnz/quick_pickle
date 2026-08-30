@@ -18,9 +18,9 @@ import { resolveDatabaseUrl } from "@/lib/demo/mode";
  *
  * This is the call the previous version of this file described and did not
  * make. `createRosterPlatform` loads the strategy out of `strategy_documents`,
- * builds all eight roles from it, reconciles each into `public.agents` through
+ * builds all nine roles from it, reconciles each into `public.agents` through
  * the runtime's own `register`, and hands back a platform whose tool registry
- * is the roster's twenty-three tools rather than an empty one. The endpoint
+ * is the roster's tools rather than an empty one. The endpoint
  * stops refusing work for agents it has never been told about.
  *
  * Three things this does not do, each on purpose.

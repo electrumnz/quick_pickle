@@ -51,6 +51,7 @@ export const CAPABILITIES = [
   "wholesale_outreach",
   "product_development",
   "business_reporting",
+  "security_watch",
   "catalogue_facts",
 ] as const;
 
@@ -74,6 +75,7 @@ export const CAPABILITY_TOOLS: Readonly<Record<Capability, readonly string[]>> =
     wholesale_outreach: ["read_trade_accounts", "queue_trade_outreach"],
     product_development: ["read_range_signals", "save_product_concept"],
     business_reporting: ["read_weekly_pulse"],
+    security_watch: ["read_sign_in_activity", "read_secrets_configured"],
     catalogue_facts: ["read_catalogue"],
   };
 

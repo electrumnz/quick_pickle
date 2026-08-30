@@ -44,6 +44,8 @@ export const CAPABILITY_WORDS: Readonly<Record<Capability, string>> = {
   wholesale_outreach: "the bars, restaurants and shops that stock us",
   product_development: "what the range should make next",
   business_reporting: "how the week went",
+  security_watch:
+    "who can get into this admin, and whether anything is exposed",
   catalogue_facts: "what is in the range and what it costs",
 };
 
@@ -85,6 +87,39 @@ const VOCABULARIES: readonly Vocabulary[] = [
       "suppliers",
     ],
     hints: ["order", "buy"],
+  },
+  {
+    // High in the table because these words mean one thing and nothing else in
+    // a pickle company: nobody asks about "two-factor" or "locked out" meaning
+    // stock. "password" and "hacked" are the two she is most likely to type.
+    capability: "security_watch",
+    phrases: [
+      "security",
+      "secure",
+      "hacked",
+      "hack",
+      "breach",
+      "breached",
+      "password",
+      "passwords",
+      "locked out",
+      "lockout",
+      "signed in",
+      "sign in",
+      "logged in",
+      "log in",
+      "who can get in",
+      "two factor",
+      "two-factor",
+      "2fa",
+      "api key",
+      "access token",
+      "leaked",
+      "phishing",
+      "suspicious",
+      "audit trail",
+    ],
+    hints: ["access", "token", "safe", "login", "admin"],
   },
   {
     capability: "wholesale_outreach",

@@ -18,6 +18,28 @@
 --     provider = 'local'
 --
 -- Safe to re-run: the file truncates what it owns before writing.
+--
+-- TWO TABLES IT DOES NOT OWN: `public.agents` and `public.operators`.
+--
+-- The roster is registered by `supabase/migrations/20260103000000_agent_roster.sql`
+-- from the roles declared in `lib/agents/roster/definitions.ts`, and the gateway
+-- model each one runs on by `20260108000000_roster_gateway_models.sql`. Both run
+-- BEFORE this file on every deployment — the demo image builder and
+-- `supabase/tests/run_local.sh` both apply migrations and then this seed — so
+-- truncating `agents` here deleted the roster the migrations had just written.
+-- The four roles the seed does not itself describe (Ari, Vic, Pip and Cass)
+-- vanished from every such deployment, and the four it does describe came back
+-- naming models the runtime never resolves.
+--
+-- `operators` is out for the same reason and not by choice: `agents.operator_id`
+-- references it, and `truncate ... cascade` empties every table with a foreign
+-- key into a truncated one. Truncating operators therefore truncated agents,
+-- whether or not agents was named. Keeping operator rows also keeps their ids
+-- stable across a re-run, which is what lets anything still pointing at them —
+-- a chat session, a marketing asset — keep resolving.
+--
+-- Both are upserted below instead, and the upserts write only the columns this
+-- file legitimately owns: the demonstration's colour, run counters and history.
 -- =============================================================================
 
 begin;
@@ -36,19 +58,30 @@ truncate table
   public.collection_products, public.collections,
   public.product_images, public.product_variants, public.products,
   public.addresses, public.customers,
+  -- The child tables of `agents`, in dependency order, and NOT `agents` itself.
+  -- These stay first: every one of them has a foreign key into a table further
+  -- down this list, and the seed rewrites all of them from scratch.
   public.agent_costs, public.agent_tool_calls, public.agent_messages,
-  public.agent_runs, public.approvals, public.agents,
+  public.agent_runs, public.approvals,
   public.brand_rules, public.brand_assets,
   public.webhook_events, public.sync_state,
-  public.audit_log, public.admin_sessions, public.settings, public.operators
+  public.audit_log, public.admin_sessions, public.settings
 restart identity cascade;
 
 -- =============================================================================
 -- OPERATORS AND SESSIONS
 -- =============================================================================
+-- Upserted rather than truncated, and keyed on the same expression the unique
+-- index uses. Two reasons: truncating operators cascades into `public.agents`
+-- and takes the registered roster with it, and a stable operator id means a row
+-- somewhere else that points at Nadia still points at Nadia after a re-run.
 insert into public.operators (email, full_name, role, phone, timezone, last_seen_at) values
   ('nadia@halfsour.co.nz', 'Nadia Feldman', 'owner', '+64 21 447 118', 'Pacific/Auckland', now() - interval '11 minutes'),
-  ('agents@halfsour.co.nz', 'Half Sour Agent Runtime', 'agent_service', null, 'Pacific/Auckland', now() - interval '2 minutes');
+  ('agents@halfsour.co.nz', 'Half Sour Agent Runtime', 'agent_service', null, 'Pacific/Auckland', now() - interval '2 minutes')
+on conflict (lower(email)) do update set
+  full_name = excluded.full_name, role = excluded.role, phone = excluded.phone,
+  timezone = excluded.timezone, last_seen_at = excluded.last_seen_at,
+  is_active = true, updated_at = now();
 
 insert into public.admin_sessions
   (operator_id, session_token_hash, started_at, last_active_at, expires_at,
@@ -189,6 +222,29 @@ values
 
 -- =============================================================================
 -- AGENTS — the staff
+--
+-- The migrations own the roster: who works here, what they may do, which model
+-- they run on and what their prompt is all come from
+-- `lib/agents/roster/definitions.ts` by way of
+-- `20260103000000_agent_roster.sql`. This file owns the DEMONSTRATION: a colour
+-- per agent, a plausible run history, and the two rows that are history rather
+-- than roster.
+--
+-- So the insert below is an upsert whose `do update` touches three columns and
+-- no others. It cannot move a model, widen a tool grant, loosen an autonomy or
+-- overwrite a prompt, which is exactly what it used to do to the four roles it
+-- names — the Team page showed `claude-sonnet-4-5` for months because of it.
+--
+-- Two of these rows are not roles in the roster and are here deliberately:
+--
+--   scout   Bex, wholesale outreach. The job is Vic's now. Her runs, approvals
+--           and outreach are referenced by rows elsewhere, and the history has
+--           to keep resolving.
+--   mirror  Storefront Sync. Not a role at all — it is the worker that drains
+--           the Shopify webhook queue, which this codebase really does.
+--
+-- The Team page lists both under "Rows that are not part of the roster" rather
+-- than hiding them, which is the correct behaviour and not a fault.
 -- =============================================================================
 insert into public.agents
   (slug, name, job_title, purpose, model, tools, status, autonomy, requires_approval_for,
@@ -223,19 +279,55 @@ values
    'active', 'propose', '{price_change,discount,settings_change}', 900, 18000, null,
    '0 8 * * 1', '#96A14B', now() - interval '2 days 3 hours', 41),
 
+  -- Retired, and seeded that way on purpose. 20260103000000_agent_roster.sql
+  -- retires her because "one company does not approach the same venue with two
+  -- voices" — that work is Vic's now. Its `update` can never fire, though:
+  -- migrations run BEFORE this file, so `scout` does not exist yet when it
+  -- looks for her. Seeding her active undid a decision the schema had already
+  -- taken, and the Team page then showed two agents doing trade outreach. The
+  -- row stays rather than being deleted: her runs, approvals and audit entries
+  -- are referenced elsewhere and the history has to keep resolving.
   ('scout', 'Bex', 'Wholesale Outreach',
-   'Builds the trade prospect list from bar and bottle-shop data, writes the first approach, and keeps the follow-up cadence honest.',
+   'Builds the trade prospect list from bar and bottle-shop data, writes the first approach, and keeps the follow-up cadence honest. Retired: this work is now Vic''s, so the trade list has one voice.',
    'claude-sonnet-4-5',
    '{customers.read,crm.read,email.draft,campaigns.read,approvals.create}',
-   'active', 'propose', '{email_outreach,customer_message}', 700, 14000, null,
-   '30 9 * * 2', '#B4482A', now() - interval '5 days', 63),
+   'retired', 'propose', '{email_outreach,customer_message}', 700, 14000, null,
+   null, '#B4482A', now() - interval '5 days', 63),
 
   ('mirror', 'Mirror', 'Storefront Sync',
    'Keeps the local mirror honest against Shopify: drains the webhook queue, reconciles drift nightly, and reports anything the mirror and the store disagree about.',
    'claude-haiku-4-5',
    '{shopify.read,webhooks.drain,sync.reconcile,inventory.write}',
    'active', 'act_with_limits', '{}', 400, 8000, null,
-   '*/15 * * * *', '#2F3A1E', now() - interval '6 minutes', 4812);
+   '*/15 * * * *', '#2F3A1E', now() - interval '6 minutes', 4812)
+on conflict (slug) do update set
+  colour_hex  = excluded.colour_hex,
+  last_run_at = excluded.last_run_at,
+  runs_count  = excluded.runs_count,
+  updated_at  = now();
+
+-- The rest of the roster: registered by the migration, and given the same
+-- demonstration colour and history as everyone else so The Team does not show
+-- half a company in colour and half of it blank. Only the three demonstration
+-- columns, and the roles are named rather than described — their purpose, model,
+-- tools and prompt belong to the migration and are not repeated here, so there
+-- is nothing for this file to drift from.
+update public.agents a
+   set colour_hex  = d.colour,
+       last_run_at = now() - d.last_run,
+       runs_count  = d.runs,
+       updated_at  = now()
+  from (values
+    -- Counts that a four-month-old company could actually have produced on the
+    -- schedule each role runs on: Cass weekly, Pip monthly, Ward every morning,
+    -- Ari and Vic only when they are asked.
+    ('marketing', '#B4482A', interval '1 day 6 hours', 34),
+    ('trade',     '#96A14B', interval '2 days',        26),
+    ('product',   '#7A8B3C', interval '9 days',         5),
+    ('analyst',   '#2F3A1E', interval '3 days 1 hour', 17),
+    ('security',  '#96A14B', interval '38 minutes',   121)
+  ) as d(slug, colour, last_run, runs)
+ where a.slug = d.slug;
 
 update public.agents a set operator_id = o.id
   from public.operators o where o.email = 'agents@halfsour.co.nz';

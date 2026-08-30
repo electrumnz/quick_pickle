@@ -196,7 +196,7 @@ function renderRun(run: RoleRun, view: RunReplay): string {
 }
 
 describe("roster evidence", () => {
-  it("01 — the eight roles, as registered in the database", async () => {
+  it("01 — the nine roles, as registered in the database", async () => {
     const rows = await harness.database.rows(
       `select slug, name, job_title, model, autonomy, status, is_enabled,
               tools, requires_approval_for, daily_spend_cap_cents,
@@ -301,6 +301,7 @@ describe("roster evidence", () => {
     ["trade", "07-vic-trade.txt"],
     ["product", "08-pip-product.txt"],
     ["analyst", "09-cass-analyst.txt"],
+    ["security", "14-ward-security.txt"],
   ];
 
   for (const [slug, file] of order) {

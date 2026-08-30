@@ -138,7 +138,7 @@ describe("M38 the two sides are genuinely separate agents", () => {
     const vic = roleFor("trade").definition.tools;
     const shared = ari.filter((tool) => vic.includes(tool));
 
-    // `hand_off` is held by all eight roles and does not soften this. It gives
+    // `hand_off` is held by all nine roles and does not soften this. It gives
     // neither of them the other's tools: it names a KIND OF WORK, the router
     // resolves it to whoever advertises it, and that agent does its own job
     // under its own prompt, its own grants and its own approvals. Ari asking

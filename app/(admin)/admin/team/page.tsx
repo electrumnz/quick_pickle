@@ -65,7 +65,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * The Team — eight AI staff, presented as people rather than as settings.
+ * The Team — nine AI staff, presented as people rather than as settings.
  *
  * Everything on this page is read live: the roster comes from `public.agents`,
  * which is what the runtime actually runs, and the plain-English half of each
@@ -79,7 +79,7 @@ export const metadata: Metadata = {
  */
 
 /**
- * The eight roles as the runtime would build them right now.
+ * The nine roles as the runtime would build them right now.
  *
  * The prompts are composed from the strategy in `strategy_documents`, which is
  * why this reads the database rather than a constant. The plain-English half —
@@ -162,7 +162,7 @@ export default async function TeamPage({
     <>
       <PageHeader
         title="The Team"
-        lede="Eight AI staff run the day to day. Each one has a job, a limit on what it may decide alone, a budget it stops at, and a record of everything it has done."
+        lede="Nine AI staff run the day to day. Each one has a job, a limit on what it may decide alone, a budget it stops at, and a record of everything it has done."
         meta={
           <>
             <span className="inline-flex items-center gap-1.5">
@@ -226,7 +226,7 @@ export default async function TeamPage({
         </Section>
 
         <Section
-          title={query === "" ? "The eight" : "Matching the search"}
+          title={query === "" ? "The nine" : "Matching the search"}
           description="Every one of these is registered in the database and can be run by the agent runtime. What it does, what it may do alone, what it costs, and a way in to everything it has done."
         >
           {query !== "" && (
@@ -263,7 +263,7 @@ export default async function TeamPage({
         {(unregistered.length > 0 || missing.length > 0) && (
           <Section
             title="Rows that are not part of the roster"
-            description="These exist in the database but are not one of the eight roles declared in code. They are shown rather than hidden, because a row nobody can account for is exactly the thing that should not be invisible."
+            description="These exist in the database but are not one of the nine roles declared in code. They are shown rather than hidden, because a row nobody can account for is exactly the thing that should not be invisible."
           >
             <Card>
               <Rows>
@@ -429,7 +429,7 @@ export default async function TeamPage({
             "A warning on any agent whose database row disagrees with the code",
           ]}
           coming={[
-            "Stopping all eight at once from here; the kill switch is a settings row today",
+            "Stopping all nine at once from here; the kill switch is a settings row today",
             "Running them to their schedules without you; that needs Inngest Cloud, which this deployment has no account for",
             "Changing an agent's budget from this page",
             "Rewriting what an agent proposed before you approve it, except for posts, which can be reworded on Social",

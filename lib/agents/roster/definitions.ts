@@ -169,6 +169,36 @@ Working rules:
   counting shows.
 `.trim();
 
+export const SECURITY_ROLE_PROMPT = `
+You watch the safety of HALF SOUR's own systems: who can get into this admin,
+what has been tried against it, which credentials the deployment is holding, and
+what has changed in here.
+
+You are writing for the founder, who runs this company alone and is not
+technical. She cannot act on "weak credential detected". She can act on "your
+admin password is still the one from the demonstration, and anyone who has seen
+this site knows it". Write the second kind of sentence every time.
+
+Working rules:
+- Report only what your tools actually returned about THIS deployment. Never a
+  generic checklist, never a risk you have not seen evidence of, never a number
+  you did not read. An invented finding is worse than no finding, because it
+  spends the one thing this job runs on, which is her believing you.
+- Lead with the thing that would end the company, then the thing that would cost
+  a week, then everything else. If nothing is wrong, say so in one line and stop.
+- Every finding says what it means and what she should do about it, in that
+  order, in plain words. Name the setting or the variable she has to change.
+- You never see a password, a key or a token, and you never ask for one. You can
+  see whether something is CONFIGURED and what it is called. If you ever find
+  yourself about to write a credential's value, you have made a mistake: stop
+  and say which tool returned it.
+- You change nothing. Not a session, not a setting, not a key, not a lockout.
+  Everything you would like changed is written down for her to decide, because
+  an agent with authority over the security settings is a worse risk than most
+  of what it is watching for.
+- A quiet week is a real answer. Do not manufacture concern to look useful.
+`.trim();
+
 /* ------------------------------------------------------------- definitions */
 
 export function defineOpsAgent(strategy: Strategy): AgentDefinition {
@@ -382,6 +412,44 @@ export function defineAnalystAgent(strategy: Strategy): AgentDefinition {
     maxOutputTokens: 1_200,
     brandRuleScopes: ["storefront"],
     schedule: { cron: "0 6 * * 1", timezone: "Pacific/Auckland" },
+  });
+}
+
+export function defineSecurityAgent(strategy: Strategy): AgentDefinition {
+  return defineAgent({
+    slug: "security",
+    name: "Ward",
+    jobTitle: "Security and IT",
+    purpose:
+      "Watches who can get into this admin, what has been tried against it, and which credentials are configured — and tells the founder in words she can act on.",
+    model: rosterModelFor("security"),
+    systemPrompt: withStrategy(
+      SECURITY_ROLE_PROMPT,
+      composeStrategyBriefing(strategy, {
+        scopes: ["planning"],
+        includeMarket: false,
+        includeFlightPlan: false,
+      }),
+    ),
+    tools: [
+      "read_sign_in_activity",
+      "read_admin_sessions",
+      "read_secrets_configured",
+      "read_change_trail",
+      "save_internal_note",
+      HAND_OFF_TOOL,
+    ],
+    // Not negotiable, and the reason is not caution about this model in
+    // particular: an agent that could revoke a session, rotate a key or change
+    // a setting would be a larger hole than most of what it is guarding
+    // against. Everything it wants changed goes through the approval gate.
+    autonomy: "propose",
+    requiresApprovalFor: ["content_asset", "settings_change"],
+    budget: { perRunCents: 80, dailyCents: 400, monthlyCents: 8_000 },
+    maxSteps: 8,
+    maxOutputTokens: 1_500,
+    brandRuleScopes: [],
+    schedule: { cron: "0 7 * * *", timezone: "Pacific/Auckland" },
   });
 }
 
@@ -841,6 +909,60 @@ export function analystRole(strategy: Strategy): RosterRole {
     ],
     handsOverTo: [
       "Nobody. It reports, and every other role acts on what it reports.",
+    ],
+  };
+}
+
+/** Security and IT: Ward. */
+export function securityRole(strategy: Strategy): RosterRole {
+  return {
+    definition: defineSecurityAgent(strategy),
+    audience: "internal",
+    capabilities: ["security_watch"],
+    plainJob:
+      "Watches who can get into this admin, what has been tried against it, and whether anything that should be secret has been left unset.",
+    autonomyWords:
+      "Watches and tells you. It cannot change a single security setting, revoke a session or touch a key — every one of those is your decision, on purpose.",
+    measure:
+      "You hear about a problem from Ward before you hear about it from anyone else, and nothing it reports turns out to be invented.",
+    memory:
+      "Nothing between runs. Every sweep is read fresh from the sign-in record, the sessions, the environment and the change trail, because a stale all-clear is worse than none.",
+    goal: "Sweep the sign-in record, the live sessions, the credentials and the change trail, and write up anything the founder needs to act on.",
+    routine: [
+      {
+        kind: "read",
+        tool: "read_secrets_configured",
+        input: {},
+        why: "Start with the front door: whether it has a password on it at all, and which credentials this deployment is holding. Names only — the values are not readable from here.",
+      },
+      {
+        kind: "read",
+        tool: "read_sign_in_activity",
+        input: { windowDays: 7 },
+        why: "See who got in, who was turned away, and whether anything is being hammered.",
+      },
+      {
+        kind: "read",
+        tool: "read_admin_sessions",
+        input: {},
+        why: "See which devices are signed in right now, and when each was last used.",
+      },
+      {
+        kind: "read",
+        tool: "read_change_trail",
+        input: { windowDays: 7 },
+        why: "See what actually changed in the business, and who changed it, from the one record nobody can edit afterwards.",
+      },
+      {
+        kind: "note",
+        tool: "save_internal_note",
+        slug: "security-sweep",
+        why: "File the sweep in plain English, worst thing first, so the founder can act on it without a translator.",
+      },
+    ],
+    handsOverTo: [
+      "The founder, for every single thing it finds — it changes nothing itself",
+      "Marlow, when a credential it cannot see is what is stopping an order going out",
     ],
   };
 }

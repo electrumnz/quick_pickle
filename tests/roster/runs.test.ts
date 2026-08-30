@@ -1,5 +1,5 @@
 /**
- * All eight roles, run against the seeded business.
+ * All nine roles, run against the seeded business.
  *
  * The point of this file is not that a model said something. It is that each
  * role read the business through its own grant, reasoned from what came back,
@@ -25,8 +25,8 @@ afterAll(async () => {
 });
 
 describe("the roster runs", () => {
-  it("has all eight roles, each with a routine and a goal", () => {
-    expect(harness.roster.roles).toHaveLength(8);
+  it("has all nine roles, each with a routine and a goal", () => {
+    expect(harness.roster.roles).toHaveLength(9);
     for (const role of harness.roster.roles) {
       expect(role.routine.length).toBeGreaterThan(0);
       expect(role.goal.length).toBeGreaterThan(10);
@@ -51,6 +51,7 @@ describe("the roster runs", () => {
     "trade",
     "product",
     "analyst",
+    "security",
   ]) {
     it(`${slug} finishes a run and reports numbers it actually read`, async () => {
       const role = harness.roster.roles.find(

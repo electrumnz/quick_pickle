@@ -9,7 +9,9 @@
  *
  * The shape of the set is the shape of the company:
  *
- *   read              thirteen ways to look at the business, all SQL
+ *   read              seventeen ways to look at the business, all SQL — the
+ *                     last four of them about its safety rather than its trade,
+ *                     and none of the four able to return a credential
  *   business_write    notes, drafts and concepts — our own records
  *   storefront_write  one: a price change
  *   external          five: post, reply, outreach, campaign, supplier order
@@ -27,7 +29,7 @@
  *
  *   - A read whose result carries prose the company did not write declares
  *     `untrustedSource`. The runtime defangs and frames it before it reaches a
- *     prompt (`lib/agents/boundary/inbound.ts`). Five of the thirteen reads do:
+ *     prompt (`lib/agents/boundary/inbound.ts`). Five of the seventeen do:
  *     open conversations, one customer's history, the trade list, one account's
  *     memory, and the range signals — which quote reviews verbatim.
  *   - Every write goes through `redactingSink`, which scrubs credential-shaped
@@ -284,6 +286,71 @@ export function createRosterTools(ports: RosterToolPorts): RosterTools {
     effect: "read",
     inputSchema: z.object({}).describe("No arguments."),
     execute: async () => reads.weeklyPulse(),
+  });
+
+  /* ------------------------------------------------- security and IT reads */
+
+  /*
+   * Four reads, one property.
+   *
+   * None of them can return a credential. That is enforced in the layer below
+   * rather than here: `security-posture.ts` answers "is this configured" with a
+   * boolean and a variable NAME, and the queries in `sql-reads.ts` do not
+   * select `settings.value` or `admin_sessions.session_token_hash` at all. A
+   * column that is never in the query cannot be leaked by a tool that forgot to
+   * strip it.
+   *
+   * They are `read` and nothing else. Ward proposes; the founder decides. There
+   * is deliberately no tool here that revokes a session, rotates a key, locks
+   * an address out or changes a setting — an agent with authority over the
+   * security settings is a worse risk than most of what it is watching for.
+   */
+
+  const readSignInActivity = defineTool({
+    name: "read_sign_in_activity",
+    title: "Sign-ins, refusals and lockouts",
+    description:
+      "Who signed in and from where, how many attempts were refused, and which addresses are locked out of the sign-in page. Never a password, a hash or a token. Read-only.",
+    effect: "read",
+    inputSchema: windowSchema,
+    execute: async (input) => reads.signInActivity(input.windowDays),
+  });
+
+  const readAdminSessions = defineTool({
+    name: "read_admin_sessions",
+    title: "Who is signed in",
+    description:
+      "Every admin session: the device, the address it was opened from, when it was last used, and why the ended ones ended. The session token and its hash are not readable from here. Read-only.",
+    effect: "read",
+    inputSchema: z.object({}).describe("No arguments."),
+    execute: async () => reads.adminSessions(),
+  });
+
+  const readSecretsConfigured = defineTool({
+    name: "read_secrets_configured",
+    title: "Which credentials are set",
+    description:
+      "Which of this deployment's credentials are configured and which are missing, BY NAME ONLY, plus whether the admin is open without a password. It cannot read what any credential is set to. Read-only.",
+    effect: "read",
+    inputSchema: z.object({}).describe("No arguments."),
+    execute: async () => reads.secretsConfigured(),
+  });
+
+  const readChangeTrail = defineTool({
+    name: "read_change_trail",
+    title: "What changed and who changed it",
+    description:
+      "The append-only record of every change made in the admin or by an agent, with who made it and when. Read-only.",
+    effect: "read",
+    // No `untrustedSource`, and that is a measured claim rather than an
+    // assumption: `tests/agents/boundary/coverage.test.ts` plants a canary in
+    // every column a person outside this company controls and asserts a
+    // biconditional between carrying it and declaring it. Nothing external
+    // reaches `audit_log` — every summary, label and action in it is written by
+    // this codebase. If a customer's own words are ever copied into an entity
+    // label, that test fails and this declaration is what it is asking for.
+    inputSchema: windowSchema,
+    execute: async (input) => reads.changeTrail(input.windowDays),
   });
 
   /* ------------------------------------------------------ business writes */
@@ -737,6 +804,10 @@ export function createRosterTools(ports: RosterToolPorts): RosterTools {
     readAccountMemory,
     readRangeSignals,
     readWeeklyPulse,
+    readSignInActivity,
+    readAdminSessions,
+    readSecretsConfigured,
+    readChangeTrail,
     saveInternalNote,
     saveInternalDraft,
     saveAccountNote,

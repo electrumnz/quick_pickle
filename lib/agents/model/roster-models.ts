@@ -125,6 +125,10 @@ export const ROSTER_MODEL_DEFAULTS: Readonly<Record<string, string>> =
     // Cass counts and says what the counting shows, weekly, on a schedule.
     // Comparison over a small table: the agentic model, and the faster one.
     analyst: MINIMAX_M2_7_FREE,
+    // Ward reads four small tables and the shape of the environment, and writes
+    // what it found for one person inside the company. Checking rather than
+    // composing, and nothing it writes is read outside the company.
+    security: MINIMAX_M2_7_FREE,
   });
 
 /** A global override, applied to every role that has no override of its own. */

@@ -1,7 +1,7 @@
 /**
  * `lib/agents/roster` — everyone in the company except the founder.
  *
- * The runtime in `lib/agents` is the machinery; this is the staff. Eight roles,
+ * The runtime in `lib/agents` is the machinery; this is the staff. Nine roles,
  * each an `AgentDefinition` plus the plain-English metadata the admin renders,
  * all reading the same business database the founder reads.
  *
@@ -26,6 +26,7 @@ export {
   MARKETING_TOOLS,
   OPS_ROLE_PROMPT,
   PRODUCT_ROLE_PROMPT,
+  SECURITY_ROLE_PROMPT,
   SOCIAL_ROLE_PROMPT,
   TRADE_TOOLS,
   analystRole,
@@ -35,12 +36,14 @@ export {
   defineFinanceAgent,
   defineOpsAgent,
   defineProductAgent,
+  defineSecurityAgent,
   defineSocialAgent,
   financeRole,
   grantRosterTools,
   marketingRole,
   opsRole,
   productRole,
+  securityRole,
   socialRole,
   tradeRole,
 } from "./definitions";
@@ -89,10 +92,14 @@ export {
 
 export type {
   AccountMemory,
+  AdminSessionLine,
+  AdminSessionReport,
   BatchLine,
   BatchPlanReport,
   BusinessReads,
   CatalogueLine,
+  ChangeLine,
+  ChangeTrailReport,
   ContentReport,
   ConversationReport,
   CustomerHistory,
@@ -108,17 +115,32 @@ export type {
   RangeReport,
   ReviewThemeLine,
   SalesReport,
+  SecretSettingLine,
+  SecretsReport,
+  SignInLine,
+  SignInReport,
   SkuSalesLine,
   SocialPostProposal,
   StockCoverLine,
   StockCoverReport,
   SupplierOrderProposal,
   TakingsReport,
+  ThrottleBucket,
   TradeAccountLine,
   TradeOutreachProposal,
   TradeReport,
   WeeklyPulse,
 } from "./reads";
+
+export {
+  WATCHED_SECRETS,
+  describeSecretPosture,
+  type SecretPosture,
+  type SecretStanding,
+  type SecurityEnv,
+  type SecurityEnvironment,
+  type WatchedSecret,
+} from "./security-posture";
 
 export type { Audience, RosterRole, RoutineStep } from "./types";
 

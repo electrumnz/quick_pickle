@@ -20,10 +20,14 @@
 
 import type {
   AccountMemory,
+  AdminSessionLine,
+  AdminSessionReport,
   BatchLine,
   BatchPlanReport,
   BusinessReads,
   CatalogueLine,
+  ChangeLine,
+  ChangeTrailReport,
   ContentReport,
   ConversationReport,
   CustomerHistory,
@@ -35,14 +39,22 @@ import type {
   RangeReport,
   ReviewThemeLine,
   SalesReport,
+  SecretsReport,
+  SignInLine,
+  SignInReport,
   SkuSalesLine,
   StockCoverLine,
   StockCoverReport,
   TakingsReport,
+  ThrottleBucket,
   TradeAccountLine,
   TradeReport,
   WeeklyPulse,
 } from "./reads";
+import {
+  describeSecretPosture,
+  type SecurityEnvironment,
+} from "./security-posture";
 
 export type RosterSqlRow = Record<string, unknown>;
 
@@ -183,10 +195,82 @@ function changePct(now: number, before: number): number | null {
   return round(((now - before) / before) * 100);
 }
 
+/**
+ * "1 change", "3 changes", "2 addresses are".
+ *
+ * The plural form is given explicitly wherever the verb has to agree, because
+ * "2 address is locked out" is the kind of sentence that makes a reader stop
+ * trusting the number in front of it.
+ */
+function plainCount(count: number, singular: string, plural?: string): string {
+  return `${String(count)} ${count === 1 ? singular : (plural ?? `${singular}s`)}`;
+}
+
+const MINUTE_MS = 60_000;
+const HOUR_MS = 3_600_000;
+const DAY_MS = 86_400_000;
+
+/** An instant as a person would say it: "11 minutes ago", "3 days ago". */
+function agoWords(when: string, now: number = Date.now()): string {
+  const at = Date.parse(when);
+  if (!Number.isFinite(at)) return "at an unrecorded time";
+  const elapsed = now - at;
+  const ahead = elapsed < 0;
+  const size = Math.abs(elapsed);
+  const said =
+    size < MINUTE_MS
+      ? "less than a minute"
+      : size < HOUR_MS
+        ? plainCount(Math.round(size / MINUTE_MS), "minute")
+        : size < DAY_MS
+          ? plainCount(Math.round(size / HOUR_MS), "hour")
+          : plainCount(Math.round(size / DAY_MS), "day");
+  return ahead ? `in ${said}` : `${said} ago`;
+}
+
+/** Past tense of an `audit_action`, so a sentence about one reads as English. */
+const AUDIT_ACTION_PAST: Readonly<Record<string, string>> = {
+  create: "created",
+  update: "updated",
+  delete: "deleted",
+  approve: "approved",
+  reject: "rejected",
+  publish: "published",
+  unpublish: "unpublished",
+  sync: "synced",
+  export: "exported",
+  import: "imported",
+  refund: "refunded",
+  cancel: "cancelled",
+  adjust: "adjusted",
+  release: "released",
+  recall: "recalled",
+  login: "signed in to",
+  logout: "signed out of",
+};
+
+function pastTense(action: string): string {
+  return AUDIT_ACTION_PAST[action] ?? `${action}ed`;
+}
+
+function capitalise(value: string): string {
+  return value === "" ? value : value[0]?.toUpperCase() + value.slice(1);
+}
+
 /* ------------------------------------------------------------------ class */
 
 export class SqlBusinessReads implements BusinessReads {
-  constructor(private readonly sql: RosterSqlClient) {}
+  /**
+   * @param sql the business database.
+   * @param environment where the credential posture is read from. Injectable so
+   *   a test can vary the environment without mutating the process; production
+   *   passes nothing and gets the real one. See `security-posture.ts` — nothing
+   *   reachable from here can return a credential's value.
+   */
+  constructor(
+    private readonly sql: RosterSqlClient,
+    private readonly environment: SecurityEnvironment = {},
+  ) {}
 
   private async rows(
     text: string,
@@ -1352,6 +1436,339 @@ export class SqlBusinessReads implements BusinessReads {
         `${String(int(newRows[0] ?? {}, "n"))} customers ordered for the first time.`,
         ...sales.findings,
         `${String(decisions)} decision${decisions === 1 ? "" : "s"} waiting on the founder, ${String(failures)} agent run${failures === 1 ? "" : "s"} failed, ${String(int(row, "unfulfilled"))} paid order${int(row, "unfulfilled") === 1 ? "" : "s"} still to pack.`,
+      ],
+    };
+  }
+
+  /* -------------------------------------------------- security and IT */
+
+  /**
+   * Sign-ins, refusals and lockouts.
+   *
+   * `audit_log` is the record that matters here rather than the throttle
+   * counters, because the counters can be cleared — `npm run auth:unlock` does
+   * exactly that — and the log cannot: UPDATE and DELETE on it are revoked at
+   * the grant level. Both are read, and the report says which is which.
+   *
+   * `after_data` on a login row carries the outcome, the refusal reason and the
+   * failure counts, and by construction never the password, the hash, the
+   * session token or any prefix of one — see `lib/auth/audit.ts`. Only the two
+   * fields this needs are lifted out of it.
+   */
+  async signInActivity(windowDays: number): Promise<SignInReport> {
+    const eventRows = await this.rows(
+      `select occurred_at, actor_label, action::text as action, entity_label,
+              host(ip_address) as ip,
+              after_data->>'outcome' as outcome,
+              after_data->>'reason'  as reason
+         from public.audit_log
+        where action in ('login', 'logout')
+          and occurred_at > now() - ($1::int * interval '1 day')
+        order by occurred_at desc
+        limit 40`,
+      [windowDays],
+    );
+    const countRows = await this.rows(
+      `select count(*) filter (
+                where action = 'login' and after_data->>'outcome' = 'failure'
+              )::int as failed,
+              count(*) filter (
+                where action = 'login' and after_data->>'outcome' is distinct from 'failure'
+              )::int as succeeded
+         from public.audit_log
+        where action = 'login'
+          and occurred_at > now() - ($1::int * interval '1 day')`,
+      [windowDays],
+    );
+    const bucketRows = await this.rows(
+      `select scope, subject, consecutive_failures, total_failures, total_attempts,
+              locked_until, lock_count, last_failure_at
+         from public.admin_auth_throttle
+        order by (locked_until is not null and locked_until > now()) desc,
+                 consecutive_failures desc, subject
+        limit 20`,
+    );
+
+    const signIns: readonly SignInLine[] = eventRows.map((row) => ({
+      at: iso(row, "occurred_at"),
+      who: str(row, "actor_label"),
+      action:
+        strOrNull(row, "outcome") === "failure"
+          ? "refused"
+          : str(row, "action"),
+      device: strOrNull(row, "entity_label"),
+      from: strOrNull(row, "ip"),
+    }));
+    const buckets: readonly ThrottleBucket[] = bucketRows.map((row) => ({
+      scope: str(row, "scope"),
+      subject: str(row, "subject"),
+      consecutiveFailures: int(row, "consecutive_failures"),
+      totalFailures: int(row, "total_failures"),
+      totalAttempts: int(row, "total_attempts"),
+      lockedUntil: iso(row, "locked_until"),
+      lockCount: int(row, "lock_count"),
+      lastFailureAt: iso(row, "last_failure_at"),
+    }));
+
+    const now = Date.now();
+    const lockedOutNow = buckets.filter(
+      (bucket) =>
+        bucket.lockedUntil !== null &&
+        Date.parse(bucket.lockedUntil) > now &&
+        Number.isFinite(Date.parse(bucket.lockedUntil)),
+    ).length;
+    const failed = int(countRows[0] ?? {}, "failed");
+    const succeeded = int(countRows[0] ?? {}, "succeeded");
+
+    const findings: string[] = [
+      `${plainCount(succeeded, "successful sign-in")} and ${plainCount(failed, "refused attempt")} in the last ${String(windowDays)} days.`,
+    ];
+    if (lockedOutNow > 0) {
+      findings.push(
+        `${plainCount(lockedOutNow, "address is", "addresses are")} locked out of the sign-in page right now.`,
+      );
+    }
+    for (const line of signIns.slice(0, 6)) {
+      findings.push(
+        `${line.action === "refused" ? "Refused" : line.action === "logout" ? "Signed out" : "Signed in"}${line.at === null ? "" : ` ${agoWords(line.at)}`}${line.from === null ? "" : ` from ${line.from}`}${line.who === "unauthenticated" ? "" : ` as ${line.who}`}.`,
+      );
+    }
+    if (signIns.length === 0) {
+      findings.push(
+        "Nobody has signed in or been refused in that window, so there is nothing here to read either way.",
+      );
+    }
+
+    return {
+      windowDays,
+      signIns,
+      failedAttempts: failed,
+      buckets,
+      lockedOutNow,
+      headline:
+        failed === 0 && lockedOutNow === 0
+          ? `Nobody has been turned away from the sign-in page in ${String(windowDays)} days, and ${plainCount(succeeded, "sign-in")} went through.`
+          : `${plainCount(failed, "sign-in attempt was", "sign-in attempts were")} refused in the last ${String(windowDays)} days${lockedOutNow === 0 ? "" : `, and ${plainCount(lockedOutNow, "address is", "addresses are")} locked out right now`}.`,
+      findings,
+    };
+  }
+
+  /**
+   * Who is signed in, and from what.
+   *
+   * `session_token_hash` is not selected. It is a hash rather than a token, but
+   * it is the only stored thing a cookie is compared against, so it is treated
+   * as a credential and never leaves the database.
+   */
+  async adminSessions(): Promise<AdminSessionReport> {
+    const rows = await this.rows(
+      `select o.full_name, s.device_label, host(s.ip_address) as ip,
+              s.started_at, s.last_active_at, s.expires_at,
+              s.revoked_at, s.revoked_reason, s.is_agent_session
+         from public.admin_sessions s
+         join public.operators o on o.id = s.operator_id
+        order by s.last_active_at desc
+        limit 30`,
+    );
+    const lines: readonly AdminSessionLine[] = rows.map((row) => {
+      const revoked = iso(row, "revoked_at");
+      const expires = iso(row, "expires_at");
+      const expired = expires !== null && Date.parse(expires) <= Date.now();
+      return {
+        operator: str(row, "full_name"),
+        device: strOrNull(row, "device_label"),
+        from: strOrNull(row, "ip"),
+        startedAt: iso(row, "started_at"),
+        lastActiveAt: iso(row, "last_active_at"),
+        expiresAt: expires,
+        state: revoked !== null ? "revoked" : expired ? "expired" : "live",
+        revokedReason: strOrNull(row, "revoked_reason"),
+        isAgentSession: row["is_agent_session"] === true,
+      };
+    });
+    const live = lines.filter((line) => line.state === "live");
+    const ended = lines.filter((line) => line.state !== "live").slice(0, 8);
+
+    const findings = [
+      ...live.map(
+        (line) =>
+          `${line.device ?? "An unnamed device"} is signed in as ${line.operator}${line.from === null ? "" : ` from ${line.from}`}, last used${line.lastActiveAt === null ? " at an unrecorded time" : ` ${agoWords(line.lastActiveAt)}`}.`,
+      ),
+      ...ended.map(
+        (line) =>
+          `${line.device ?? "An unnamed device"} is no longer signed in${line.state === "revoked" ? "" : " — its session simply ran out"}${line.revokedReason === null ? "" : `: ${line.revokedReason}`}.`,
+      ),
+    ];
+    if (lines.length === 0) {
+      findings.push(
+        "There are no admin sessions on record at all, which is what a deployment nobody has signed into looks like.",
+      );
+    }
+
+    return {
+      live,
+      ended,
+      liveCount: live.length,
+      headline:
+        live.length === 0
+          ? "Nobody is signed in to the admin right now."
+          : `${plainCount(live.length, "device is", "devices are")} signed in to the admin right now.`,
+      findings,
+    };
+  }
+
+  /**
+   * Which credentials this deployment is holding, by name.
+   *
+   * The environment half is {@link describeSecretPosture}, which cannot return
+   * a value. The database half selects `key`, `description`, `category` and
+   * `updated_at` from `settings` and deliberately does NOT select `value` — the
+   * column that would hold the thing worth stealing is not in the query.
+   */
+  async secretsConfigured(): Promise<SecretsReport> {
+    const posture = describeSecretPosture(this.environment);
+    const rows = await this.rows(
+      `select key, description, category, updated_at
+         from public.settings
+        where is_secret
+        order by key`,
+    );
+    const secretSettings = rows.map((row) => ({
+      key: str(row, "key"),
+      description: str(row, "description"),
+      category: str(row, "category"),
+      updatedAt: iso(row, "updated_at"),
+    }));
+
+    const configured = posture.secrets
+      .filter((secret) => secret.configured)
+      .map((secret) => secret.name);
+    const missing = posture.secrets
+      .filter((secret) => !secret.configured)
+      .map((secret) => ({
+        name: secret.name,
+        what: secret.what,
+        whenMissing: secret.whenMissing ?? "",
+      }));
+
+    // The auth gate's own gaps come first and are already worded. A variable it
+    // has named is not named a second time here: two sentences about one
+    // missing variable is how a report stops being read.
+    const findings: string[] = [
+      // The gap reporter names the variable and how to generate one; the
+      // watched-secret entry says what its absence MEANS for her. Where both
+      // speak about the same variable they are joined into one sentence rather
+      // than printed twice, because a report that says everything twice stops
+      // being read at all.
+      ...posture.warnings.map((warning) => {
+        const entry = missing.find((candidate) =>
+          warning.includes(candidate.name),
+        );
+        return entry === undefined
+          ? warning
+          : `${warning} ${entry.whenMissing}`;
+      }),
+      ...missing
+        .filter(
+          (entry) =>
+            !posture.warnings.some((warning) => warning.includes(entry.name)),
+        )
+        .map((entry) => `${entry.name} is not set. ${entry.whenMissing}`),
+      `${plainCount(configured.length, "credential is", "credentials are")} configured: ${configured.length === 0 ? "none" : configured.join(", ")}. This lists the names only — no agent in this company can read what any of them is set to.`,
+    ];
+    if (secretSettings.length > 0) {
+      findings.push(
+        `${plainCount(secretSettings.length, "settings row holds", "settings rows hold")} something secret: ${secretSettings.map((line) => line.key).join(", ")}. Their contents are not readable from here either.`,
+      );
+    }
+
+    return {
+      configured,
+      missing,
+      secretSettings,
+      warnings: posture.warnings,
+      adminOpensWithoutPassword: posture.adminOpensWithoutPassword,
+      demoMode: posture.demoMode,
+      headline: posture.adminOpensWithoutPassword
+        ? "This admin opens without a password, so anyone who has the address is already inside it."
+        : missing.length === 0
+          ? "Every credential this deployment uses is configured."
+          : `${plainCount(missing.length, "credential is", "credentials are")} not configured: ${missing.map((entry) => entry.name).join(", ")}.`,
+      findings,
+    };
+  }
+
+  /**
+   * What changed, and who changed it.
+   *
+   * `audit_log` is append-only — UPDATE and DELETE are revoked at the grant
+   * level rather than merely unpolicied — so this is the one trail that an
+   * attacker inside the admin cannot tidy up behind themselves. Sign-ins are
+   * left to {@link signInActivity} so the two reads do not say the same thing
+   * twice.
+   */
+  async changeTrail(windowDays: number): Promise<ChangeTrailReport> {
+    const rows = await this.rows(
+      `select occurred_at, actor_label, actor_type::text as actor_type,
+              action::text as action, entity_type, entity_label, summary,
+              host(ip_address) as ip
+         from public.audit_log
+        where occurred_at > now() - ($1::int * interval '1 day')
+          and action not in ('login', 'logout')
+        order by occurred_at desc
+        limit 25`,
+      [windowDays],
+    );
+    const actorRows = await this.rows(
+      `select actor_label, actor_type::text as actor_type, count(*)::int as n
+         from public.audit_log
+        where occurred_at > now() - ($1::int * interval '1 day')
+          and action not in ('login', 'logout')
+        group by actor_label, actor_type
+        order by n desc, actor_label`,
+      [windowDays],
+    );
+    const totalRows = await this.rows(
+      `select count(*)::int as n from public.audit_log
+        where occurred_at > now() - ($1::int * interval '1 day')
+          and action not in ('login', 'logout')`,
+      [windowDays],
+    );
+
+    const entries: readonly ChangeLine[] = rows.map((row) => ({
+      at: iso(row, "occurred_at"),
+      who: str(row, "actor_label"),
+      actorType: str(row, "actor_type"),
+      action: str(row, "action"),
+      entity: str(row, "entity_type"),
+      label: strOrNull(row, "entity_label"),
+      summary: str(row, "summary"),
+      from: strOrNull(row, "ip"),
+    }));
+    const byActor = actorRows.map((row) => ({
+      who: str(row, "actor_label"),
+      actorType: str(row, "actor_type"),
+      changes: int(row, "n"),
+    }));
+    const total = int(totalRows[0] ?? {}, "n");
+
+    return {
+      windowDays,
+      entries,
+      byActor,
+      total,
+      headline: `${plainCount(total, "change was", "changes were")} recorded in the last ${String(windowDays)} days, by ${plainCount(byActor.length, "person or agent", "people and agents")}.`,
+      findings: [
+        ...byActor.map(
+          (line) =>
+            `${line.who} (${line.actorType === "operator" ? "a person" : line.actorType === "agent" ? "an agent" : line.actorType}) made ${plainCount(line.changes, "change")}.`,
+        ),
+        ...entries
+          .slice(0, 6)
+          .map(
+            (line) =>
+              `${line.at === null ? "At an unrecorded time" : capitalise(agoWords(line.at))}, ${line.who} ${pastTense(line.action)} ${line.entity.replace(/_/g, " ")}${line.label === null ? "" : ` — ${line.label}`}.`,
+          ),
       ],
     };
   }

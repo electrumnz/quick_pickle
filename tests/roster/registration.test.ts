@@ -1,7 +1,7 @@
 /**
  * The database and the code have to agree about who works here.
  *
- * `supabase/migrations/20260103000000_agent_roster.sql` writes the eight roles
+ * `supabase/migrations/20260103000000_agent_roster.sql` writes eight of the nine roles
  * into `public.agents`, and the admin's Team page reads that table — so if the
  * migration drifts from `lib/agents/roster/definitions.ts`, the founder is shown
  * an agent that is not the agent that would run. This applies the real migration
@@ -37,7 +37,7 @@ afterAll(async () => {
 });
 
 describe("the roster is registered exactly as it is declared", () => {
-  it("registers all eight roles and nothing is missing", () => {
+  it("registers all nine roles and nothing is missing", () => {
     for (const slug of ROSTER_SLUGS) {
       expect(rows.has(slug)).toBe(true);
     }

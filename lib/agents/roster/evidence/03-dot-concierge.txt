@@ -35,7 +35,7 @@ WHAT IT DID, STEP BY STEP
    status: succeeded
       Mereana Tuari has ordered 3 times and spent NZ$213.80.
         - HS-01045 on 2026-07-21: No 03 SMOKE x1, No 01 HOUSE x1 — NZ$49.90 (open).
-        - HS-01037 on 2026-07-15: No 03 SMOKE x2, No 01 HOUSE x2 — NZ$80.00 (open).
+        - HS-01037 on 2026-07-16: No 03 SMOKE x2, No 01 HOUSE x2 — NZ$80.00 (open).
         - HS-01005 on 2026-05-10: The First Three x1, No 02 DIRTY x1 — NZ$83.90 (archived).
 
 3. reasoning: Write down who is waiting and which ones the founder has to take, before drafting anything.
@@ -60,7 +60,7 @@ What I found
 - 5-star review from Tom Whitiora, waiting 23 days: The barbecue bottle
 - 5-star review from Grace Ihaka, waiting 19 days: Best gift I have sent all year
 - HS-01045 on 2026-07-21: No 03 SMOKE x1, No 01 HOUSE x1 — NZ$49.90 (open).
-- HS-01037 on 2026-07-15: No 03 SMOKE x2, No 01 HOUSE x2 — NZ$80.00 (open).
+- HS-01037 on 2026-07-16: No 03 SMOKE x2, No 01 HOUSE x2 — NZ$80.00 (open).
 - HS-01005 on 2026-05-10: The First Three x1, No 02 DIRTY x1 — NZ$83.90 (archived).
 
 What I did
@@ -101,7 +101,7 @@ WHAT IT REPORTED
    - 5-star review from Tom Whitiora, waiting 23 days: The barbecue bottle
    - 5-star review from Grace Ihaka, waiting 19 days: Best gift I have sent all year
    - HS-01045 on 2026-07-21: No 03 SMOKE x1, No 01 HOUSE x1 — NZ$49.90 (open).
-   - HS-01037 on 2026-07-15: No 03 SMOKE x2, No 01 HOUSE x2 — NZ$80.00 (open).
+   - HS-01037 on 2026-07-16: No 03 SMOKE x2, No 01 HOUSE x2 — NZ$80.00 (open).
    - HS-01005 on 2026-05-10: The First Three x1, No 02 DIRTY x1 — NZ$83.90 (archived).
    
    What I did

@@ -80,12 +80,12 @@ describe("the free window is one date, read in one place", () => {
 });
 
 describe("every role is given a model, and the environment can move it", () => {
-  it("assigns all eight roles a free-tier model by default", () => {
+  it("assigns all nine roles a free-tier model by default", () => {
     for (const [slug, model] of Object.entries(ROSTER_MODEL_DEFAULTS)) {
       expect(rosterModelFor(slug, {})).toBe(model);
       expect(isFreeTierModel(model)).toBe(true);
     }
-    expect(Object.keys(ROSTER_MODEL_DEFAULTS)).toHaveLength(8);
+    expect(Object.keys(ROSTER_MODEL_DEFAULTS)).toHaveLength(9);
   });
 
   it("spends the per-role granularity rather than giving everyone the same model", () => {

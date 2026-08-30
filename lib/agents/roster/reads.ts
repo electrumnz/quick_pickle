@@ -414,6 +414,120 @@ export interface WeeklyPulse extends Findings {
   readonly openingSentence: string;
 }
 
+/* ------------------------------------------------------ security and IT */
+
+/**
+ * Four reads that are about the company's safety rather than its trade, and
+ * one property they all share: **none of them can return a secret.**
+ *
+ * A sign-in is who, when and from where. A session is a device label and two
+ * timestamps — never `session_token_hash`, which is a hash of a credential and
+ * therefore treated as one. A credential check is a variable NAME and a
+ * boolean. A settings row flagged secret gives up its key and its description
+ * and never its `value`. The queries in `sql-reads.ts` do not select those
+ * columns at all, which is a stronger guarantee than remembering to strip them.
+ */
+
+/** One sign-in or sign-out, as the audit trail recorded it. */
+export interface SignInLine {
+  readonly at: string | null;
+  readonly who: string;
+  /** `login` or `logout`. */
+  readonly action: string;
+  readonly device: string | null;
+  readonly from: string | null;
+}
+
+/** One brute-force budget: per client address, or the whole door. */
+export interface ThrottleBucket {
+  /** `ip` or `global`. */
+  readonly scope: string;
+  /** The address, or `*` for the whole-door budget. Never a credential. */
+  readonly subject: string;
+  readonly consecutiveFailures: number;
+  readonly totalFailures: number;
+  readonly totalAttempts: number;
+  readonly lockedUntil: string | null;
+  readonly lockCount: number;
+  readonly lastFailureAt: string | null;
+}
+
+export interface SignInReport extends Findings {
+  readonly windowDays: number;
+  readonly signIns: readonly SignInLine[];
+  readonly failedAttempts: number;
+  readonly buckets: readonly ThrottleBucket[];
+  readonly lockedOutNow: number;
+}
+
+/** One admin session. The token and its hash are not in this shape at all. */
+export interface AdminSessionLine {
+  readonly operator: string;
+  readonly device: string | null;
+  readonly from: string | null;
+  readonly startedAt: string | null;
+  readonly lastActiveAt: string | null;
+  readonly expiresAt: string | null;
+  /** `live` while usable, then `expired` or `revoked`. */
+  readonly state: "live" | "expired" | "revoked";
+  readonly revokedReason: string | null;
+  /** True when the browser it was opened from is not this deployment's own. */
+  readonly isAgentSession: boolean;
+}
+
+export interface AdminSessionReport extends Findings {
+  readonly live: readonly AdminSessionLine[];
+  readonly ended: readonly AdminSessionLine[];
+  readonly liveCount: number;
+}
+
+/** A settings row that holds something secret. Key and description only. */
+export interface SecretSettingLine {
+  readonly key: string;
+  readonly description: string;
+  readonly category: string;
+  readonly updatedAt: string | null;
+}
+
+export interface SecretsReport extends Findings {
+  /** Names of the environment variables that ARE configured. Names only. */
+  readonly configured: readonly string[];
+  readonly missing: readonly {
+    readonly name: string;
+    readonly what: string;
+    readonly whenMissing: string;
+  }[];
+  readonly secretSettings: readonly SecretSettingLine[];
+  /** Already-worded sentences: what is wrong, and what to do about it. */
+  readonly warnings: readonly string[];
+  readonly adminOpensWithoutPassword: boolean;
+  readonly demoMode: boolean;
+}
+
+/** One entry in the append-only trail of what changed. */
+export interface ChangeLine {
+  readonly at: string | null;
+  readonly who: string;
+  /** `operator`, `agent`, `customer` or `system`. */
+  readonly actorType: string;
+  readonly action: string;
+  readonly entity: string;
+  readonly label: string | null;
+  readonly summary: string;
+  readonly from: string | null;
+}
+
+export interface ChangeTrailReport extends Findings {
+  readonly windowDays: number;
+  readonly entries: readonly ChangeLine[];
+  readonly byActor: readonly {
+    readonly who: string;
+    readonly actorType: string;
+    readonly changes: number;
+  }[];
+  readonly total: number;
+}
+
 /* ------------------------------------------------------------------ port */
 
 /**
@@ -434,4 +548,8 @@ export interface BusinessReads {
   accountMemory(customerId: string): Promise<AccountMemory>;
   rangeSignals(windowDays: number): Promise<RangeReport>;
   weeklyPulse(): Promise<WeeklyPulse>;
+  signInActivity(windowDays: number): Promise<SignInReport>;
+  adminSessions(): Promise<AdminSessionReport>;
+  secretsConfigured(): Promise<SecretsReport>;
+  changeTrail(windowDays: number): Promise<ChangeTrailReport>;
 }

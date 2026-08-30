@@ -64,6 +64,12 @@ export const TOOL_WORDS: Readonly<Record<string, string>> = {
   read_account_memory: "Read everything already said to one trade account",
   read_range_signals: "Put sales and reviews side by side",
   read_weekly_pulse: "Take the week against the week before",
+  read_sign_in_activity:
+    "See who signed in, who was turned away, and who is locked out",
+  read_admin_sessions: "See which devices are signed in to this admin",
+  read_secrets_configured:
+    "Check which credentials are set — the names only, never what they are set to",
+  read_change_trail: "Read what changed in here, and who changed it",
   save_internal_note: "File a note in our own records",
   save_internal_draft: "Save a draft in our own records",
   save_account_note: "Add to a trade account's file",
@@ -161,6 +167,7 @@ export function scheduleWords(cron: string | null): string {
     "0 6 * * 1": "Monday mornings at 6am",
     "0 9 1 * *": "The first of the month",
     "*/15 * * * *": "Every fifteen minutes",
+    "0 7 * * *": "Every morning at 7am",
   };
   return known[cron.trim()] ?? `On the schedule ${cron}`;
 }
