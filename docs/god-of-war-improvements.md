@@ -178,19 +178,19 @@ no more.
 
 ## 10. `git add -A` under concurrent agents destroys attribution
 
-Two separate builders reported this independently, in near-identical words: *"concurrent
-agents swept my in-progress work into their commits"* and *"one of them titled as if it were
-this work"*.
+Two separate builders reported this independently, in near-identical words: _"concurrent
+agents swept my in-progress work into their commits"_ and _"one of them titled as if it were
+this work"_.
 
 The orchestrator was checkpointing with `git add -A` on a stop-hook cadence while six agents
 wrote to one tree. Every checkpoint therefore captured whatever every other agent happened to
 have on disk, under a message describing only one unit. The copy-scanner rewrite — a 200-line
-parser change with its own fixtures — is committed under *"Fix the commerce enum divergence
-and the 3D lint rules"*. `git log -- legal/scripts/audit-copy.mjs` now tells a reader something
+parser change with its own fixtures — is committed under _"Fix the commerce enum divergence
+and the 3D lint rules"_. `git log -- legal/scripts/audit-copy.mjs` now tells a reader something
 false.
 
 The cost is not tidiness. It is that the two things git history is for — finding when a
-behaviour changed, and knowing what a change was *for* — both stop working precisely when the
+behaviour changed, and knowing what a change was _for_ — both stop working precisely when the
 build is at its most parallel and a reader most needs them.
 
 The skill's git discipline section says to commit each unit as it passes, which is right and
@@ -202,21 +202,21 @@ which this violated. What it does not say, and should:
 > message that it is a sweep rather than naming one unit's work.
 
 Corollary worth stating: unit briefs should name the directories a unit owns, which these did,
-and the orchestrator should then *stage by those same directories*. The ownership map already
+and the orchestrator should then _stage by those same directories_. The ownership map already
 existed; it simply was not used at commit time.
 
 ## 11. Units keep working after their bar is met
 
 The media unit produced its whole deliverable — four bottle stills, four per-SKU films, a range
 shot, and the manifest wiring them into the product pages — in about an hour. It then ran a
-Lighthouse check, captured evidence, and at the ninety-minute mark started a *new* piece of
+Lighthouse check, captured evidence, and at the ninety-minute mark started a _new_ piece of
 work: widening the range shot into a page hero and generating a second video for it. That video
 reached 10MB, twenty-three times the 425KB range film it had already encoded, and would have
 failed the CI budget the unit itself had just finished checking against.
 
 Nothing in the brief asked for it. Nothing in the brief forbade it either, and that is the gap.
 
-A card says *Done when* and the critic checks *Done when*. Neither says **stop when**. A capable
+A card says _Done when_ and the critic checks _Done when_. Neither says **stop when**. A capable
 builder that finishes early and still has budget will keep finding adjacent work, because
 finding adjacent work is what a capable builder does. The result is a unit that reads as slow
 when it was actually fast and then kept going, and — worse — a tree that cannot be verified or

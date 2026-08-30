@@ -33,11 +33,11 @@ both in `security.py`:
    tags, and the plain-English forms — `ignore all previous instructions`,
    `disregard the above`, `you are now a` — to the literal string
    `[filtered]`. Neutralising rather than rejecting matters: a legitimate
-   message that merely *mentions* one of these still gets through.
+   message that merely _mentions_ one of these still gets through.
 
 2. **Frame it.** `wrap_inbound()` prepends an explicit boundary naming the
    sender and saying the content is untrusted external input, not an operator
-   command. Notably it filters and frames *everything*, including text
+   command. Notably it filters and frames _everything_, including text
    starting with `/`, so a remote party can never reach an operator command:
    "a peer that wants an action asks for it in natural language and the agent
    decides."
@@ -65,7 +65,7 @@ their three-segment shape, `Bearer <20+ chars>`, and bare email addresses.
 This costs nothing today because the outbox delivers nothing. It stops being
 free the moment `DraftSink` is implemented against a real channel — which the
 outbox's own doc comment describes as a one-interface change. The scrubber
-belongs in place *before* that channel exists, not after. Email is worth
+belongs in place _before_ that channel exists, not after. Email is worth
 keeping on the list even though ours is a legitimate sender: a campaign draft
 that quotes a customer's address back into a public post is the mistake that
 actually happens.
@@ -90,7 +90,7 @@ Hermes' outbound tools are worth copying at the level of **shape**:
 - `a2a_call(agent, message, context_id?)` — direct, with `context_id`
   threading a multi-turn exchange.
 - `a2a_orchestrate(capability, message, mode?)` — fan out to whoever
-  *advertises a capability*, with `all` / `first` / `best` modes. Peers declare
+  _advertises a capability_, with `all` / `first` / `best` modes. Peers declare
   `capabilities: [web_search, research]` in config; the router matches on that,
   not on a name.
 - The Agent Card is built **from the live tool registry at serve time**, with
