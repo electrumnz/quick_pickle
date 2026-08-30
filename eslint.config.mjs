@@ -17,6 +17,10 @@ const eslintConfig = defineConfig([
     // throwaway builds the image/video units diff against. Gitignored, so
     // linting it only ever reports on someone else's build artefact.
     ".gen/**",
+    // Private build directories. `distDir` is redirected here so two
+    // concurrent builds cannot share `.next`; the output is a build
+    // artefact like any other and reported 2,766 errors belonging to nobody.
+    ".scratch/**",
   ]),
   ...nextVitals,
   ...nextTs,
