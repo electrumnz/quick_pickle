@@ -33,11 +33,38 @@ It substitutes a **database**, at one seam: `resolveDatabaseUrl` answers with
 Commerce, the admin's own queries, the storefront's list sign-ups, the asset
 library and the auth store all go through that one door.
 
-It **opens the admin to readers**. With `HALF_SOUR_DEMO=1`, `proxy.ts` does not
+It **opens the admin to readers, over the image and only over the image**.
+With `HALF_SOUR_DEMO=1` **and** no `SUPABASE_DB_URL`, `proxy.ts` does not
 require a session on `/admin`, and `requireAdminAccess()` lets a page render
 without one. Every row on the far side of that door is invented, the deployment
 is `noindex` three ways over, and a password in front of a fabricated business
 protects nothing while costing the one thing the demo is for.
+
+The conjunction is `demoOpensAdmin()` in `mode.ts`, and it is a narrowing of
+`isDemoMode()` — never a second way to switch demo mode on. The flag is still
+the only switch; this can only take the open door back:
+
+| `HALF_SOUR_DEMO` | `SUPABASE_DB_URL`   | admin           |
+| ---------------- | ------------------- | --------------- |
+| unset            | anything            | needs a session |
+| `1`              | unset               | **open**        |
+| `1`              | a real Postgres DSN | needs a session |
+| `1`              | unreadable / absent | needs a session |
+
+The third row is the point. `resolveDatabaseUrl` lets a configured DSN win over
+the image so a stray flag cannot divert writes away from live data — and
+without this conjunction, that same stray flag would have put a real business's
+orders, customers and addresses on the open internet behind no password. Every
+ambiguous case sits in the closed column: "no database can be resolved" is read
+as a deployment nobody should be let into, not as "it must be the demo, then".
+
+A deployment in that third row shows a sign-in page, which on something calling
+itself a demonstration looks broken. It is not, and it says so:
+`describeDemoAdminGate()` in `lib/auth/config.ts` puts a sentence beside the
+login form naming `SUPABASE_DB_URL` and explaining that the open admin is only
+ever opened over the demonstration database. Beside the form, not instead of
+it — signing in works perfectly there, unlike the `describeAuthConfigGaps` case
+which replaces the form because nothing can sign in at all.
 
 It does **not** touch authentication. Read the paragraph above as exactly what
 it says — the admin does not _require_ a session — and not a word more. Demo
@@ -61,7 +88,8 @@ Which actions those are is listed at the end of this file.
 
 With `HALF_SOUR_DEMO` unset, none of the above exists. The proxy fails closed,
 `/admin` redirects to `/login`, and every line of the gate behaves as it did
-before demo mode was written.
+before demo mode was written. The same is true, deliberately, of a deployment
+that carries the flag over a real database.
 
 ## The limitation, stated plainly
 

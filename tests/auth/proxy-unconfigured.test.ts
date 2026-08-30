@@ -3,10 +3,11 @@ import { NextRequest } from "next/server";
 
 import {
   describeAuthConfigGaps,
+  describeDemoAdminGate,
   LOGIN_PATH,
   SESSION_COOKIE_NAME,
 } from "@/lib/auth/config";
-import { DEMO_ENV_VAR } from "@/lib/demo/mode";
+import { DEMO_ENV_VAR, demoOpensAdmin, isDemoMode } from "@/lib/demo/mode";
 import { proxy } from "@/proxy";
 
 /**
@@ -234,5 +235,87 @@ describe(`the gate with ${DEMO_ENV_VAR}=1 and nothing else configured`, () => {
       expect(response.status, `HALF_SOUR_DEMO=${value}`).toBe(307);
       expect(response.headers.get("location")).toBe(`${ORIGIN}${LOGIN_PATH}`);
     }
+  });
+});
+
+/**
+ * The third case: the flag is on, and the database is somebody's real one.
+ *
+ * The first two blocks are the two directions of the switch. This is the one
+ * between them, and it is the reason the open door is gated on a conjunction
+ * rather than on the flag alone.
+ *
+ * `resolveDatabaseUrl` deliberately lets a configured `SUPABASE_DB_URL` win
+ * over the compiled-in image, so that a demo flag left on by accident can never
+ * quietly divert writes away from live data. Without this narrowing, that same
+ * accident had a far worse reading: the flag would open the admin, and the
+ * admin it opened would be sitting on the real database — real orders, real
+ * customers, real addresses, behind no password at all.
+ *
+ * So the rule is that the door opens over the demonstration image and nothing
+ * else. Here the environment is a real DSN, and every assertion below is one
+ * the FIRST block makes too: this deployment is gated exactly like production.
+ */
+describe(`the gate with ${DEMO_ENV_VAR}=1 and a real database`, () => {
+  const REAL_DATABASE = "postgres://user@db.example.com:5432/half_sour";
+
+  beforeEach(() => {
+    clearEnvironment();
+    process.env[DEMO_ENV_VAR] = "1";
+    process.env["SUPABASE_DB_URL"] = REAL_DATABASE;
+  });
+
+  afterEach(restoreEnvironment);
+
+  it("is a demonstration whose admin is nonetheless shut", () => {
+    // Both halves matter. Demo mode is still on — the banner still shows and
+    // the noindex layers still apply — and the door is still closed.
+    expect(isDemoMode()).toBe(true);
+    expect(demoOpensAdmin()).toBe(false);
+  });
+
+  it("turns away every admin path, exactly as it does in production", async () => {
+    for (const path of ["/admin", "/admin/orders", "/admin/team/marlow"]) {
+      const response = await proxy(request(path));
+      expect(response.status, path).toBe(307);
+      expect(response.headers.get("location"), path).toBe(
+        `${ORIGIN}${LOGIN_PATH}`,
+      );
+    }
+  });
+
+  it("turns away the endpoint that verifies a password", async () => {
+    const response = await proxy(request("/login/session"));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(`${ORIGIN}${LOGIN_PATH}`);
+  });
+
+  it("lets the login page load, so it can say why it is asking", async () => {
+    const response = await proxy(request(LOGIN_PATH));
+    expect(response.status).toBeLessThan(300);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("says why, in a sentence, naming the variable and never a value", async () => {
+    // The failure mode this guards against is a demonstration that presents a
+    // password prompt with nothing on screen to say the prompt is deliberate.
+    const note = describeDemoAdminGate();
+    expect(note).not.toBeNull();
+    expect(note).toContain("SUPABASE_DB_URL");
+    expect(note).toContain("demonstration");
+    expect(note ?? "").not.toContain(REAL_DATABASE);
+  });
+
+  it("keeps that sentence off every deployment it does not describe", async () => {
+    // A demo whose admin DID open has nothing to explain.
+    delete process.env["SUPABASE_DB_URL"];
+    expect(demoOpensAdmin()).toBe(true);
+    expect(describeDemoAdminGate()).toBeNull();
+
+    // And a deployment that is not a demonstration at all is not told about
+    // demonstrations.
+    process.env["SUPABASE_DB_URL"] = REAL_DATABASE;
+    delete process.env[DEMO_ENV_VAR];
+    expect(describeDemoAdminGate()).toBeNull();
   });
 });

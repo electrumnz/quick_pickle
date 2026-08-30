@@ -11,7 +11,7 @@ import {
   ROBOTS_NOINDEX,
 } from "@/lib/auth/proxy-headers";
 import { sessionDependencies } from "@/lib/auth/runtime";
-import { isDemoMode } from "@/lib/demo/mode";
+import { demoOpensAdmin } from "@/lib/demo/mode";
 
 /**
  * The admin gate.
@@ -32,18 +32,25 @@ import { isDemoMode } from "@/lib/demo/mode";
  *
  * Demo mode is the one exception, and it is an exception to "requires a
  * session", not to any part of the authentication itself. `HALF_SOUR_DEMO=1`
- * is the same build-time switch that puts the banner on every page and makes
- * the whole deployment noindex three ways over; on such a deployment every row
- * is invented, so the admin is the thing worth showing and a password in front
- * of it protects nothing. Read `openAdmin` below as what it says: the admin is
- * not REQUIRED to carry a session. Nothing here mints one, and `/login` still
- * verifies a password with argon2id, still throttles, still locks out and still
- * refuses the wrong one.
+ * over the compiled-in database image is the same build-time switch that puts
+ * the banner on every page and makes the whole deployment noindex three ways
+ * over; on such a deployment every row is invented, so the admin is the thing
+ * worth showing and a password in front of it protects nothing. Read
+ * `openAdmin` below as what it says: the admin is not REQUIRED to carry a
+ * session. Nothing here mints one, and `/login` still verifies a password with
+ * argon2id, still throttles, still locks out and still refuses the wrong one.
+ *
+ * `demoOpensAdmin` is deliberately narrower than the demo flag alone: the flag
+ * by itself cannot open this door. If the deployment names a real
+ * `SUPABASE_DB_URL`, the demo flag opens nothing and the gate below behaves
+ * exactly as it does in production — which is what stops a flag left on by
+ * accident from putting a real business's orders and customers on the open
+ * internet.
  */
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   // Read once, from the one predicate. Never from the request: a signal a
   // client can send is a gate a client can open.
-  const openAdmin = isDemoMode();
+  const openAdmin = demoOpensAdmin();
 
   let decision;
   try {

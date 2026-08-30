@@ -19,9 +19,12 @@
  * gate still refuses to sign anyone in without `ADMIN_PASSWORD_HASH` and
  * `ADMIN_SESSION_SECRET`.
  *
- * **Demo mode supplies a database and nothing else.** It never supplies a
- * credential, never relaxes the password check, never shortens the throttle and
- * never mints a session. The only thing it stands in for is `SUPABASE_DB_URL`.
+ * **Demo mode supplies a database, and opens the admin over that database.**
+ * It never supplies a credential, never relaxes the password check, never
+ * shortens the throttle and never mints a session. The only thing it stands in
+ * for is `SUPABASE_DB_URL`. The one other thing it does is stop REQUIRING a
+ * session on admin paths — and only when the database it is standing in for is
+ * the compiled-in image. See {@link demoOpensAdmin}.
  *
  * **This predicate is not re-derived anywhere.** Every surface — commerce
  * config, the SQL executor factory, the auth store, the banner, `robots.txt` —
@@ -77,4 +80,47 @@ export function resolveDatabaseUrl(env: DemoEnv = process.env): string | null {
   const configured = env.SUPABASE_DB_URL?.trim();
   if (configured !== undefined && configured !== "") return configured;
   return isDemoMode(env) ? DEMO_DATABASE_URL : null;
+}
+
+/**
+ * Whether the admin may be served to a request that carries no session.
+ *
+ * Two conditions, and both are necessary. This is a NARROWING of
+ * {@link isDemoMode}, never a second way to switch demo mode on: with
+ * `HALF_SOUR_DEMO` unset this is false whatever the database is, so the
+ * hostname, `NODE_ENV` and the absence of a database still decide nothing. The
+ * flag remains the only thing that can open anything, and this can only take
+ * that back.
+ *
+ * The second condition exists because {@link resolveDatabaseUrl} deliberately
+ * lets a configured `SUPABASE_DB_URL` win over the image — so that a demo flag
+ * left on by accident cannot divert writes away from live data. That same rule
+ * means `HALF_SOUR_DEMO=1` on a deployment with a real database would otherwise
+ * open a real business's admin to anyone who found the URL: real orders, real
+ * customers, real addresses, behind no password. Which is the exact failure the
+ * whole boundary exists to prevent.
+ *
+ * So the door opens only over the compiled-in image, where every row is
+ * invented and there is nothing to protect. Anything else is closed:
+ *
+ * | `HALF_SOUR_DEMO` | `SUPABASE_DB_URL`     | admin           |
+ * | ---------------- | --------------------- | --------------- |
+ * | unset            | anything              | needs a session |
+ * | `1`              | unset                 | **open**        |
+ * | `1`              | a real Postgres DSN   | needs a session |
+ * | `1`              | unreadable / absent   | needs a session |
+ *
+ * Every ambiguous case is in the closed column on purpose. "No database can be
+ * resolved" is not read as "it must be the demo, then" — it is read as a
+ * deployment whose admin nobody should be let into.
+ *
+ * When this is false while {@link isDemoMode} is true, the sign-in page says so
+ * in words, via `describeDemoAdminGate` in `lib/auth/config.ts`. A gate that
+ * closes without explaining itself is the failure mode this build has paid for
+ * more than once.
+ */
+export function demoOpensAdmin(env: DemoEnv = process.env): boolean {
+  if (!isDemoMode(env)) return false;
+  const database = resolveDatabaseUrl(env);
+  return database !== null && isDemoDatabaseUrl(database);
 }

@@ -125,6 +125,20 @@ describe("footer admin link on a demonstration", () => {
       expect(markup, String(value)).toContain(">Staff<");
     }
   });
+
+  it("is a whisper again when the demonstration sits on a real database", () => {
+    // The link is tied to the door actually being open, not to the deployment
+    // calling itself a demonstration. A demo pointed at a real database keeps
+    // its password gate, so a button reading "Open the admin" and promising no
+    // password would be a lie that bounces the reader onto a sign-in page.
+    vi.stubEnv(DEMO_ENV_VAR, "1");
+    vi.stubEnv("SUPABASE_DB_URL", "postgres://user@db.example.com:5432/live");
+    const markup = renderToStaticMarkup(<FooterAdminLink />);
+    expect(markup).toContain(`href="${LOGIN_PATH}"`);
+    expect(markup).toContain(">Staff<");
+    expect(markup).not.toContain("Open the admin");
+    expect(markup).not.toContain("no password");
+  });
 });
 
 describe("sign-out form", () => {

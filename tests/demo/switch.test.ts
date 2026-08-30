@@ -40,6 +40,7 @@ import { demoSqlExecutor, resetDemoDatabase } from "@/lib/demo/database";
 import {
   DEMO_DATABASE_URL,
   DEMO_ENV_VAR,
+  demoOpensAdmin,
   isDemoMode,
   resolveDatabaseUrl,
 } from "@/lib/demo/mode";
@@ -221,4 +222,107 @@ describe(`${DEMO_ENV_VAR}=1`, () => {
 
     await resetDemoDatabase();
   }, 120_000);
+});
+
+/**
+ * The narrowing, as a truth table.
+ *
+ * `demoOpensAdmin` is the only thing that lets an admin path be served without
+ * a session, and it is strictly narrower than `isDemoMode`. Two properties are
+ * asserted here and they pull in opposite directions on purpose:
+ *
+ * **It can never open anything the flag has not opened.** With `HALF_SOUR_DEMO`
+ * unset it is false for every database value there is, so no hostname, no
+ * `NODE_ENV` and no missing variable can turn the admin open. The flag is still
+ * the only switch.
+ *
+ * **The flag alone is no longer enough.** A deployment carrying the flag AND a
+ * real `SUPABASE_DB_URL` keeps its password gate, because the row behind that
+ * connection string is somebody's actual order.
+ */
+describe("what opens the admin without a session", () => {
+  /** The environment of a demo deployment, minus whatever a case varies. */
+  function demoEnvironment(): void {
+    clearEnvironment();
+    vi.stubEnv(DEMO_ENV_VAR, "1");
+  }
+
+  it("is false whenever the flag is off, whatever the database says", () => {
+    for (const database of [
+      undefined,
+      "",
+      DEMO_DATABASE_URL,
+      "postgres://localhost:5432/half_sour",
+    ]) {
+      clearEnvironment();
+      vi.stubEnv("SUPABASE_DB_URL", database);
+      expect(demoOpensAdmin(), `SUPABASE_DB_URL=${String(database)}`).toBe(
+        false,
+      );
+    }
+  });
+
+  it("is true on the flag over the database compiled into the build", () => {
+    demoEnvironment();
+    // Nothing names a database, so demo mode is standing in for one — which is
+    // the only state in which the door opens.
+    expect(resolveDatabaseUrl()).toBe(DEMO_DATABASE_URL);
+    expect(demoOpensAdmin()).toBe(true);
+  });
+
+  it("is false on the flag over a REAL database", () => {
+    // The case this narrowing exists for. `resolveDatabaseUrl` deliberately
+    // lets a configured DSN win over the image so a stray flag cannot divert
+    // writes away from live data — which would otherwise mean a stray flag put
+    // a real business's admin on the open internet instead.
+    demoEnvironment();
+    vi.stubEnv("SUPABASE_DB_URL", "postgres://user@db.example.com:5432/live");
+    expect(demoOpensAdmin()).toBe(false);
+
+    // And it is the DATABASE that closed it, not the flag: demo mode is still
+    // on, so the banner and the noindex layers are unchanged.
+    expect(isDemoMode()).toBe(true);
+  });
+
+  it("is false for anything ambiguous, rather than assuming the demo", () => {
+    for (const database of [
+      "pglite://something-else",
+      "postgres://localhost:5432/half_sour",
+      "PGLITE://HALF-SOUR-DEMO",
+    ]) {
+      demoEnvironment();
+      vi.stubEnv("SUPABASE_DB_URL", database);
+      expect(demoOpensAdmin(), `SUPABASE_DB_URL=${database}`).toBe(false);
+    }
+  });
+
+  it("still opens for a whitespace-padded spelling of the image itself", () => {
+    demoEnvironment();
+    vi.stubEnv("SUPABASE_DB_URL", `  ${DEMO_DATABASE_URL}  `);
+    expect(demoOpensAdmin()).toBe(true);
+  });
+
+  it("reads a variable that is only whitespace as the unset variable it is", () => {
+    // Not an ambiguous case, by `resolveDatabaseUrl`'s own long-standing rule:
+    // blank after trimming has always meant "nothing is named here". So the
+    // image is the database, and the door is open over the image as usual.
+    demoEnvironment();
+    vi.stubEnv("SUPABASE_DB_URL", "   ");
+    expect(resolveDatabaseUrl()).toBe(DEMO_DATABASE_URL);
+    expect(demoOpensAdmin()).toBe(true);
+  });
+
+  it("says nothing about who may sign in, in any of those states", () => {
+    // The narrowing moves one line: whether a session is REQUIRED. It does not
+    // touch the credentials, so the gap reporter reads the same either way.
+    demoEnvironment();
+    const open = describeAuthConfigGaps();
+    vi.stubEnv("SUPABASE_DB_URL", "postgres://user@db.example.com:5432/live");
+    const closed = describeAuthConfigGaps();
+    expect(open).toEqual([
+      expect.stringContaining("ADMIN_PASSWORD_HASH"),
+      expect.stringContaining("ADMIN_SESSION_SECRET"),
+    ]);
+    expect(closed).toEqual(open);
+  });
 });

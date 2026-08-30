@@ -1,6 +1,10 @@
 import "server-only";
 
-import { resolveDatabaseUrl } from "@/lib/demo/mode";
+import {
+  demoOpensAdmin,
+  isDemoMode,
+  resolveDatabaseUrl,
+} from "@/lib/demo/mode";
 
 import type { Bytes } from "./crypto/encoding";
 import { AuthConfigError } from "./errors";
@@ -265,6 +269,39 @@ export function describeAuthConfigGaps(): readonly string[] {
   }
 
   return gaps;
+}
+
+/**
+ * Why the sign-in page is here at all on a deployment that says "Demo".
+ *
+ * `HALF_SOUR_DEMO=1` normally opens the admin without a password, so a
+ * demonstration that presents a password prompt looks broken — and "looks
+ * broken" is how an hour gets spent on a gate that is working exactly as
+ * designed. It happens for one reason: the deployment also names a real
+ * `SUPABASE_DB_URL`, and the open door is only ever opened over the database
+ * image compiled into the build. A real database keeps its real gate.
+ *
+ * Returned as a sentence rather than pushed into {@link describeAuthConfigGaps}
+ * on purpose. That list means "nobody can sign in here", and the sign-in page
+ * replaces its whole form with it. This is the opposite case: signing in works
+ * perfectly, and the form must still be there to sign in with. So this is a
+ * note that sits BESIDE the form, and `null` whenever there is nothing to
+ * explain — which is every deployment that is not in this one specific state.
+ *
+ * Names a variable, never a value, exactly as the gap reporter does.
+ */
+export function describeDemoAdminGate(): string | null {
+  if (!isDemoMode()) return null;
+  if (demoOpensAdmin()) return null;
+  return (
+    "This is a demonstration deployment, and on one the admin usually opens " +
+    "without a password. It is asking for one because SUPABASE_DB_URL names a " +
+    "real database: the open admin is only ever opened over the demonstration " +
+    "database built into the deployment, never over a real one. That is " +
+    "deliberate, and it is not a fault in this page. Unset SUPABASE_DB_URL to " +
+    "run this deployment on the demonstration data, or sign in to reach the " +
+    "real one."
+  );
 }
 
 /**

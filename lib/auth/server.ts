@@ -17,7 +17,7 @@ import { authenticateCookieValue } from "./http/guard";
 import { LOGIN_CSRF_HEADER } from "./proxy-headers";
 import { sessionDependencies } from "./runtime";
 import type { AdminSessionRow } from "./store/types";
-import { isDemoMode } from "@/lib/demo/mode";
+import { demoOpensAdmin } from "@/lib/demo/mode";
 
 /**
  * The server-side surface the admin feature pages consume.
@@ -77,7 +77,7 @@ export async function getAdminSession(): Promise<AdminAuthState> {
   try {
     deps = sessionDependencies();
   } catch (cause) {
-    if (!isDemoMode()) throw cause;
+    if (!demoOpensAdmin()) throw cause;
     return { status: "unauthenticated", reason: "absent" };
   }
   const jar = await cookies();
@@ -108,7 +108,7 @@ export async function requireAdminAccess(
       csrfToken: state.payload.csrf,
     };
   }
-  if (isDemoMode()) return { kind: "open" };
+  if (demoOpensAdmin()) return { kind: "open" };
   redirect(await loginDestination(returnTo));
 }
 
@@ -122,7 +122,7 @@ export async function requireAdminAccess(
  */
 export async function hasAdminReadAccess(): Promise<boolean> {
   const state = await getAdminSession();
-  return state.status === "authenticated" || isDemoMode();
+  return state.status === "authenticated" || demoOpensAdmin();
 }
 
 /**

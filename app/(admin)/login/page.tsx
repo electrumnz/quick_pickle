@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import {
   CSRF_FIELD_NAME,
   describeAuthConfigGaps,
+  describeDemoAdminGate,
   LOGIN_SUBMIT_PATH,
   PASSWORD_FIELD_NAME,
   RETURN_TO_PARAM,
@@ -99,6 +100,11 @@ export default async function AdminLoginPage({
     );
   }
 
+  // A demonstration deployment whose admin did NOT open, and why. Null on
+  // every other deployment, including a demonstration whose admin did open —
+  // there is nothing to explain when the visitor was never sent here.
+  const demoGate = describeDemoAdminGate();
+
   const challenge = await resolveChallenge(
     firstValue(params[LOGIN_CHALLENGE_PARAM]),
   );
@@ -113,6 +119,18 @@ export default async function AdminLoginPage({
           Half Sour operations. Authorised access only.
         </p>
       </header>
+
+      {/*
+        Beside the form, never instead of it: this deployment can sign someone
+        in perfectly well, and the only thing in question is why it is asking.
+        Read by anyone who reaches the page, which is safe — it names an
+        environment variable and no value of one.
+      */}
+      {demoGate === null ? null : (
+        <p className="border-l-2 border-current pl-3 text-sm opacity-80">
+          {demoGate}
+        </p>
+      )}
 
       <form method="post" action={action} className="space-y-5">
         <input

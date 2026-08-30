@@ -1,6 +1,6 @@
 import { ADMIN_ROOT_PATH, LOGIN_PATH } from "@/lib/auth/config";
 import { DEMO_ADMIN_LINK } from "@/components/demo/copy";
-import { isDemoMode } from "@/lib/demo/mode";
+import { demoOpensAdmin } from "@/lib/demo/mode";
 
 /**
  * The way in, in two weights.
@@ -19,7 +19,7 @@ import { isDemoMode } from "@/lib/demo/mode";
  *
  * **On a demonstration: the loud one.** Discretion is exactly backwards there.
  * A demo exists to be looked at, its admin is the half worth looking at, and
- * `isDemoMode()` has already opened it — so the control is a labelled button
+ * `demoOpensAdmin()` has already opened it — so the control is a labelled button
  * pointing at `/admin` itself rather than a whisper pointing at a password
  * prompt that is not going to be asked for. The wording says where it goes and
  * promises nothing else.
@@ -34,9 +34,12 @@ import { isDemoMode } from "@/lib/demo/mode";
  * deployment is noindex from top to bottom besides.
  */
 export function FooterAdminLink({ className }: { className?: string }) {
-  // The one predicate, read the way the banner and `robots.txt` read it. Never
-  // re-derived from a hostname, a provider name or the absence of a database.
-  const demo = isDemoMode();
+  // The predicate that says the door is actually open, not merely that this is
+  // a demonstration. A demo pointed at a real database keeps its password gate,
+  // and a button promising "no password needed" would then be a lie that
+  // bounces the reader onto a sign-in page. Never re-derived from a hostname, a
+  // provider name or the absence of a database.
+  const demo = demoOpensAdmin();
 
   const classes = [
     demo

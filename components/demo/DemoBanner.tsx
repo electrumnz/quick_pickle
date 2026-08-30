@@ -1,3 +1,5 @@
+import { demoOpensAdmin } from "@/lib/demo/mode";
+
 import { DEMO_BANNER } from "./copy";
 
 /**
@@ -25,8 +27,16 @@ import { DEMO_BANNER } from "./copy";
  *
  * `app/layout.tsx` pads the body by the bar's height so it never covers the
  * last line of a page.
+ *
+ * The sentence about the admin is conditional, and on a narrower predicate
+ * than the banner itself. The banner appears whenever this is a demonstration;
+ * the sentence appears only when the admin is actually open, which a demo
+ * pointed at a real database is not. Promising a reader there is no password
+ * and then showing them one is worse than saying nothing — and dropping the
+ * line only makes the bar shorter, which the body's reserve already clears.
  */
 export function DemoBanner() {
+  const adminOpen = demoOpensAdmin();
   return (
     <aside
       aria-label={DEMO_BANNER.regionLabel}
@@ -38,7 +48,7 @@ export function DemoBanner() {
           {DEMO_BANNER.tag}
         </strong>
         <span>{DEMO_BANNER.body}</span>
-        <span>{DEMO_BANNER.admin}</span>
+        {adminOpen ? <span>{DEMO_BANNER.admin}</span> : null}
         <span className="opacity-80">{DEMO_BANNER.reset}</span>
       </p>
     </aside>
