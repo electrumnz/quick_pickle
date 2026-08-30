@@ -94,6 +94,27 @@ describe("the gate with no admin configuration", () => {
     expect(withBadHash.join(" ")).not.toContain("hunter2");
   });
 
+  it("names variable expansion when the hash arrives with its dollars eaten", async () => {
+    // What a shell or a .env loader leaves behind when `$argon2id$v=19$m=...`
+    // goes through unquoted: every `$word` is read as an empty variable, so the
+    // prefix vanishes and the parameter tail survives.
+    process.env["ADMIN_PASSWORD_HASH"] = "=19=19456,t=2,p=1";
+    const gaps = describeAuthConfigGaps();
+    const hashGap = gaps.find((gap) => gap.includes("ADMIN_PASSWORD_HASH"));
+    expect(hashGap).toBeDefined();
+    expect(hashGap).toContain("expansion");
+    expect(hashGap).toContain("SINGLE quotes");
+  });
+
+  it("does not blame expansion for a value that is simply wrong", async () => {
+    process.env["ADMIN_PASSWORD_HASH"] = "the-plaintext-password";
+    const hashGap = describeAuthConfigGaps().find((gap) =>
+      gap.includes("ADMIN_PASSWORD_HASH"),
+    );
+    expect(hashGap).toContain("auth:hash-password");
+    expect(hashGap).not.toContain("expansion");
+  });
+
   it("reports nothing once the environment is complete", async () => {
     process.env["ADMIN_PASSWORD_HASH"] =
       `$argon2id$v=19$m=19456,t=2,p=1$${"c2FsdHNhbHRzYWx0"}$${"aGFzaGhhc2hoYXNoaGFzaGhhc2hoYXNoaGFzaGg"}`;

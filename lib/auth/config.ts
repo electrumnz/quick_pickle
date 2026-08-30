@@ -224,8 +224,17 @@ export function describeAuthConfigGaps(): readonly string[] {
       "ADMIN_PASSWORD_HASH is not set. Generate one with `npm run auth:hash-password`.",
     );
   } else if (!hash.startsWith("$argon2id$")) {
+    // A PHC string is almost all dollar signs, which makes it the single worst
+    // shape to put through anything that expands variables. An unquoted shell
+    // export or a `.env` line eats `$argon2id`, `$v` and `$m` as empty
+    // variables and leaves the parameter tail behind. The value that arrives is
+    // wrong in a way that reads as a wrong password, so it is worth naming
+    // rather than making someone find it twice.
+    const looksExpanded = /(^|[^$])(m=\d+|t=\d+|p=\d+)/.test(hash);
     gaps.push(
-      "ADMIN_PASSWORD_HASH is set but is not an argon2id PHC string. Re-generate it with `npm run auth:hash-password`.",
+      looksExpanded
+        ? "ADMIN_PASSWORD_HASH is set but has had its `$` segments eaten by variable expansion — the argon2id parameters are there and the `$argon2id$v=19$` prefix is not. Wrap the value in SINGLE quotes, or paste it into the hosting dashboard rather than a shell."
+        : "ADMIN_PASSWORD_HASH is set but is not an argon2id PHC string. Re-generate it with `npm run auth:hash-password`.",
     );
   }
 
