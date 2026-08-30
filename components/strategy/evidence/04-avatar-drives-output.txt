@@ -7,7 +7,7 @@ The marketing agent is run twice through the real AgentRuntime. Between the
 two runs exactly one field changes: avatars.b2c.jobToBeDone. Nothing else —
 not the BrandScript, not the role prompt, not the tools, not the goal.
 
-generated: 2026-08-30T00:17:40.708Z (npx vitest run tests/strategy/avatar-wiring.test.ts)
+generated: 2026-08-30T01:07:24.030Z (npx vitest run tests/strategy/avatar-wiring.test.ts)
 model: AvatarModel — deterministic, composes only from the avatar block in the system prompt.
 Everything below the model is the real runtime and the real strategy tables.
 

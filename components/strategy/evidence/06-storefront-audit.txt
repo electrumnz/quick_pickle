@@ -7,7 +7,7 @@ Every line below was produced by fetching a real URL and reading the HTML a
 browser would have been served. Nothing here reads content/strategy.
 
 base URL:  http://localhost:3000  (already-running)
-run at:    2026-08-30T00:16:26.048Z
+run at:    2026-08-30T01:06:13.186Z
 command:   npx vitest run tests/strategy/storefront-audit.test.ts
 
 SCORE: 6/17 checks pass.

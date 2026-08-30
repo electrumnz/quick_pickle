@@ -8,7 +8,7 @@ strategy_documents.body, the agent definitions are rebuilt from the store,
 and the run is repeated. This is the path production takes: the founder
 edits the strategy and the next run says something different, with no deploy.
 
-generated: 2026-08-30T00:18:02.892Z (npx vitest run tests/strategy/agent-wiring.test.ts)
+generated: 2026-08-30T01:07:21.186Z (npx vitest run tests/strategy/agent-wiring.test.ts)
 model: BriefingModel — deterministic, composes only from the system prompt.
 Everything below the model is the real runtime and the real strategy tables.
 
