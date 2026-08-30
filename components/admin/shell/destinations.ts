@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 
 import {
   IconBrand,
+  IconChat,
   IconCustomers,
   IconMoney,
   IconOrders,
@@ -14,7 +15,13 @@ import {
 } from "../ui/icons";
 
 /**
- * Nine places, and no more.
+ * Ten places, and no more.
+ *
+ * The tenth is second, between Today and Orders, and the order is the point.
+ * Today is what needs her; Ask the team is ask for anything. Both are ways IN.
+ * Everything under them is a place she goes when she already knows what she
+ * wants, and a map you can hold in your head is a map whose entrances are at
+ * the top.
  *
  * This list is the admin's information architecture, written once. The
  * sidebar, the breadcrumbs, the command palette and the search page all read
@@ -46,6 +53,24 @@ export const DESTINATIONS: readonly Destination[] = [
       "Everything waiting on you right now, in one list: decisions the team needs, orders to pack, stock running down, and anything that has failed.",
     keywords: ["home", "dashboard", "inbox", "start", "now", "approvals"],
     Icon: IconToday,
+  },
+  {
+    id: "chat",
+    label: "Ask the team",
+    href: "/admin/chat",
+    blurb:
+      "Say what you need in plain words and it goes to whoever does that job — no need to know who that is.",
+    keywords: [
+      "ask",
+      "chat",
+      "help",
+      "question",
+      "talk",
+      "message",
+      "assistant",
+      "who does",
+    ],
+    Icon: IconChat,
   },
   {
     id: "orders",

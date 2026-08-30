@@ -3,6 +3,9 @@ import type { ReactNode } from "react";
 
 import { AdminSignInLink } from "@/components/auth/admin-sign-in-link";
 import { AdminSignOutForm } from "@/components/auth/admin-sign-out-form";
+import { ChatDock } from "@/components/admin/chat/ChatDock";
+import { ChatPanel } from "@/components/admin/chat/ChatPanel";
+import { chatViewOrEmpty } from "@/components/admin/chat/data";
 import { AdminShell } from "@/components/admin/shell/AdminShell";
 import type { NavCounts } from "@/components/admin/shell/SidebarNav";
 import { THEME_BOOTSTRAP_SCRIPT } from "@/components/admin/shell/theme";
@@ -11,7 +14,8 @@ import { operator } from "@/components/admin/data/queries";
 import { Callout } from "@/components/admin/ui/primitives";
 import { DEMO_ADMIN_OPEN } from "@/components/demo/copy";
 import { rosterModelNotice } from "@/lib/agents";
-import { requireAdminAccess } from "@/lib/auth/server";
+import { adminFormToken, requireAdminAccess } from "@/lib/auth/server";
+import { isDemoMode } from "@/lib/demo/mode";
 
 /**
  * The admin, behind the gate.
@@ -94,6 +98,19 @@ export default async function AdminLayout({
     counts = {};
   }
 
+  // The floating "Ask the team" panel, rendered here rather than per page so it
+  // is on every screen and holds one conversation across all of them: opening it
+  // from Stock and opening it from Money is the same thread. Its contents are
+  // server-rendered, so the composer inside it is a plain form and the panel is
+  // never a message behind the page it floats over.
+  //
+  // Nobody signed in means no conversation to read and nothing to ask with: the
+  // panel then holds only the sentence saying why this one wants a password.
+  const chat =
+    access.kind === "session"
+      ? await chatViewOrEmpty(access.session.operatorId)
+      : null;
+
   // Built as a list so the shell's slot stays genuinely empty when there is
   // nothing to say: an always-rendered fragment is truthy, and would leave a
   // margin above every page for a notice that is not there.
@@ -131,6 +148,24 @@ export default async function AdminLayout({
           notices.length === 0 ? null : (
             <div className="space-y-3">{notices}</div>
           )
+        }
+        dock={
+          <ChatDock bannerOnScreen={isDemoMode()} waiting={chat?.waiting ?? 0}>
+            <ChatPanel
+              view={
+                chat ?? {
+                  sessions: [],
+                  current: null,
+                  turns: [],
+                  approvals: new Map(),
+                  waiting: 0,
+                }
+              }
+              csrfToken={adminFormToken(access)}
+              back="/admin/chat"
+              variant="dock"
+            />
+          </ChatDock>
         }
       >
         {children}

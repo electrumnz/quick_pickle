@@ -6,7 +6,7 @@ import { IconClose, IconMenu } from "../ui/icons";
 import { SidebarNav, type NavCounts } from "./SidebarNav";
 
 /**
- * The same nine destinations, on a phone.
+ * The same ten destinations, on a phone.
  *
  * She checks orders standing in the kitchen, so the drawer holds the identical
  * list in the identical order — a phone that reorganises the map is a phone

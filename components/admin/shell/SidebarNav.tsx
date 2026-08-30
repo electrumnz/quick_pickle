@@ -7,7 +7,7 @@ import { IconApproval } from "../ui/icons";
 import { DESTINATIONS, destinationFor } from "./destinations";
 
 /**
- * The nine destinations, and which one you are in.
+ * The ten destinations, and which one you are in.
  *
  * "Where am I" is answered three ways at once, because one way is never
  * enough: the row is recessed onto the page ground, it carries a mark in the

@@ -31,9 +31,11 @@ PROMPTS
 ------------------------------------------------------------------------------
 TOOLS
 ------------------------------------------------------------------------------
-  Ari  read_sales_by_sku, read_catalogue, save_internal_draft, queue_campaign_email
-  Vic  read_trade_accounts, read_account_memory, read_catalogue, save_account_note, queue_trade_outreach
-  Shared: read_catalogue — the price list, and nothing else.
+  Ari  read_sales_by_sku, read_catalogue, save_internal_draft, queue_campaign_email, hand_off
+  Vic  read_trade_accounts, read_account_memory, read_catalogue, save_account_note, queue_trade_outreach, hand_off
+  Shared: read_catalogue, hand_off — the price list, and the ability to ask
+  whoever does a job to do it. Neither gains the other's tools by asking:
+  a handoff opens a run of the OTHER role, under that role's own grants.
   Only Vic can read an account's history or write to its file. Only Ari can
   send to the customer list. Neither has the other's channel.
 

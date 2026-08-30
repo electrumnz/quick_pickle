@@ -133,12 +133,19 @@ describe("M38 the two sides are genuinely separate agents", () => {
     );
   });
 
-  it("gives them disjoint tools, except reading the range", () => {
+  it("gives them disjoint tools, except reading the range and asking a colleague", () => {
     const ari = roleFor("marketing").definition.tools;
     const vic = roleFor("trade").definition.tools;
     const shared = ari.filter((tool) => vic.includes(tool));
 
-    expect(shared).toEqual(["read_catalogue"]);
+    // `hand_off` is held by all eight roles and does not soften this. It gives
+    // neither of them the other's tools: it names a KIND OF WORK, the router
+    // resolves it to whoever advertises it, and that agent does its own job
+    // under its own prompt, its own grants and its own approvals. Ari asking
+    // for wholesale work does not let Ari read an account's file or send a
+    // venue anything — it opens a run of Vic's, and Vic's own gate still holds.
+    // That is the same boundary `handsOverTo` describes in prose.
+    expect(shared).toEqual(["read_catalogue", "hand_off"]);
     expect(vic).toContain("read_account_memory");
     expect(vic).toContain("save_account_note");
     expect(ari).not.toContain("read_account_memory");
@@ -151,7 +158,9 @@ describe("M38 the two sides are genuinely separate agents", () => {
       "-".repeat(78),
       `  Ari  ${ari.join(", ")}`,
       `  Vic  ${vic.join(", ")}`,
-      `  Shared: ${shared.join(", ")} — the price list, and nothing else.`,
+      `  Shared: ${shared.join(", ")} — the price list, and the ability to ask`,
+      "  whoever does a job to do it. Neither gains the other's tools by asking:",
+      "  a handoff opens a run of the OTHER role, under that role's own grants.",
       "  Only Vic can read an account's history or write to its file. Only Ari can",
       "  send to the customer list. Neither has the other's channel.",
       "",

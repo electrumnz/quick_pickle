@@ -57,6 +57,7 @@ export const PUBLIC_ROUTES: readonly AuditRoute[] = [
 
 export const ADMIN_ROUTES: readonly AuditRoute[] = [
   { name: "today", path: "/admin", signedIn: true },
+  { name: "chat", path: "/admin/chat", signedIn: true },
   { name: "orders", path: "/admin/orders", signedIn: true },
   { name: "stock", path: "/admin/stock", signedIn: true },
   { name: "social", path: "/admin/social", signedIn: true },

@@ -9,7 +9,7 @@ the real runtime, and every read is real SQL against the seeded business.
 
 GOAL          Review how the last fortnight's posts did and draft the next one.
 AUTONOMY      propose — Drafts and asks. Nothing it writes goes out without your yes.
-TOOLS GRANTED read_content_performance, read_sales_by_sku, read_catalogue, save_internal_draft, queue_social_post
+TOOLS GRANTED read_content_performance, read_sales_by_sku, read_catalogue, save_internal_draft, queue_social_post, hand_off
 ALWAYS ASKS   social_post, content_asset
               (the next line lists rule names, not claims — copy-audit-ignore)
 BRAND RULES   no-health-claims, alcohol-adjacent, name-two-words, sku-numerals, voice-dry-not-zany, nz-spelling, gst-inclusive, photo-no-stock, batch-code-visible, reply-within-day

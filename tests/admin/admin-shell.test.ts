@@ -27,10 +27,14 @@ import {
   destinationFor,
 } from "@/components/admin/shell/destinations";
 
-describe("the nine destinations", () => {
-  it("is exactly nine, in the order the brief names them", () => {
+describe("the ten destinations", () => {
+  it("is exactly ten, in the order the brief names them", () => {
+    // "Ask the team" is second on purpose: Today is what needs her, asking is
+    // ask for anything, and both are ways in. Everything under them is a place
+    // she goes when she already knows what she wants.
     expect(DESTINATIONS.map((destination) => destination.label)).toEqual([
       "Today",
+      "Ask the team",
       "Orders & Delivery",
       "Stock & Batches",
       "Social",
@@ -56,7 +60,11 @@ describe("the nine destinations", () => {
     expect(destinationFor("/admin/brand")?.id).toBe("brand");
   });
 
-  it("marks nothing current on a page that is not one of the nine", () => {
+  it("marks the chat, including a conversation chosen in the address bar", () => {
+    expect(destinationFor("/admin/chat")?.id).toBe("chat");
+  });
+
+  it("marks nothing current on a page that is not one of the ten", () => {
     // Today is /admin exactly. A 404 under /admin must not light it up.
     expect(destinationFor("/admin/no-such-page")).toBeNull();
     expect(destinationFor("/admin/search")).toBeNull();

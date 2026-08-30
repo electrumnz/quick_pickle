@@ -9,7 +9,7 @@ the real runtime, and every read is real SQL against the seeded business.
 
 GOAL          Write this week's briefing, opening with the sentence that matters most.
 AUTONOMY      act_with_limits — Writes its briefing and files it without asking. It has no way to reach anyone outside the company at all.
-TOOLS GRANTED read_weekly_pulse, read_takings, read_sales_by_sku, save_internal_note
+TOOLS GRANTED read_weekly_pulse, read_takings, read_sales_by_sku, save_internal_note, hand_off
 ALWAYS ASKS   (nothing — it has no way to reach outside the company)
               (the next line lists rule names, not claims — copy-audit-ignore)
 BRAND RULES   no-health-claims, alcohol-adjacent, name-two-words, sku-numerals, voice-dry-not-zany, nz-spelling, gst-inclusive, photo-no-stock, batch-code-visible, reply-within-day

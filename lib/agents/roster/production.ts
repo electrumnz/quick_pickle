@@ -29,6 +29,9 @@
  *    real implementation later is a change here and nowhere else.
  */
 
+import { InProcessHandoff } from "../boundary/handoff";
+import { SqlConversationLedger, sqlRunOutcome } from "../chat/conversations";
+import { drivingRunner } from "../chat/drive";
 import type { AgentPlatform } from "../factory";
 import { createProductionRuntime } from "../factory";
 import type { ModelResolver } from "../model/provider";
@@ -37,7 +40,12 @@ import type { StrategyStore } from "@/lib/strategy";
 import { SqlStrategyStore } from "@/lib/strategy";
 
 import type { DraftSink } from "./outbox";
-import { loadRoster, registerRoster, type Roster } from "./roster";
+import {
+  capabilityDirectory,
+  loadRoster,
+  registerRoster,
+  type Roster,
+} from "./roster";
 import { SqlBusinessReads, type RosterSqlClient } from "./sql-reads";
 import { createRosterTools, type RosterTools } from "./tools";
 
@@ -74,16 +82,34 @@ export async function createRosterPlatform(options: {
   const roster = await loadRoster(
     options.strategy ?? new SqlStrategyStore(options.sql),
   );
+  // Turns are counted in the database rather than in a `Map`, because a chain
+  // of runs here crosses an Inngest step boundary and therefore a process, and
+  // a ceiling that resets when the process recycles is not a ceiling.
+  const conversations = new SqlConversationLedger(options.sql, "schedule");
   const tools = createRosterTools({
     reads: new SqlBusinessReads(options.sql),
     outbox: options.outbox,
+    conversations,
+    readRunOutcome: sqlRunOutcome(options.sql),
   });
   const platform = createProductionRuntime({
     registry: tools.registry,
+    conversations,
     ...(options.env === undefined ? {} : { env: options.env }),
     ...(options.store === undefined ? {} : { store: options.store }),
     ...(options.models === undefined ? {} : { models: options.models }),
   });
+  // `hand_off` has had a router behind it since `lib/agents/boundary` was
+  // written and no caller in front of it. Binding it here means a scheduled run
+  // can ask a colleague exactly as a run started from the chat window can —
+  // same directory, same two refusals, same turn cap.
+  tools.handoff.bind(
+    new InProcessHandoff({
+      directory: capabilityDirectory(roster),
+      runner: drivingRunner(platform.runtime),
+      conversations,
+    }),
+  );
   const agentIds = await registerRoster(platform.runtime, roster);
   return { platform, roster, tools, agentIds };
 }

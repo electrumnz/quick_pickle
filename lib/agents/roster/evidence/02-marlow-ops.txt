@@ -9,7 +9,7 @@ the real runtime, and every read is real SQL against the seeded business.
 
 GOAL          Sweep stock against days of cover and the production board, and draft anything that needs ordering.
 AUTONOMY      act_with_limits — Writes its own notes without asking. Any order that spends money stops and waits for your yes.
-TOOLS GRANTED read_stock_cover, read_batch_plan, read_catalogue, save_internal_note, queue_supplier_order
+TOOLS GRANTED read_stock_cover, read_batch_plan, read_catalogue, save_internal_note, queue_supplier_order, hand_off
 ALWAYS ASKS   purchase_order, inventory_adjustment, batch_release
               (the next line lists rule names, not claims — copy-audit-ignore)
 BRAND RULES   no-health-claims, name-two-words, sku-numerals, nz-spelling, batch-code-visible

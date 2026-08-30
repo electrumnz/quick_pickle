@@ -10,7 +10,7 @@ import { IconSearch } from "../ui/icons";
  * One box that reaches everything.
  *
  * Cmd-K on a Mac, Ctrl-K everywhere else, or the search field in the sidebar.
- * It searches two things at once: the nine destinations, matched here without a
+ * It searches two things at once: the ten destinations, matched here without a
  * round trip, and the nouns of the business — orders, customers, products,
  * batches, suppliers, the team, settings — matched on the server.
  *

@@ -16,7 +16,7 @@ import { ThemeToggle } from "./ThemeToggle";
  * The frame every admin page hangs in.
  *
  * The persistent sidebar is the whole answer to "I do not want her to be lost
- * as to where to find stuff when she logs in": the same nine destinations in
+ * as to where to find stuff when she logs in": the same ten destinations in
  * the same order on every screen, the current one marked three ways, and a
  * count beside anything that is waiting for her. Nothing collapses, nothing
  * reorders, nothing is hidden behind a menu on a desktop.
@@ -27,6 +27,7 @@ export function AdminShell({
   operatorRole,
   signOut,
   notice,
+  dock,
   children,
 }: {
   counts: NavCounts;
@@ -43,6 +44,17 @@ export function AdminShell({
    * that will be forgotten.
    */
   notice?: ReactNode;
+  /**
+   * A control that floats over every screen, or nothing.
+   *
+   * One slot, for the same reason `notice` is one slot: the thing in it today —
+   * "ask the team", open from wherever she is standing — is true of every screen
+   * at once, and a floating control a page can forget to render is a floating
+   * control that is missing from the screen she happened to be on. It is
+   * rendered last, outside `main`, so it is not part of the page's reading order
+   * and does not sit inside its landmark.
+   */
+  dock?: ReactNode;
   children: ReactNode;
 }) {
   const identity = (
@@ -169,6 +181,7 @@ export function AdminShell({
       </div>
 
       <CommandPalette />
+      {dock}
     </div>
   );
 }

@@ -112,6 +112,14 @@ async function inputFor(
     const accounts = await reads.tradeAccounts();
     return { customerId: accounts.accounts[0]?.customerId ?? "none" };
   }
+  if (tool.name === "hand_off") {
+    // The one read that reads no business text: it reads the phone book. It
+    // belongs in the sweep anyway, because "carries no canary" is exactly the
+    // claim being checked. Nothing happens when it runs here — the registry
+    // this harness builds has no router bound and no conversation to count
+    // against, so it refuses and opens nothing.
+    return { capability: "catalogue_facts", message: "A canary check." };
+  }
   return {};
 }
 

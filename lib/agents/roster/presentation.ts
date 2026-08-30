@@ -74,6 +74,7 @@ export const TOOL_WORDS: Readonly<Record<string, string>> = {
   queue_trade_outreach: "Email a trade account — always your decision",
   queue_campaign_email: "Email the customer list — always your decision",
   queue_supplier_order: "Order from a supplier — always your decision",
+  hand_off: "Ask whoever handles a job to pick it up",
 };
 
 /** What an effect class means for what can happen without a human. */

@@ -9,7 +9,7 @@ the real runtime, and every read is real SQL against the seeded business.
 
 GOAL          Work the trade list: find who is overdue, remember what has already been said, and draft the approach.
 AUTONOMY      propose — Drafts and asks. Every approach to a venue is an external send and waits for your yes.
-TOOLS GRANTED read_trade_accounts, read_account_memory, read_catalogue, save_account_note, queue_trade_outreach
+TOOLS GRANTED read_trade_accounts, read_account_memory, read_catalogue, save_account_note, queue_trade_outreach, hand_off
 ALWAYS ASKS   email_outreach, content_asset
               (the next line lists rule names, not claims — copy-audit-ignore)
 BRAND RULES   no-health-claims, name-two-words, sku-numerals, voice-dry-not-zany, nz-spelling, gst-inclusive, photo-no-stock, trade-tone

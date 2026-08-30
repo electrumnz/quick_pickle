@@ -31,6 +31,14 @@
  *              inside their own cadence. Its cycle runs for weeks, so its first
  *              act on every run is to remember.
  *
+ * Every role holds `hand_off`, and that is the only grant they all share.
+ * `lib/agents/boundary/handoff.ts` could route work by capability from the day
+ * it was written and nothing could ever ask it to, because no role held a tool
+ * that could. Now they all do: an agent that reaches the edge of its own job
+ * names the WORK it needs — "whoever handles pricing" — and the router finds
+ * whoever advertises it. `handsOverTo` below says the same thing in prose for a
+ * human, and now the prose and the runtime cannot drift apart.
+ *
  * Prompt text below is the ROLE prompt only. The prompt an agent actually runs
  * with is this text plus the strategy briefing plus the brand rules loaded out
  * of `brand_rules` at run time — composed by `composeSystemPrompt`, persisted as
@@ -40,6 +48,7 @@
 import { composeStrategyBriefing } from "@/lib/strategy";
 import type { Strategy } from "@/content/strategy/types";
 
+import { HAND_OFF_TOOL } from "../chat/hand-off-tool";
 import { defineAgent } from "../definition";
 import { rosterModelFor } from "../model/roster-models";
 import type { AgentDefinition } from "../types";
@@ -184,6 +193,7 @@ export function defineOpsAgent(strategy: Strategy): AgentDefinition {
       "read_catalogue",
       "save_internal_note",
       "queue_supplier_order",
+      HAND_OFF_TOOL,
     ],
     autonomy: "act_with_limits",
     requiresApprovalFor: [
@@ -226,6 +236,7 @@ export function defineSocialAgent(strategy: Strategy): AgentDefinition {
       "read_catalogue",
       "save_internal_draft",
       "queue_social_post",
+      HAND_OFF_TOOL,
     ],
     autonomy: "propose",
     requiresApprovalFor: ["social_post", "content_asset"],
@@ -259,6 +270,7 @@ export function defineConciergeAgent(strategy: Strategy): AgentDefinition {
       "read_catalogue",
       "save_internal_draft",
       "queue_customer_reply",
+      HAND_OFF_TOOL,
     ],
     autonomy: "propose",
     requiresApprovalFor: ["customer_message", "review_reply", "refund"],
@@ -297,6 +309,7 @@ export function defineFinanceAgent(strategy: Strategy): AgentDefinition {
       "read_catalogue",
       "save_internal_note",
       "propose_price_change",
+      HAND_OFF_TOOL,
     ],
     autonomy: "propose",
     requiresApprovalFor: ["price_change", "discount", "settings_change"],
@@ -324,7 +337,12 @@ export function defineProductAgent(strategy: Strategy): AgentDefinition {
         includeMarket: true,
       }),
     ),
-    tools: ["read_range_signals", "read_catalogue", "save_product_concept"],
+    tools: [
+      "read_range_signals",
+      "read_catalogue",
+      "save_product_concept",
+      HAND_OFF_TOOL,
+    ],
     autonomy: "propose",
     requiresApprovalFor: ["recipe_change", "content_asset"],
     budget: { perRunCents: 140, dailyCents: 400, monthlyCents: 8_000 },
@@ -355,6 +373,7 @@ export function defineAnalystAgent(strategy: Strategy): AgentDefinition {
       "read_takings",
       "read_sales_by_sku",
       "save_internal_note",
+      HAND_OFF_TOOL,
     ],
     autonomy: "act_with_limits",
     requiresApprovalFor: [],
@@ -435,6 +454,7 @@ export const MARKETING_TOOLS = [
   "read_catalogue",
   "save_internal_draft",
   "queue_campaign_email",
+  HAND_OFF_TOOL,
 ] as const;
 
 /** Vic's tools: named accounts, their whole history, and one outreach channel. */
@@ -444,6 +464,7 @@ export const TRADE_TOOLS = [
   "read_catalogue",
   "save_account_note",
   "queue_trade_outreach",
+  HAND_OFF_TOOL,
 ] as const;
 
 /* ------------------------------------------------------------- the roster */

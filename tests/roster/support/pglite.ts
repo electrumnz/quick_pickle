@@ -30,16 +30,18 @@ import {
  * registration afterwards is exactly what a developer has to do locally, and
  * running them twice also proves both migrations are idempotent.
  *
- * Both, in order: the registration writes the eight rows, and the model
- * migration moves them onto the gateway ids the code now declares. Re-applying
- * only the first would leave the table naming models the runtime never resolves,
- * and `registration.test.ts` would fail on exactly the field this pair exists to
- * keep honest.
+ * All three, in order: the registration writes the eight rows, the model
+ * migration moves them onto the gateway ids the code now declares, and the chat
+ * migration grants them `hand_off`. Re-applying only the first would leave the
+ * table naming models the runtime never resolves and tool grants the code no
+ * longer declares, and `registration.test.ts` would fail on exactly the fields
+ * this set exists to keep honest.
  */
 
 const ROSTER_MIGRATIONS = [
   "20260103000000_agent_roster.sql",
   "20260108000000_roster_gateway_models.sql",
+  "20260110000000_founder_chat.sql",
 ] as const;
 
 const SUPABASE_AUTH_STUB = `

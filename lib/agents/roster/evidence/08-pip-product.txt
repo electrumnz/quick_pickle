@@ -9,7 +9,7 @@ the real runtime, and every read is real SQL against the seeded business.
 
 GOAL          Read the range signals and write up one product idea worth the founder's ten seconds.
 AUTONOMY      propose — Proposes and waits. Ideas are written into our own records; nothing reaches the shop without your yes.
-TOOLS GRANTED read_range_signals, read_catalogue, save_product_concept
+TOOLS GRANTED read_range_signals, read_catalogue, save_product_concept, hand_off
 ALWAYS ASKS   recipe_change, content_asset
               (the next line lists rule names, not claims — copy-audit-ignore)
 BRAND RULES   no-health-claims, alcohol-adjacent, name-two-words, sku-numerals, voice-dry-not-zany, nz-spelling, gst-inclusive, photo-no-stock, batch-code-visible, reply-within-day

@@ -15,7 +15,7 @@ Marlow — Head of Brine Ops (brine-ops)
   audience     internal
   model        minimax/minimax-m2.7-free
   autonomy     act_with_limits
-  tools        read_stock_cover, read_batch_plan, read_catalogue, save_internal_note, queue_supplier_order
+  tools        read_stock_cover, read_batch_plan, read_catalogue, save_internal_note, queue_supplier_order, hand_off
   always asks  purchase_order, inventory_adjustment, batch_release
   budget       NZ$0.80/run, NZ$8.00/day, NZ$160.00/month, single action ceiling NZ$250.00
   schedule     0 19 * * *
@@ -31,7 +31,7 @@ Dot — Customer Concierge (concierge)
   audience     b2c
   model        minimax/minimax-m3-free
   autonomy     propose
-  tools        read_open_conversations, read_customer_history, read_catalogue, save_internal_draft, queue_customer_reply
+  tools        read_open_conversations, read_customer_history, read_catalogue, save_internal_draft, queue_customer_reply, hand_off
   always asks  customer_message, review_reply, refund
   budget       NZ$1.40/run, NZ$9.00/day, NZ$180.00/month, single action ceiling NZ$150.00
   schedule     0 */4 * * *
@@ -47,7 +47,7 @@ Teller — Finance and Pricing (ledger)
   audience     internal
   model        minimax/minimax-m2.7-free
   autonomy     propose
-  tools        read_margins, read_takings, read_catalogue, save_internal_note, propose_price_change
+  tools        read_margins, read_takings, read_catalogue, save_internal_note, propose_price_change, hand_off
   always asks  price_change, discount, settings_change
   budget       NZ$1.40/run, NZ$9.00/day, NZ$180.00/month
   schedule     0 8 * * 1
@@ -63,7 +63,7 @@ Vinnie — Social and Content Lead (social)
   audience     b2c
   model        minimax/minimax-m3-free
   autonomy     propose
-  tools        read_content_performance, read_sales_by_sku, read_catalogue, save_internal_draft, queue_social_post
+  tools        read_content_performance, read_sales_by_sku, read_catalogue, save_internal_draft, queue_social_post, hand_off
   always asks  social_post, content_asset
   budget       NZ$1.40/run, NZ$6.00/day, NZ$120.00/month
   schedule     0 20 * * 1,4
@@ -79,7 +79,7 @@ Ari — Marketing (marketing)
   audience     b2c
   model        minimax/minimax-m3-free
   autonomy     propose
-  tools        read_sales_by_sku, read_catalogue, save_internal_draft, queue_campaign_email
+  tools        read_sales_by_sku, read_catalogue, save_internal_draft, queue_campaign_email, hand_off
   always asks  social_post, content_asset, email_campaign
   budget       NZ$1.40/run, NZ$6.00/day, NZ$60.00/month
   schedule     (on demand)
@@ -95,7 +95,7 @@ Vic — Trade (trade)
   audience     b2b
   model        minimax/minimax-m3-free
   autonomy     propose
-  tools        read_trade_accounts, read_account_memory, read_catalogue, save_account_note, queue_trade_outreach
+  tools        read_trade_accounts, read_account_memory, read_catalogue, save_account_note, queue_trade_outreach, hand_off
   always asks  email_outreach, content_asset
   budget       NZ$1.40/run, NZ$6.00/day, NZ$60.00/month
   schedule     (on demand)
@@ -111,7 +111,7 @@ Pip — Product Development (product)
   audience     internal
   model        minimax/minimax-m3-free
   autonomy     propose
-  tools        read_range_signals, read_catalogue, save_product_concept
+  tools        read_range_signals, read_catalogue, save_product_concept, hand_off
   always asks  recipe_change, content_asset
   budget       NZ$1.40/run, NZ$4.00/day, NZ$80.00/month
   schedule     0 9 1 * *
@@ -127,7 +127,7 @@ Cass — Analyst (analyst)
   audience     internal
   model        minimax/minimax-m2.7-free
   autonomy     act_with_limits
-  tools        read_weekly_pulse, read_takings, read_sales_by_sku, save_internal_note
+  tools        read_weekly_pulse, read_takings, read_sales_by_sku, save_internal_note, hand_off
   always asks  (nothing)
   budget       NZ$0.80/run, NZ$4.00/day, NZ$80.00/month
   schedule     0 6 * * 1

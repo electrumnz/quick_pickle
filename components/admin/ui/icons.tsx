@@ -1,9 +1,8 @@
 /**
  * The admin's icon set, drawn here rather than installed.
  *
- * Nine destinations need nine marks that read at 18px and agree with each
- * other; a general-purpose icon library would have brought a thousand that do
- * not. Every path is stroked in `currentColor`, so an icon is whatever colour
+ * Ten destinations need ten marks that read at 18px and agree with each other;
+ * a general-purpose icon library would have brought a thousand that do not. Every path is stroked in `currentColor`, so an icon is whatever colour
  * the semantic token around it says — there is no colour in this file at all.
  */
 
@@ -111,6 +110,16 @@ export function IconTeam({ className }: IconProps) {
       <rect x="3.4" y="4.6" width="17.2" height="14.8" rx="2.4" />
       <circle cx="9.4" cy="10.4" r="2.1" />
       <path d="M6 16.4c0-1.8 1.5-3 3.4-3s3.4 1.2 3.4 3M15.4 9.6h3.2M15.4 13.2h3.2" />
+    </Svg>
+  );
+}
+
+/** Ask the team — a speech bubble with a line of talk in it. */
+export function IconChat({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M20.5 12.2c0 3.6-3.6 6.6-8 6.6a9.7 9.7 0 0 1-2.5-.3L5.5 20.5l1.3-3.2a6.3 6.3 0 0 1-3.3-5.1c0-3.6 3.6-6.6 8-6.6s9 3 9 6.6Z" />
+      <path d="M8.6 11.3h6.8M8.6 14h4.2" />
     </Svg>
   );
 }

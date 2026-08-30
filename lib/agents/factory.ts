@@ -8,6 +8,7 @@
  */
 
 import { ApprovalService } from "./approvals/service";
+import type { ConversationLedger } from "./boundary/conversation";
 import { systemClock, type Clock } from "./clock";
 import { StoreControlPlane, type ControlPlane } from "./control/kill-switch";
 import { CostMeter } from "./cost/meter";
@@ -49,6 +50,16 @@ export interface CreateRuntimeOptions {
   readonly control?: ControlPlane;
   readonly controlPollIntervalMs?: number;
   readonly fxNzdPerUsd?: number;
+  /**
+   * Counts turns across a chain of runs.
+   *
+   * Defaults to the runtime's own in-process ledger, which is the right one
+   * while a chain lives inside a single request. A caller whose conversation
+   * outlives the process — the founder's chat window, which she can leave and
+   * come back to — passes a durable one, because a ceiling that resets when a
+   * lambda recycles is a ceiling that does not bind.
+   */
+  readonly conversations?: ConversationLedger;
 }
 
 /** Wire a runtime from explicit parts. */
@@ -80,6 +91,9 @@ export function createAgentRuntime(
     ...(options.controlPollIntervalMs === undefined
       ? {}
       : { controlPollIntervalMs: options.controlPollIntervalMs }),
+    ...(options.conversations === undefined
+      ? {}
+      : { conversations: options.conversations }),
   });
   return {
     runtime,
@@ -121,9 +135,10 @@ export function createAgentRuntime(
  * `store` is the one part a caller may supply. It defaults to
  * {@link SupabaseAgentStore}, which needs `NEXT_PUBLIC_SUPABASE_URL` and a
  * service-role key; a deployment whose database is a Postgres it holds a
- * connection to rather than a REST endpoint passes `SqlAgentStore` instead.
- * Everything above the port is identical either way — same runtime, same gate,
- * same meter, same transcript — which is the whole reason the port exists.
+ * connection to rather than a REST endpoint passes `SqlAgentStore`
+ * instead. Everything above the port is identical either way — same runtime,
+ * same gate, same meter, same transcript — which is the whole reason the port
+ * exists.
  */
 export function createProductionRuntime(options: {
   readonly registry: ToolRegistry;
@@ -143,6 +158,14 @@ export function createProductionRuntime(options: {
    * to do that would prove something about a different object.
    */
   readonly models?: ModelResolver;
+  /**
+   * Counts turns across a chain of runs. Defaults to the in-process ledger.
+   *
+   * Passed by any caller whose conversation outlives one process — the founder's
+   * chat window, and the durable workflow, where a chain of runs crosses an
+   * Inngest step boundary.
+   */
+  readonly conversations?: ConversationLedger;
 }): AgentPlatform {
   const env = options.env ?? process.env;
   const unavailable = liveModelUnavailableReason(env);
@@ -158,6 +181,9 @@ export function createProductionRuntime(options: {
     registry: options.registry,
     models,
     ...(options.logger === undefined ? {} : { logger: options.logger }),
+    ...(options.conversations === undefined
+      ? {}
+      : { conversations: options.conversations }),
   });
 }
 

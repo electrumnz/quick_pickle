@@ -38,6 +38,11 @@
 import { z } from "zod";
 
 import {
+  BindableHandoff,
+  createHandOffTool,
+  type HandOffConversations,
+} from "../chat/hand-off-tool";
+import {
   defineTool,
   ToolRegistry,
   type ToolDefinition,
@@ -78,6 +83,23 @@ const draftSchema = z.object({
 export interface RosterToolPorts {
   readonly reads: BusinessReads;
   readonly outbox: DraftSink;
+  /**
+   * Where a run's conversation is looked up, for `hand_off`.
+   *
+   * Defaults to reading it off nothing, which makes every handoff refuse with a
+   * sentence rather than proceed uncapped. A caller that opens runs inside
+   * conversations — the founder's chat, and the durable workflow — passes the
+   * ledger it counts turns in.
+   */
+  readonly conversations?: HandOffConversations;
+  /**
+   * What a run the handoff opened ended up saying.
+   *
+   * Supplied by a caller that drives the runs it opens, so `hand_off` can hand
+   * the colleague's answer back to the agent that asked instead of just a run
+   * id. Read from `agent_runs.outcome`; nothing copies it.
+   */
+  readonly readRunOutcome?: (runId: string) => Promise<string | null>;
 }
 
 /** Every tool the roster can be granted, by name. */
@@ -85,6 +107,16 @@ export interface RosterTools {
   readonly all: readonly ToolDefinition[];
   readonly byName: Readonly<Record<string, ToolDefinition>>;
   readonly registry: ToolRegistry;
+  /**
+   * The seam `hand_off` dispatches through.
+   *
+   * The tool registry is built before the runtime exists and the router needs
+   * the runtime to open a run, so the tool is built against this and the real
+   * router is bound once both halves are there — see
+   * `lib/agents/chat/platform.ts` and `./production.ts`. Unbound, a handoff
+   * comes back as a readable refusal rather than as nothing.
+   */
+  readonly handoff: BindableHandoff;
 }
 
 export function createRosterTools(ports: RosterToolPorts): RosterTools {
@@ -673,6 +705,24 @@ export function createRosterTools(ports: RosterToolPorts): RosterTools {
       ),
   });
 
+  /**
+   * Asking a colleague, by capability rather than by name.
+   *
+   * The last tool in the set and the only one that is not about the business:
+   * it is about the company. `lib/agents/boundary/handoff.ts` could always
+   * route work and nothing could ever ask it to, because no role held a tool
+   * that could. See `lib/agents/chat/hand-off-tool.ts` for why its effect is
+   * `read`.
+   */
+  const handoff = new BindableHandoff();
+  const handOff = createHandOffTool({
+    handoff,
+    conversations: ports.conversations ?? NO_CONVERSATIONS,
+    ...(ports.readRunOutcome === undefined
+      ? {}
+      : { readOutcome: ports.readRunOutcome }),
+  });
+
   const all: readonly ToolDefinition[] = [
     readCatalogue,
     readStockCover,
@@ -697,6 +747,7 @@ export function createRosterTools(ports: RosterToolPorts): RosterTools {
     queueTradeOutreach,
     queueCampaignEmail,
     queueSupplierOrder,
+    handOff,
   ];
 
   const byName: Record<string, ToolDefinition> = {};
@@ -704,5 +755,18 @@ export function createRosterTools(ports: RosterToolPorts): RosterTools {
     byName[tool.name] = tool;
   }
 
-  return { all, byName, registry: new ToolRegistry([...all]) };
+  return { all, byName, registry: new ToolRegistry([...all]), handoff };
 }
+
+/**
+ * A conversation lookup for a caller that has none.
+ *
+ * Answering "no conversation" rather than inventing one is what makes
+ * `hand_off` refuse in that case: a chain of runs with no ceiling to count
+ * against is the exact runaway the turn cap exists to stop.
+ */
+const NO_CONVERSATIONS: HandOffConversations = {
+  async conversationFor() {
+    return null;
+  },
+};
