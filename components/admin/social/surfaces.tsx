@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { CSSProperties, ReactNode } from "react";
 
 import type { PostMedia } from "@/components/admin/data/queries";
@@ -30,6 +31,14 @@ import styles from "./preview.module.css";
  * which the caption is folded away. All of it is drawn in HALF SOUR's own
  * tokens, using the same `Avatar`, `Badge` and `Meter` as the rest of the
  * admin, and every panel is labelled as an approximation on its face.
+ *
+ * The one thing here that is not an approximation is the photograph. It is the
+ * file itself, drawn at its own ratio and cropped by the arithmetic in
+ * `cropPlan`, because the question "what does this picture look like once
+ * Instagram has taken 18% of its width off it" cannot be answered by a
+ * rectangle with the dimensions written under it. A real picture inside
+ * invented chrome is the honest combination: the part that is ours is real and
+ * the part that is theirs is admitted.
  *
  * That is a deliberate trade. A pixel-perfect Instagram card would be somebody
  * else's trade dress reproduced in our repository, and it would be worth
@@ -131,14 +140,48 @@ function Chrome({ surface, post }: SurfaceProps) {
 }
 
 /**
+ * Why there is no photograph in this frame, in a sentence — or null when there
+ * is one.
+ *
+ * Four different absences, and they are not the same fact. A post with nothing
+ * attached is a job for her; a record whose file this deployment does not hold
+ * is a job for whoever uploads it; a clip has no still on the record to draw;
+ * and a file whose dimensions were never recorded cannot be drawn at all,
+ * because `.shot` is sized from them and an image forced into a guessed box is
+ * a stretched photograph presented as a preview of the real one.
+ */
+function missingPictureWords(media: PostMedia): string | null {
+  if (media.width === null || media.height === null) {
+    return "No size is recorded for this file, so there is nothing to draw the picture into — the frame below is the platform's own shape.";
+  }
+  if (media.kind !== "image") {
+    return `This one is a ${media.kind}, and the record carries no still from it, so the frame is drawn from its size rather than from the picture.`;
+  }
+  if (media.src === null) {
+    return "No file is attached to this record yet. The frame is drawn from the size on the record; attach the file and the picture appears in it.";
+  }
+  return null;
+}
+
+/**
  * The picture, and what the frame takes off it.
  *
- * Drawn from the file's own recorded width and height rather than from the
- * bytes: the files sit on a CDN this admin does not fetch from, and a crop is
- * arithmetic either way. The outer rectangle is the photograph at the ratio it
- * was shot in; the inner one is what survives, centred, because every platform
- * here cover-crops and takes the overflow evenly off both edges. The hatched
- * remainder is exactly, to scale, what is lost.
+ * The box is the photograph at the ratio it was shot in, and the file is drawn
+ * into it at that ratio, so nothing here is stretched. Over it, the inner
+ * rectangle is what the platform keeps — centred, because every platform here
+ * cover-crops and takes the overflow evenly off both edges. Inside that
+ * rectangle is exactly what goes out, at exactly the crop it goes out at;
+ * everything dimmed outside it is exactly, to scale, what is cut.
+ *
+ * It is still an approximation and it still says so on its face. The
+ * photograph is the real file and the crop is real arithmetic, but the card
+ * around it is HALF SOUR's own chrome and no platform's interface is copied —
+ * see the note at the top of this file.
+ *
+ * Where the file is not one this deployment serves, or is a clip with no still
+ * on the record, or was recorded with no dimensions, the labelled box stays and
+ * {@link missingPictureWords} says which of those it is. A frame that guessed
+ * would be worse than a frame that is empty: it would look authoritative.
  */
 function MediaFrame({
   media,
@@ -158,27 +201,45 @@ function MediaFrame({
     plan === null || plan.axis !== "width" ? 100 : (1 - plan.lost) * 100;
   const keptHeight =
     plan === null || plan.axis !== "height" ? 100 : (1 - plan.lost) * 100;
+  const missing = media === null ? null : missingPictureWords(media);
+  const photo = media !== null && missing === null ? media.src : null;
+  // The alt text on the record is what a reader of the post would get. Where
+  // nobody has written one the title stands in — it describes the file rather
+  // than the picture, which is worse, and the caption below says so.
+  const described = media === null || media.alt === "" ? null : media.alt;
 
   return (
     <figure className="m-0 px-3 pb-1">
-      <div
-        className={styles.shot}
-        style={{ aspectRatio: String(sourceRatio) }}
-        role="img"
-        aria-label={
-          media === null
-            ? `No picture is attached to this post. The frame shown is ${frame.label}.`
-            : `${media.alt === "" ? media.title : media.alt}. Shown inside a ${frame.label} frame.`
-        }
-      >
+      <div className={styles.shot} style={{ aspectRatio: String(sourceRatio) }}>
+        {photo !== null && media !== null && (
+          // The whole box is the whole photograph, so `cover` at the source
+          // ratio crops nothing here; the platform's crop is the rectangle
+          // drawn over the top. `sizes` is the widest column any surface
+          // renders at — Instagram stops at 470, X at 600.
+          <Image
+            src={photo}
+            alt={described ?? media.title}
+            fill
+            sizes="(max-width: 640px) 100vw, 600px"
+            className={styles.photo}
+          />
+        )}
         <div
-          className={styles.kept}
+          className={`${styles.kept} ${photo === null ? "" : styles.keptOver}`}
           style={{
             inlineSize: `${keptWidth.toFixed(2)}%`,
             blockSize: `${keptHeight.toFixed(2)}%`,
           }}
         >
-          <span className="text-caption text-muted">{frame.label}</span>
+          <span
+            className={
+              photo === null
+                ? "text-caption text-muted"
+                : "rounded-pill border border-hairline bg-surface-raised px-2 py-0.5 text-caption font-medium text-primary"
+            }
+          >
+            {frame.label}
+          </span>
         </div>
         {storyBands && (
           <>
@@ -215,6 +276,7 @@ function MediaFrame({
                 : ` · ${count(media.seconds)} seconds`}
             </p>
             <p>{cropWords(plan, frame)}</p>
+            {missing !== null && <p>{missing}</p>}
             <p>
               {media.alt === ""
                 ? "No alt text on this file. Write one before it goes out — it is the only description a blind reader gets."

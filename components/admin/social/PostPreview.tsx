@@ -114,8 +114,10 @@ export function PostPreview({
       <p className="mt-1 max-w-prose text-caption text-muted">
         An approximation of each platform&rsquo;s layout drawn in this
         admin&rsquo;s own type and colour — the order, the proportions, the crop
-        and the exact character the caption is cut at. It is not a screenshot
-        and no platform&rsquo;s logo or interface is copied.{" "}
+        and the exact character the caption is cut at. The picture inside it is
+        the real file at the real crop; everything around the picture is drawn
+        here. It is not a screenshot and no platform&rsquo;s logo or interface
+        is copied.{" "}
         <strong className="font-semibold text-primary">
           Nothing here is connected.
         </strong>{" "}

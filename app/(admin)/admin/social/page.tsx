@@ -471,6 +471,7 @@ export default async function SocialPage({
           works={[
             "Every post, its state, and the numbers the platform reported",
             "Seeing what a post will look like on each platform at a phone, tablet and desktop width, with the caption cut where that platform cuts it and every character, hashtag and crop counted against its real limits",
+            "The picture itself inside the frame, at the crop the platform will apply, with what the crop takes off it dimmed over the top",
             "Approving a post and giving it a time, which is recorded against it for good",
             "Changing the wording before you say yes",
             "Declining a post with a reason, which answers the agent that asked",
@@ -480,8 +481,7 @@ export default async function SocialPage({
           ]}
           coming={[
             "Actually posting: nothing here is connected to Instagram or TikTok, so a scheduled post waits for a person",
-            "The preview showing the photograph itself rather than its shape: the files sit on a CDN this admin does not fetch from, so the crop is drawn from the recorded dimensions",
-            "Uploading the picture or video with the caption",
+            "Uploading the picture or video with the caption — until a record has a file this deployment holds, its frame draws the shape from the recorded size and says the file is missing rather than fetching one from a host it cannot vouch for",
             "Replying to comments without leaving the admin",
           ]}
         />

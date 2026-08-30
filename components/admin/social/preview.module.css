@@ -144,8 +144,13 @@
  * `.shot` is the whole photograph at the ratio it was shot in. `.kept` is the
  * part of it the platform's frame leaves behind, centred, because platforms
  * cover-crop and take the overflow evenly off both edges. Everything outside
- * `.kept` is hatched: that is what is lost, and it is drawn to scale rather
- * than described.
+ * `.kept` is lost, and it is drawn to scale rather than described.
+ *
+ * There are two states and they share the geometry. With no file to draw, the
+ * box is hatched and `.kept` is a raised panel carrying the frame's name. With
+ * the file in hand, `.photo` fills the box and `.keptOver` turns that same
+ * panel into a window: transparent, with everything outside it dimmed. So the
+ * bright part of the picture is what goes out, at the crop it goes out at.
  */
 .shot {
   position: relative;
@@ -163,6 +168,17 @@
   );
 }
 
+/*
+ * The photograph itself.
+ *
+ * `.shot` is sized from the file's own recorded ratio, so `cover` crops
+ * nothing here — the box is the whole picture. The platform's crop is the
+ * rectangle drawn over the top, never a change to this rule.
+ */
+.photo {
+  object-fit: cover;
+}
+
 .kept {
   position: absolute;
   top: 50%;
@@ -175,6 +191,32 @@
   border: 1px solid var(--accent-edge);
   border-radius: var(--radius-sm);
   background: var(--surface-raised);
+}
+
+/*
+ * The same rectangle, over a photograph instead of over a hatched box.
+ *
+ * The dimming is a spread shadow rather than four positioned shims: `.shot`
+ * already clips with `overflow: hidden`, so one shadow covers the remainder
+ * exactly however the rectangle is sized, and no arithmetic is repeated in two
+ * places. The frame's name moves to a corner and gets its own solid ground —
+ * caption-sized type laid straight over a photograph is not readable on every
+ * photograph, and this one has to be readable on all of them.
+ */
+.keptOver {
+  place-items: end start;
+  padding: 0.4rem;
+  background: transparent;
+  /* `surface-inverse` rather than a second surface: it is the darkest ground
+     either scheme has, so the cut region reads as cut over a bright photograph
+     and over a dark one. A mid-tone tint only separates from one of them. */
+  box-shadow: 0 0 0 100vmax
+    color-mix(in oklab, var(--surface-inverse) 72%, transparent);
+  /* And the boundary goes light, because the surround it has to be seen
+     against is now dark in both schemes. `accent-edge` is Ink in light, which
+     is invisible on a photograph shot on a black bar top — which most of this
+     company's photography is. */
+  border-color: var(--text-on-inverse);
 }
 
 /* The bands Instagram's own controls sit over on a story. Drawn, not claimed:

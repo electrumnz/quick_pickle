@@ -959,10 +959,10 @@ select
 from (values
   ('social_post', 'social_posts',
    'Instagram: No 03 SMOKE back on the shelf Thursday',
-   'A single still of the three-up line shot with a caption announcing the restock, scheduled for Thursday 5pm.',
+   'A single still of the No 03 bottle with a caption announcing the restock, scheduled for Thursday 5pm.',
    'No 03 has been out of stock for nine days and it is the second most asked-about thing in the inbox. Batch D lands Wednesday.',
    '{"action":"schedule","platform":"instagram","scheduled_for":"+2 days 17:00 Pacific/Auckland","caption_length":214}',
-   '{"caption":"No 03 SMOKE is back on Thursday. Chipotle and manzano, manuka-smoked salt, the heat arrives about three seconds late. Batch D, bottled Tuesday.","asset":"three-up.jpg"}',
+   '{"caption":"No 03 SMOKE is back on Thursday. Chipotle and manzano, manuka-smoked salt, the heat arrives about three seconds late. Batch D, bottled Tuesday.","asset":"media/bottles/no-03-smoke.jpg"}',
    'low', null, 'pending', 'social', 'Draft this fortnight''s content calendar and schedule against the brand rules.',
    interval '19 hours', interval '-29 hours', null, null, null, null),
 
@@ -1589,6 +1589,26 @@ values
   ('facebook', 'halfsournz', 'Half Sour', 'https://facebook.com/halfsournz', '104928374651093',
    'vault:meta_page_token', false, 386, 0, 11, now() - interval '5 months', now() - interval '9 days', now() - interval '9 days');
 
+-- The content library.
+--
+-- `public_url` is the one column here the running app reads: the social
+-- preview draws the picture inside the platform frame, and it draws it only
+-- when this column is a path THIS deployment serves — see `servedHere` in
+-- components/admin/data/queries.ts. So a row is one of two things and never
+-- anything in between:
+--
+--   * a real file in `public/`, with the real dimensions and the real byte
+--     count of that file, and alt text describing what is actually in it; or
+--   * a record with no file published yet, whose `public_url` is null and
+--     whose frame the preview draws from `width_px`/`height_px` while saying
+--     in words that nothing is attached.
+--
+-- The second group is not an oversight. Half of this library describes
+-- photography this company has not taken — a market stall, a fermenter at day
+-- four, a batch code going onto a neck label — and pointing those rows at the
+-- nearest bottle shot would put a caption under a picture that does not show
+-- what the caption says. That is the failure CLAUDE.md names, so they stay
+-- unattached and the preview says so.
 insert into public.content_assets
   (slug, title, asset_type, storage_path, public_url, mime_type, width_px, height_px, duration_seconds,
    file_size_bytes, alt_text, caption, body, tags, product_id, brand_asset_id,
@@ -1597,29 +1617,36 @@ select ca.slug, ca.title, ca.atype::public.content_asset_type, ca.path, ca.url, 
        ca.w, ca.h, ca.dur, ca.size, ca.alt, ca.caption, ca.body, ca.tags::text[],
        p.id, ba.id, ag.id, ap.id, ca.approved, ca.rights, ca.credit, now() - ca.shot_ago
   from (values
-    ('three-up-cream', 'Three-up on cream', 'image', 'content/three-up-cream.jpg', 'https://cdn.halfsour.co.nz/content/three-up-cream.jpg', 'image/jpeg', 3000, 3000, null, 4820114,
+    -- The only file in this list that exists. `public/media/bottles/no-03-smoke.jpg`,
+    -- from the same shoot as the storefront's — components/product/media.ts is
+    -- where that shoot is described — so the dimensions, the byte count and the
+    -- alt text below are the file's own and not a description of an intention.
+    ('no-03-smoke-bottle', 'No 03 SMOKE, the bottle', 'image', 'media/bottles/no-03-smoke.jpg', '/media/bottles/no-03-smoke.jpg', 'image/jpeg', 1024, 1280, null, 66411,
+     'A 500 ml bottle of No 03 SMOKE on a dark slate bar top, with two dried chillies beside it', 'The heat arrives late.', null,
+     '{product,smoke,evergreen}', 'no-03-smoke', null, null, null, true, 'Owned outright. Shot in-house.', null, interval '4 weeks'),
+    ('three-up-cream', 'Three-up on cream', 'image', 'content/three-up-cream.jpg', null, 'image/jpeg', 3000, 3000, null, 4820114,
      'No 01, No 02 and No 03 side by side on a cream ground, in numeric order', 'The whole range, in order.', null,
      '{range,hero,evergreen}', 'the-full-set', 'shot-three-up', null, null, true, 'Owned outright. Shot in-house.', 'Nadia Feldman', interval '5 weeks'),
-    ('bar-pour-brass', 'Bar pour at Brass and Bitters', 'image', 'content/bar-pour-brass.jpg', 'https://cdn.halfsour.co.nz/content/bar-pour-brass.jpg', 'image/jpeg', 4000, 2667, null, 6120448,
+    ('bar-pour-brass', 'Bar pour at Brass and Bitters', 'image', 'content/bar-pour-brass.jpg', null, 'image/jpeg', 4000, 2667, null, 6120448,
      'No 02 DIRTY poured into a mixing glass on the pass at Brass and Bitters', 'Kiri on the pass.', null,
      '{trade,bar,proof}', 'no-02-dirty', 'shot-bar-pour', null, null, true, 'Venue release signed. Kiri Ngatai approved use.', 'Nadia Feldman', interval '13 days'),
-    ('dirty-martini-build', 'Dirty Martini build', 'video', 'content/dirty-martini-build.mp4', 'https://cdn.halfsour.co.nz/content/dirty-martini-build.mp4', 'video/mp4', 1080, 1920, 22, 18442096,
+    ('dirty-martini-build', 'Dirty Martini build', 'video', 'content/dirty-martini-build.mp4', null, 'video/mp4', 1080, 1920, 22, 18442096,
      'A 22-second vertical of a Dirty Martini being built with No 02', 'Thirty martinis to a bottle.', null,
      '{video,trade,bar}', 'no-02-dirty', null, null, 'Instagram: the Dirty Martini build at Brass and Bitters', true, 'Venue release signed.', 'Nadia Feldman', interval '13 days'),
-    ('fermenter-day-four', 'Day four in the fermenter', 'image', 'content/fermenter-day-four.jpg', 'https://cdn.halfsour.co.nz/content/fermenter-day-four.jpg', 'image/jpeg', 3000, 2000, null, 3918224,
+    ('fermenter-day-four', 'Day four in the fermenter', 'image', 'content/fermenter-day-four.jpg', null, 'image/jpeg', 3000, 2000, null, 3918224,
      'Chipotle and split manzano going into the No 03 fermenter at day four', 'The chilli goes in late on purpose.', null,
      '{process,kitchen,smoke}', 'no-03-smoke', null, null, null, true, 'Owned outright.', 'Nadia Feldman', interval '12 days'),
-    ('label-overprint', 'Batch code going on', 'video', 'content/label-overprint.mp4', 'https://cdn.halfsour.co.nz/content/label-overprint.mp4', 'video/mp4', 1080, 1920, 14, 11208960,
+    ('label-overprint', 'Batch code going on', 'video', 'content/label-overprint.mp4', null, 'video/mp4', 1080, 1920, 14, 11208960,
      'A batch code being overprinted onto a neck label on the line', 'Every bottle knows where it came from.', null,
      '{process,traceability,video}', 'no-01-house', null, null, null, true, 'Owned outright.', 'Nadia Feldman', interval '26 days'),
     ('restock-copy-smoke', 'No 03 restock caption', 'copy', null, null, null, null, null, null, null,
      null, null,
      'No 03 SMOKE is back on Thursday. Chipotle and manzano, manuka-smoked salt, the heat arrives about three seconds late. Batch D, bottled Tuesday.',
      '{caption,restock,smoke}', 'no-03-smoke', null, 'social', 'Instagram: No 03 SMOKE back on the shelf Thursday', false, null, null, interval '19 hours'),
-    ('trade-one-pager', 'Trade one-pager', 'pdf', 'content/half-sour-trade-2026.pdf', 'https://cdn.halfsour.co.nz/content/half-sour-trade-2026.pdf', 'application/pdf', null, null, null, 842116,
+    ('trade-one-pager', 'Trade one-pager', 'pdf', 'content/half-sour-trade-2026.pdf', null, 'application/pdf', null, null, null, 842116,
      null, 'Case sizes, shelf life, freight and pour cost on one page.', null,
      '{trade,wholesale,collateral}', null, 'wordmark-primary', null, null, true, 'Owned outright.', null, interval '7 weeks'),
-    ('market-stall-coastville', 'Coastville market stall', 'image', 'content/market-stall.jpg', 'https://cdn.halfsour.co.nz/content/market-stall.jpg', 'image/jpeg', 4000, 2667, null, 5402188,
+    ('market-stall-coastville', 'Coastville market stall', 'image', 'content/market-stall.jpg', null, 'image/jpeg', 4000, 2667, null, 5402188,
      'The Half Sour stall at the Coastville market, all three bottles on a cream cloth', 'Saturdays at Coastville.', null,
      '{market,retail,community}', null, null, null, null, true, 'Owned outright.', 'Nadia Feldman', interval '9 days')
   ) as ca(slug, title, atype, path, url, mime, w, h, dur, size, alt, caption, body, tags,
@@ -1736,8 +1763,17 @@ select sp.id, ca.id, 10
     when sp.caption like 'Day four%' then 'fermenter-day-four'
     when sp.caption like 'Every bottle carries%' then 'label-overprint'
     when sp.caption like 'Fourteen seconds%' then 'label-overprint'
+    -- Both No 03 posts carry the No 03 bottle. They used to carry
+    -- `three-up-cream`, which is a three-bottle shot nobody has taken, so the
+    -- decision waiting on the founder showed an empty rectangle.
+    when sp.caption like 'No 03 SMOKE.%' then 'no-03-smoke-bottle'
+    when sp.caption like 'No 03 SMOKE is back%' then 'no-03-smoke-bottle'
+    -- The First Three keeps `three-up-cream` and therefore keeps the empty
+    -- frame. The range shot in `public/media/range/` has FOUR bottles in it,
+    -- and a picture is a representation: using it to sell a box of three would
+    -- misstate what is in the box. components/product/ProductMedia.tsx refuses
+    -- the same substitution on the storefront, for the same reason.
     when sp.caption like 'The First Three.%' then 'three-up-cream'
-    when sp.caption like 'No 03 SMOKE is back%' then 'three-up-cream'
     when sp.caption like 'Coastville market%' then 'market-stall-coastville'
   end;
 

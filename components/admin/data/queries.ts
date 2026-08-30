@@ -775,11 +775,18 @@ export async function socialAccounts(): Promise<readonly SocialAccount[]> {
 /**
  * A picture or clip already attached to a post, as `social_post_assets` has it.
  *
- * Enough to draw the crop truthfully and nothing more: the shape it was shot
- * in, the words describing it, and how long it runs. The bytes themselves live
- * on a CDN this admin does not fetch from, which is why there is no URL here —
- * see `components/admin/social/PostPreview.tsx` for what the frame draws
- * instead.
+ * Enough to draw the crop truthfully — the shape it was shot in, the words
+ * describing it, how long it runs — and the file itself where this deployment
+ * holds one, so the preview can show the photograph rather than a rectangle
+ * with its dimensions written under it.
+ *
+ * `src` is the record's own `public_url`, and it is filled in ONLY when that
+ * URL is a path this deployment serves; see {@link servedHere}. A record whose
+ * bytes are somewhere else is neither fetched nor guessed at: `src` is null,
+ * the frame is drawn from `width` and `height`, and the caption under it says
+ * in words that no file is attached yet. A broken image icon in a preview
+ * reads as a fault in the preview, and the whole point of this screen is that
+ * it is never confidently wrong.
  */
 export type PostMedia = {
   readonly title: string;
@@ -790,7 +797,28 @@ export type PostMedia = {
   readonly width: number | null;
   readonly height: number | null;
   readonly seconds: number | null;
+  /** The file, when this deployment is the one serving it. Null otherwise. */
+  readonly src: string | null;
 };
+
+/**
+ * A recorded URL, but only when this deployment is the thing that serves it.
+ *
+ * A root-relative path is served by this app: `/media/range/range.jpg` is a
+ * file in `public/`. Anything else belongs to another host — the content
+ * store, a CDN, a bucket — and the admin does not fetch from one, so the
+ * answer is null and the frame says so rather than pointing an `<img>` at a
+ * name that may not resolve.
+ *
+ * `//host/path` is protocol-relative and therefore remote despite the leading
+ * slash, which is why the second character is checked as well as the first.
+ */
+export function servedHere(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) return null;
+  return trimmed;
+}
 
 export type SocialPostItem = {
   readonly id: string;
@@ -842,6 +870,7 @@ function toMedia(value: unknown): readonly PostMedia[] {
         width: positiveOrNull(record["width"]),
         height: positiveOrNull(record["height"]),
         seconds: positiveOrNull(record["seconds"]),
+        src: servedHere(record["src"]),
       },
     ];
   });
@@ -880,7 +909,8 @@ const POST_SELECT = `
                      'alt',     coalesce(ca.alt_text, ''),
                      'width',   ca.width_px,
                      'height',  ca.height_px,
-                     'seconds', ca.duration_seconds)
+                     'seconds', ca.duration_seconds,
+                     'src',     ca.public_url)
                    order by spa.position, ca.title),
                    '[]'::json)
             from public.social_post_assets spa
