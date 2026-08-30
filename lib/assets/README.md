@@ -205,11 +205,18 @@ card and on the page, and the agent-facing citation says
 A draft only becomes `model_edited` when the text has actually changed, not
 because she pressed save on the screen it was on.
 
+<!-- copy-audit-ignore-start: this paragraph NAMES the health and therapeutic
+     rule groups in order to say which ones claim-guard.ts mirrors. It forbids
+     those terms rather than claiming anything, so flagging it is a false
+     positive of exactly the kind that trains people to ignore the scanner. -->
+
 Model output is the one place text arrives from outside the company, so it is
 checked before it is stored: `claim-guard.ts` holds a conservative subset of the
 health and therapeutic rule groups from `legal/COPY-RULES.md`, and a draft that
 trips it is discarded rather than filed. The binding check remains
 `legal/scripts/audit-copy.mjs` over everything the company publishes.
+
+<!-- copy-audit-ignore-end -->
 
 ## Running the tests
 
