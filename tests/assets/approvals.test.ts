@@ -25,7 +25,10 @@ let approvalId = "";
 beforeAll(async () => {
   world = await createAssetWorld();
   const outcome = await ingestFile(
-    { bytes: repoFile("public/media/bottles/no-02-dirty.jpg"), filename: "bar.jpg" },
+    {
+      bytes: repoFile("public/media/bottles/no-02-dirty.jpg"),
+      filename: "bar.jpg",
+    },
     {
       title: "The martini at the bar",
       description: "A bartender pouring No 02 DIRTY into a mixing glass.",

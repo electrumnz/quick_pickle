@@ -38,7 +38,9 @@ export class LocalStorageProvider implements StorageProvider {
 
   constructor(root: string) {
     this.root = path.resolve(root);
-    this.location = `this machine, under ${this.root}`;
+    // Named, not spelled out: an absolute server path is noise on a screen the
+    // founder reads, and the folder is not one she navigates to by hand.
+    this.location = `on this machine, in the project's ".assets" folder`;
   }
 
   private resolve(key: string): string {

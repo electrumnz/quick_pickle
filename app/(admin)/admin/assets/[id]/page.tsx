@@ -135,8 +135,8 @@ export default async function AssetPage({
           </Card>
 
           <Card>
-            <CardHeader title="What the team sees" />
-            <CardBody className="space-y-3">
+            <CardHeader title="What the team can do with it" />
+            <CardBody>
               {verdict.allowed ? (
                 <Callout title="Cleared for use">
                   An agent may choose this one for a post. Choosing it is not
@@ -149,117 +149,9 @@ export default async function AssetPage({
                   <p className="mt-1">{verdict.fix}</p>
                 </Callout>
               )}
-              <DefinitionList
-                items={[
-                  {
-                    term: "Description",
-                    value: citation.description,
-                    hint: `Read as: ${citation.descriptionBy}`,
-                  },
-                  {
-                    term: "Occasion",
-                    value: citation.occasion ?? "not recorded",
-                    hint:
-                      citation.occasionOn === null
-                        ? "No date, so an agent cannot tell the season"
-                        : day(citation.occasionOn),
-                  },
-                  {
-                    term: "Bottles in it",
-                    value:
-                      citation.products.length === 0
-                        ? "none recorded"
-                        : citation.products.join(", "),
-                  },
-                  {
-                    term: "Fits",
-                    value:
-                      framesFor(asset.aspectRatio).length === 0
-                        ? `${shapeWords(asset)}, no standard frame without a crop`
-                        : framesFor(asset.aspectRatio)
-                            .map((frame) => FRAMES[frame].label)
-                            .join(", "),
-                  },
-                  {
-                    term: "Tags",
-                    value:
-                      asset.tags.length === 0 ? "none" : asset.tags.join(", "),
-                  },
-                ]}
-              />
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader title="The file itself" />
-            <CardBody>
-              <DefinitionList
-                items={[
-                  { term: "Type", value: asset.mimeType },
-                  {
-                    term: "Size",
-                    value: fileSize(asset.byteSize),
-                    hint: asset.originalFilename,
-                  },
-                  ...(asset.durationMs === null
-                    ? []
-                    : [
-                        {
-                          term: "Length",
-                          value: seconds(asset.durationMs) ?? "unknown",
-                        },
-                      ]),
-                  {
-                    term: "Location data",
-                    value: asset.hadLocationMetadata
-                      ? "found, and removed"
-                      : "none found",
-                    hint: asset.metadataStripped
-                      ? "The stored file was rebuilt without its metadata."
-                      : "This container is stored as uploaded.",
-                  },
-                  {
-                    term: "Taken",
-                    value:
-                      asset.capturedAt === null
-                        ? "the file did not say"
-                        : day(asset.capturedAt),
-                  },
-                  {
-                    term: "Added",
-                    value: day(asset.createdAt),
-                  },
-                  {
-                    term: "Consent",
-                    value: CONSENT_WORDS[asset.peopleConsent].meaning,
-                    hint:
-                      asset.consentRecordedAt === null
-                        ? undefined
-                        : `Recorded ${day(asset.consentRecordedAt)}`,
-                  },
-                  {
-                    term: "Rights",
-                    value: RIGHTS_WORDS[asset.usageRights].meaning,
-                    hint:
-                      asset.credit === null
-                        ? undefined
-                        : `Credit: ${asset.credit}`,
-                  },
-                  {
-                    term: "Fingerprint",
-                    value: (
-                      <span className="font-mono text-caption break-all">
-                        {asset.checksum.slice(0, 32)}…
-                      </span>
-                    ),
-                    hint: "The same file added again is recognised by this and not stored twice.",
-                  },
-                ]}
-              />
             </CardBody>
           </Card>
         </div>
-
         <div className="space-y-6">
           <MetadataForm
             asset={asset}
@@ -329,6 +221,124 @@ export default async function AssetPage({
             </Section>
           </PageSections>
         </div>
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader
+            title="What the team sees"
+            note="The same words an agent is handed"
+          />
+          <CardBody>
+            <DefinitionList
+              items={[
+                {
+                  term: "Description",
+                  value: citation.description,
+                  hint: `Read as: ${citation.descriptionBy}`,
+                },
+                {
+                  term: "Occasion",
+                  value: citation.occasion ?? "not recorded",
+                  hint:
+                    citation.occasionOn === null
+                      ? "No date, so an agent cannot tell the season"
+                      : day(citation.occasionOn),
+                },
+                {
+                  term: "Bottles in it",
+                  value:
+                    citation.products.length === 0
+                      ? "none recorded"
+                      : citation.products.join(", "),
+                },
+                {
+                  term: "Fits",
+                  value:
+                    framesFor(asset.aspectRatio).length === 0
+                      ? `${shapeWords(asset)}, no standard frame without a crop`
+                      : framesFor(asset.aspectRatio)
+                          .map((frame) => FRAMES[frame].label)
+                          .join(", "),
+                },
+                {
+                  term: "Tags",
+                  value:
+                    asset.tags.length === 0 ? "none" : asset.tags.join(", "),
+                },
+              ]}
+            />
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader title="The file itself" />
+          <CardBody>
+            <DefinitionList
+              items={[
+                { term: "Type", value: asset.mimeType },
+                {
+                  term: "Size",
+                  value: fileSize(asset.byteSize),
+                  hint: asset.originalFilename,
+                },
+                ...(asset.durationMs === null
+                  ? []
+                  : [
+                      {
+                        term: "Length",
+                        value: seconds(asset.durationMs) ?? "unknown",
+                      },
+                    ]),
+                {
+                  term: "Location data",
+                  value: asset.hadLocationMetadata
+                    ? "found, and removed"
+                    : "none found",
+                  hint: asset.metadataStripped
+                    ? "The stored file was rebuilt without its metadata."
+                    : "This container is stored as uploaded.",
+                },
+                {
+                  term: "Taken",
+                  value:
+                    asset.capturedAt === null
+                      ? "the file did not say"
+                      : day(asset.capturedAt),
+                },
+                {
+                  term: "Added",
+                  value: day(asset.createdAt),
+                },
+                {
+                  term: "Consent",
+                  value: CONSENT_WORDS[asset.peopleConsent].meaning,
+                  hint:
+                    asset.consentRecordedAt === null
+                      ? undefined
+                      : `Recorded ${day(asset.consentRecordedAt)}`,
+                },
+                {
+                  term: "Rights",
+                  value: RIGHTS_WORDS[asset.usageRights].meaning,
+                  hint:
+                    asset.credit === null
+                      ? undefined
+                      : `Credit: ${asset.credit}`,
+                },
+                {
+                  term: "Fingerprint",
+                  value: (
+                    <span className="font-mono text-caption break-all">
+                      {asset.checksum.slice(0, 32)}…
+                    </span>
+                  ),
+                  hint: "The same file added again is recognised by this and not stored twice.",
+                },
+              ]}
+            />
+          </CardBody>
+        </Card>
       </div>
     </>
   );

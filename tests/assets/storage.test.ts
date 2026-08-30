@@ -139,7 +139,7 @@ describe("choosing a provider", () => {
     expect(config.backend).toBe("local");
     const provider = createStorageProvider(config);
     expect(provider.name).toBe("local");
-    expect(provider.location).toContain(path.join(process.cwd(), ".assets"));
+    expect(provider.location).toContain(".assets");
   });
 
   it("keeps files out of public/, where they would be served with no session", () => {

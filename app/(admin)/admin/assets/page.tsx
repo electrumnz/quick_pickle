@@ -255,9 +255,9 @@ export default async function AssetsPage({
               same file added twice stays one file.
             </p>
             <p className="mt-2">
-              These are kept in {library.storage.location}, and served only
-              through this admin, to you, signed in. They are not on the public
-              site and there is no address anyone else can open.
+              These are kept {library.storage.location}, and served only through
+              this admin, to you, signed in. They are not on the public site and
+              there is no address anyone else can open.
             </p>
           </Callout>
         </Section>

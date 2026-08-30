@@ -61,6 +61,19 @@ export interface UploadedFile {
    * file like any other and is sniffed, capped and scrubbed like any other.
    */
   readonly poster?: UploadedFile | null;
+  /**
+   * What the browser read off the clip: length and frame size.
+   *
+   * A hint, and treated as one. MP4 and QuickTime carry both in `mvhd` and
+   * `tkhd` and are read server-side, so these are only used for WebM, whose
+   * container this library does not parse. Nothing security-relevant rests on
+   * them — they decide which frame shapes an agent is offered, and that is all.
+   */
+  readonly hints?: {
+    readonly durationMs?: number | null;
+    readonly width?: number | null;
+    readonly height?: number | null;
+  } | null;
 }
 
 /** What the founder filled in beside the file. Every field is optional. */
@@ -235,9 +248,12 @@ export async function ingestFile(
       byteSize: scrubbed.bytes.length,
       checksum,
       originalFilename: file.filename.slice(0, 200),
-      width: scrubbed.width,
-      height: scrubbed.height,
-      durationMs: scrubbed.durationMs ?? positive(intake.durationMs),
+      width: scrubbed.width ?? bounded(file.hints?.width, 20_000),
+      height: scrubbed.height ?? bounded(file.hints?.height, 20_000),
+      durationMs:
+        scrubbed.durationMs ??
+        positive(intake.durationMs) ??
+        bounded(file.hints?.durationMs, 24 * 60 * 60 * 1000),
       metadataStripped: scrubbed.stripped,
       hadLocationMetadata: scrubbed.hadLocation,
       uploadedBy: ports.operatorId ?? null,
@@ -426,6 +442,15 @@ function dayOf(iso: string | null): string | null {
   return Number.isNaN(parsed.getTime())
     ? null
     : parsed.toISOString().slice(0, 10);
+}
+
+/** A client-supplied number, kept only when it is sane. */
+function bounded(
+  value: number | null | undefined,
+  ceiling: number,
+): number | null {
+  const rounded = positive(value);
+  return rounded === null || rounded > ceiling ? null : rounded;
 }
 
 function positive(value: number | null | undefined): number | null {

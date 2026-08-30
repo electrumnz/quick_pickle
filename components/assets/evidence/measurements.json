@@ -1,0 +1,257 @@
+[
+  {
+    "shot": "empty-1440-light.png",
+    "route": "/admin/assets (empty)",
+    "scheme": "light",
+    "viewport": "1440",
+    "headline": "Your photos and video go here",
+    "says": false,
+    "teaches": true
+  },
+  {
+    "shot": "empty-375-light.png",
+    "route": "/admin/assets (empty)",
+    "scheme": "light",
+    "viewport": "375",
+    "headline": "Your photos and video go here",
+    "says": false,
+    "teaches": true
+  },
+  {
+    "shot": "empty-1440-dark.png",
+    "route": "/admin/assets (empty)",
+    "scheme": "dark",
+    "viewport": "1440",
+    "headline": "Your photos and video go here",
+    "says": false,
+    "teaches": true
+  },
+  {
+    "shot": "empty-375-dark.png",
+    "route": "/admin/assets (empty)",
+    "scheme": "dark",
+    "viewport": "375",
+    "headline": "Your photos and video go here",
+    "says": false,
+    "teaches": true
+  },
+  {
+    "step": "recorded a WebM in the browser",
+    "base64Length": 20832
+  },
+  {
+    "step": "upload: a photo carrying GPS, and two clips",
+    "results": [
+      "The stall on the corner.JPG · addedRemoved from the file: EXIF block, including the GPS coordinates.It carried the coordinates of where it was taken. Those are gone, and were never written down.",
+      "Bottling line, batch E.mp4 · addedRemoved from the file: user-data box (where a phone writes the recording location).No poster frame was captured, so this clip shows as a plain card until one is.",
+      "Filling the last case.webm · addedWebM is stored as uploaded — this library does not rewrite that container."
+    ]
+  },
+  {
+    "step": "upload: a photo with people in it",
+    "results": [
+      "Two customers at the stall.jpg · addedThere are people in this one, so no agent can choose it until you record whether they agreed."
+    ]
+  },
+  {
+    "step": "upload: a PNG named .jpg",
+    "results": [
+      "holiday.jpg · not addedThat file is named .jpg but its contents are png image. Rename it or export it again — the library goes by what is inside the file, not what it is called."
+    ]
+  },
+  {
+    "shot": "library-1440-light.png",
+    "route": "/admin/assets",
+    "scheme": "light",
+    "viewport": "1440",
+    "cards": 5,
+    "horizontalOverflow": false
+  },
+  {
+    "shot": "blocked-1440-light.png",
+    "route": "/admin/assets/e233e555-30a3-476f-895b-e719afbfab9b",
+    "scheme": "light",
+    "viewport": "1440",
+    "refusal": true
+  },
+  {
+    "shot": "clip-1440-light.png",
+    "route": "/admin/assets/83e72268-c538-48dd-8e7d-152e4691ea90",
+    "scheme": "light",
+    "viewport": "1440"
+  },
+  {
+    "shot": "library-375-light.png",
+    "route": "/admin/assets",
+    "scheme": "light",
+    "viewport": "375",
+    "cards": 5,
+    "horizontalOverflow": false
+  },
+  {
+    "shot": "blocked-375-light.png",
+    "route": "/admin/assets/e233e555-30a3-476f-895b-e719afbfab9b",
+    "scheme": "light",
+    "viewport": "375",
+    "refusal": true
+  },
+  {
+    "shot": "clip-375-light.png",
+    "route": "/admin/assets/83e72268-c538-48dd-8e7d-152e4691ea90",
+    "scheme": "light",
+    "viewport": "375"
+  },
+  {
+    "shot": "library-1440-dark.png",
+    "route": "/admin/assets",
+    "scheme": "dark",
+    "viewport": "1440",
+    "cards": 5,
+    "horizontalOverflow": false
+  },
+  {
+    "shot": "blocked-1440-dark.png",
+    "route": "/admin/assets/e233e555-30a3-476f-895b-e719afbfab9b",
+    "scheme": "dark",
+    "viewport": "1440",
+    "refusal": true
+  },
+  {
+    "shot": "clip-1440-dark.png",
+    "route": "/admin/assets/83e72268-c538-48dd-8e7d-152e4691ea90",
+    "scheme": "dark",
+    "viewport": "1440"
+  },
+  {
+    "shot": "library-375-dark.png",
+    "route": "/admin/assets",
+    "scheme": "dark",
+    "viewport": "375",
+    "cards": 5,
+    "horizontalOverflow": false
+  },
+  {
+    "shot": "blocked-375-dark.png",
+    "route": "/admin/assets/e233e555-30a3-476f-895b-e719afbfab9b",
+    "scheme": "dark",
+    "viewport": "375",
+    "refusal": true
+  },
+  {
+    "shot": "clip-375-dark.png",
+    "route": "/admin/assets/83e72268-c538-48dd-8e7d-152e4691ea90",
+    "scheme": "dark",
+    "viewport": "375"
+  },
+  {
+    "check": "the served photo carries no EXIF",
+    "shot": "one-file-1440-light.png",
+    "url": "/admin/assets/file/photos/2026/08/fe4a05ad50639a1526b1e5a0f0e6623a247da12927185ea7d7e9b83a00136288.jpg",
+    "status": 200,
+    "headers": {
+      "content-type": "image/jpeg",
+      "content-disposition": "inline; filename=\"the-stall-on-the-corner-fe4a05ad.jpg\"",
+      "x-content-type-options": "nosniff",
+      "content-security-policy": "default-src 'none'; sandbox",
+      "cache-control": "no-store, max-age=0, must-revalidate",
+      "accept-ranges": "bytes"
+    },
+    "uploadedBytes": 79412,
+    "servedBytesLength": 79242,
+    "uploadedHadExifBlock": true,
+    "servedHasExifBlock": false,
+    "servedHasExifMarker": false,
+    "pageSaysLocationRemoved": true
+  },
+  {
+    "check": "the same file, from a browser with no session",
+    "status": 307,
+    "location": "/login?next=%2Fadmin%2Fassets%2Ffile%2Fphotos%2F2026%2F08%2Ffe4a05ad50639a1526b1e5a0f0e6623a247da12927185ea7d7e9b83a00136288.jpg",
+    "isTheImage": false
+  },
+  {
+    "check": "the WebM clip: poster frame, playback, and no autoplay",
+    "hasAutoplayAttribute": false,
+    "autoplayProperty": false,
+    "paused": true,
+    "muted": true,
+    "hasControls": true,
+    "preload": "metadata",
+    "poster": "/admin/assets/file/posters/2026/08/4d64f449026cb96c3967730fcc814ffcf75145590c0bd21c335d607a8bc3fab4.jpg",
+    "videoWidth": 640,
+    "videoHeight": 800,
+    "duration": 0.886554,
+    "decodes": true
+  },
+  {
+    "check": "the MP4 clip in this browser",
+    "note": "Playwright's Chromium has no H.264 decoder, so it can neither capture a still from this clip nor draw it. Chrome, Safari and Edge do. The library stored it, scrubbed, either way.",
+    "hasAutoplayAttribute": false,
+    "autoplayProperty": false,
+    "paused": true,
+    "muted": true,
+    "hasControls": true,
+    "preload": "metadata",
+    "poster": null,
+    "videoWidth": 0,
+    "videoHeight": 0,
+    "duration": null,
+    "decodes": false
+  },
+  {
+    "check": "the poster frame the browser captured",
+    "status": 200,
+    "contentType": "image/jpeg",
+    "bytes": 6638
+  },
+  {
+    "check": "ranged read",
+    "status": 206,
+    "contentRange": "bytes 0-99/79242",
+    "length": 100
+  },
+  {
+    "check": "path traversal",
+    "status": 404
+  },
+  {
+    "check": "recording consent flips the gate",
+    "saidCannotUseBefore": true,
+    "saysClearedAfter": true,
+    "url": "http://localhost:3210/admin/assets/e233e555-30a3-476f-895b-e719afbfab9b?saved=1"
+  },
+  {
+    "shot": "cleared-1440-light.png",
+    "route": "/admin/assets/e233e555-30a3-476f-895b-e719afbfab9b",
+    "scheme": "light",
+    "viewport": "1440"
+  },
+  {
+    "shot": "cleared-375-light.png",
+    "route": "/admin/assets/e233e555-30a3-476f-895b-e719afbfab9b",
+    "scheme": "light",
+    "viewport": "375"
+  },
+  {
+    "shot": "cleared-1440-dark.png",
+    "route": "/admin/assets/e233e555-30a3-476f-895b-e719afbfab9b",
+    "scheme": "dark",
+    "viewport": "1440"
+  },
+  {
+    "shot": "cleared-375-dark.png",
+    "route": "/admin/assets/e233e555-30a3-476f-895b-e719afbfab9b",
+    "scheme": "dark",
+    "viewport": "375"
+  },
+  {
+    "check": "delete takes the row and the bytes together",
+    "file": "/admin/assets/file/video/2026/08/4c973b084f9fbe8ce7cdd0779be3a1ac96baed5a53a2609b677cab915aa70325.mp4",
+    "fileStatusAfterDelete": 404,
+    "stillListed": 0,
+    "url": "http://localhost:3210/admin/assets?deleted=1"
+  },
+  {
+    "consoleErrors": []
+  }
+]

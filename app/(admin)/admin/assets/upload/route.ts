@@ -103,6 +103,7 @@ export async function POST(request: Request): Promise<Response> {
               declaredMimeType: poster.type,
             }
           : null,
+      hints: hintsFrom(form.get(`meta-${String(index)}`)),
     });
   }
 
@@ -172,6 +173,39 @@ export function GET(): Response {
       "x-robots-tag": "noindex, nofollow",
     },
   });
+}
+
+/**
+ * The length and frame size the browser read off a clip.
+ *
+ * Only ever a hint: MP4 and QuickTime are measured server-side from their own
+ * boxes, and this fills the gap for WebM, whose container this library does not
+ * parse. `ingestFile` bounds whatever arrives.
+ */
+function hintsFrom(
+  value: FormDataEntryValue | null,
+): { durationMs?: number; width?: number; height?: number } | null {
+  if (typeof value !== "string" || value === "") return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (typeof parsed !== "object" || parsed === null) return null;
+    const record = parsed as Record<string, unknown>;
+    const number = (key: string): number | undefined =>
+      typeof record[key] === "number" && Number.isFinite(record[key])
+        ? Math.round(record[key])
+        : undefined;
+    return {
+      ...(number("durationMs") === undefined
+        ? {}
+        : { durationMs: number("durationMs") ?? 0 }),
+      ...(number("width") === undefined ? {} : { width: number("width") ?? 0 }),
+      ...(number("height") === undefined
+        ? {}
+        : { height: number("height") ?? 0 }),
+    };
+  } catch {
+    return null;
+  }
 }
 
 function string(form: FormData, name: string): string {

@@ -38,7 +38,7 @@ export class SupabaseStorageProvider implements StorageProvider {
   readonly location: string;
 
   constructor(private readonly config: SupabaseStorageConfig) {
-    this.location = `Supabase Storage, private bucket "${config.bucket}"`;
+    this.location = `in Supabase Storage, in the private bucket "${config.bucket}"`;
   }
 
   private endpoint(key: string): string {

@@ -88,14 +88,14 @@ export function UploadPanel({
     try {
       for (const [index, file] of files.entries()) {
         if (!file.type.startsWith("video/")) continue;
-        const poster = await captureFrame(file);
-        if (poster !== null) {
-          data.append(
-            `poster-${String(index)}`,
-            poster,
-            `poster-${String(index)}.jpg`,
-          );
-        }
+        const captured = await captureFrame(file);
+        if (captured === null) continue;
+        data.append(
+          `poster-${String(index)}`,
+          captured.poster,
+          `poster-${String(index)}.jpg`,
+        );
+        data.append(`meta-${String(index)}`, JSON.stringify(captured.meta));
       }
 
       const response = await fetch("/admin/assets/upload", {
@@ -264,7 +264,17 @@ export function UploadPanel({
  * is very often the lens still adjusting, and a grey rectangle is a worse
  * poster than no poster.
  */
-async function captureFrame(file: File): Promise<Blob | null> {
+interface CapturedFrame {
+  readonly poster: Blob;
+  /** What the browser read off the clip. The server treats it as a hint. */
+  readonly meta: {
+    readonly durationMs: number | null;
+    readonly width: number;
+    readonly height: number;
+  };
+}
+
+async function captureFrame(file: File): Promise<CapturedFrame | null> {
   const url = URL.createObjectURL(file);
   try {
     const video = document.createElement("video");
@@ -312,7 +322,7 @@ async function captureFrame(file: File): Promise<Blob | null> {
     if (context === null) return null;
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    return await new Promise<Blob | null>((resolve) => {
+    const poster = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob(
         (blob) => {
           resolve(blob);
@@ -321,6 +331,17 @@ async function captureFrame(file: File): Promise<Blob | null> {
         0.82,
       );
     });
+    if (poster === null) return null;
+    return {
+      poster,
+      meta: {
+        durationMs: Number.isFinite(video.duration)
+          ? Math.round(video.duration * 1000)
+          : null,
+        width,
+        height,
+      },
+    };
   } catch {
     return null;
   } finally {
