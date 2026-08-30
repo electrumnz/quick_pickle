@@ -14,7 +14,7 @@ import {
  *
  * Orders themselves come through the commerce provider, because that is the
  * seam Shopify plugs into. Refunds she has decided on do not exist there yet —
- * see `supabase/migrations/20260106000000_order_refunds.sql` for why they are
+ * see `supabase/migrations/20260106010000_order_refunds.sql` for why they are
  * their own table — so they are read here and joined on screen.
  */
 
