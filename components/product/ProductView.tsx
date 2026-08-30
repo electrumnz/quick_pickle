@@ -223,7 +223,12 @@ function Serves({ entry }: { entry: CatalogueEntry }) {
             </h3>
           </div>
           <div className="max-w-page mt-stack mx-auto md:px-[var(--spacing-gutter)]">
-            <ul className={cx(styles.rail)}>
+            {/* The rail scrolls sideways below 768 and every card in it is
+                plain text, so there was nothing for a keyboard to focus and
+                no way to reach the cards past the first (axe
+                `scrollable-region-focusable`, WCAG 2.1.1). The list is the tab
+                stop; above 768 it is a grid and scrolls nowhere. */}
+            <ul tabIndex={0} className={cx(styles.rail)}>
               {drinks.map((serve) => (
                 <li key={serve.slug}>
                   <ServeCard serve={serve} />
@@ -242,7 +247,7 @@ function Serves({ entry }: { entry: CatalogueEntry }) {
             </h3>
           </div>
           <div className="max-w-page mt-stack mx-auto md:px-[var(--spacing-gutter)]">
-            <ul className={cx(styles.rail)}>
+            <ul tabIndex={0} className={cx(styles.rail)}>
               {dishes.map((serve) => (
                 <li key={serve.slug}>
                   <ServeCard serve={serve} />
@@ -336,6 +341,13 @@ function BoxContents({ contents }: { contents: readonly CatalogueEntry[] }) {
         <h2 id="contents-h2" className="text-display-3 text-primary mt-stack">
           {PRODUCT.boxHeading}
         </h2>
+
+        {/* Why the fourth bottle is missing, before the list makes a buyer
+            wonder. The supply constraint is real and is stated in these words
+            elsewhere in the range; this is the same fact, not a new claim. */}
+        <p className="text-body text-muted mt-stack max-w-prose">
+          {PRODUCT.boxNote}
+        </p>
 
         <ul className="mt-block">
           {contents.map((entry) => (
@@ -509,7 +521,7 @@ export function ProductView({
           panel has scrolled away. Never rendered without script, never
           rendered above 1024. */}
       {degraded || added !== null ? null : (
-        <StickyBuy watch="buy">
+        <StickyBuy watch="buy" label={PRODUCT.stickyBuyLabel}>
           <div className="min-w-0 flex-1">
             <p className="text-caption text-muted truncate">{entry.title}</p>
             <p className={cx(styles.figure, "text-body text-primary")}>

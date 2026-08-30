@@ -36,7 +36,7 @@ WHAT IT DID, STEP BY STEP
       Mereana Tuari has ordered 3 times and spent NZ$213.80.
         - HS-01045 on 2026-07-21: No 03 SMOKE x1, No 01 HOUSE x1 — NZ$49.90 (open).
         - HS-01037 on 2026-07-15: No 03 SMOKE x2, No 01 HOUSE x2 — NZ$80.00 (open).
-        - HS-01005 on 2026-05-10: The Full Set x1, No 02 DIRTY x1 — NZ$83.90 (archived).
+        - HS-01005 on 2026-05-10: The First Three x1, No 02 DIRTY x1 — NZ$83.90 (archived).
 
 3. reasoning: Write down who is waiting and which ones the founder has to take, before drafting anything.
    tool: save_internal_draft {"slug":"concierge-sweep","title":"6 conversations open, 1 of which is unhappy or late and must go to the founder.","body":"6 conversations open, 1 of which is unhappy or late and must go to the founder.\nMereana Tuari has ordered 3 times and spent NZ$213.80.\
@@ -61,7 +61,7 @@ What I found
 - 5-star review from Grace Ihaka, waiting 19 days: Best gift I have sent all year
 - HS-01045 on 2026-07-21: No 03 SMOKE x1, No 01 HOUSE x1 — NZ$49.90 (open).
 - HS-01037 on 2026-07-15: No 03 SMOKE x2, No 01 HOUSE x2 — NZ$80.00 (open).
-- HS-01005 on 2026-05-10: The Full Set x1, No 02 DIRTY x1 — NZ$83.90 (archived).
+- HS-01005 on 2026-05-10: The First Three x1, No 02 DIRTY x1 — NZ$83.90 (archived).
 
 What I did
 - save_internal_draft: recorded (concierge-sweep), not delivered — this deployment has no live outbound channel.
@@ -102,7 +102,7 @@ WHAT IT REPORTED
    - 5-star review from Grace Ihaka, waiting 19 days: Best gift I have sent all year
    - HS-01045 on 2026-07-21: No 03 SMOKE x1, No 01 HOUSE x1 — NZ$49.90 (open).
    - HS-01037 on 2026-07-15: No 03 SMOKE x2, No 01 HOUSE x2 — NZ$80.00 (open).
-   - HS-01005 on 2026-05-10: The Full Set x1, No 02 DIRTY x1 — NZ$83.90 (archived).
+   - HS-01005 on 2026-05-10: The First Three x1, No 02 DIRTY x1 — NZ$83.90 (archived).
    
    What I did
    - save_internal_draft: recorded (concierge-sweep), not delivered — this deployment has no live outbound channel.

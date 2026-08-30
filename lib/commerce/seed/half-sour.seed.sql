@@ -2,7 +2,8 @@
 -- HALF SOUR — commerce fixture for the mock provider
 --
 -- The real product line, as it exists in Shopify today: four brines plus the
--- three-bottle set, NZD, 500 ml bottles. No 04 WILD is stocked in genuinely
+-- three-bottle set (No 04 WILD is deliberately not in it — see the migration
+-- 20260107000000_rename_set_the_first_three.sql), NZD, 500 ml bottles. No 04 WILD is stocked in genuinely
 -- small numbers because its supply is limited by kawakawa leaf and not by
 -- demand — the low-stock path is exercised by real fixture data, not by a
 -- test that reaches in and sets it. Everything is written with provider = 'local' and
@@ -69,12 +70,12 @@ values
    true, true, '/products/no-03-smoke-500ml.jpg', 3),
 
   ('11111111-0000-4000-8000-000000000004', 'local', 'local', 'the-full-set',
-   'The Full Set', 'All three, one box',
+   'The First Three', 'All three, one box',
    'One of each: HOUSE, DIRTY and SMOKE, 500ml apiece, in a box that survives the courier. The cheapest way to find out which one you actually reach for.',
    'Set', 'Half Sour', 'active', now() - interval '150 days',
    array['set','gift','bar','brine'],
-   'The Full Set — three Half Sour brines',
-   'All three Half Sour brines in one box. 3 x 500ml, NZ made.',
+   'The First Three — three Half Sour brines',
+   'Nos 01, 02 and 03 in one box. 3 x 500ml, NZ made.',
    true, true, '/products/the-full-set.jpg', 5),
 
   -- No sourcing relationship is asserted here. The leaf supply is a fact about
@@ -142,7 +143,7 @@ values
    'A 500ml bottle of Half Sour No 03 SMOKE brine', 1, 1600, 2000),
   ('88888888-0000-4000-8000-000000000005', '11111111-0000-4000-8000-000000000004',
    null, 'local', 'local', '/products/the-full-set.jpg',
-   'All three Half Sour brines in their shipping box', 1, 2000, 2000),
+   'Nos 01, 02 and 03 in their shipping box', 1, 2000, 2000),
   ('88888888-0000-4000-8000-000000000006', '11111111-0000-4000-8000-000000000005',
    null, 'local', 'local', '/products/no-04-wild-500ml.jpg',
    'A 500ml bottle of Half Sour No 04 WILD brine', 1, 1600, 2000)
@@ -289,7 +290,7 @@ values
    now() - interval '300 days', null, 'active'),
 
   ('77777777-0000-4000-8000-000000000002', 'local', 'local', 'FULLSET5',
-   '$5 off The Full Set', 'Five dollars off the three-bottle set.',
+   '$5 off The First Three', 'Five dollars off the three-bottle set.',
    'fixed_amount', null, 500, 'NZD', 'product',
    '11111111-0000-4000-8000-000000000004', null,
    null, null, null, false, 500, 2, 0,

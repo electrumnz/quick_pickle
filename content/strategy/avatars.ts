@@ -170,7 +170,7 @@ const FRIDAY_HOST: CustomerAvatar = {
       trigger: "A present for the friend who cooks.",
       whatTheyDoNext: "Buy the set, because choosing for someone else is hard.",
       needs:
-        "The Full Set priced against three singles, which the shop already does.",
+        "The First Three priced against three singles, which the shop already does.",
     },
   ],
   whatStopsThem: [
@@ -233,7 +233,7 @@ const FRIDAY_HOST: CustomerAvatar = {
     unblinkingCents: 2_000,
     deliberateCents: 2_600,
     hiddenCost:
-      "Courier. On a single bottle it can be half the price of the bottle, which is why The Full Set at $54 in one parcel is the order shape the plan actually wants — the Flight Plan's wings section says the same thing from the margin end.",
+      "Courier. On a single bottle it can be half the price of the bottle, which is why The First Three at $54 in one parcel is the order shape the plan actually wants — the Flight Plan's wings section says the same thing from the margin end.",
     note: "They are not price-sensitive on the bottle. They are sensitive to paying $12 to receive an $18 bottle, and to not knowing that before the last step.",
   },
   repeat: {

@@ -394,7 +394,7 @@ export default async function CustomersPage({
             "One page per customer, with their whole order history",
             "Writing and sending a campaign from here",
             "Replying to a review without leaving the admin",
-            "Segments — lapsed buyers, bars that have not reordered, the Full Set crowd",
+            "Segments — lapsed buyers, bars that have not reordered, the boxed-set crowd",
           ]}
         />
       </PageSections>

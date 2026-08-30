@@ -527,7 +527,7 @@ values
       },
       {
         "sku": "HS-SET-3",
-        "name": "The Full Set",
+        "name": "The First Three",
         "job": "Acquisition. Three bottles in one parcel is the only direct order shape whose courier cost is not eating the margin.",
         "shelfPriceCents": 5400,
         "costBreakdownCents": [
@@ -546,7 +546,7 @@ values
     ],
     "findings": [
       "At a 40% trade discount the margin on No 01 is about a quarter of the trade price. That does not pay for the hour it takes to sample, deliver and invoice a venue. Either the discount comes down to about 30%, or a case is six bottles and never fewer — the market model assumes the second.",
-      "The Full Set has the weakest gross margin in the range and the strongest contribution per parcel, because courier and packaging are charged once for three bottles rather than once for two. It is the direct order shape to push, in spite of the percentage.",
+      "The First Three has the weakest gross margin in the range and the strongest contribution per parcel, because courier and packaging are charged once for three bottles rather than once for two. It is the direct order shape to push, in spite of the percentage.",
       "A single-bottle direct order is close to break-even after courier, packaging and payment fees. Either the shipping is charged, or the smallest direct offer is three bottles.",
       "No 04 is the highest margin per bottle and cannot be scaled, so it should never be discounted and never be a lead offer. It is a range-topper, and its job is to make No 02 look reasonable."
     ]
@@ -645,7 +645,7 @@ values
       {
         "item": "Courier, urban, one parcel",
         "cents": 850,
-        "note": "The same whether the parcel holds one bottle or three. This single fact is why The Full Set exists."
+        "note": "The same whether the parcel holds one bottle or three. This single fact is why The First Three exists."
       },
       {
         "item": "Mailer, void fill and label",
@@ -1026,7 +1026,7 @@ values
   ($hs$shelfPriceInclGstCents$hs$, $hs$Average shelf price (GST-inclusive)$hs$,
    2100000000, $hs$cents$hs$::public.strategy_unit, $hs$estimate$hs$::public.strategy_confidence,
    null,
-   $hs$The range runs $18 / $20 / $22 / $26, and The Full Set at $54 realises $18 a bottle. $21.00 is the blend weighted toward No 01 and No 02, which will carry the volume. It is an assumption about mix, not a price.$hs$,
+   $hs$The range runs $18 / $20 / $22 / $26, and The First Three at $54 realises $18 a bottle. $21.00 is the blend weighted toward No 01 and No 02, which will carry the volume. It is an assumption about mix, not a price.$hs$,
    1400000000, 3200000000, 25000000, 40, true),
 
   ($hs$gstRate$hs$, $hs$GST rate$hs$,
@@ -1086,7 +1086,7 @@ values
   ($hs$bottlesPerDtcOrder$hs$, $hs$Bottles per direct order$hs$,
    2400000, $hs$count$hs$::public.strategy_unit, $hs$estimate$hs$::public.strategy_confidence,
    null,
-   $hs$Between a single bottle and The Full Set's three. The number matters because courier and packaging are charged per parcel, not per bottle — see the Flight Plan's body section.$hs$,
+   $hs$Between a single bottle and the three bottles in The First Three. The number matters because courier and packaging are charged per parcel, not per bottle — see the Flight Plan's body section.$hs$,
    1000000, 6000000, 100000, 140, true),
 
   ($hs$auPopulation$hs$, $hs$Australian population$hs$,

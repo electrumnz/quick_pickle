@@ -44,11 +44,22 @@ export const SEAL_TONE: Readonly<Record<BrineId, SealTone>> = {
   "no-04-wild": "secondary",
 };
 
-/** The three-bottle box (01–03), which commerce carries as its own product. */
+/**
+ * The three-bottle box (01–03), which commerce carries as its own product.
+ *
+ * NAMED FOR WHAT IS IN IT. It was "The Full Set" while the range was three
+ * bottles; No 04 WILD made that a claim about composition rather than a name —
+ * a set sold as full that is missing a quarter of the range is caught by Fair
+ * Trading Act s 13(a) (kind, quantity, composition), not merely by good taste.
+ * "The First Three" leans on the numbering the labels already carry, is
+ * literally true, and reads as though No 04 sits beyond it rather than having
+ * been forgotten. The handle stays `the-full-set`: a live URL that 404s costs
+ * more than a stale slug, and there is no redirect layer to catch it.
+ */
 export const FULL_SET = {
   handle: "the-full-set",
-  name: "THE FULL SET",
-  descriptor: "One of each",
+  name: "THE FIRST THREE",
+  descriptor: "One each of 01, 02 and 03",
   priceNzd: 54,
   // copy-audit-approved: R-04 (no scarcity framing; this is a pack description)
   line: "Three bottles, one box, no decision required.",
@@ -283,7 +294,7 @@ export const FOOTER_NAV: readonly {
     items: [
       { href: "#range", label: "The range", local: true },
       { href: SHOP_HREF, label: "Shop all" },
-      { href: fullSetHref(), label: "The Full Set" },
+      { href: fullSetHref(), label: "The First Three" },
       { href: "#buy", label: "How to buy", local: true },
     ],
   },

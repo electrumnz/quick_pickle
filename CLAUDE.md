@@ -27,13 +27,13 @@ not yet verified is marked `TODO: verify with supplier` rather than written as f
 
 ## The products
 
-| SKU       | Name         | Brine                              | Price | Job                             |
-| --------- | ------------ | ---------------------------------- | ----- | ------------------------------- |
-| HS-01-500 | No 01 HOUSE  | Dill, peppercorn, garlic, bay      | $18   | The everyday one                |
-| HS-02-500 | No 02 DIRTY  | Cornichon, green olive, lemon peel | $20   | The martini                     |
-| HS-03-500 | No 03 SMOKE  | Chipotle, manzano, manuka-smoked   | $22   | Mezcal, michelada, pork         |
-| HS-04-500 | No 04 WILD   | Kawakawa, kelp, lemon              | $26   | Seafood. Limited by leaf supply |
-| HS-SET-3  | The Full Set | All three of 01–03                 | $54   |                                 |
+| SKU       | Name            | Brine                              | Price | Job                             |
+| --------- | --------------- | ---------------------------------- | ----- | ------------------------------- |
+| HS-01-500 | No 01 HOUSE     | Dill, peppercorn, garlic, bay      | $18   | The everyday one                |
+| HS-02-500 | No 02 DIRTY     | Cornichon, green olive, lemon peel | $20   | The martini                     |
+| HS-03-500 | No 03 SMOKE     | Chipotle, manzano, manuka-smoked   | $22   | Mezcal, michelada, pork         |
+| HS-04-500 | No 04 WILD      | Kawakawa, kelp, lemon              | $26   | Seafood. Limited by leaf supply |
+| HS-SET-3  | The First Three | All three of 01–03                 | $54   |                                 |
 
 All 500ml, NZD, live in Shopify. WILD carries the highest claim risk in the range because
 kawakawa has strong rongoā associations — keep its copy strictly culinary.

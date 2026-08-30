@@ -26,7 +26,7 @@ WHAT IT DID, STEP BY STEP
         - No 02 DIRTY: 525 bottles available, selling 7.54 a day — 70 days of cover.
         - No 03 SMOKE: 457 bottles available, selling 3.54 a day — 129 days of cover.
         - No 04 WILD: 17 bottles available, selling 0 a day — no sales in the window, so no cover figure.
-        - The Full Set: 117 bottles available, selling 0.39 a day — 298 days of cover.
+        - The First Three: 117 bottles available, selling 0.39 a day — 298 days of cover.
         - 500ml flint glass bottle is below its reorder point: 1180ea on hand against 1200ea, 14 day lead time.
         - Fresh dill heads is below its reorder point: 5.1kg on hand against 8kg, 3 day lead time.
         - Kawakawa leaf is below its reorder point: 1.4kg on hand against 2kg, 14 day lead time.
@@ -60,7 +60,7 @@ What I found
 - No 02 DIRTY: 525 bottles available, selling 7.54 a day — 70 days of cover.
 - No 03 SMOKE: 457 bottles available, selling 3.54 a day — 129 days of cover.
 - No 04 WILD: 17 bottles available, selling 0 a day — no sales in the window, so no cover figure.
-- The Full Set: 117 bottles available, selling 0.39 a day — 298 days of cover.
+- The First Three: 117 bottles available, selling 0.39 a day — 298 days of cover.
 - 500ml flint glass bottle is below its reorder point: 1180ea on hand against 1200ea, 14 day lead time.
 - Fresh dill heads is below its reorder point: 5.1kg on hand against 8kg, 3 day lead time.
 - Kawakawa leaf is below its reorder point: 1.4kg on hand against 2kg, 14 day lead time.
@@ -100,7 +100,7 @@ WHAT IT REPORTED
    - No 02 DIRTY: 525 bottles available, selling 7.54 a day — 70 days of cover.
    - No 03 SMOKE: 457 bottles available, selling 3.54 a day — 129 days of cover.
    - No 04 WILD: 17 bottles available, selling 0 a day — no sales in the window, so no cover figure.
-   - The Full Set: 117 bottles available, selling 0.39 a day — 298 days of cover.
+   - The First Three: 117 bottles available, selling 0.39 a day — 298 days of cover.
    - 500ml flint glass bottle is below its reorder point: 1180ea on hand against 1200ea, 14 day lead time.
    - Fresh dill heads is below its reorder point: 5.1kg on hand against 8kg, 3 day lead time.
    - Kawakawa leaf is below its reorder point: 1.4kg on hand against 2kg, 14 day lead time.

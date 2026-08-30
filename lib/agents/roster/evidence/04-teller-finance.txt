@@ -26,7 +26,7 @@ WHAT IT DID, STEP BY STEP
         - No 02 DIRTY sells at NZ$20.00 (NZ$2.61 of that is GST). Unit cost NZ$7.78 from 3 recent batches, margin 55.3% — below the floor.
         - No 03 SMOKE sells at NZ$22.00 (NZ$2.87 of that is GST). Unit cost NZ$8.87 from 3 recent batches, margin 53.6% — below the floor.
         - No 04 WILD sells at NZ$26.00 (NZ$3.39 of that is GST). Unit cost NZ$11.45 from 1 recent batch, margin 49.4% — below the floor.
-        - The Full Set sells at NZ$54.00 (NZ$7.04 of that is GST). Unit cost NZ$21.83 from 3 recent batches, margin 53.5% — below the floor.
+        - The First Three sells at NZ$54.00 (NZ$7.04 of that is GST). Unit cost NZ$21.83 from 3 recent batches, margin 53.5% — below the floor.
         proposal: {"sku":"HS-04-500","fromCents":2600,"toCents":3300,"reason":"No 04 WILD is making 49.4% against a floor of 60%: unit cost is NZ$11.45 and the GST-exclusive price is NZ$22.61."}
 
 2. reasoning: Separate the GST held for Inland Revenue out of the money that came in.
@@ -58,7 +58,7 @@ What I found
 - No 02 DIRTY sells at NZ$20.00 (NZ$2.61 of that is GST). Unit cost NZ$7.78 from 3 recent batches, margin 55.3% — below the floor.
 - No 03 SMOKE sells at NZ$22.00 (NZ$2.87 of that is GST). Unit cost NZ$8.87 from 3 recent batches, margin 53.6% — below the floor.
 - No 04 WILD sells at NZ$26.00 (NZ$3.39 of that is GST). Unit cost NZ$11.45 from 1 recent batch, margin 49.4% — below the floor.
-- The Full Set sells at NZ$54.00 (NZ$7.04 of that is GST). Unit cost NZ$21.83 from 3 recent batches, margin 53.5% — below the floor.
+- The First Three sells at NZ$54.00 (NZ$7.04 of that is GST). Unit cost NZ$21.83 from 3 recent batches, margin 53.5% — below the floor.
 - 38 orders totalling NZ$9123.20 in the last 28 days.
 - NZ$1189.99 of that is GST collected, which is owed to Inland Revenue and is not takings.
 - wholesale: 9 orders, NZ$7293.60.
@@ -100,7 +100,7 @@ WHAT IT REPORTED
    - No 02 DIRTY sells at NZ$20.00 (NZ$2.61 of that is GST). Unit cost NZ$7.78 from 3 recent batches, margin 55.3% — below the floor.
    - No 03 SMOKE sells at NZ$22.00 (NZ$2.87 of that is GST). Unit cost NZ$8.87 from 3 recent batches, margin 53.6% — below the floor.
    - No 04 WILD sells at NZ$26.00 (NZ$3.39 of that is GST). Unit cost NZ$11.45 from 1 recent batch, margin 49.4% — below the floor.
-   - The Full Set sells at NZ$54.00 (NZ$7.04 of that is GST). Unit cost NZ$21.83 from 3 recent batches, margin 53.5% — below the floor.
+   - The First Three sells at NZ$54.00 (NZ$7.04 of that is GST). Unit cost NZ$21.83 from 3 recent batches, margin 53.5% — below the floor.
    - 38 orders totalling NZ$9123.20 in the last 28 days.
    - NZ$1189.99 of that is GST collected, which is owed to Inland Revenue and is not takings.
    - wholesale: 9 orders, NZ$7293.60.

@@ -25,15 +25,15 @@ WHAT IT DID, STEP BY STEP
         - No 02 DIRTY: 330 bottles, NZ$5854.34, up 522.6% on the 90 days before.
         - No 01 HOUSE: 259 bottles, NZ$4120.50, up 979.2% on the 90 days before.
         - No 03 SMOKE: 160 bottles, NZ$3168.51, up 344.4% on the 90 days before.
-        - The Full Set: 38 bottles, NZ$2043.45, up 375.0% on the 90 days before.
+        - The First Three: 38 bottles, NZ$2043.45, up 375.0% on the 90 days before.
         - No 03 SMOKE: 2 reviews, average 3.5, lowest 2. Said: Arrived cracked; The barbecue bottle
-        - No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: It does not cloud the glass; Very good, wish the bottle were bigger; Finally
-        - No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: Bought it for a pickleback, kept it for cooking; Genuinely good; Good, arrived fast; The one I keep buying
-        - The Full Set: 1 reviews, average 5, lowest 5. Said: Best gift I have sent all year
-        proposal: {"workingName":"No 02 DIRTY at trade strength","basedOnSku":"HS-02-500","rationale":"No 02 DIRTY is the range's best seller at 330 bottles in 90 days, against 38 for The Full Set. A concentrate of the same brine is the cheapest new line to try: the recipe, the suppliers and the bottle are already in the system, so nothing new has to be sourced. What would kill it: No 03 SMOKE already averages 3.5 on 2 reviews, and a stronger brine is the same risk in a smaller bottle.","ingredients":"Filtered water 209l, Cornichon cucumbers 70kg, Spanish manzanilla olives 24kg, Marlborough sea salt 11.44kg, Preserved lemon peel 2.2kg, White peppercorn 0.44kg, Coriander seed 0.33kg, Citric acid 0.11kg"}
+        - No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: Finally; Very good, wish the bottle were bigger; It does not cloud the glass
+        - No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: The one I keep buying; Good, arrived fast; Genuinely good; Bought it for a pickleback, kept it for cooking
+        - The First Three: 1 reviews, average 5, lowest 5. Said: Best gift I have sent all year
+        proposal: {"workingName":"No 02 DIRTY at trade strength","basedOnSku":"HS-02-500","rationale":"No 02 DIRTY is the range's best seller at 330 bottles in 90 days, against 38 for The First Three. A concentrate of the same brine is the cheapest new line to try: the recipe, the suppliers and the bottle are already in the system, so nothing new has to be sourced. What would kill it: No 03 SMOKE already averages 3.5 on 2 reviews, and a stronger brine is the same risk in a smaller bottle.","ingredients":"Filtered water 209l, Cornichon cucumbers 70kg, Spanish manzanilla olives 24kg, Marlborough sea salt 11.44kg, Preserved lemon peel 2.2kg, White peppercorn 0.44kg, Coriander seed 0.33kg, Citric acid 0.11kg"}
 
 2. reasoning: Write up the one idea the evidence supports, with what would have to be true for it to work.
-   tool: save_product_concept {"workingName":"No 02 DIRTY at trade strength","basedOnSku":"HS-02-500","rationale":"No 02 DIRTY is the range's best seller at 330 bottles in 90 days, against 38 for The Full Set. A concentrate of the same brine is the cheapest new line to try: the recipe, the
+   tool: save_product_concept {"workingName":"No 02 DIRTY at trade strength","basedOnSku":"HS-02-500","rationale":"No 02 DIRTY is the range's best seller at 330 bottles in 90 days, against 38 for The First Three. A concentrate of the same brine is the cheapest new line to try: the recipe, 
    status: succeeded (behind approval id#1)
       recorded="No 02 DIRTY at trade strength" delivered=false
       Recorded, not sent. This deployment has no live outbound channel wired: the approved action is written down so it can be carried out by a person, or by a channel adapter that does not exist yet.
@@ -44,11 +44,11 @@ What I found
 - No 02 DIRTY: 330 bottles, NZ$5854.34, up 522.6% on the 90 days before.
 - No 01 HOUSE: 259 bottles, NZ$4120.50, up 979.2% on the 90 days before.
 - No 03 SMOKE: 160 bottles, NZ$3168.51, up 344.4% on the 90 days before.
-- The Full Set: 38 bottles, NZ$2043.45, up 375.0% on the 90 days before.
+- The First Three: 38 bottles, NZ$2043.45, up 375.0% on the 90 days before.
 - No 03 SMOKE: 2 reviews, average 3.5, lowest 2. Said: Arrived cracked; The barbecue bottle
-- No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: It does not cloud the glass; Very good, wish the bottle were bigger; Finally
-- No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: Bought it for a pickleback, kept it for cooking; Genuinely good; Good, arrived fast; The one I keep buying
-- The Full Set: 1 reviews, average 5, lowest 5. Said: Best gift I have sent all year
+- No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: Finally; Very good, wish the bottle were bigger; It does not cloud the glass
+- No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: The one I keep buying; Good, arrived fast; Genuinely good; Bought it for a pickleback, kept it for cooking
+- The First Three: 1 reviews, average 5, lowest 5. Said: Best gift I have sent all year
 
 What I did
 - save_product_concept: recorded (No 02 DIRTY at trade strength), not delivered — this deployment has no live outbound channel.
@@ -58,7 +58,7 @@ What I did
 DECISIONS PUT TO THE FOUNDER
 ------------------------------------------------------------------------------
    [approved] recipe_change: Product idea: No 02 DIRTY at trade strength
-      summary: No 02 DIRTY is the range's best seller at 330 bottles in 90 days, against 38 for The Full Set. A concentrate of the same brine is the cheapest new line to try: the recipe, the suppliers and the bottle
+      summary: No 02 DIRTY is the range's best seller at 330 bottles in 90 days, against 38 for The First Three. A concentrate of the same brine is the cheapest new line to try: the recipe, the suppliers and the bot
       why:     Write up the one idea the evidence supports, with what would have to be true for it to work.
       decided: founder — Approved.
 
@@ -78,11 +78,11 @@ WHAT IT REPORTED
    - No 02 DIRTY: 330 bottles, NZ$5854.34, up 522.6% on the 90 days before.
    - No 01 HOUSE: 259 bottles, NZ$4120.50, up 979.2% on the 90 days before.
    - No 03 SMOKE: 160 bottles, NZ$3168.51, up 344.4% on the 90 days before.
-   - The Full Set: 38 bottles, NZ$2043.45, up 375.0% on the 90 days before.
+   - The First Three: 38 bottles, NZ$2043.45, up 375.0% on the 90 days before.
    - No 03 SMOKE: 2 reviews, average 3.5, lowest 2. Said: Arrived cracked; The barbecue bottle
-   - No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: It does not cloud the glass; Very good, wish the bottle were bigger; Finally
-   - No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: Bought it for a pickleback, kept it for cooking; Genuinely good; Good, arrived fast; The one I keep buying
-   - The Full Set: 1 reviews, average 5, lowest 5. Said: Best gift I have sent all year
+   - No 02 DIRTY: 3 reviews, average 4.67, lowest 4. Said: Finally; Very good, wish the bottle were bigger; It does not cloud the glass
+   - No 01 HOUSE: 4 reviews, average 4.75, lowest 4. Said: The one I keep buying; Good, arrived fast; Genuinely good; Bought it for a pickleback, kept it for cooking
+   - The First Three: 1 reviews, average 5, lowest 5. Said: Best gift I have sent all year
    
    What I did
    - save_product_concept: recorded (No 02 DIRTY at trade strength), not delivered — this deployment has no live outbound channel.

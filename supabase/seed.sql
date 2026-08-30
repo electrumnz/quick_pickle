@@ -127,7 +127,7 @@ values
    '{halfsour,"half-sour","HALF SOUR"}', 10, true),
 
   ('sku-numerals', 'naming', 'must', 'The range is numbered, not nicknamed',
-   'Always "No 01 HOUSE", "No 02 DIRTY", "No 03 SMOKE" — numeral first, name in caps, no full stop after No. "The Full Set" is the only bundle name.',
+   'Always "No 01 HOUSE", "No 02 DIRTY", "No 03 SMOKE" — numeral first, name in caps, no full stop after No. "The First Three" is the only bundle name.',
    'The numerals are the shelf system. A bar manager orders by number down a noisy phone line.',
    'Two cases of No 02 DIRTY', 'Two cases of the dirty martini one', '{storefront,social,email,packaging,wholesale}',
    '{"no.01","no.02","no.03","number one brine","the dill one"}', 12, true),
@@ -296,10 +296,10 @@ values
    null, 35,
    'shopify', 'gid://shopify/Product/9389915963642', now() - interval '2 days', 'synced', now() - interval '14 minutes'),
 
-  ('the-full-set', 'The Full Set', 'All three, boxed.',
+  ('the-full-set', 'The First Three', 'All three, boxed.',
    'No 01, No 02 and No 03 in a rigid box with three cards: a Dirty Martini, a Bloody Mary and the pickleback. It is what we send when we do not know what someone drinks, and it is most of our December. 3 x 500ml.',
    'Gift', 'active', now() - interval '5 months', '{gift,bundle,set,vegan,gluten-free}',
-   'The Full Set — all three brines | Half Sour',
+   'The First Three — Nos 01, 02 and 03 boxed | Half Sour',
    'No 01 HOUSE, No 02 DIRTY and No 03 SMOKE boxed with recipe cards. 3 x 500ml.',
    'https://cdn.shopify.com/s/files/1/0912/3456/7890/files/the-full-set-hero.jpg', 40,
    'shopify', 'gid://shopify/Product/9389912654074', now() - interval '9 days', 'synced', now() - interval '14 minutes');
@@ -335,7 +335,7 @@ select p.id, i.url, i.alt, i.pos, 2400, 3000, 'shopify', i.gid, 'synced', now() 
     ('no-02-dirty',  'https://cdn.shopify.com/s/files/1/0912/3456/7890/files/no-02-dirty-front.jpg',  'A 500ml bottle of Half Sour No 02 DIRTY beside a coupe and three olives on a pick', 10, 'gid://shopify/MediaImage/34123456789014'),
     ('no-02-dirty',  'https://cdn.shopify.com/s/files/1/0912/3456/7890/files/no-02-dirty-martini.jpg','A Dirty Martini being built at Brass and Bitters, the No 02 bottle in frame', 20, 'gid://shopify/MediaImage/34123456789015'),
     ('no-03-smoke',  'https://cdn.shopify.com/s/files/1/0912/3456/7890/files/no-03-smoke-front.jpg',  'A 500ml bottle of Half Sour No 03 SMOKE with an ember-red cap', 10, 'gid://shopify/MediaImage/34123456789016'),
-    ('the-full-set', 'https://cdn.shopify.com/s/files/1/0912/3456/7890/files/the-full-set-open.jpg',  'The Full Set gift box open, showing all three 500ml bottles and the recipe cards', 10, 'gid://shopify/MediaImage/34123456789017'),
+    ('the-full-set', 'https://cdn.shopify.com/s/files/1/0912/3456/7890/files/the-full-set-open.jpg',  'The First Three gift box open, showing all three 500ml bottles and the recipe cards', 10, 'gid://shopify/MediaImage/34123456789017'),
     ('the-full-set', 'https://cdn.shopify.com/s/files/1/0912/3456/7890/files/three-up.jpg',           'No 01, No 02 and No 03 side by side on cream, in numeric order', 20, 'gid://shopify/MediaImage/34123456789018')
   ) as i(handle, url, alt, pos, gid)
   join public.products p on p.handle = i.handle;
@@ -347,7 +347,7 @@ values
   ('the-brines', 'The Brines', 'No 01 HOUSE, No 02 DIRTY, No 03 SMOKE and No 04 WILD. Everything we make, in order.',
    true, now() - interval '5 months', 10, false, null,
    'shopify', 'gid://shopify/Collection/475327070458', 'synced', now() - interval '14 minutes'),
-  ('gifts', 'Gifts', 'The Full Set, boxed with recipe cards and posted anywhere in New Zealand.',
+  ('gifts', 'Gifts', 'The First Three, boxed with recipe cards and posted anywhere in New Zealand.',
    true, now() - interval '5 months', 20, false, null,
    'local', null, 'local', null),
   ('summer-2027', 'Summer 2027', 'Holding collection for the December range. Not published.',
@@ -382,7 +382,7 @@ values
   ('BRINETIME', 'Newsletter welcome', 'NZ$5.00 off a first order of NZ$30 or more.',
    'fixed_amount', null, 500, 'order', null, 3000, null, 500, 1, 0,
    now() - interval '4 months', null, 'active', 'shopify', 'gid://shopify/DiscountCodeNode/91234500003', 'synced', now() - interval '14 minutes'),
-  ('SETFREIGHT', 'Free freight on The Full Set', 'Free shipping on any order containing The Full Set. Starts with the December push.',
+  ('SETFREIGHT', 'Free freight on The First Three', 'Free shipping on any order containing The First Three. Starts with the December push.',
    'free_shipping', null, null, 'shipping', null, 5000, null, null, null, 0,
    now() + interval '3 weeks', now() + interval '3 months', 'scheduled', 'shopify', 'gid://shopify/DiscountCodeNode/91234500004', 'synced', now() - interval '14 minutes'),
   ('SMOKE25', 'No 03 launch promotion', '25% off No 03 SMOKE for the launch fortnight.',
@@ -1119,8 +1119,8 @@ select i.code, i.name, i.cat::public.ingredient_category, i.unit::public.unit_of
     ('BOTTLE_500', '500ml flint glass bottle',      'packaging', 'ea', 'Flint glass, 38mm neck.',                                 '{}',          false, 'ambient', null,   118,1180.000,1200.000,2400.000, 'GLASSCO',   'BELOW REORDER POINT. Fourteen-day lead time and the last two orders slipped three days each. Nothing else stops the line the way this does.'),
     ('CAP_38',     '38mm tamper-evident cap',       'packaging', 'ea', 'Tamper band, four colourways.',                          '{}',          false, 'ambient', null,    22,4400.000,2500.000,7500.000, 'GLASSCO',   'Brine green for No 01, olive for No 02, ember for No 03, dill for No 04.'),
     ('LABEL_500',  '500ml wrap label',              'label',     'ea', 'Uncoated stock, die-cut, batch code overprinted by us.',   '{}',          false, 'ambient', null,    31,3250.000,1500.000,4500.000, 'INKPRESS',  'Never pre-print the batch code. It goes on at bottling.'),
-    ('BOX_SET3',   'The Full Set rigid box',        'packaging', 'ea', 'Rigid three-bottle box with moulded pulp insert.',         '{}',          false, 'ambient', null,   420, 210.000, 100.000, 300.000, 'INKPRESS',  null),
-    ('CARD_SET3',  'The Full Set recipe cards',     'label',     'ea', 'Three-card set: Dirty Martini, Bloody Mary, pickleback.',  '{}',          false, 'ambient', null,    38, 640.000, 300.000, 900.000, 'INKPRESS',  null)
+    ('BOX_SET3',   'The First Three rigid box',        'packaging', 'ea', 'Rigid three-bottle box with moulded pulp insert.',         '{}',          false, 'ambient', null,   420, 210.000, 100.000, 300.000, 'INKPRESS',  null),
+    ('CARD_SET3',  'The First Three recipe cards',     'label',     'ea', 'Three-card set: Dirty Martini, Bloody Mary, pickleback.',  '{}',          false, 'ambient', null,    38, 640.000, 300.000, 900.000, 'INKPRESS',  null)
   ) as i(code, name, cat, unit, descr, allergens, organic, storage, shelf, cost, stock, rp, rq, supplier_code, notes)
   left join public.suppliers s on s.code = i.supplier_code;
 
@@ -1225,7 +1225,7 @@ select r.slug, r.version, r.name, r.descr, p.id, r.status::public.recipe_status,
      '{"50L fermenter","muslin","5 micron pad","plate chiller","gravity filler","code printer"}',
      'No declared allergens. Suitable for vegans.', 21000, null, true, interval '6 weeks'),
 
-    ('full-set-pack', 1, 'The Full Set pack-out v1', 'Pack-out procedure, not a brine.', 'the-full-set', 'active',
+    ('full-set-pack', 1, 'The First Three pack-out v1', 'Pack-out procedure, not a brine.', 'the-full-set', 'active',
      1.00, 200, null, null, null,
      'Pack one each of No 01, No 02 and No 03 into the rigid box on the moulded pulp insert, with the three recipe cards. Tape, weigh at 2.79kg plus or minus 40g, and record all three brine batch codes on the pack sheet. The box inherits its traceability from the bottles inside it.',
      '{"pack bench","scale","tape gun"}', 'Contains mustard and sulphites (No 01 and No 02). Gluten free.', 6800,
@@ -1334,7 +1334,7 @@ from (values
   -- No 04 WILD. One run, ever. Forty bottles is not a soft launch, it is how
   -- much leaf came in — which is why nothing here plans a second one.
   ('04','no-04-wild','wild-brine',1,'A',interval  '31 days', interval  '9 days', interval '11 days','released',365, 22.00, 40, 2, 17, 21000, 9000, 12400, 3400,3.37,4.41,'pH 3.37, 4.41% salinity. Two rejected on fill level. Passed.', 'The entire No 04 stock, and there is no second run booked. Do not promise a restock date.'),
-  -- The Full Set pack-outs
+  -- The First Three pack-outs
   ('SET','the-full-set','full-set-pack',1,'X',interval '128 days', interval '0 days', interval '0 days','sold_out',540,0.00,120, 3,  0,     0,20000,238000, 6000,null,null,'Pack sheet complete, all three component codes recorded. Passed.', 'Components: the first HOUSE run, DIRTY A, SMOKE A.'),
   ('SET','the-full-set','full-set-pack',1,'A',interval  '70 days', interval '0 days', interval '0 days','sold_out',540,0.00,160, 2,  0,     0,26000,318000, 8000,null,null,'Pack sheet complete. Passed.', 'Components: HOUSE B, DIRTY B, SMOKE B.'),
   ('SET','the-full-set','full-set-pack',1,'B',interval  '24 days', interval '0 days', interval '0 days','released',540,0.00,200, 1,118,     0,32000,388000,10000,null,null,'Pack sheet complete. Passed.', 'Components: HOUSE D, DIRTY C, SMOKE D.')
@@ -1644,7 +1644,7 @@ select c.slug, c.name, c.objective, c.channel::public.campaign_channel, c.status
      'wholesale', 'active', interval '6 days', null, 40000, 12400, 0,
      'Twelve Wellington cocktail bars shortlisted by Bex.', null, 'outreach', 'email', 'wellington-trade', 'scout',
      'Twelve sent, two replies, one sample pack requested. Nothing converted yet.'),
-    ('summer-full-set', 'Summer gifting — The Full Set', 'Own December gifting before the category gets loud.',
+    ('summer-full-set', 'Summer gifting — The First Three', 'Own December gifting before the category gets loud.',
      'social_paid', 'scheduled', interval '-3 weeks', interval '-3 months', 90000, 0, 0,
      'Gift buyers 28-55, Auckland and Wellington.', 'SETFREIGHT', 'meta', 'paid_social', 'summer-full-set', 'social',
      'Creative is in the library and the free-freight code is scheduled. Waiting on the December bottle order landing.'),
@@ -1710,8 +1710,8 @@ select acc.id, acc.platform, camp.id, sp.status::public.social_post_status, sp.c
      interval '2 days', null, null, null, 0, 0, 0, 0, 0, 0, 0, null, 'no-03-smoke', 'social',
      'Instagram: No 03 SMOKE back on the shelf Thursday', true, 'Passed all eleven active rules.'),
     ('instagram', 'summer-full-set', 'draft',
-     'The Full Set. All three, boxed, with the three cards we actually use behind our own bar.',
-     '{halfsour,gifts,thefullset}', 'https://halfsour.co.nz/products/the-full-set',
+     'The First Three. All three, boxed, with the three cards we actually use behind our own bar.',
+     '{halfsour,gifts,thefirstthree}', 'https://halfsour.co.nz/products/the-full-set',
      null, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, 'the-full-set', 'social', null, true, 'Passed. Held until the December bottle order lands.'),
     ('tiktok', null, 'failed',
      'Three ways with No 02 that are not a martini.',
@@ -1736,7 +1736,7 @@ select sp.id, ca.id, 10
     when sp.caption like 'Day four%' then 'fermenter-day-four'
     when sp.caption like 'Every bottle carries%' then 'label-overprint'
     when sp.caption like 'Fourteen seconds%' then 'label-overprint'
-    when sp.caption like 'The Full Set.%' then 'three-up-cream'
+    when sp.caption like 'The First Three.%' then 'three-up-cream'
     when sp.caption like 'No 03 SMOKE is back%' then 'three-up-cream'
     when sp.caption like 'Coastville market%' then 'market-stall-coastville'
   end;
@@ -1767,8 +1767,8 @@ select camp.id, c.id, o.id, e.to_email, e.to_name, e.subject, e.preheader, e.tem
      'transactional', 'delivered', 'msg_9Lm44bTq', null, interval '3 days', interval '3 days',
      interval '70 hours', interval '69 hours', null, 3, 1, null, null, null),
     (null, null, 'nadine.oputa@gmail.com', null,
-     'You left The Full Set in your basket', 'Still there if you want it.', 'abandoned-cart',
-     'Your basket is still sitting there with The Full Set in it. No pressure, but it is one of the last of batch B.',
+     'You left The First Three in your basket', 'Still there if you want it.', 'abandoned-cart',
+     'Your basket is still sitting there with The First Three in it. No pressure, but it is one of the last of batch B.',
      'lifecycle', 'queued', null, interval '4 hours', null, null, null, null, null, 0, 0, null, 'concierge', null),
     ('no-03-launch', null, 'aroha.wetere@gmail.com', 'Aroha Wetere',
      'No 03 SMOKE, and why the chilli goes in late', 'Chipotle, manzano, manuka-smoked salt.', 'campaign-launch',

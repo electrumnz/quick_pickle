@@ -84,7 +84,7 @@ export const MARKET_INPUTS: readonly MarketInput[] = [
     unit: "cents",
     confidence: "estimate",
     rationale:
-      "The range runs $18 / $20 / $22 / $26, and The Full Set at $54 realises $18 a bottle. $21.00 is the blend weighted toward No 01 and No 02, which will carry the volume. It is an assumption about mix, not a price.",
+      "The range runs $18 / $20 / $22 / $26, and The First Three at $54 realises $18 a bottle. $21.00 is the blend weighted toward No 01 and No 02, which will carry the volume. It is an assumption about mix, not a price.",
     min: 1_400,
     max: 3_200,
     step: 25,
@@ -207,7 +207,7 @@ export const MARKET_INPUTS: readonly MarketInput[] = [
     unit: "count",
     confidence: "estimate",
     rationale:
-      "Between a single bottle and The Full Set's three. The number matters because courier and packaging are charged per parcel, not per bottle — see the Flight Plan's body section.",
+      "Between a single bottle and the three bottles in The First Three. The number matters because courier and packaging are charged per parcel, not per bottle — see the Flight Plan's body section.",
     min: 1,
     max: 6,
     step: 0.1,

@@ -7,7 +7,7 @@ Both briefings are composed from the same strategy_documents rows and scoped
 by applies_to, exactly as brand_rules already are. Ari gets the story; Vic
 gets the story and the numbers.
 
-generated: 2026-08-30T02:32:30.526Z (npx vitest run tests/strategy/agent-wiring.test.ts)
+generated: 2026-08-30T02:42:08.651Z (npx vitest run tests/strategy/agent-wiring.test.ts)
 model: BriefingModel — deterministic, composes only from the system prompt.
 Everything below the model is the real runtime and the real strategy tables.
 
@@ -168,7 +168,7 @@ WHO YOU ARE WRITING TO — The Friday host
     - A jar of good olives — $12.00. What they use the brine of today. This is the price they will flinch against, not the bar price.
     - A bottle of dry vermouth — $35.00. The last ingredient they upgraded. It proves they will pay for one bottle that fixes one drink.
     - Aromatic bitters — $28.00. Bought once, used by the drop, never questioned. The shape of purchase we want.
-    The cost that is not on the price tag: Courier. On a single bottle it can be half the price of the bottle, which is why The Full Set at $54 in one parcel is the order shape the plan actually wants — the Flight Plan's wings section says the same thing from the margin end.
+    The cost that is not on the price tag: Courier. On a single bottle it can be half the price of the bottle, which is why The First Three at $54 in one parcel is the order shape the plan actually wants — the Flight Plan's wings section says the same thing from the margin end.
   WHAT WOULD MAKE THEM BUY AGAIN — repeat is the whole business at this volume:
     Cadence: A bottle every ten to twelve weeks if it is only for drinks; every five or six if it gets into the cooking. (2 bottles a year)
     - A recipe that uses a third of the bottle in one go — brined olives, a vinaigrette, a beurre blanc. The kitchen use is what converts an occasional bottle into a standing one.
@@ -203,7 +203,7 @@ FLIGHT PLAN — what this company is, in six parts:
     - No 02 DIRTY — One drink. Filtered clear so it will not cloud a stirred one, which is the specific failure it was built to fix.
     - No 03 SMOKE — Heat and smoke. The bottle that wins the taste test at a market stall and loses the reorder if the customer only drinks one style.
     - No 04 WILD — Seafood. The bottle that says the range has a top end, and the one that cannot be scaled.
-    - The Full Set — Acquisition. Three bottles in one parcel is the only direct order shape whose courier cost is not eating the margin.
+    - The First Three — Acquisition. Three bottles in one parcel is the only direct order shape whose courier cost is not eating the margin.
   Direct sales: The market model's year 2 target is 4,356 direct bottles, which at 2.4 bottles an order is about 151 orders a month — roughly five a day, all packed on Tuesday.
   Trade sales: The market model's year 2 target is 83 live accounts, which at a one-in-five close rate is 4 approaches a week for two years. That is Thursday, and it is why Thursday is protected.
   Hard constraint: Two production days a week is the hard ceiling. At 120 bottles a day and 44 working weeks that is 10,560 bottles a year, and no amount of marketing moves it.
@@ -414,7 +414,7 @@ FLIGHT PLAN — what this company is, in six parts:
     - No 02 DIRTY — One drink. Filtered clear so it will not cloud a stirred one, which is the specific failure it was built to fix.
     - No 03 SMOKE — Heat and smoke. The bottle that wins the taste test at a market stall and loses the reorder if the customer only drinks one style.
     - No 04 WILD — Seafood. The bottle that says the range has a top end, and the one that cannot be scaled.
-    - The Full Set — Acquisition. Three bottles in one parcel is the only direct order shape whose courier cost is not eating the margin.
+    - The First Three — Acquisition. Three bottles in one parcel is the only direct order shape whose courier cost is not eating the margin.
   Direct sales: The market model's year 2 target is 4,356 direct bottles, which at 2.4 bottles an order is about 151 orders a month — roughly five a day, all packed on Tuesday.
   Trade sales: The market model's year 2 target is 83 live accounts, which at a one-in-five close rate is 4 approaches a week for two years. That is Thursday, and it is why Thursday is protected.
   Hard constraint: Two production days a week is the hard ceiling. At 120 bottles a day and 44 working weeks that is 10,560 bottles a year, and no amount of marketing moves it.

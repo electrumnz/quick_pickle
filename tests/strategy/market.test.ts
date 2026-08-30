@@ -179,7 +179,7 @@ describe("unit economics", () => {
     expect(economics.tradeMarginPercent).toBeLessThan(30);
   });
 
-  it("finds The Full Set has the weakest gross margin in the range", () => {
+  it("finds The First Three has the weakest gross margin in the range", () => {
     const margins = FLIGHT_PLAN.wings.wings.map((wing) => ({
       sku: wing.sku,
       percent: wingEconomics(wing, gst, discount).directMarginPercent,

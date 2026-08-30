@@ -393,7 +393,7 @@ const WINGS: readonly ProductWing[] = [
   },
   {
     sku: "HS-SET-3",
-    name: "The Full Set",
+    name: "The First Three",
     job: "Acquisition. Three bottles in one parcel is the only direct order shape whose courier cost is not eating the margin.",
     shelfPriceCents: 5_400,
     costBreakdownCents: [
@@ -453,7 +453,7 @@ const PRODUCTS: ProductsSection = {
   wings: WINGS,
   findings: [
     "At a 40% trade discount the margin on No 01 is about a quarter of the trade price. That does not pay for the hour it takes to sample, deliver and invoice a venue. Either the discount comes down to about 30%, or a case is six bottles and never fewer — the market model assumes the second.",
-    "The Full Set has the weakest gross margin in the range and the strongest contribution per parcel, because courier and packaging are charged once for three bottles rather than once for two. It is the direct order shape to push, in spite of the percentage.",
+    "The First Three has the weakest gross margin in the range and the strongest contribution per parcel, because courier and packaging are charged once for three bottles rather than once for two. It is the direct order shape to push, in spite of the percentage.",
     "A single-bottle direct order is close to break-even after courier, packaging and payment fees. Either the shipping is charged, or the smallest direct offer is three bottles.",
     "No 04 is the highest margin per bottle and cannot be scaled, so it should never be discounted and never be a lead offer. It is a range-topper, and its job is to make No 02 look reasonable.",
   ],
@@ -553,7 +553,7 @@ const BODY: OperationsSection = {
     {
       item: "Courier, urban, one parcel",
       cents: 850,
-      note: "The same whether the parcel holds one bottle or three. This single fact is why The Full Set exists.",
+      note: "The same whether the parcel holds one bottle or three. This single fact is why The First Three exists.",
     },
     {
       item: "Mailer, void fill and label",

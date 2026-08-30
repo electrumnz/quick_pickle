@@ -472,7 +472,7 @@ truncates what it owns first, so it is safe to re-run, and every timestamp is
 relative to `now()` so the store looks current whenever it is loaded.
 
 - **The real catalogue**: No 01 HOUSE (NZ$18.00), No 02 DIRTY (NZ$20.00),
-  No 03 SMOKE (NZ$22.00) and The Full Set (NZ$54.00), all 500ml, carrying their
+  No 03 SMOKE (NZ$22.00) and The First Three (NZ$54.00), all 500ml, carrying their
   live Shopify product gids and the real `The Brines` collection gid.
 - **95 orders** across four months with a believable curve — 1, then 11, 16, 31
   and 36 by calendar month — including the spike that followed the Brass and

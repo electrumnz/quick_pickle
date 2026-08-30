@@ -25,8 +25,8 @@ WHAT IT DID, STEP BY STEP
         - No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before.
         - No 01 HOUSE: 172 bottles, NZ$2685.60, up 201.8% on the 28 days before.
         - No 03 SMOKE: 99 bottles, NZ$1909.00, up 482.4% on the 28 days before.
-        - The Full Set: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
-        proposal: {"slug":"campaign-hs-set-3","subject":"The Full Set","body":"The Full Set sold 11 bottles in the last 28 days.","audience":"lapsed","reason":"The Full Set is down 31.2% on the 28 days before, so the campaign goes to customers who have stopped ordering."}
+        - The First Three: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
+        proposal: {"slug":"campaign-hs-set-3","subject":"The First Three","body":"The First Three sold 11 bottles in the last 28 days.","audience":"lapsed","reason":"The First Three is down 31.2% on the 28 days before, so the campaign goes to customers who have stopped ordering."}
 
 2. reasoning: Quote the range and the prices as they actually stand.
    tool: read_catalogue {}
@@ -36,7 +36,7 @@ WHAT IT DID, STEP BY STEP
         - No 02 DIRTY (HS-02-500) sells at NZ$20.00, recorded unit cost NZ$7.80.
         - No 03 SMOKE (HS-03-500) sells at NZ$22.00, recorded unit cost NZ$8.90.
         - No 04 WILD (HS-04-500) sells at NZ$26.00, recorded unit cost NZ$10.15.
-        - The Full Set (HS-SET-3) sells at NZ$54.00, recorded unit cost NZ$21.80.
+        - The First Three (HS-SET-3) sells at NZ$54.00, recorded unit cost NZ$21.80.
 
 3. reasoning: Write the campaign brief from the BrandScript before writing a word of the email.
    tool: save_internal_draft {"slug":"campaign-brief","title":"NZ$8880.60 across 493 bottles in 28 days.","body":"NZ$8880.60 across 493 bottles in 28 days.\n5 products in the range, 5 of them live.\n\n- No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before.\n- No 01 HOUSE:
@@ -45,7 +45,7 @@ WHAT IT DID, STEP BY STEP
       Recorded, not sent. This deployment has no live outbound channel wired: the approved action is written down so it can be carried out by a person, or by a channel adapter that does not exist yet.
 
 4. reasoning: Put the campaign in front of the founder. An email to the list leaves the company and can never be sent without an approval.
-   tool: queue_campaign_email {"slug":"campaign-hs-set-3","subject":"The Full Set: Order a bottle","body":"They feel like an amateur in their own kitchen. The drink is nearly right and they cannot say what is missing, which is worse than it being obviously wrong.\n\nMost home martinis are 
+   tool: queue_campaign_email {"slug":"campaign-hs-set-3","subject":"The First Three: Order a bottle","body":"They feel like an amateur in their own kitchen. The drink is nearly right and they cannot say what is missing, which is worse than it being obviously wrong.\n\nMost home martinis a
    status: succeeded (behind approval id#2)
       recorded="campaign-hs-set-3" delivered=false
       Recorded, not sent. This deployment has no live outbound channel wired: the approved action is written down so it can be carried out by a person, or by a channel adapter that does not exist yet.
@@ -56,12 +56,12 @@ What I found
 - No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before.
 - No 01 HOUSE: 172 bottles, NZ$2685.60, up 201.8% on the 28 days before.
 - No 03 SMOKE: 99 bottles, NZ$1909.00, up 482.4% on the 28 days before.
-- The Full Set: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
+- The First Three: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
 - No 01 HOUSE (HS-01-500) sells at NZ$18.00, recorded unit cost NZ$6.20.
 - No 02 DIRTY (HS-02-500) sells at NZ$20.00, recorded unit cost NZ$7.80.
 - No 03 SMOKE (HS-03-500) sells at NZ$22.00, recorded unit cost NZ$8.90.
 - No 04 WILD (HS-04-500) sells at NZ$26.00, recorded unit cost NZ$10.15.
-- The Full Set (HS-SET-3) sells at NZ$54.00, recorded unit cost NZ$21.80.
+- The First Three (HS-SET-3) sells at NZ$54.00, recorded unit cost NZ$21.80.
 
 What I did
 - save_internal_draft: recorded (campaign-brief), not delivered — this deployment has no live outbound channel.
@@ -75,7 +75,7 @@ DECISIONS PUT TO THE FOUNDER
       summary: NZ$8880.60 across 493 bottles in 28 days. 5 products in the range, 5 of them live.  - No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before. - No 01 HOUSE: 172 bottles, NZ$2685.60, up 
       why:     Write the campaign brief from the BrandScript before writing a word of the email.
       decided: founder — Approved.
-   [approved] email_campaign: Campaign: The Full Set: Order a bottle
+   [approved] email_campaign: Campaign: The First Three: Order a bottle
       summary: They feel like an amateur in their own kitchen. The drink is nearly right and they cannot say what is missing, which is worse than it being obviously wrong.  Most home martinis are let down by whateve
       why:     Put the campaign in front of the founder. An email to the list leaves the company and can never be sent without an approval.
       decided: founder — Approved.
@@ -86,7 +86,7 @@ WHAT ACTUALLY LEFT THE COMPANY
    external actions delivered: 0 (this build has no outbound channel)
    actions recorded in the outbox: 2
       draft: NZ$8880.60 across 493 bottles in 28 days.
-      campaign_email: The Full Set: Order a bottle
+      campaign_email: The First Three: Order a bottle
 
 ------------------------------------------------------------------------------
 WHAT IT REPORTED
@@ -97,12 +97,12 @@ WHAT IT REPORTED
    - No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before.
    - No 01 HOUSE: 172 bottles, NZ$2685.60, up 201.8% on the 28 days before.
    - No 03 SMOKE: 99 bottles, NZ$1909.00, up 482.4% on the 28 days before.
-   - The Full Set: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
+   - The First Three: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
    - No 01 HOUSE (HS-01-500) sells at NZ$18.00, recorded unit cost NZ$6.20.
    - No 02 DIRTY (HS-02-500) sells at NZ$20.00, recorded unit cost NZ$7.80.
    - No 03 SMOKE (HS-03-500) sells at NZ$22.00, recorded unit cost NZ$8.90.
    - No 04 WILD (HS-04-500) sells at NZ$26.00, recorded unit cost NZ$10.15.
-   - The Full Set (HS-SET-3) sells at NZ$54.00, recorded unit cost NZ$21.80.
+   - The First Three (HS-SET-3) sells at NZ$54.00, recorded unit cost NZ$21.80.
    
    What I did
    - save_internal_draft: recorded (campaign-brief), not delivered — this deployment has no live outbound channel.

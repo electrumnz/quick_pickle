@@ -28,7 +28,7 @@ WHAT IT DID, STEP BY STEP
         - No 01 HOUSE: 65 bottles, NZ$1062.00, up 1525.0% on the 7 days before.
         - No 02 DIRTY: 43 bottles, NZ$788.00, down 14.0% on the 7 days before.
         - No 03 SMOKE: 18 bottles, NZ$369.60, down 28.0% on the 7 days before.
-        - The Full Set: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
+        - The First Three: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
         - 6 decisions waiting on the founder, 1 agent run failed, 6 paid orders still to pack.
 
 2. reasoning: See which bottle carried the week.
@@ -38,7 +38,7 @@ WHAT IT DID, STEP BY STEP
         - No 01 HOUSE: 65 bottles, NZ$1062.00, up 1525.0% on the 7 days before.
         - No 02 DIRTY: 43 bottles, NZ$788.00, down 14.0% on the 7 days before.
         - No 03 SMOKE: 18 bottles, NZ$369.60, down 28.0% on the 7 days before.
-        - The Full Set: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
+        - The First Three: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
         proposal: {"slug":"campaign-hs-03-500","subject":"No 03 SMOKE","body":"No 03 SMOKE sold 18 bottles in the last 7 days.","audience":"lapsed","reason":"No 03 SMOKE is down 28.0% on the 7 days before, so the campaign goes to customers who have stopped ordering."}
 
 3. reasoning: Put the week inside the month, and keep the GST separate from the takings.
@@ -66,12 +66,12 @@ What I found
 - No 01 HOUSE: 65 bottles, NZ$1062.00, up 1525.0% on the 7 days before.
 - No 02 DIRTY: 43 bottles, NZ$788.00, down 14.0% on the 7 days before.
 - No 03 SMOKE: 18 bottles, NZ$369.60, down 28.0% on the 7 days before.
-- The Full Set: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
+- The First Three: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
 - 6 decisions waiting on the founder, 1 agent run failed, 6 paid orders still to pack.
 - No 01 HOUSE: 65 bottles, NZ$1062.00, up 1525.0% on the 7 days before.
 - No 02 DIRTY: 43 bottles, NZ$788.00, down 14.0% on the 7 days before.
 - No 03 SMOKE: 18 bottles, NZ$369.60, down 28.0% on the 7 days before.
-- The Full Set: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
+- The First Three: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
 - 38 orders totalling NZ$9123.20 in the last 28 days.
 - NZ$1189.99 of that is GST collected, which is owed to Inland Revenue and is not takings.
 - wholesale: 9 orders, NZ$7293.60.
@@ -106,12 +106,12 @@ WHAT IT REPORTED
    - No 01 HOUSE: 65 bottles, NZ$1062.00, up 1525.0% on the 7 days before.
    - No 02 DIRTY: 43 bottles, NZ$788.00, down 14.0% on the 7 days before.
    - No 03 SMOKE: 18 bottles, NZ$369.60, down 28.0% on the 7 days before.
-   - The Full Set: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
+   - The First Three: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
    - 6 decisions waiting on the founder, 1 agent run failed, 6 paid orders still to pack.
    - No 01 HOUSE: 65 bottles, NZ$1062.00, up 1525.0% on the 7 days before.
    - No 02 DIRTY: 43 bottles, NZ$788.00, down 14.0% on the 7 days before.
    - No 03 SMOKE: 18 bottles, NZ$369.60, down 28.0% on the 7 days before.
-   - The Full Set: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
+   - The First Three: 2 bottles, NZ$108.00, up 0.0% on the 7 days before.
    - 38 orders totalling NZ$9123.20 in the last 28 days.
    - NZ$1189.99 of that is GST collected, which is owed to Inland Revenue and is not takings.
    - wholesale: 9 orders, NZ$7293.60.

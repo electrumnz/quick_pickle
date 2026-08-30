@@ -37,8 +37,8 @@ WHAT IT DID, STEP BY STEP
         - No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before.
         - No 01 HOUSE: 172 bottles, NZ$2685.60, up 201.8% on the 28 days before.
         - No 03 SMOKE: 99 bottles, NZ$1909.00, up 482.4% on the 28 days before.
-        - The Full Set: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
-        proposal: {"slug":"campaign-hs-set-3","subject":"The Full Set","body":"The Full Set sold 11 bottles in the last 28 days.","audience":"lapsed","reason":"The Full Set is down 31.2% on the 28 days before, so the campaign goes to customers who have stopped ordering."}
+        - The First Three: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
+        proposal: {"slug":"campaign-hs-set-3","subject":"The First Three","body":"The First Three sold 11 bottles in the last 28 days.","audience":"lapsed","reason":"The First Three is down 31.2% on the 28 days before, so the campaign goes to customers who have stopped ordering."}
 
 3. reasoning: Save the read on the fortnight next to the draft, so the reasoning survives the decision.
    tool: save_internal_draft {"slug":"social-review","title":"5 posts published in the window, 2 waiting on a decision, 1 failed to go out.","body":"5 posts published in the window, 2 waiting on a decision, 1 failed to go out.\nNZ$8880.60 across 493 bottles in 28 days.\n\n- instagram on 2
@@ -64,7 +64,7 @@ What I found
 - No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before.
 - No 01 HOUSE: 172 bottles, NZ$2685.60, up 201.8% on the 28 days before.
 - No 03 SMOKE: 99 bottles, NZ$1909.00, up 482.4% on the 28 days before.
-- The Full Set: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
+- The First Three: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
 
 What I did
 - save_internal_draft: recorded (social-review), not delivered — this deployment has no live outbound channel.
@@ -106,7 +106,7 @@ WHAT IT REPORTED
    - No 02 DIRTY: 211 bottles, NZ$3692.00, up 603.3% on the 28 days before.
    - No 01 HOUSE: 172 bottles, NZ$2685.60, up 201.8% on the 28 days before.
    - No 03 SMOKE: 99 bottles, NZ$1909.00, up 482.4% on the 28 days before.
-   - The Full Set: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
+   - The First Three: 11 bottles, NZ$594.00, down 31.2% on the 28 days before.
    
    What I did
    - save_internal_draft: recorded (social-review), not delivered — this deployment has no live outbound channel.

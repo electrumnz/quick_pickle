@@ -104,7 +104,7 @@ export const SET_LINE = FULL_SET.line;
  * still the authority whenever it answers; this is only what is said when it
  * does not.
  */
-export const SET_TITLE = "The Full Set";
+export const SET_TITLE = "The First Three";
 export const SET_DESCRIPTOR = "All three, boxed.";
 export const SET_PRICE_NZD = FULL_SET.priceNzd;
 export const SET_BOTTLE_COUNT = 3;
@@ -170,11 +170,20 @@ export const PRODUCT = {
   bundleEyebrow: "One box",
   alsoEyebrow: "Also in the range",
   alsoHeading: "The rest of the shelf.",
+  /** Names the fixed buy bar on a phone, for a screen reader. */
+  stickyBuyLabel: "Buy this bottle",
   skuLabel: "SKU",
   priceShownLabel: "Price shown",
   priceShownValue: "NZD, GST included",
   boxEyebrow: "In the box",
   boxHeading: "Three bottles, named.",
+  // Why the fourth bottle is not here, said once, on the page where a buyer is
+  // counting the bottles. It is the same fact the range already states about No
+  // 04 — the leaf is what limits it, not the demand — so the box reads as a
+  // deliberate three rather than as an oversight, and nothing new is claimed.
+  boxNote:
+    // copy-audit-approved: WILD-02 (kawakawa named as the ingredient that limits supply; no wellness, no rongoā framing — legal/COPY-RULES.md Group H)
+    "No 04 WILD is not in the box. It is limited by leaf supply and only filled when there is kawakawa to fill it with, so it is sold on its own.",
   boxLink: "What is in the box",
   libraryCount: "in the recipe library",
   /** "About 25 × The Dirty Martini, at 20 ml a drink." Both numbers shown. */
@@ -258,8 +267,9 @@ export const STATE = {
  * without composing an email. Both were missing, and both were audit findings
  * rather than opinions.
  *
- * The box is called what it is — three bottles — rather than by a name that is
- * being reconsidered elsewhere in the build.
+ * The box is called what it is — three bottles — which is now also what its
+ * name says. See `FULL_SET` in `components/home/data.ts` for why it stopped
+ * being "The Full Set".
  */
 export const STORE_FOOTER: readonly {
   readonly heading: string;
