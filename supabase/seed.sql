@@ -127,7 +127,7 @@ values
    '{halfsour,"half-sour","HALF SOUR"}', 10, true),
 
   ('sku-numerals', 'naming', 'must', 'The range is numbered, not nicknamed',
-   'Always "No 01 HOUSE", "No 02 DIRTY", "No 03 SMOKE" — numeral first, name in caps, no full stop after No. "The First Three" is the only bundle name.',
+   'Always "No 01 HOUSE", "No 02 DIRTY", "No 03 SMOKE", "No 04 WILD" — numeral first, name in caps, no full stop after No. "The First Three" is the only bundle name, and it holds 01 to 03 only.',
    'The numerals are the shelf system. A bar manager orders by number down a noisy phone line.',
    'Two cases of No 02 DIRTY', 'Two cases of the dirty martini one', '{storefront,social,email,packaging,wholesale}',
    '{"no.01","no.02","no.03","number one brine","the dill one"}', 12, true),
