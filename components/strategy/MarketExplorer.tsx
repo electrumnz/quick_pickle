@@ -365,8 +365,8 @@ export function MarketExplorer({
             tone="danger"
           >
             The database could not be reached, so this page is showing the
-            assumptions as they stand in the code. The AI team may be using
-            different ones.
+            assumptions as they stand in the code. Stored values may differ
+            once the database is back.
           </Callout>
         )}
       </section>

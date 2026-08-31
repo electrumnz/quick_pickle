@@ -511,7 +511,7 @@ export function GapSummary({
       </p>
       <p className="mt-1.5">
         {next === undefined
-          ? "Nothing is booked ahead. The next thing that goes out is the next thing you or Vinnie writes."
+          ? "Nothing is booked ahead. The next thing that goes out is the next thing you write."
           : `Next out: ${dayInWords(next.day)} at ${time(next.instant)} on ${platformWord(next.platform)}.`}
       </p>
       {worst !== null && worst.days > 1 && (

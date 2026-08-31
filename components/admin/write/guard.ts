@@ -13,11 +13,9 @@ import {
 /**
  * The one door every write in this admin goes through.
  *
- * `app/(admin)/admin/team/actions.ts` established the shape when it built the
- * pause button: check the session inside the action, check the CSRF token the
- * form carried, then write an `audit_log` row saying what changed. Everything
- * added since — packing an order, recording a refund, releasing a batch,
- * approving a post — repeats those three steps exactly, and repeats them by
+ * Every write checks the session inside the action, checks the CSRF token the
+ * form carried, then writes an `audit_log` row saying what changed — packing
+ * an order, recording a refund, releasing a batch, approving a post — by
  * calling this file rather than by remembering to.
  *
  * The session check is not relaxed on a demonstration deployment, and this is

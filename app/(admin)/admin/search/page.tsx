@@ -40,9 +40,9 @@ const SEARCHABLE = [
   "Customer names, company names and email addresses",
   "Products and their prices",
   "Batch codes, ingredients and suppliers",
-  "The AI team by name or job",
   "Social posts by what they say",
   "Brand rules and settings",
+  "The Team — Grok Bot adoption pointer",
 ];
 
 export default async function SearchPage({
