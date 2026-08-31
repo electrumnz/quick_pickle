@@ -111,7 +111,6 @@ const SURFACE_MAP = [
   { prefix: "lib/", surface: INTERNAL, note: "libraries and adapters" },
   { prefix: "tests/", surface: INTERNAL, note: "unit tests" },
   { prefix: "e2e/", surface: INTERNAL, note: "end-to-end tests" },
-  { prefix: "inngest/", surface: INTERNAL, note: "background job wiring" },
   { prefix: "supabase/", surface: INTERNAL, note: "schema and migrations" },
   { prefix: "docs/", surface: INTERNAL, note: "engineering documentation" },
   {

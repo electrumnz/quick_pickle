@@ -1,7 +1,5 @@
 import "server-only";
 
-import { pgTextArray } from "@/lib/agents/roster";
-
 import { ago } from "./format";
 import {
   adminSql,
@@ -28,297 +26,6 @@ import {
  * Every function returns a named, typed shape. No screen above this file ever
  * sees a column name, and no screen ever shows a raw uuid where a name exists.
  */
-
-// ---------------------------------------------------------------------------
-// Approvals — the queue the whole company waits on
-// ---------------------------------------------------------------------------
-
-export type ApprovalRisk = "low" | "medium" | "high" | "critical";
-
-export type ApprovalItem = {
-  readonly id: string;
-  readonly title: string;
-  readonly summary: string;
-  readonly rationale: string | null;
-  readonly subjectType: string;
-  readonly risk: ApprovalRisk;
-  readonly amountCents: number | null;
-  readonly requestedAt: string;
-  readonly expiresAt: string | null;
-  readonly status: string;
-  readonly decidedAt: string | null;
-  readonly decisionNote: string | null;
-  readonly agentName: string | null;
-  readonly agentSlug: string | null;
-  readonly agentJobTitle: string | null;
-  readonly runGoal: string | null;
-  /** The table the decision is about, e.g. `social_posts`. */
-  readonly subjectTable: string;
-  /** The row it is about, when the agent named one. */
-  readonly subjectId: string | null;
-  /** What the agent wants changed, as it wrote it for a human to read. */
-  readonly preview: Readonly<Record<string, unknown>>;
-  /** The exact call to make on approval. Shown as words, never replayed here. */
-  readonly payload: Readonly<Record<string, unknown>>;
-};
-
-const APPROVAL_SELECT = `
-  select a.id, a.title, a.summary, a.rationale, a.subject_type, a.risk,
-         a.amount_cents, a.requested_at, a.expires_at, a.status, a.decided_at,
-         a.decision_note, a.subject_table, a.subject_id, a.preview, a.payload,
-         ag.name as agent_name, ag.slug as agent_slug,
-         ag.job_title as agent_job_title,
-         r.goal as run_goal
-    from public.approvals a
-    left join public.agents ag on ag.id = a.requested_by_agent_id
-    left join public.agent_runs r on r.id = a.requested_by_run_id`;
-
-function toApproval(row: Record<string, unknown>): ApprovalItem {
-  const risk = text(row, "risk");
-  return {
-    id: text(row, "id"),
-    title: text(row, "title"),
-    summary: text(row, "summary"),
-    rationale: textOrNull(row, "rationale"),
-    subjectType: text(row, "subject_type"),
-    risk:
-      risk === "critical" || risk === "high" || risk === "medium"
-        ? risk
-        : "low",
-    amountCents: row["amount_cents"] === null ? null : int(row, "amount_cents"),
-    requestedAt: iso(row, "requested_at"),
-    expiresAt: isoOrNull(row, "expires_at"),
-    status: text(row, "status"),
-    decidedAt: isoOrNull(row, "decided_at"),
-    decisionNote: textOrNull(row, "decision_note"),
-    agentName: textOrNull(row, "agent_name"),
-    agentSlug: textOrNull(row, "agent_slug"),
-    agentJobTitle: textOrNull(row, "agent_job_title"),
-    runGoal: textOrNull(row, "run_goal"),
-    subjectTable: text(row, "subject_table"),
-    subjectId: textOrNull(row, "subject_id"),
-    preview: jsonObject(row["preview"]),
-    payload: jsonObject(row["payload"]),
-  };
-}
-
-/** `jsonb` arrives already parsed. Anything that is not an object is nothing. */
-function jsonObject(value: unknown): Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-/** Everything waiting on her, riskiest and oldest first. */
-export async function pendingApprovals(): Promise<readonly ApprovalItem[]> {
-  const result = await adminSql().query(
-    `${APPROVAL_SELECT}
-      where a.status = 'pending'
-      order by case a.risk when 'critical' then 0 when 'high' then 1
-                           when 'medium' then 2 else 3 end,
-               a.requested_at`,
-  );
-  return result.rows.map(toApproval);
-}
-
-/** One decision by id. Null when the id names nothing. */
-export async function approvalById(id: string): Promise<ApprovalItem | null> {
-  const result = await adminSql().query(`${APPROVAL_SELECT} where a.id = $1`, [
-    id,
-  ]);
-  const row = result.rows[0];
-  return row === undefined ? null : toApproval(row);
-}
-
-/** Everything waiting on her about one kind of thing. */
-export async function pendingApprovalsOf(
-  subjectType: string,
-): Promise<readonly ApprovalItem[]> {
-  const result = await adminSql().query(
-    `${APPROVAL_SELECT}
-      where a.status = 'pending' and a.subject_type = $1::public.approval_subject
-      order by a.requested_at`,
-    [subjectType],
-  );
-  return result.rows.map(toApproval);
-}
-
-/** Everything one agent is waiting on her for. */
-export async function pendingApprovalsBy(
-  agentId: string,
-): Promise<readonly ApprovalItem[]> {
-  const result = await adminSql().query(
-    `${APPROVAL_SELECT}
-      where a.status = 'pending' and a.requested_by_agent_id = $1
-      order by a.requested_at`,
-    [agentId],
-  );
-  return result.rows.map(toApproval);
-}
-
-/** What she already decided, most recent first. */
-export async function decidedApprovals(
-  limit = 10,
-): Promise<readonly ApprovalItem[]> {
-  const result = await adminSql().query(
-    `${APPROVAL_SELECT}
-      where a.status <> 'pending'
-      order by coalesce(a.decided_at, a.requested_at) desc
-      limit $1`,
-    [limit],
-  );
-  return result.rows.map(toApproval);
-}
-
-// ---------------------------------------------------------------------------
-// The team
-// ---------------------------------------------------------------------------
-
-export type AgentProfile = {
-  readonly id: string;
-  readonly slug: string;
-  readonly name: string;
-  readonly jobTitle: string;
-  readonly purpose: string;
-  readonly model: string;
-  readonly status: string;
-  readonly autonomy: string;
-  readonly needsApprovalFor: readonly string[];
-  readonly tools: readonly string[];
-  readonly dailyCapCents: number;
-  readonly monthlyCapCents: number;
-  readonly singleActionCapCents: number | null;
-  readonly scheduleCron: string | null;
-  readonly lastRunAt: string | null;
-  readonly runsCount: number;
-  readonly isEnabled: boolean;
-  readonly spentTodayCents: number;
-  readonly spentMonthCents: number;
-  readonly pendingApprovals: number;
-  readonly failedRuns7d: number;
-};
-
-/** Every AI role, with what it has spent today and what it is waiting on. */
-export async function team(): Promise<readonly AgentProfile[]> {
-  const result = await adminSql().query(
-    `select a.*,
-            coalesce(today.micros, 0)  as spent_today_micros,
-            coalesce(month.micros, 0)  as spent_month_micros,
-            coalesce(pending.n, 0)     as pending_approvals,
-            coalesce(failed.n, 0)      as failed_runs_7d
-       from public.agents a
-       left join lateral (
-         select sum(c.cost_micros) as micros from public.agent_costs c
-          where c.agent_id = a.id
-            and c.incurred_on = (now() at time zone 'Pacific/Auckland')::date
-       ) today on true
-       left join lateral (
-         select sum(c.cost_micros) as micros from public.agent_costs c
-          where c.agent_id = a.id
-            and c.incurred_on >= date_trunc('month',
-                  (now() at time zone 'Pacific/Auckland'))::date
-       ) month on true
-       left join lateral (
-         select count(*)::int as n from public.approvals ap
-          where ap.requested_by_agent_id = a.id and ap.status = 'pending'
-       ) pending on true
-       left join lateral (
-         select count(*)::int as n from public.agent_runs r
-          where r.agent_id = a.id and r.status = 'failed'
-            and r.queued_at > now() - interval '7 days'
-       ) failed on true
-      order by a.name`,
-  );
-  return result.rows.map((row) => ({
-    id: text(row, "id"),
-    slug: text(row, "slug"),
-    name: text(row, "name"),
-    jobTitle: text(row, "job_title"),
-    purpose: text(row, "purpose"),
-    model: text(row, "model"),
-    status: text(row, "status"),
-    autonomy: text(row, "autonomy"),
-    // `requires_approval_for` is an array of an ENUM, and `pg` has no type
-    // parser for one: enum OIDs are per-database, so the driver hands the
-    // column back as the literal string `{purchase_order,discount}`. Read
-    // with `textArray` it came back empty, and every agent on the Team page
-    // said it always asks you about nothing — the most dangerous sentence
-    // this screen could get wrong. `pgTextArray` copes with both shapes.
-    needsApprovalFor: pgTextArray(row["requires_approval_for"]),
-    tools: pgTextArray(row["tools"]),
-    dailyCapCents: int(row, "daily_spend_cap_cents"),
-    monthlyCapCents: int(row, "monthly_spend_cap_cents"),
-    singleActionCapCents:
-      row["single_action_cap_cents"] === null
-        ? null
-        : int(row, "single_action_cap_cents"),
-    scheduleCron: textOrNull(row, "schedule_cron"),
-    lastRunAt: isoOrNull(row, "last_run_at"),
-    runsCount: int(row, "runs_count"),
-    isEnabled: bool(row, "is_enabled"),
-    spentTodayCents: Math.round(int(row, "spent_today_micros") / 10_000),
-    spentMonthCents: Math.round(int(row, "spent_month_micros") / 10_000),
-    pendingApprovals: int(row, "pending_approvals"),
-    failedRuns7d: int(row, "failed_runs_7d"),
-  }));
-}
-
-export type RunItem = {
-  readonly id: string;
-  readonly agentName: string;
-  readonly agentSlug: string;
-  readonly status: string;
-  readonly trigger: string;
-  readonly goal: string;
-  readonly outcome: string | null;
-  readonly error: string | null;
-  readonly queuedAt: string;
-  readonly finishedAt: string | null;
-  readonly costCents: number;
-  readonly toolCalls: number;
-};
-
-function toRun(row: Record<string, unknown>): RunItem {
-  return {
-    id: text(row, "id"),
-    agentName: text(row, "agent_name"),
-    agentSlug: text(row, "agent_slug"),
-    status: text(row, "status"),
-    trigger: text(row, "trigger"),
-    goal: text(row, "goal"),
-    outcome: textOrNull(row, "outcome"),
-    error: textOrNull(row, "error"),
-    queuedAt: iso(row, "queued_at"),
-    finishedAt: isoOrNull(row, "finished_at"),
-    costCents: Math.round(int(row, "cost_micros") / 10_000),
-    toolCalls: int(row, "tool_call_count"),
-  };
-}
-
-/** What the team has been doing, newest first. */
-export async function recentRuns(limit = 12): Promise<readonly RunItem[]> {
-  const result = await adminSql().query(
-    `select r.*, a.name as agent_name, a.slug as agent_slug
-       from public.agent_runs r join public.agents a on a.id = r.agent_id
-      order by r.queued_at desc limit $1`,
-    [limit],
-  );
-  return result.rows.map(toRun);
-}
-
-export async function runsForAgent(
-  agentId: string,
-  limit = 5,
-): Promise<readonly RunItem[]> {
-  const result = await adminSql().query(
-    `select r.*, a.name as agent_name, a.slug as agent_slug
-       from public.agent_runs r join public.agents a on a.id = r.agent_id
-      where r.agent_id = $1
-      order by r.queued_at desc limit $2`,
-    [agentId, limit],
-  );
-  return result.rows.map(toRun);
-}
 
 // ---------------------------------------------------------------------------
 // Things that are broken
@@ -383,27 +90,18 @@ function platformName(platform: string): string {
   return PLATFORM_NAMES[platform] ?? platform;
 }
 
-function lowerFirst(sentence: string): string {
-  return sentence.charAt(0).toLowerCase() + sentence.slice(1);
-}
-
 function lastSuccess(iso: string | null): string {
   return iso === null ? "it was set up" : ago(iso);
 }
 
 export async function troubles(): Promise<readonly Trouble[]> {
   const sql = adminSql();
-  const [runs, posts, hooks, syncs] = await Promise.all([
+  // Mirror troubles and failed posts only — not agent-run cards. The in-site
+  // roster is gone; Mirror remains schema + dashboard troubles, not a teammate.
+  const [posts, hooks, syncs] = await Promise.all([
     sql.query(
-      `select r.id, r.error, r.goal, r.finished_at, r.queued_at, a.name as agent_name
-         from public.agent_runs r join public.agents a on a.id = r.agent_id
-        where r.status = 'failed' and r.queued_at > now() - interval '30 days'
-        order by r.queued_at desc`,
-    ),
-    sql.query(
-      `select p.id, p.platform, p.caption, p.error, p.updated_at, a.name as agent_name
+      `select p.id, p.platform, p.caption, p.error, p.updated_at
          from public.social_posts p
-         left join public.agents a on a.id = p.created_by_agent_id
         where p.status = 'failed'
         order by p.updated_at desc`,
     ),
@@ -423,17 +121,6 @@ export async function troubles(): Promise<readonly Trouble[]> {
   ]);
 
   const items: Trouble[] = [];
-  for (const row of runs.rows) {
-    items.push({
-      id: `run-${text(row, "id")}`,
-      title: `${text(row, "agent_name")} hit an error and stopped`,
-      detail: `It was part way through: ${lowerFirst(text(row, "goal"))}. It has not tried again on its own.`,
-      source: text(row, "agent_name"),
-      occurredAt: isoOrNull(row, "finished_at") ?? iso(row, "queued_at"),
-      section: "The Team",
-      href: "/admin/team",
-    });
-  }
   for (const row of posts.rows) {
     items.push({
       id: `post-${text(row, "id")}`,
@@ -441,7 +128,7 @@ export async function troubles(): Promise<readonly Trouble[]> {
       detail:
         textOrNull(row, "error") ??
         "The post was scheduled and never published.",
-      source: textOrNull(row, "agent_name") ?? "Social",
+      source: "Social",
       occurredAt: iso(row, "updated_at"),
       section: "Social",
       href: "/admin/social",
@@ -1118,6 +805,8 @@ export async function settings(): Promise<readonly SettingItem[]> {
   }));
 }
 
+export type ActivityFilter = "all" | "stock" | "batches" | "orders" | "other";
+
 export type ActivityItem = {
   readonly id: string;
   readonly occurredAt: string;
@@ -1125,35 +814,130 @@ export type ActivityItem = {
   readonly actorType: string;
   readonly action: string;
   readonly summary: string;
+  readonly entityType: string;
   readonly entityLabel: string | null;
+  /** Where to open this object in the admin, when there is one. */
+  readonly href: string | null;
+  readonly filter: Exclude<ActivityFilter, "all">;
 };
+
+const STOCK_ENTITIES = new Set([
+  "ingredients",
+  "ingredient_suppliers",
+  "purchase_orders",
+  "purchase_order_items",
+  "inventory_levels",
+  "products",
+  "product_variants",
+  "suppliers",
+]);
+
+const BATCH_ENTITIES = new Set([
+  "batches",
+  "batch_ingredients",
+  "recipes",
+  "recipe_ingredients",
+  "order_item_batches",
+]);
+
+const ORDER_ENTITIES = new Set([
+  "orders",
+  "order_items",
+  "fulfillments",
+  "refunds",
+]);
+
+export function activityBucket(
+  entityType: string,
+): Exclude<ActivityFilter, "all"> {
+  if (STOCK_ENTITIES.has(entityType)) return "stock";
+  if (BATCH_ENTITIES.has(entityType)) return "batches";
+  if (ORDER_ENTITIES.has(entityType)) return "orders";
+  return "other";
+}
+
+export function activityHref(
+  entityType: string,
+  entityLabel: string | null,
+): string | null {
+  switch (activityBucket(entityType)) {
+    case "stock":
+      return entityLabel === null
+        ? "/admin/stock"
+        : `/admin/stock?q=${encodeURIComponent(entityLabel)}`;
+    case "batches":
+      return entityLabel === null
+        ? "/admin/stock"
+        : `/admin/stock?q=${encodeURIComponent(entityLabel)}`;
+    case "orders":
+      return entityLabel === null
+        ? "/admin/orders"
+        : `/admin/orders?q=${encodeURIComponent(entityLabel)}`;
+    case "other":
+      if (entityType === "social_posts") {
+        return entityLabel === null
+          ? "/admin/social"
+          : `/admin/social?q=${encodeURIComponent(entityLabel.slice(0, 24))}`;
+      }
+      if (entityType === "reviews" || entityType === "customers") {
+        return "/admin/customers";
+      }
+      if (entityType.startsWith("brand") || entityType === "brand_rules") {
+        return "/admin/brand";
+      }
+      if (entityType === "settings" || entityType === "admin_session") {
+        return "/admin/settings";
+      }
+      return null;
+  }
+}
 
 /**
  * The company's own log, in sentences.
  *
- * Sign-ins are left out. She is the only human, so "Nadia signed in" is a line
- * about herself in a feed whose whole purpose is telling her what happened
- * while she was not here. Sessions are on Settings, where they are a security
- * question rather than news.
+ * Newest first. Times are stored UTC and read in Pacific/Auckland by the
+ * formatters. Sign-ins and sign-outs are left out — sessions live on Settings.
+ * Rows stamped `actor_type = agent` or carrying an `agent_run_id` are hidden:
+ * the in-site roster is gone, and Grok Bot work appears when it uses this admin
+ * as a person (operator / system), not as the old agent runtime.
  */
-export async function activity(limit = 10): Promise<readonly ActivityItem[]> {
+export async function activity(
+  limit = 10,
+  filter: ActivityFilter = "all",
+): Promise<readonly ActivityItem[]> {
   const result = await adminSql().query(
     `select id, occurred_at, actor_type, actor_label, action, summary,
-            entity_label
+            entity_type, entity_label
        from public.audit_log
       where action not in ('login', 'logout')
-      order by occurred_at desc limit $1`,
-    [limit],
+        and actor_type <> 'agent'
+        and agent_run_id is null
+      order by occurred_at desc
+      limit $1`,
+    // Fetch a wider window when filtering in memory so a stock-only view is
+    // not empty just because the newest ten rows were orders.
+    [filter === "all" ? limit : Math.max(limit * 8, 80)],
   );
-  return result.rows.map((row) => ({
-    id: text(row, "id"),
-    occurredAt: iso(row, "occurred_at"),
-    actor: textOrNull(row, "actor_label") ?? "System",
-    actorType: text(row, "actor_type"),
-    action: text(row, "action"),
-    summary: text(row, "summary"),
-    entityLabel: textOrNull(row, "entity_label"),
-  }));
+  const items = result.rows.map((row) => {
+    const entityType = text(row, "entity_type");
+    const entityLabel = textOrNull(row, "entity_label");
+    const bucket = activityBucket(entityType);
+    return {
+      id: text(row, "id"),
+      occurredAt: iso(row, "occurred_at"),
+      actor: textOrNull(row, "actor_label") ?? "System",
+      actorType: text(row, "actor_type"),
+      action: text(row, "action"),
+      summary: text(row, "summary"),
+      entityType,
+      entityLabel,
+      href: activityHref(entityType, entityLabel),
+      filter: bucket,
+    };
+  });
+  const filtered =
+    filter === "all" ? items : items.filter((item) => item.filter === filter);
+  return filtered.slice(0, limit);
 }
 
 // ---------------------------------------------------------------------------
@@ -1215,65 +999,6 @@ export async function companyFacts(): Promise<CompanyFacts> {
   };
 }
 
-export type AgentSpend = {
-  readonly todayCents: number;
-  readonly monthCents: number;
-  readonly dailyCapCents: number;
-  readonly killSwitchOn: boolean;
-  readonly runsToday: number;
-  readonly runningNow: number;
-  readonly waitingOnHer: number;
-};
-
-/** What the team costs, and whether anything is holding them back. */
-export async function agentSpend(): Promise<AgentSpend> {
-  const sql = adminSql();
-  const [costs, caps, kill, runs] = await Promise.all([
-    sql.query(
-      `select coalesce(sum(cost_micros) filter (
-                where incurred_on = (now() at time zone 'Pacific/Auckland')::date
-              ), 0) as today_micros,
-              coalesce(sum(cost_micros) filter (
-                where incurred_on >= date_trunc('month',
-                        (now() at time zone 'Pacific/Auckland'))::date
-              ), 0) as month_micros
-         from public.agent_costs`,
-    ),
-    sql.query(
-      `select coalesce(sum(daily_spend_cap_cents), 0) as cap
-         from public.agents where is_enabled`,
-    ),
-    sql.query(
-      `select value from public.settings where key = 'agents.kill_switch'`,
-    ),
-    sql.query(
-      `select count(*) filter (
-                where queued_at >= (date_trunc('day',
-                  now() at time zone 'Pacific/Auckland')
-                  at time zone 'Pacific/Auckland')
-              ) as today,
-              count(*) filter (where status = 'running')            as running,
-              count(*) filter (where status = 'awaiting_approval')  as waiting
-         from public.agent_runs`,
-    ),
-  ]);
-  const costRow = costs.rows[0] ?? {};
-  const runRow = runs.rows[0] ?? {};
-  const killValue = kill.rows[0]?.["value"];
-  const halted =
-    killValue !== null &&
-    typeof killValue === "object" &&
-    (killValue as Record<string, unknown>)["halted"] === true;
-  return {
-    todayCents: Math.round(int(costRow, "today_micros") / 10_000),
-    monthCents: Math.round(int(costRow, "month_micros") / 10_000),
-    dailyCapCents: int(caps.rows[0] ?? {}, "cap"),
-    killSwitchOn: halted,
-    runsToday: int(runRow, "today"),
-    runningNow: int(runRow, "running"),
-    waitingOnHer: int(runRow, "waiting"),
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Who is signed in

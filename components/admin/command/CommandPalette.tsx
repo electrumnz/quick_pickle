@@ -257,9 +257,7 @@ export function CommandPalette() {
         covers this element completely, so the
         `event.target === event.currentTarget` guard that used to live on the
         parent could never be true and clicking outside the palette did
-        nothing. See `components/admin/chat/ChatDock.tsx` for the whole
-        account — the palette is the third overlay in this admin that shipped
-        with the same dead check.
+        nothing. The palette dismisses from the backdrop itself.
       */}
       <div
         aria-hidden="true"
@@ -282,7 +280,7 @@ export function CommandPalette() {
             onChange={(event) => {
               setQuery(event.target.value);
             }}
-            placeholder="Search orders, customers, batches, the team…"
+            placeholder="Search orders, customers, batches…"
             aria-label="Search"
             className="min-w-0 flex-1 bg-transparent text-body-sm text-primary outline-none placeholder:text-muted"
           />
@@ -304,7 +302,7 @@ export function CommandPalette() {
               </p>
               <p className="mx-auto mt-1 max-w-prose text-caption text-muted">
                 Search covers order numbers, customer names and emails,
-                products, batch codes, suppliers, ingredients, the AI team,
+                products, batch codes, suppliers, ingredients,
                 social posts and settings.
               </p>
             </li>

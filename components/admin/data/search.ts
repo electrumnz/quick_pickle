@@ -7,15 +7,15 @@ import { money } from "./format";
 /**
  * One search box over the whole company.
  *
- * Nine destinations is a small enough map to hold in your head, but the things
+ * The destinations are a small enough map to hold in your head, but the things
  * *inside* them are not: 95 orders, 50 customers, 18 batches, seven suppliers.
  * So search covers the nouns rather than the pages — an order number, a
- * customer's name, a batch code, a supplier, a member of the team — and every
+ * customer's name, a batch code, a supplier — and every
  * result says which section it lives in, so finding something also teaches
  * where it lives.
  *
  * Orders, products and customers come through the commerce provider. Batches,
- * suppliers, ingredients, agents, posts and settings are Half Sour's own
+ * suppliers, ingredients, posts and settings are Half Sour's own
  * tables and come from SQL.
  */
 
@@ -108,7 +108,7 @@ export async function searchEverything(
         [like, limitPerGroup],
       )
       .then(async (batches) => {
-        const [suppliers, ingredients, agents, posts, rules, keys] =
+        const [suppliers, ingredients, posts, rules, keys] =
           await Promise.all([
             sql.query(
               `select id::text as id, name as title, coalesce(city, region, '') as detail
@@ -121,13 +121,6 @@ export async function searchEverything(
               `select id::text as id, name as title, category::text as detail
                  from public.ingredients
                 where is_active and (name ilike $1 or code ilike $1)
-                limit $2`,
-              [like, limitPerGroup],
-            ),
-            sql.query(
-              `select id::text as id, name as title, job_title as detail
-                 from public.agents
-                where name ilike $1 or job_title ilike $1 or slug ilike $1
                 limit $2`,
               [like, limitPerGroup],
             ),
@@ -155,7 +148,7 @@ export async function searchEverything(
               [like, limitPerGroup],
             ),
           ]);
-        return { batches, suppliers, ingredients, agents, posts, rules, keys };
+        return { batches, suppliers, ingredients, posts, rules, keys };
       })
       .catch(() => null),
   ]);
@@ -227,16 +220,6 @@ export async function searchEverything(
         href: `/admin/stock?q=${encodeURIComponent(text(row, "title"))}`,
       });
     }
-    for (const row of rest.agents.rows) {
-      hits.push({
-        id: `agent-${text(row, "id")}`,
-        kind: "Team",
-        title: text(row, "title"),
-        subtitle: text(row, "detail"),
-        section: "The Team",
-        href: `/admin/team?q=${encodeURIComponent(text(row, "title"))}`,
-      });
-    }
     for (const row of rest.posts.rows) {
       hits.push({
         id: `post-${text(row, "id")}`,
@@ -284,9 +267,6 @@ export async function navCounts(): Promise<NavCountsData> {
   const sql = adminSql();
   const result = await sql.query(
     `select
-       (select count(*) from public.approvals where status = 'pending')       as approvals,
-       (select count(*) from public.agent_runs
-         where status = 'failed' and queued_at > now() - interval '30 days')  as failed_runs,
        (select count(*) from public.social_posts where status = 'failed')     as failed_posts,
        (select count(*) from public.webhook_events
          where process_status = 'failed')                                     as failed_hooks,
@@ -294,6 +274,10 @@ export async function navCounts(): Promise<NavCountsData> {
        (select count(*) from public.reviews
          where status = 'pending'
             or (status = 'published' and reply_body is null and rating <= 3)) as reviews,
+       (select count(*) from public.orders
+         where status = 'open'
+           and fulfillment_status = 'unfulfilled'
+           and financial_status <> 'paid')                                    as unpaid_to_pack,
        (select count(*) from public.orders
          where status = 'open' and fulfillment_status = 'unfulfilled')        as to_pack,
        (select count(*) from public.ingredients
@@ -306,12 +290,13 @@ export async function navCounts(): Promise<NavCountsData> {
   );
   const row = result.rows[0] ?? {};
   const failures =
-    int(row, "failed_runs") +
     int(row, "failed_posts") +
     int(row, "failed_hooks") +
     int(row, "failed_syncs");
   return {
-    needsYou: int(row, "approvals") + failures + int(row, "reviews"),
+    // Real blockers only: unpaid pack queue, Mirror troubles, low stock signal
+    // via stock badge, failed posts/reviews. No agent-raised approvals.
+    needsYou: failures + int(row, "reviews") + int(row, "unpaid_to_pack"),
     toPack: int(row, "to_pack"),
     stockLow: int(row, "low_ingredients") + int(row, "low_stock"),
     socialWaiting: int(row, "social_waiting"),

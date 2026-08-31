@@ -88,16 +88,12 @@ the sealed cookie all behave as they always did. Tests assert both directions.
 
 Two things it changes, deliberately, because every row in that database is invented:
 
-- **The admin is open** — no password to look, and none to ask the team. Gated on
+- **The admin is open** — no password to look. Gated on
   `demoOpensAdmin()`, not bare `isDemoMode()`: the latter is also true when
   `HALF_SOUR_DEMO=1` sits beside a real `SUPABASE_DB_URL`, and Server Actions are
   reachable by POST without rendering a page. Writes with nobody signed in are stamped
   `actor_type = 'system'` against a row that says what it is, never against the founder.
 - **The approval gate still holds.** Deciding needs the password.
-
-The agents run on the Vercel AI Gateway via `AI_GATEWAY_API_KEY`. A deployment fixes its
-environment at build time, so a variable added after a deploy does not reach it until the
-next one — redeploy rather than debugging the code.
 
 ## Deploying
 

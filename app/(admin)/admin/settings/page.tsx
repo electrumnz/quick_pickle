@@ -14,7 +14,6 @@ import {
   settingLabel,
 } from "@/components/admin/data/format";
 import {
-  agentSpend,
   companyFacts,
   operator,
   operatorSessions,
@@ -75,21 +74,19 @@ export default async function SettingsPage({
   const demo = isDemoMode();
 
   const result = await load(async () => {
-    const [facts, rows, sessions, person, spend] = await Promise.all([
+    const [facts, rows, sessions, person] = await Promise.all([
       companyFacts(),
       settings(),
       access.kind === "session"
         ? operatorSessions(access.session.operatorId, access.session.id)
         : [],
       access.kind === "session" ? operator(access.session.operatorId) : null,
-      agentSpend(),
     ]);
     return {
       facts,
       rows,
       sessions,
       person,
-      spend,
       providerName: commerce().name,
     };
   });
@@ -106,7 +103,7 @@ export default async function SettingsPage({
     );
   }
 
-  const { facts, rows, sessions, person, spend, providerName } = result.data;
+  const { facts, rows, sessions, person, providerName } = result.data;
   const shown = rows.filter(
     (row) =>
       query === "" ||
@@ -311,36 +308,6 @@ export default async function SettingsPage({
                 </Row>
               ))}
             </Rows>
-          </Card>
-        </Section>
-
-        <Section
-          title="How the AI team is governed"
-          description="The rules that apply to all six of them at once."
-        >
-          <Card>
-            <CardBody>
-              <DefinitionList
-                items={[
-                  {
-                    term: "Emergency stop",
-                    value: spend.killSwitchOn
-                      ? "On — every agent is stopped"
-                      : "Off — the team is working",
-                    hint: "One switch halts every agent mid-job",
-                  },
-                  {
-                    term: "Spent today",
-                    value: `${money(spend.todayCents)} of ${money(spend.dailyCapCents)}`,
-                    hint: "Each agent stops itself at its own limit",
-                  },
-                  {
-                    term: "Spent this month",
-                    value: money(spend.monthCents),
-                  },
-                ]}
-              />
-            </CardBody>
           </Card>
         </Section>
 

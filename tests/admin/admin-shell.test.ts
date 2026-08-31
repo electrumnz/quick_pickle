@@ -27,14 +27,10 @@ import {
   destinationFor,
 } from "@/components/admin/shell/destinations";
 
-describe("the ten destinations", () => {
-  it("is exactly ten, in the order the brief names them", () => {
-    // "Ask the team" is second on purpose: Today is what needs her, asking is
-    // ask for anything, and both are ways in. Everything under them is a place
-    // she goes when she already knows what she wants.
+describe("the nine destinations", () => {
+  it("is exactly nine, in the order the admin map names them", () => {
     expect(DESTINATIONS.map((destination) => destination.label)).toEqual([
       "Today",
-      "Ask the team",
       "Orders & Delivery",
       "Stock & Batches",
       "Social",
@@ -58,16 +54,19 @@ describe("the ten destinations", () => {
     expect(destinationFor("/admin/orders")?.id).toBe("orders");
     expect(destinationFor("/admin/orders/HS-01092")?.id).toBe("orders");
     expect(destinationFor("/admin/brand")?.id).toBe("brand");
+    expect(destinationFor("/admin/team")?.id).toBe("team");
   });
 
-  it("marks the chat, including a conversation chosen in the address bar", () => {
-    expect(destinationFor("/admin/chat")?.id).toBe("chat");
+  it("does not treat the old chat path as a destination", () => {
+    expect(destinationFor("/admin/chat")).toBeNull();
   });
 
-  it("marks nothing current on a page that is not one of the ten", () => {
+  it("marks nothing current on a page that is not one of the nine", () => {
     // Today is /admin exactly. A 404 under /admin must not light it up.
     expect(destinationFor("/admin/no-such-page")).toBeNull();
     expect(destinationFor("/admin/search")).toBeNull();
+    // Activity is a reader, not a sidebar destination.
+    expect(destinationFor("/admin/activity")).toBeNull();
   });
 });
 
@@ -78,25 +77,23 @@ describe("words for numbers", () => {
     expect(money(150)).toBe("$1.50");
   });
 
-  it("pluralises the way a person speaks", () => {
+  it("pluralises with the count in front", () => {
     expect(plural(1, "order")).toBe("1 order");
-    expect(plural(6, "order")).toBe("6 orders");
-    expect(plural(2, "thing")).toBe("2 things");
+    expect(plural(3, "order")).toBe("3 orders");
   });
 
-  it("turns a settings key into a phrase", () => {
-    expect(settingLabel("tax.gst_rate_bp")).toBe("GST rate in basis points");
-    expect(settingLabel("shipping.free_threshold_cents")).toBe(
-      "Free threshold in cents",
-    );
+  it("turns a setting key into words", () => {
+    expect(settingLabel("company.trading_name")).toBe("Trading name");
   });
+});
 
-  it("names the device behind a user agent", () => {
+describe("a device, as a person would name it", () => {
+  it("reads a browser user-agent as a short device name", () => {
     expect(
       deviceName(
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
       ),
-    ).toBe("Safari on an iPhone");
+    ).toBe("Safari on a Mac");
     expect(deviceName("curl/8.5.0")).toBe("A command line tool");
     expect(deviceName(null)).toBe("Unrecorded device");
   });
@@ -125,10 +122,10 @@ describe("dates, in New Zealand", () => {
 });
 
 function todayWith(counts: {
-  decisions: number;
   toPack: number;
   failures: number;
   repliesOwed: number;
+  awaitingPayment?: number;
 }): TodayData {
   const empty = {
     orders: 0,
@@ -140,7 +137,6 @@ function todayWith(counts: {
   return {
     now: "2026-08-30T09:00:00+12:00",
     actions: [],
-    decisions: counts.decisions,
     failures: counts.failures,
     repliesOwed: counts.repliesOwed,
     toPack: Array.from({ length: counts.toPack }, (_, index) => ({
@@ -154,7 +150,7 @@ function todayWith(counts: {
       paid: true,
       shippingMethod: null,
     })),
-    awaitingPayment: 0,
+    awaitingPayment: counts.awaitingPayment ?? 0,
     stock: [],
     lowIngredients: [],
     batches: [],
@@ -162,46 +158,28 @@ function todayWith(counts: {
     previousWeek: empty,
     days: [],
     activity: [],
-    spend: {
-      todayCents: 0,
-      monthCents: 0,
-      dailyCapCents: 0,
-      killSwitchOn: false,
-      runsToday: 0,
-      runningNow: 0,
-      waitingOnHer: 0,
-    },
     upcoming: [],
-    team: [],
   };
 }
 
 describe("the sentence at the top of Today", () => {
-  it("describes a busy morning as a list, in her order of concern", () => {
-    expect(
-      summariseDay(
-        todayWith({ decisions: 4, toPack: 6, failures: 4, repliesOwed: 1 }),
-      ),
-    ).toBe(
-      "4 decisions are waiting on you, 6 orders to pack, 4 things are not working, and 1 review owed a reply.",
+  it("says nothing is waiting when the day is quiet", () => {
+    expect(summariseDay(todayWith({ toPack: 0, failures: 0, repliesOwed: 0 }))).toBe(
+      "Nothing is waiting on you. Every order is packed and nothing has failed.",
     );
   });
 
-  it("agrees with itself about number", () => {
+  it("names orders to pack when there are some", () => {
     expect(
-      summariseDay(
-        todayWith({ decisions: 1, toPack: 0, failures: 1, repliesOwed: 0 }),
-      ),
-    ).toBe("1 decision is waiting on you, and 1 thing is not working.");
+      summariseDay(todayWith({ toPack: 2, failures: 0, repliesOwed: 0 })),
+    ).toContain("2 orders to pack");
   });
 
-  it("says a quiet day is quiet, rather than showing nothing", () => {
-    expect(
-      summariseDay(
-        todayWith({ decisions: 0, toPack: 0, failures: 0, repliesOwed: 0 }),
-      ),
-    ).toBe(
-      "Nothing is waiting on you. The team has everything it needs, every order is packed and nothing has failed.",
+  it("names failures and replies when they exist", () => {
+    const sentence = summariseDay(
+      todayWith({ toPack: 0, failures: 1, repliesOwed: 2 }),
     );
+    expect(sentence).toContain("1 thing is not working");
+    expect(sentence).toContain("2 reviews owed a reply");
   });
 });

@@ -16,7 +16,6 @@
  * | `ingest.ts`      | Upload, in the order the security design requires            |
  * | `storage/`       | The `StorageProvider` port, local disk and Supabase Storage  |
  * | `store/`         | The persistence port and its SQL implementation              |
- * | `tools.ts`       | The two read-only tools, for the runtime's own registry      |
  * | `describe.ts`    | The optional vision draft, labelled as a draft everywhere    |
  * | `claim-guard.ts` | What model-written text is checked against before it is kept |
  */
@@ -84,16 +83,6 @@ export {
   slugify,
 } from "./naming";
 
-export {
-  ASSET_TOOL_NAMES,
-  citationFor,
-  createAssetTools,
-  registerAssetTools,
-  type AssetCitation,
-  type AssetLibraryReads,
-  type AssetToolPorts,
-  type AssetTools,
-} from "./tools";
 
 export type {
   AssetApprovalReference,

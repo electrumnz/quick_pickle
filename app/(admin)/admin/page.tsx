@@ -30,7 +30,6 @@ import {
   Card,
   CardBody,
   CardHeader,
-  Dot,
   EmptyState,
   Meter,
   Row,
@@ -48,13 +47,10 @@ export const metadata: Metadata = {
  * Today — the screen that has to tell her what her day is.
  *
  * Everything above the fold is something she can act on. The right-hand rail
- * is the state of the business, which she reads rather than works: takings,
- * what is coming, and what the AI team has been doing while she was asleep.
- *
- * No number appears without the words that make it mean something, and no
- * identifier appears where a name exists — a batch is "No 03 SMOKE, batch E",
- * not a uuid, and an order is a person and a town.
+ * is the state of the business: takings, what is coming, and what happened
+ * while she was away (from `audit_log`).
  */
+
 export default async function TodayPage() {
   const result = await load(() => loadToday());
   const now = new Date();
@@ -83,12 +79,7 @@ export default async function TodayPage() {
           <>
             <span>{dayLong(now)}</span>
             <span aria-hidden="true">·</span>
-            <span className="inline-flex items-center gap-1.5">
-              <Dot tone={data.spend.killSwitchOn ? "warn" : "live"} />
-              {data.spend.killSwitchOn
-                ? "The team is stopped"
-                : `${plural(data.spend.runsToday, "job")} run by the team today`}
-            </span>
+            <span>New Zealand time</span>
           </>
         }
       />
@@ -103,14 +94,12 @@ export default async function TodayPage() {
         <aside aria-label="Today at a glance" className="space-y-6">
           <BusinessNow data={data} />
           <ComingUp data={data} />
-          <TeamToday data={data} />
+          <WhileAway data={data} />
         </aside>
       </div>
     </>
   );
 }
-
-// ---------------------------------------------------------------------------
 
 function NeedsYou({ actions }: { actions: readonly ActionItem[] }) {
   const shown = actions.slice(0, 10);
@@ -124,10 +113,10 @@ function NeedsYou({ actions }: { actions: readonly ActionItem[] }) {
       {actions.length === 0 ? (
         <EmptyState
           headline="Nothing is waiting on you"
-          fills="Decisions land here the moment one of the AI team asks for one — a price change, a supplier order, a post before it goes out."
+          fills="Unpaid orders, Mirror troubles, failed posts and reviews that need a reply land here."
         >
-          The team has everything it needs, and nothing has failed. This list is
-          where anything that needs a human turns up.
+          Every order is packed and nothing has failed. This list is where
+          anything that needs a human turns up.
         </EmptyState>
       ) : (
         <Rows>
@@ -149,12 +138,7 @@ function NeedsYou({ actions }: { actions: readonly ActionItem[] }) {
 }
 
 function ActionRow({ action }: { action: ActionItem }) {
-  const tone =
-    action.kind === "Not working"
-      ? "danger"
-      : action.risk === "high" || action.risk === "critical"
-        ? "accent"
-        : "quiet";
+  const tone = action.kind === "Not working" ? "danger" : "quiet";
   return (
     <Row href={action.href}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
@@ -169,12 +153,6 @@ function ActionRow({ action }: { action: ActionItem }) {
             <span>{action.source}</span>
             <span aria-hidden="true">·</span>
             <span>{ago(action.occurredAt)}</span>
-            {action.expiresAt !== null && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span>expires {until(action.expiresAt)}</span>
-              </>
-            )}
             {action.amountLabel !== null && (
               <>
                 <span aria-hidden="true">·</span>
@@ -193,8 +171,6 @@ function ActionRow({ action }: { action: ActionItem }) {
     </Row>
   );
 }
-
-// ---------------------------------------------------------------------------
 
 function ToPack({ data }: { data: TodayData }) {
   const oldest = data.toPack[0];
@@ -255,8 +231,6 @@ function ToPack({ data }: { data: TodayData }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-
 function StockToday({ data }: { data: TodayData }) {
   const tightest = data.stock[0];
   return (
@@ -288,10 +262,6 @@ function StockToday({ data }: { data: TodayData }) {
                     </p>
                   </div>
                   <div className="mt-1.5">
-                    {/* The bar is days of cover, not bottles: a full bar means
-                        three months or more, and a short one means order now.
-                        A line with no recent sales gets no bar, because there
-                        is no rate to draw one from. */}
                     {line.coverDays === null ? (
                       <p className="text-caption text-muted">
                         Nothing sold in the last month, so there is no rate to
@@ -380,8 +350,6 @@ function StockToday({ data }: { data: TodayData }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-
 function BusinessNow({ data }: { data: TodayData }) {
   const change =
     data.previousWeek.takingsCents === 0
@@ -459,64 +427,41 @@ function ComingUp({ data }: { data: TodayData }) {
   );
 }
 
-function TeamToday({ data }: { data: TodayData }) {
+function WhileAway({ data }: { data: TodayData }) {
   return (
     <Card>
       <CardHeader
-        title="The team"
-        action={{ label: "All six", href: "/admin/team" }}
+        title="While you were away"
+        action={{ label: "Full activity log", href: "/admin/activity" }}
       />
-      <CardBody className="space-y-4">
-        <div>
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="text-caption text-muted">
-              Spent today by the AI team
-            </p>
-            <p className="text-body-sm text-primary tabular-nums">
-              {money(data.spend.todayCents)}
-            </p>
-          </div>
-          <div className="mt-2">
-            <Meter
-              value={data.spend.todayCents}
-              max={Math.max(data.spend.dailyCapCents, 1)}
-              label={`${money(data.spend.todayCents)} spent of a ${money(data.spend.dailyCapCents)} daily limit`}
-            />
-          </div>
-          <p className="mt-1.5 text-caption text-muted">
-            The daily limit across all six is {money(data.spend.dailyCapCents)}.
-            They stop on their own when they reach it.
-          </p>
-        </div>
-        <p className="text-caption text-muted">
-          {data.spend.runningNow > 0
-            ? `${plural(data.spend.runningNow, "job")} running now. `
-            : "Nothing running this minute. "}
-          {data.spend.waitingOnHer > 0
-            ? `${plural(data.spend.waitingOnHer, "job")} stopped, waiting for you to decide.`
-            : "Nothing is waiting on a decision."}
-        </p>
-      </CardBody>
-      <div className="border-t border-hairline">
-        <p className="px-4 pt-3 text-eyebrow uppercase text-muted">
-          What happened while you were away
-        </p>
-        <Rows>
-          {data.activity.slice(0, 5).map((entry) => (
-            <Row key={entry.id}>
-              <p className="text-caption text-primary">{entry.summary}</p>
-              <p className="mt-0.5 text-caption text-muted">
-                {entry.actor} · {dayAndTime(entry.occurredAt)}
-              </p>
-            </Row>
-          ))}
-        </Rows>
-        <CardBody className="border-t border-hairline">
-          <ActionLink href="/admin/team">
-            See everything the team did
-          </ActionLink>
-        </CardBody>
-      </div>
+      {data.activity.length === 0 ? (
+        <EmptyState
+          headline="Nothing to show yet"
+          fills="Grok Bot work appears here when it uses this admin."
+        >
+          Packing an order, correcting a count, or approving a post will leave a
+          line in the activity log.
+        </EmptyState>
+      ) : (
+        <>
+          <Rows>
+            {data.activity.slice(0, 5).map((entry) => (
+              <Row key={entry.id} href={entry.href ?? undefined}>
+                <p className="text-caption text-primary">{entry.summary}</p>
+                <p className="mt-0.5 text-caption text-muted">
+                  {entry.actor} · {dayAndTime(entry.occurredAt)}
+                  {entry.entityLabel === null
+                    ? ""
+                    : ` · ${entry.entityLabel}`}
+                </p>
+              </Row>
+            ))}
+          </Rows>
+          <CardBody className="border-t border-hairline">
+            <ActionLink href="/admin/activity">See the activity log</ActionLink>
+          </CardBody>
+        </>
+      )}
     </Card>
   );
 }
