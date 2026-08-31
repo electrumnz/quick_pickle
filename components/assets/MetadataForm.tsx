@@ -83,8 +83,8 @@ export function MetadataForm({
           {asset.descriptionSource === "model_draft" && (
             <Callout title="This description was drafted by a vision model">
               It has not been checked. Correct anything it got wrong and save —
-              the words below are what the team reads when it decides whether
-              this file suits a post.
+              the words below are what you read when deciding whether this file
+              suits a post.
             </Callout>
           )}
 
@@ -105,7 +105,7 @@ export function MetadataForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
               label="The occasion"
-              hint="Where this was. An agent uses it to keep a post in the right place."
+              hint="Where this was. Used to keep a post in the right place."
               htmlFor="occasion"
             >
               <TextInput

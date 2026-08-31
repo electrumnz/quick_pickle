@@ -5,11 +5,7 @@
  * and the admin path to look at it.
  */
 
-import {
-  aspectBucket,
-  framesFor,
-  type MarketingAsset,
-} from "./types";
+import { aspectBucket, framesFor, type MarketingAsset } from "./types";
 
 export interface AssetCitation {
   readonly assetId: string;

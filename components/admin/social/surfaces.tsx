@@ -506,7 +506,7 @@ export function InstagramFeed({ surface, post }: SurfaceProps) {
 /**
  * Instagram, as a story. Full-bleed 9:16 and no caption at all — the single
  * most useful thing this preview says, because the caption on the row is what
- * an agent wrote and a story reader never sees a word of it.
+ * was written for the feed, and a story reader never sees a word of it.
  */
 export function InstagramStory({ surface, post }: SurfaceProps) {
   const frame = surface.frames[0] ?? { label: "Story, 9:16", ratio: 9 / 16 };

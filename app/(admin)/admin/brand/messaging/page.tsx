@@ -28,13 +28,12 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 /**
- * Messaging — the StoryBrand BrandScript, as the marketing agent reads it.
+ * Messaging — the StoryBrand BrandScript.
  *
  * The seven elements are rendered in SB7 order and numbered, because the order
  * is the framework: a story that puts the plan before the problem is not a
  * story. Everything here is loaded from `strategy_documents`, so what she reads
- * on this screen is literally the text sitting in the marketing agent's system
- * prompt.
+ * on this screen is the same text the company publishes from.
  */
 export default async function MessagingPage() {
   const loaded = await loadStrategyForAdmin();
@@ -44,7 +43,7 @@ export default async function MessagingPage() {
     <>
       <PageHeader
         title="Messaging"
-        lede="The seven things a customer needs to hear, in the order they need to hear them — and the exact lines the AI team writes from."
+        lede="The seven things a customer needs to hear, in the order they need to hear them — and the exact lines published copy writes from."
         meta={
           <>
             <span>BrandScript v{script.version}</span>
@@ -70,8 +69,7 @@ export default async function MessagingPage() {
             The customer is the hero. HALF SOUR is the guide. Any sentence whose
             subject is us — what we make, how long it takes, how much we care —
             is a sentence to rewrite with them as the subject. That rule is
-            written into the agents&rsquo; system prompt in these words, not
-            left for them to infer.
+            written into the BrandScript in these words, not left to infer.
           </p>
         </Callout>
 
@@ -130,18 +128,15 @@ export default async function MessagingPage() {
         />
 
         <Section
-          title="Who reads this"
-          description="The BrandScript is not a document filed somewhere. It is loaded into an agent's system prompt before it writes."
+          title="Where this lives"
+          description="The BrandScript is not a document filed somewhere. It is the row in strategy_documents this screen reads."
         >
           <Card>
             <CardBody className="space-y-2 text-body-sm text-primary">
               <p className="max-w-prose">
-                Ari, the marketing agent, is handed this script scoped to{" "}
-                <code className="font-mono text-caption">social</code>,{" "}
-                <code className="font-mono text-caption">email</code> and{" "}
-                <code className="font-mono text-caption">storefront</code>, with
-                the direct customer first. Vic, the trade agent, is handed the
-                same script with the venue buyer first, plus the market model.
+                Direct-customer copy uses the Friday-host script scoped to
+                storefront, social and email. Trade copy uses the bar-manager
+                script first, plus the market model.
               </p>
               <p className="max-w-prose text-muted">
                 The evidence that this is real rather than decorative is in{" "}

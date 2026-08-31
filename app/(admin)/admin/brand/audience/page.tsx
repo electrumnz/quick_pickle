@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
  * Audience — the two customers, and the store's score against them.
  *
  * The avatars are loaded from `strategy_avatars`, so what is on this screen is
- * the text sitting in the agents' system prompts. The score above them is not a
+ * the same text the company plans against. The score above them is not a
  * stored number: the audit runs when this page is requested, fetching the real
  * storefront over HTTP and asking each check its question. A score that came
  * out of a table would be a score from whenever the table was last written, and

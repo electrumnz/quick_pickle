@@ -1487,6 +1487,23 @@ select c.slug, c.name, c.objective, c.channel::public.campaign_channel, c.status
   left join public.discounts d on d.code = c.discount_code
   left join public.agents a on a.slug = c.agent_slug;
 
+-- One pending approval (no agent) so Social has a waiting post and
+-- supabase/tests/verify.sql can probe the pending-undecided check.
+insert into public.approvals
+  (subject_type, subject_table, title, summary, rationale, payload, preview, risk,
+   amount_cents, status, requested_by_agent_id, requested_by_run_id, requested_at, expires_at,
+   decided_by, decided_at, decision_note, applied_at, applied_result)
+values
+  ('social_post', 'social_posts',
+   'Instagram: No 03 SMOKE back on the shelf Thursday',
+   'A single still of the No 03 bottle with a caption announcing the restock, scheduled for Thursday 5pm.',
+   'No 03 has been out of stock for nine days and it is the second most asked-about thing in the inbox. Batch D lands Wednesday.',
+   '{"action":"schedule","platform":"instagram","scheduled_for":"+2 days 17:00 Pacific/Auckland","caption_length":214}'::jsonb,
+   '{"caption":"No 03 SMOKE is back on Thursday. Chipotle and manzano, manuka-smoked salt, the heat arrives about three seconds late. Batch D, bottled Tuesday.","asset":"media/bottles/no-03-smoke.jpg"}'::jsonb,
+   'low', null, 'pending', null, null,
+   now() - interval '19 hours', now() + interval '29 hours',
+   null, null, null, null, null);
+
 insert into public.social_posts
   (account_id, platform, campaign_id, status, caption, hashtags, link_url, scheduled_for, published_at,
    external_post_id, permalink, impressions, reach, likes, comments_count, shares, saves, link_clicks,
@@ -1496,7 +1513,7 @@ select acc.id, acc.platform, camp.id, sp.status::public.social_post_status, sp.c
        case when sp.published is null then null else now() - sp.published end,
        sp.ext, sp.permalink, sp.impressions, sp.reach, sp.likes, sp.comments, sp.shares, sp.saves, sp.clicks,
        case when sp.published is null then null else now() - interval '3 hours' end,
-       sp.error, p.id, null::uuid, null::uuid, sp.brand_ok, sp.brand_notes
+       sp.error, p.id, null::uuid, ap.id, sp.brand_ok, sp.brand_notes
   from (values
     ('instagram', 'no-03-launch', 'published',
      'No 03 SMOKE. Chipotle and fresh manzano go in at day four, and the salt is cold-smoked over manuka before it ever touches water. The heat arrives about three seconds late and then sits there.',
@@ -1534,28 +1551,27 @@ select acc.id, acc.platform, camp.id, sp.status::public.social_post_status, sp.c
      '{halfsour,coastvillemarket,auckland,farmersmarket}', null,
      null, interval '9 days', '18042117993205102', 'https://instagram.com/p/DLr2Ze5pV1n/',
      6210, 5402, 288, 19, 31, 74, 0, null, null, null, null, true, 'Passed.'),
-    ('instagram', null, 'draft',
+    ('instagram', null, 'pending_approval',
      'No 03 SMOKE is back on Thursday. Chipotle and manzano, manuka-smoked salt, the heat arrives about three seconds late. Batch D, bottled Tuesday.',
      '{halfsour,restock,smoke,brine}', 'https://halfsour.co.nz/products/no-03-smoke',
-     interval '2 days', null, null, null, 0, 0, 0, 0, 0, 0, 0, null, 'no-03-smoke', 'social',
+     interval '2 days', null, null, null, 0, 0, 0, 0, 0, 0, 0, null, 'no-03-smoke', null,
      'Instagram: No 03 SMOKE back on the shelf Thursday', true, 'Passed all eleven active rules.'),
     ('instagram', 'summer-full-set', 'draft',
      'The First Three. All three, boxed, with the three cards we actually use behind our own bar.',
      '{halfsour,gifts,thefirstthree}', 'https://halfsour.co.nz/products/the-full-set',
-     null, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, 'the-full-set', 'social', null, true, 'Passed. Held until the December bottle order lands.'),
+     null, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, 'the-full-set', null, null, true, 'Passed. Held until the December bottle order lands.'),
     ('tiktok', null, 'failed',
      'Three ways with No 02 that are not a martini.',
      '{halfsour,cooking,brine}', null,
      null, null, null, null, 0, 0, 0, 0, 0, 0, 0,
      'TikTok rejected the upload: video is 1080x1350, the API requires a 9:16 aspect ratio. Re-crop and retry.',
-     'no-02-dirty', 'social', null, true, 'Passed brand check. Failed on upload, not content.')
+     'no-02-dirty', null, null, true, 'Passed brand check. Failed on upload, not content.')
   ) as sp(platform, campaign_slug, status, caption, hashtags, link, scheduled, published, ext, permalink,
           impressions, reach, likes, comments, shares, saves, clicks, error,
           product_handle, agent_slug, approval_title, brand_ok, brand_notes)
   join public.social_accounts acc on acc.platform = sp.platform::public.social_platform
   left join public.campaigns camp on camp.slug = sp.campaign_slug
   left join public.products p on p.handle = sp.product_handle
-  left join public.agents ag on ag.slug = sp.agent_slug
   left join public.approvals ap on ap.title = sp.approval_title;
 
 insert into public.social_post_assets (post_id, asset_id, position)

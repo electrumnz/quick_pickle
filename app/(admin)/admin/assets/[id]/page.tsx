@@ -143,16 +143,16 @@ export default async function AssetPage({
           </Card>
 
           <Card>
-            <CardHeader title="What the team can do with it" />
+            <CardHeader title="What you can do with it" />
             <CardBody>
               {verdict.allowed ? (
                 <Callout title="Cleared for use">
-                  An agent may choose this one for a post. Choosing it is not
-                  publishing it — whatever it writes still comes to you for a
-                  yes, with this picture beside it.
+                  This one may be chosen for a post. Choosing it is not
+                  publishing it — anything that uses it still needs your yes,
+                  with this picture beside it.
                 </Callout>
               ) : (
-                <Callout title="The team cannot use this one" tone="danger">
+                <Callout title="This one cannot be used yet" tone="danger">
                   <p>{verdict.reason}</p>
                   <p className="mt-1">{verdict.fix}</p>
                 </Callout>

@@ -364,7 +364,7 @@ export const GO_LIVE_TASKS: readonly GoLiveTask[] = [
       "When it is done, mark it done: set done: true on the product-photography entry in content/go-live.ts and tick its box in TODO.md.",
     ].join("\n"),
     done: false,
-  }
+  },
 ];
 
 /** How far through the list she is. */

@@ -3,14 +3,8 @@ import Link from "next/link";
 
 import { load } from "@/components/admin/data/db";
 import { dayAndTime } from "@/components/admin/data/format";
-import {
-  activity,
-  type ActivityFilter,
-} from "@/components/admin/data/queries";
-import {
-  DataUnavailable,
-  PageHeader,
-} from "@/components/admin/ui/page";
+import { activity, type ActivityFilter } from "@/components/admin/data/queries";
+import { DataUnavailable, PageHeader } from "@/components/admin/ui/page";
 import {
   Card,
   CardBody,
@@ -66,10 +60,7 @@ export default async function ActivityPage({
   if (!result.ok) {
     return (
       <>
-        <PageHeader
-          title="Activity"
-          lede="What changed while you were away."
-        />
+        <PageHeader title="Activity" lede="What changed while you were away." />
         <DataUnavailable problem={result.problem} detail={result.detail} />
       </>
     );
@@ -85,7 +76,11 @@ export default async function ActivityPage({
         meta={<span>Pacific/Auckland</span>}
       />
 
-      <div className="mb-4 flex flex-wrap gap-2" role="navigation" aria-label="Filter activity">
+      <div
+        className="mb-4 flex flex-wrap gap-2"
+        role="navigation"
+        aria-label="Filter activity"
+      >
         {FILTERS.map((entry) => {
           const active = entry.id === filter;
           const href =
@@ -143,8 +138,8 @@ export default async function ActivityPage({
         )}
         <CardBody className="border-t border-hairline">
           <p className="text-caption text-muted">
-            Source: <code className="text-primary">public.audit_log</code>.
-            Rows stamped as the old agent runtime stay hidden.
+            Source: <code className="text-primary">public.audit_log</code>. Rows
+            stamped as the old agent runtime stay hidden.
           </p>
         </CardBody>
       </Card>

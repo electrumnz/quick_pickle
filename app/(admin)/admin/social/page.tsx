@@ -200,14 +200,15 @@ export default async function SocialPage({
           title="Waiting on you"
           description="A post stops here before it can be put in the diary. Saying yes is written down against the post for good — and it still does not send it."
         >
-          {everything.filter((post) => post.status === "pending_approval").length === 0 ? (
+          {everything.filter((post) => post.status === "pending_approval")
+            .length === 0 ? (
             <Card>
               <EmptyState
                 headline="Nobody is waiting on you"
                 fills="Drafts that need a yes before they can be diarised appear here."
               >
-                Posts waiting for approval will show up with their captions so you
-                can reword, diarise or decline them.
+                Posts waiting for approval will show up with their captions so
+                you can reword, diarise or decline them.
               </EmptyState>
             </Card>
           ) : (
@@ -300,13 +301,13 @@ export default async function SocialPage({
 
         <Section
           title="Waiting to go out"
-          description="Nothing here has been published. A post drafted by Vinnie stops here until you say yes, and stays here after you have."
+          description="Nothing here has been published. A post stops here until you say yes, and stays here after you have."
         >
           <Card>
             {waiting.length === 0 ? (
               <EmptyState
                 headline="Nothing is queued"
-                fills="Vinnie drafts the fortnight's posts on a schedule. Each one lands here with its caption and picture before it goes anywhere."
+                fills="Draft and waiting posts land here with their caption and picture before they go anywhere."
               >
                 This is the queue of posts that are written but not yet public.
               </EmptyState>
@@ -345,7 +346,6 @@ export default async function SocialPage({
                       {post.error ?? "No reason was recorded."}
                     </p>
                     <p className="mt-1 text-caption text-muted">
-                      {post.agentName ?? "The admin"} ·{" "}
                       {ago(
                         post.publishedAt ??
                           post.scheduledFor ??
@@ -456,7 +456,7 @@ export default async function SocialPage({
             "The picture itself inside the frame, at the crop the platform will apply, with what the crop takes off it dimmed over the top",
             "Approving a post and giving it a time, which is recorded against it for good",
             "Changing the wording before you say yes",
-            "Declining a post with a reason, which answers the agent that asked",
+            "Declining a post with a reason",
             "Approving several waiting decisions at once",
             "Failures with the platform's own reason",
             "A month and a week of everything with a date on it, on the calendar, with the gaps between them said in words",
@@ -495,7 +495,6 @@ function PostRow({
       </div>
       <p className="mt-1 text-caption text-muted">
         {platform(post.platform)}
-        {post.agentName === null ? "" : ` · drafted by ${post.agentName}`}
         {post.scheduledFor === null
           ? ""
           : ` · goes out ${dayAndTime(post.scheduledFor)}, ${until(post.scheduledFor)}`}

@@ -35,13 +35,13 @@ import { ConfidenceBadge } from "./pieces";
  * A TAM whose assumptions cannot be inspected is decoration. So every number on
  * this screen is either an input she can change or a line of arithmetic that
  * says which inputs it consumed — and changing an input recomputes the whole
- * model in front of her, using `computeMarket`, which is the same function the
- * agent runtime calls. There is no second copy of the sums for the UI.
+ * model in front of her, using `computeMarket`. There is no second copy of the
+ * sums for the UI.
  *
  * Editing here is local: it answers "what if" without committing to it. The
  * SQL that would make a change permanent is shown at the bottom, because the
- * stored values are what the AI team reasons from, and quietly diverging the
- * two would be worse than not letting her edit at all.
+ * stored values in `strategy_assumptions` are the source of truth, and quietly
+ * diverging the two would be worse than not letting her edit at all.
  */
 
 const MICRO = 1_000_000;
@@ -231,7 +231,7 @@ export function MarketExplorer({
             <p className="mt-1 max-w-prose text-caption text-muted">
               Every figure above is either one of these {inputs.length} numbers
               or arithmetic over them. Editing here changes this screen only;
-              the stored values are what the AI team reasons from.
+              the stored values stay until you run the SQL below.
             </p>
           </div>
           {changed.length > 0 && (
@@ -330,9 +330,9 @@ export function MarketExplorer({
         </Card>
 
         {changed.length > 0 && (
-          <Callout title="To make these the numbers the AI team uses">
+          <Callout title="To make these the stored numbers">
             <p>
-              This screen is showing a what-if. The agents read
+              This screen is showing a what-if. The live model reads
               <code className="mx-1 font-mono">strategy_assumptions</code>, so
               run this to make it permanent — editing from the admin is not
               built yet, and pretending otherwise would leave the two copies
@@ -365,8 +365,8 @@ export function MarketExplorer({
             tone="danger"
           >
             The database could not be reached, so this page is showing the
-            assumptions as they stand in the code. Stored values may differ
-            once the database is back.
+            assumptions as they stand in the code. Stored values may differ once
+            the database is back.
           </Callout>
         )}
       </section>

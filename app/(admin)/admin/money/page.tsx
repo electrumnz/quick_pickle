@@ -16,10 +16,7 @@ import {
   percent,
   plural,
 } from "@/components/admin/data/format";
-import {
-  purchaseOrders,
-  recentBatches,
-} from "@/components/admin/data/queries";
+import { purchaseOrders, recentBatches } from "@/components/admin/data/queries";
 import { TakingsStrip } from "@/components/admin/ui/bars";
 import {
   DataUnavailable,
@@ -270,7 +267,13 @@ export default async function MoneyPage() {
                   />
                   <Stat
                     label="Open supplier orders"
-                    value={String(po.filter((order) => order.receivedAt === null && order.status === "ordered").length)}
+                    value={String(
+                      po.filter(
+                        (order) =>
+                          order.receivedAt === null &&
+                          order.status === "ordered",
+                      ).length,
+                    )}
                     hint="Still waiting to arrive"
                   />
                 </StatGrid>

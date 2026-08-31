@@ -25,9 +25,9 @@ export const dynamic = "force-dynamic";
  * The assumptions are rendered as inputs rather than as a list, because the
  * only honest way to present a market size to the person betting on it is to
  * let her push it and watch it move. The editor is local — the SQL that would
- * make a change permanent is shown rather than run, since the stored values are
- * what the AI team reasons from and a screen that silently diverged from them
- * would be worse than one that cannot edit at all.
+ * make a change permanent is shown rather than run, since the stored values in
+ * `strategy_assumptions` are the source of truth and a screen that silently
+ * diverged from them would be worse than one that cannot edit at all.
  */
 export default async function MarketPage() {
   const loaded = await loadStrategyForAdmin();

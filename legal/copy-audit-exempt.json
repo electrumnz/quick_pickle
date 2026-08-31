@@ -56,10 +56,7 @@
     {
       "path": "brand/brand-guide.md",
       "scope": "sections",
-      "sections": [
-        "What HALF SOUR never says",
-        "What it is never"
-      ],
+      "sections": ["What HALF SOUR never says", "What it is never"],
       "linePatterns": [
         "What we are not, and will not become",
         "Two makes it a sports drink",

@@ -524,6 +524,7 @@ export type SocialPostItem = {
   readonly likes: number;
   readonly comments: number;
   readonly linkClicks: number;
+  /** Always null — the in-site roster is gone; column kept for type stability. */
   readonly agentName: string | null;
   readonly brandCheckPassed: boolean | null;
   readonly error: string | null;
@@ -579,7 +580,7 @@ function toPost(row: Record<string, unknown>): SocialPostItem {
     likes: int(row, "likes"),
     comments: int(row, "comments_count"),
     linkClicks: int(row, "link_clicks"),
-    agentName: textOrNull(row, "agent_name"),
+    agentName: null,
     brandCheckPassed: boolOrNull(row, "brand_check_passed"),
     error: textOrNull(row, "error"),
     approvalId: textOrNull(row, "approval_id"),
@@ -588,7 +589,7 @@ function toPost(row: Record<string, unknown>): SocialPostItem {
 }
 
 const POST_SELECT = `
-  select p.*, a.name as agent_name, ap.status as approval_status,
+  select p.*, null::text as agent_name, ap.status as approval_status,
          (select coalesce(
                    json_agg(json_build_object(
                      'title',   ca.title,
@@ -604,7 +605,6 @@ const POST_SELECT = `
             join public.content_assets ca on ca.id = spa.asset_id
            where spa.post_id = p.id) as media
     from public.social_posts p
-    left join public.agents a on a.id = p.created_by_agent_id
     left join public.approvals ap on ap.id = p.approval_id`;
 
 export async function socialPosts(
@@ -643,14 +643,12 @@ export type CampaignItem = {
   readonly endsAt: string | null;
   readonly spendCents: number;
   readonly revenueCents: number;
-  readonly ownerAgentName: string | null;
 };
 
 export async function campaigns(limit = 8): Promise<readonly CampaignItem[]> {
   const result = await adminSql().query(
-    `select c.*, a.name as owner_name
+    `select c.*
        from public.campaigns c
-       left join public.agents a on a.id = c.owner_agent_id
       order by coalesce(c.starts_at, c.created_at) desc limit $1`,
     [limit],
   );
@@ -663,7 +661,6 @@ export async function campaigns(limit = 8): Promise<readonly CampaignItem[]> {
     endsAt: isoOrNull(row, "ends_at"),
     spendCents: int(row, "spend_cents"),
     revenueCents: int(row, "revenue_cents"),
-    ownerAgentName: textOrNull(row, "owner_name"),
   }));
 }
 
@@ -998,7 +995,6 @@ export async function companyFacts(): Promise<CompanyFacts> {
     shopDomain: settingText(map, "commerce.shop_domain"),
   };
 }
-
 
 // ---------------------------------------------------------------------------
 // Who is signed in

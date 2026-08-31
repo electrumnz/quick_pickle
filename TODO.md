@@ -67,20 +67,13 @@ The order below is the order to do them in.
       `tsconfig.json` (whitespace, no new entries); that is Next's own behaviour and is
       left alone.
 
-- [ ] **Evidence files churn on every test run.** `lib/auth/evidence/*.txt` and
-      `components/strategy/evidence/*.txt` embed a
-      wall-clock timestamp and a fresh run UUID, so running the suite dirties the
-      tree with ~20 lines of meaningless diff. The cost is not the noise: it is
-      that a real behavioural change is invisible inside it, which defeats the
-      point of committing evidence at all. Fix by seeding the run id and dropping
-      the timestamp — evidence should record what happened, not when.
-
-      **It is not only the clock.** Some captures change with the ambient
-      environment too, so seeding the run id is necessary and not sufficient.
-      Auth and strategy evidence can drift with `HALF_SOUR_DEMO=1` vs unset, and
-      strategy captures that anchor dates on `now()` shift day-to-day. A capture
-      has to pin the environment it describes, or say in the file which one it
-      was taken in.
+- [ ] **Evidence files churn on every test run.** Auth and strategy evidence
+      files embed a wall-clock timestamp and a fresh run UUID, so running the
+      suite dirties the tree with meaningless diff. Fix by seeding the run id
+      and dropping the timestamp. Captures can also drift with
+      `HALF_SOUR_DEMO=1` vs unset, or with dates anchored on `now()`. Pin the
+      environment a capture describes, or say in the file which one it was
+      taken in.
 
 ## Built and verified
 

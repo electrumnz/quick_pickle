@@ -328,9 +328,6 @@ export default async function CustomersPage({
                       </div>
                       <p className="mt-0.5 text-caption text-muted">
                         {humanise(campaign.channel)}
-                        {campaign.ownerAgentName === null
-                          ? ""
-                          : ` · run by ${campaign.ownerAgentName}`}
                         {campaign.startsAt === null
                           ? ""
                           : ` · from ${day(campaign.startsAt)}`}

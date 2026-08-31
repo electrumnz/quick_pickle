@@ -164,7 +164,9 @@ function todayWith(counts: {
 
 describe("the sentence at the top of Today", () => {
   it("says nothing is waiting when the day is quiet", () => {
-    expect(summariseDay(todayWith({ toPack: 0, failures: 0, repliesOwed: 0 }))).toBe(
+    expect(
+      summariseDay(todayWith({ toPack: 0, failures: 0, repliesOwed: 0 })),
+    ).toBe(
       "Nothing is waiting on you. Every order is packed and nothing has failed.",
     );
   });

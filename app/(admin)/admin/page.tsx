@@ -450,9 +450,7 @@ function WhileAway({ data }: { data: TodayData }) {
                 <p className="text-caption text-primary">{entry.summary}</p>
                 <p className="mt-0.5 text-caption text-muted">
                   {entry.actor} · {dayAndTime(entry.occurredAt)}
-                  {entry.entityLabel === null
-                    ? ""
-                    : ` · ${entry.entityLabel}`}
+                  {entry.entityLabel === null ? "" : ` · ${entry.entityLabel}`}
                 </p>
               </Row>
             ))}

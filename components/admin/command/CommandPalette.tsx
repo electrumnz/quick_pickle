@@ -302,8 +302,8 @@ export function CommandPalette() {
               </p>
               <p className="mx-auto mt-1 max-w-prose text-caption text-muted">
                 Search covers order numbers, customer names and emails,
-                products, batch codes, suppliers, ingredients,
-                social posts and settings.
+                products, batch codes, suppliers, ingredients, social posts and
+                settings.
               </p>
             </li>
           )}

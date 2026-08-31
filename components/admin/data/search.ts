@@ -108,46 +108,45 @@ export async function searchEverything(
         [like, limitPerGroup],
       )
       .then(async (batches) => {
-        const [suppliers, ingredients, posts, rules, keys] =
-          await Promise.all([
-            sql.query(
-              `select id::text as id, name as title, coalesce(city, region, '') as detail
+        const [suppliers, ingredients, posts, rules, keys] = await Promise.all([
+          sql.query(
+            `select id::text as id, name as title, coalesce(city, region, '') as detail
                  from public.suppliers
                 where name ilike $1 or code ilike $1 or coalesce(city,'') ilike $1
                 limit $2`,
-              [like, limitPerGroup],
-            ),
-            sql.query(
-              `select id::text as id, name as title, category::text as detail
+            [like, limitPerGroup],
+          ),
+          sql.query(
+            `select id::text as id, name as title, category::text as detail
                  from public.ingredients
                 where is_active and (name ilike $1 or code ilike $1)
                 limit $2`,
-              [like, limitPerGroup],
-            ),
-            sql.query(
-              `select id::text as id, left(caption, 70) as title,
+            [like, limitPerGroup],
+          ),
+          sql.query(
+            `select id::text as id, left(caption, 70) as title,
                       platform::text as detail, status::text as extra
                  from public.social_posts
                 where caption ilike $1
                 limit $2`,
-              [like, limitPerGroup],
-            ),
-            sql.query(
-              `select id::text as id, title, kind::text as detail
+            [like, limitPerGroup],
+          ),
+          sql.query(
+            `select id::text as id, title, kind::text as detail
                  from public.brand_rules
                 where is_active and (title ilike $1 or rule ilike $1)
                 limit $2`,
-              [like, limitPerGroup],
-            ),
-            sql.query(
-              `select key as id, key as title, category as detail
+            [like, limitPerGroup],
+          ),
+          sql.query(
+            `select key as id, key as title, category as detail
                  from public.settings
                 where is_secret = false
                   and (key ilike $1 or coalesce(description, '') ilike $1)
                 limit $2`,
-              [like, limitPerGroup],
-            ),
-          ]);
+            [like, limitPerGroup],
+          ),
+        ]);
         return { batches, suppliers, ingredients, posts, rules, keys };
       })
       .catch(() => null),

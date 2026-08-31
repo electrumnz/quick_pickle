@@ -162,11 +162,9 @@ export function PostDeclineForm({
       label="Take it out of the queue"
       consequence={
         <>
-          This post is archived and will not go out. If{" "}
-          {post.agentName ?? "an agent"} asked you about it, that request is
-          answered with your reason attached, and the job it stopped in the
-          middle of finishes without it. Archived posts are not deleted, but
-          they do not come back to the queue on their own.
+          This post is archived and will not go out. Your reason is recorded
+          against it. Archived posts are not deleted, but they do not come back
+          to the queue on their own.
         </>
       }
     >
