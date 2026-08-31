@@ -83,6 +83,7 @@ export {
   slugify,
 } from "./naming";
 
+export { citationFor, type AssetCitation } from "./citation";
 
 export type {
   AssetApprovalReference,

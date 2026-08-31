@@ -327,7 +327,7 @@ export const GO_LIVE_TASKS: readonly GoLiveTask[] = [
     title: "The Instagram and TikTok accounts",
     what: "The accounts themselves, in the brand's name and held by you.",
     why: "The names are available until somebody else takes them, and the Social screen in this admin is a plan with nowhere to send anything until they exist. Taking the names costs nothing and takes twenty minutes; getting them back later costs a rename.",
-    until: "Nothing the team writes can be posted anywhere.",
+    until: "Nothing drafted for Social can be posted anywhere.",
     waiting: ["Everything on the Social screen"],
     howLong: "Twenty minutes.",
     place: {

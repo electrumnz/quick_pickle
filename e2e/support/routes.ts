@@ -96,8 +96,6 @@ export const UNAUDITED_ROUTES: Readonly<Record<string, string>> = {
     "The design-token specimen sheet — a developer instrument that exists to be looked at while building, not a page the shop links to.",
   "/products":
     "A permanent redirect to /shop. There is no document to audit; `e2e/seo.spec.ts` covers that it still redirects.",
-  "/admin/chat":
-    "Removed with the in-site roster. Grok Bot uses the admin as an operator; activity is /admin/activity.",
   "/admin/assets/[id]":
     "One asset's detail page, rendered by the same components as /admin/assets, which is audited. It needs a seeded asset id to reach.",
   "/checkout/mock/[id]":

@@ -377,4 +377,16 @@ export const FLASH_SENTENCES = {
   // in New Zealand at all. Storing it would quietly move the post an hour.
   "schedule-no-such-time":
     "There is no such time in New Zealand that morning — the clocks go forward and that hour is skipped. Pick a time before 2am or after 3am.",
+  packed: "Packed and posted. The customer's ticket number is on the order.",
+  tracking: "The ticket number is updated.",
+  cancelled: "The order is cancelled.",
+  refunded: "The refund is recorded against the order.",
+  adjusted: "The count is corrected.",
+  "batch-opened": "The batch is open.",
+  "batch-released": "The batch is released, and its bottles are on the shelf.",
+  "reorder-set": "The reorder point is saved.",
+  approved: "Approved.",
+  declined: "Declined, with your reason on it.",
+  edited: "Your wording is saved.",
+  scheduled: "Approved and put in the diary.",
 } as const;

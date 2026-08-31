@@ -43,8 +43,8 @@ kawakawa has strong rongoā associations — keep its copy strictly culinary.
 Next.js App Router · TypeScript · Tailwind v4 · Vercel
 React Three Fiber + GSAP/ScrollTrigger + Lenis for the storefront
 Shopify (Storefront + Admin API) behind a provider adapter
-Supabase for everything Shopify cannot do — recipes, batches, agents, approvals, brand rules
-Vercel AI SDK + Inngest for the agent runtime
+Supabase for everything Shopify cannot do — recipes, batches, approvals, brand rules
+Admin operations via Grok Bot (see `docs/grok-bot-adoption.md`); no in-site agent runtime
 
 **Pinned versions, deliberately.** ESLint 9 not 10 (eslint-config-next bundles an
 eslint-plugin-react that calls the removed `context.getFilename()`). TypeScript 6 not 7

@@ -1209,12 +1209,12 @@ select po.po_number, s.id, po.status::public.purchase_order_status,
        case when po.expected is null then null else now() - po.expected end,
        case when po.received is null then null else now() - po.received end,
        null, null,
-       a.id, ap.id
+       null::uuid, null::uuid
   from (values
-    ('PO-0101','GLASSCO','pending_approval', 283200, 8500, 0, 'Bottle reorder — 2,400 x 500ml',
-     'Drafted by Marlow off the nightly sweep. Bottle stock is under the reorder point and the lead time is fourteen days.',
-     null::interval, null::interval, null::interval, 'brine-ops',
-     'Reorder 2,400 x 500ml bottles from Onehunga Glass and Closures'),
+    ('PO-0101','GLASSCO','draft', 283200, 8500, 0, 'Bottle reorder — 2,400 x 500ml',
+     'Bottle stock is under the reorder point and the lead time is fourteen days.',
+     null::interval, null::interval, null::interval, null,
+     null),
     ('PO-0102','PUKEKOHE','received', 115200, 0, 0, 'Cucumbers for the No 01 run',
      '240kg telegraph, cut Friday.', interval '9 days', interval '6 days', interval '6 days', null, null),
     ('PO-0103','BOPSPICE','ordered', 68400, 2200, 0, 'Quarterly spice order',
@@ -1418,7 +1418,7 @@ insert into public.content_assets
    created_by_agent_id, approval_id, is_approved, usage_rights, credit, shot_at)
 select ca.slug, ca.title, ca.atype::public.content_asset_type, ca.path, ca.url, ca.mime,
        ca.w, ca.h, ca.dur, ca.size, ca.alt, ca.caption, ca.body, ca.tags::text[],
-       p.id, ba.id, ag.id, ap.id, ca.approved, ca.rights, ca.credit, now() - ca.shot_ago
+       p.id, ba.id, null::uuid, null::uuid, ca.approved, ca.rights, ca.credit, now() - ca.shot_ago
   from (values
     -- The only file in this list that exists. `public/media/bottles/no-03-smoke.jpg`,
     -- from the same shoot as the storefront's — components/product/media.ts is
@@ -1464,7 +1464,7 @@ insert into public.campaigns
    revenue_cents, target_audience, discount_id, utm_source, utm_medium, utm_campaign, owner_agent_id, notes)
 select c.slug, c.name, c.objective, c.channel::public.campaign_channel, c.status::public.campaign_status,
        now() - c.starts, case when c.ends is null then null else now() - c.ends end,
-       c.budget, c.spend, c.revenue, c.audience, d.id, c.utm_s, c.utm_m, c.utm_c, a.id, c.notes
+       c.budget, c.spend, c.revenue, c.audience, d.id, c.utm_s, c.utm_m, c.utm_c, null::uuid, c.notes
   from (values
     ('no-03-launch', 'No 03 SMOKE launch', 'Get the third SKU onto shelves and into the Bloody Mary conversation.',
      'social_organic', 'completed', interval '3 months', interval '11 weeks', 0, 0, 184600,
@@ -1496,7 +1496,7 @@ select acc.id, acc.platform, camp.id, sp.status::public.social_post_status, sp.c
        case when sp.published is null then null else now() - sp.published end,
        sp.ext, sp.permalink, sp.impressions, sp.reach, sp.likes, sp.comments, sp.shares, sp.saves, sp.clicks,
        case when sp.published is null then null else now() - interval '3 hours' end,
-       sp.error, p.id, ag.id, ap.id, sp.brand_ok, sp.brand_notes
+       sp.error, p.id, null::uuid, null::uuid, sp.brand_ok, sp.brand_notes
   from (values
     ('instagram', 'no-03-launch', 'published',
      'No 03 SMOKE. Chipotle and fresh manzano go in at day four, and the salt is cold-smoked over manuka before it ever touches water. The heat arrives about three seconds late and then sits there.',
@@ -1534,7 +1534,7 @@ select acc.id, acc.platform, camp.id, sp.status::public.social_post_status, sp.c
      '{halfsour,coastvillemarket,auckland,farmersmarket}', null,
      null, interval '9 days', '18042117993205102', 'https://instagram.com/p/DLr2Ze5pV1n/',
      6210, 5402, 288, 19, 31, 74, 0, null, null, null, null, true, 'Passed.'),
-    ('instagram', null, 'pending_approval',
+    ('instagram', null, 'draft',
      'No 03 SMOKE is back on Thursday. Chipotle and manzano, manuka-smoked salt, the heat arrives about three seconds late. Batch D, bottled Tuesday.',
      '{halfsour,restock,smoke,brine}', 'https://halfsour.co.nz/products/no-03-smoke',
      interval '2 days', null, null, null, 0, 0, 0, 0, 0, 0, 0, null, 'no-03-smoke', 'social',
@@ -1580,6 +1580,26 @@ select sp.id, ca.id, 10
     when sp.caption like 'Coastville market%' then 'market-stall-coastville'
   end;
 
+-- Outreach that left the building still needs an approval row on the check
+-- constraint. Seed a human-decided one (no agent) so the demo can show
+-- delivered trade email without planting the in-site roster.
+insert into public.approvals
+  (subject_type, subject_table, title, summary, rationale, payload, preview, risk,
+   amount_cents, status, requested_by_agent_id, requested_by_run_id, requested_at, expires_at,
+   decided_by, decided_at, decision_note, applied_at, applied_result)
+select
+  'email_outreach'::public.approval_subject, 'email_sends',
+  'Cold approach to twelve Wellington cocktail bars',
+  'Trade intro to twelve Wellington cocktail bars. Sample pack offered on reply.',
+  'Zero trade accounts in Wellington. Cold email is the opener.',
+  '{"action":"send_outreach","campaign":"wellington-trade","count":12}'::jsonb,
+  '{"subject":"A brine made for the Dirty, from Auckland"}'::jsonb,
+  'high'::public.approval_risk, null, 'approved'::public.approval_status,
+  null, null, now() - interval '5 days 2 hours', null,
+  op.id, now() - interval '5 days', 'Send it.', now() - interval '5 days',
+  '{"sent":12}'::jsonb
+  from public.operators op where op.email = 'nadia@halfsour.co.nz';
+
 insert into public.email_sends
   (campaign_id, customer_id, order_id, to_email, to_name, subject, preheader, template, body_text,
    kind, status, provider, provider_message_id, scheduled_for, sent_at, delivered_at,
@@ -1593,66 +1613,65 @@ select camp.id, c.id, o.id, e.to_email, e.to_name, e.subject, e.preheader, e.tem
        case when e.opened is null then null else now() - e.opened end,
        case when e.clicked is null then null else now() - e.clicked end,
        case when e.bounced is null then null else now() - e.bounced end,
-       e.opens, e.clicks, e.error, ag.id, ap.id
+       e.opens, e.clicks, e.error, null::uuid, ap.id
   from (values
     ('order-confirmation', null, 'aroha.wetere@gmail.com', 'Aroha Wetere',
      'Your Half Sour order is confirmed', 'We will email again the moment it ships.', 'order-confirmation',
      'Thanks Aroha. Your order is in and we will pack it tomorrow morning.',
      'transactional', 'delivered', 'msg_2Kd91nRp', null::interval, interval '2 days', interval '2 days',
-     interval '47 hours', null::interval, null::interval, 2, 0, null, null, null),
+     interval '47 hours', null::interval, null::interval, 2, 0, null, null),
     ('shipping-notification', null, 'sam.kerrison@outlook.co.nz', 'Sam Kerrison',
      'Your Half Sour order is on its way', 'Tracking inside.', 'shipping-notification',
      'On its way. NZ Post have it and the tracking number is in the link below.',
      'transactional', 'delivered', 'msg_9Lm44bTq', null, interval '3 days', interval '3 days',
-     interval '70 hours', interval '69 hours', null, 3, 1, null, null, null),
+     interval '70 hours', interval '69 hours', null, 3, 1, null, null),
     (null, null, 'nadine.oputa@gmail.com', null,
      'You left The First Three in your basket', 'Still there if you want it.', 'abandoned-cart',
      'Your basket is still sitting there with The First Three in it. No pressure, but it is one of the last of batch B.',
-     'lifecycle', 'queued', null, interval '4 hours', null, null, null, null, null, 0, 0, null, 'concierge', null),
+     'lifecycle', 'queued', null, interval '4 hours', null, null, null, null, null, 0, 0, null, null),
     ('no-03-launch', null, 'aroha.wetere@gmail.com', 'Aroha Wetere',
      'No 03 SMOKE, and why the chilli goes in late', 'Chipotle, manzano, manuka-smoked salt.', 'campaign-launch',
      'The third one is here. Chipotle and fresh manzano at day four over manuka cold-smoked salt.',
      'marketing', 'delivered', 'msg_5Qb18zXk', null, interval '3 months', interval '3 months',
-     interval '3 months' + interval '-4 hours', interval '3 months' + interval '-5 hours', null, 4, 2, null, null, null),
+     interval '3 months' + interval '-4 hours', interval '3 months' + interval '-5 hours', null, 4, 2, null, null),
     ('wellington-trade', null, 'bar@thesaltroom.co.nz', 'Dev Ramanathan',
      'A brine made for the Dirty, from Auckland', 'Twelve by 500ml, 48-hour freight to Wellington.', 'trade-intro-v2',
      'Twelve by 500ml, eighteen-month shelf life on No 01 and No 02, 48-hour freight to Wellington. About thirty martinis to a bottle. Happy to send a sample pack.',
      'outreach', 'delivered', 'msg_7Wc23yLm', null, interval '5 days', interval '5 days',
-     interval '4 days 21 hours', interval '4 days 20 hours', null, 2, 1, null, 'scout',
+     interval '4 days 21 hours', interval '4 days 20 hours', null, 2, 1, null,
      'Cold approach to twelve Wellington cocktail bars'),
     ('wellington-trade', null, 'hello@nightjarqt.nz', 'Flynn Mackereth',
      'A brine made for the Dirty, from Auckland', 'Twelve by 500ml, 48-hour freight.', 'trade-intro-v2',
      'Twelve by 500ml, eighteen-month shelf life on No 01 and No 02. About thirty martinis to a bottle.',
      'outreach', 'delivered', 'msg_7Wc23yLn', null, interval '5 days', interval '5 days',
-     interval '4 days 18 hours', null, null, 1, 0, null, 'scout',
+     interval '4 days 18 hours', null, null, 1, 0, null,
      'Cold approach to twelve Wellington cocktail bars'),
     (null, null, 'orders@brassandbitters.co.nz', 'Kiri Ngatai',
      'Your Half Sour invoice — due the 20th', 'Net 20 as agreed.', 'trade-invoice',
      'Invoice attached, due the 20th as agreed. Shout if the quantities look wrong.',
      'transactional', 'delivered', 'msg_3Rn77aVp', null, interval '9 days', interval '9 days',
-     interval '8 days 22 hours', null, null, 1, 0, null, null, null),
+     interval '8 days 22 hours', null, null, 1, 0, null, null),
     (null, null, 'priya.nair@fastmail.com', 'Priya Nair',
      'How was the No 02?', 'One question, thirty seconds.', 'review-request',
      'You picked up No 02 a couple of weeks ago. If you have thirty seconds, we would love to know what you made with it.',
      'lifecycle', 'delivered', 'msg_8Th55cWq', null, interval '11 days', interval '11 days',
-     interval '10 days 14 hours', interval '10 days 13 hours', null, 1, 1, null, 'concierge', null),
+     interval '10 days 14 hours', interval '10 days 13 hours', null, 1, 1, null, null),
     (null, null, 'jesse.lam@gmail.com', 'Jesse Lam',
      'Welcome — here is NZ$5 off', 'Code BRINETIME, valid on your first order.', 'newsletter-welcome',
      'Thanks for signing up at the market. BRINETIME takes NZ$5 off your first order over NZ$30.',
      'marketing', 'delivered', 'msg_1Vy09dZr', null, interval '9 days', interval '9 days',
-     interval '8 days 20 hours', null, null, 1, 0, null, null, null),
+     interval '8 days 20 hours', null, null, 1, 0, null, null),
     (null, null, 'bounced.address@example.invalid', null,
      'Welcome — here is NZ$5 off', 'Code BRINETIME.', 'newsletter-welcome',
      'Thanks for signing up.', 'marketing', 'bounced', 'msg_0Zx31eAs', null, interval '14 days', null,
-     null, null, interval '14 days', 0, 0, 'Hard bounce: recipient domain does not exist. Address removed from the list.', null, null)
+     null, null, interval '14 days', 0, 0, 'Hard bounce: recipient domain does not exist. Address removed from the list.', null)
   ) as e(campaign_slug, customer_email, to_email, to_name, subject, preheader, template, body, kind, status,
-         msg_id, scheduled, sent, delivered, opened, clicked, bounced, opens, clicks, error, agent_slug, approval_title)
+         msg_id, scheduled, sent, delivered, opened, clicked, bounced, opens, clicks, error, approval_title)
   left join public.campaigns camp on camp.slug = e.campaign_slug
   left join public.customers c on c.email = e.to_email
   left join public.orders o on o.id = (
     select o2.id from public.orders o2 where o2.email = e.to_email
      and e.kind = 'transactional' order by o2.placed_at desc limit 1)
-  left join public.agents ag on ag.slug = e.agent_slug
   left join public.approvals ap on ap.title = e.approval_title;
 
 insert into public.reviews
@@ -1712,14 +1731,6 @@ select p.id, v.id, c.id, o.id, r.author, r.email, r.location, r.rating, r.title,
      where o2.email = r.email and o2.financial_status <> 'pending'
      order by o2.placed_at desc limit 1
   ) o on r.email is not null;
-
--- Dot's drafted reply is a published statement from the brand, so it hangs off
--- an approval and stays unpublished until the founder says yes.
-update public.reviews rv
-   set approval_id = ap.id
-  from public.approvals ap
- where ap.title = 'Reply to a three-star review about the No 03 heat level'
-   and rv.rating = 3 and rv.status = 'pending';
 
 -- =============================================================================
 -- Wire each approval to the row it is about, now that those rows exist.
@@ -1844,7 +1855,7 @@ select now() - al.ago, al.actor_type::public.actor_type,
      '{"status":"draft"}', '{"status":"active"}', null, null, '203.86.74.201', 'req_01K8Xc2rP4'),
     (interval '8 days 22 hours', 'operator', 'Nadia Feldman', 'logout', 'admin_session', 'iPhone — market stall',
      'Revoked the market-stall session from a shared device.',
-     '{"revoked_at":null}', '{"revoked_at":"now"}', null, null, '121.99.230.14', 'req_01K9Rb6sN8'),
+     '{"revoked_at":null}', '{"revoked_at":"now"}', null, null, '121.99.230.14', 'req_01K9Rb6sN8')
   ) as al(ago, actor_type, actor_label, action, entity_type, entity_label, summary, before, after,
           run_goal, approval_title, ip, request_id)
   left join public.operators op on op.email = 'nadia@halfsour.co.nz'

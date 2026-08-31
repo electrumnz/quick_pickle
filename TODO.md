@@ -67,8 +67,8 @@ The order below is the order to do them in.
       `tsconfig.json` (whitespace, no new entries); that is Next's own behaviour and is
       left alone.
 
-- [ ] **Evidence files churn on every test run.** `lib/agents/evidence/*.txt`,
-      `lib/auth/evidence/*.txt` and `components/strategy/evidence/*.txt` embed a
+- [ ] **Evidence files churn on every test run.** `lib/auth/evidence/*.txt` and
+      `components/strategy/evidence/*.txt` embed a
       wall-clock timestamp and a fresh run UUID, so running the suite dirties the
       tree with ~20 lines of meaningless diff. The cost is not the noise: it is
       that a real behavioural change is invisible inside it, which defeats the
@@ -77,14 +77,10 @@ The order below is the order to do them in.
 
       **It is not only the clock.** Some captures change with the ambient
       environment too, so seeding the run id is necessary and not sufficient.
-      `lib/agents/roster/evidence/14-ward-security.txt` is the clearest case:
-      run with `HALF_SOUR_DEMO=1` its headline is "This admin opens without a
-      password", and run without it the same code reports "7 credentials are not
-      configured" and names them. Both are correct; they are answers to different
-      questions. `11-b2c-b2b-separation.txt` drifts a different way — its seeded
-      dates are anchored on `now()`, so "58 days ago" becomes "57" simply by
-      running tomorrow. A capture has to pin the environment it describes, or say
-      in the file which one it was taken in.
+      Auth and strategy evidence can drift with `HALF_SOUR_DEMO=1` vs unset, and
+      strategy captures that anchor dates on `now()` shift day-to-day. A capture
+      has to pin the environment it describes, or say in the file which one it
+      was taken in.
 
 ## Built and verified
 
