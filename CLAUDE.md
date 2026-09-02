@@ -1,7 +1,8 @@
 # HALF SOUR
 
-Brand, storefront and AI-operated admin for a New Zealand pickle-brine company.
-One founder is the only human; the admin is where the rest of the company lives.
+Brand, storefront and admin for a New Zealand pickle-brine company.
+One founder is the only human; Grok Bot operates the admin as a person at the
+keyboard (see `docs/grok-bot-adoption.md`). There is no in-site agent runtime.
 
 ## Non-negotiables
 
