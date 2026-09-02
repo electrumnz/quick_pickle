@@ -34,7 +34,14 @@ export function MotionRoot() {
     let disposed = false;
     const cleanups: (() => void)[] = [];
 
-    void (async () => {
+    /* GSAP is fetched AFTER the page has loaded and the main thread has gone
+       idle, never during hydration. Fetched straight from the effect, the
+       chunk sometimes started before the hero's first paint, and Lighthouse's
+       model then charged its download and evaluation against the largest
+       paint — a 2.4 s or a 3.0 s figure depending on a race. Nothing above
+       the fold waits on it: the reveals and the parallax are below. */
+    const start = async () => {
+      if (disposed) return;
       const [{ gsap }, { ScrollTrigger }] = await Promise.all([
         import("gsap"),
         import("gsap/ScrollTrigger"),
@@ -139,7 +146,26 @@ export function MotionRoot() {
       window.addEventListener("resize", onResize);
       cleanups.push(() => window.removeEventListener("resize", onResize));
       ScrollTrigger.refresh();
-    })();
+    };
+
+    const whenIdle = () => {
+      if (typeof window.requestIdleCallback === "function") {
+        const id = window.requestIdleCallback(() => void start(), {
+          timeout: 1500,
+        });
+        cleanups.push(() => window.cancelIdleCallback(id));
+      } else {
+        const id = window.setTimeout(() => void start(), 250);
+        cleanups.push(() => window.clearTimeout(id));
+      }
+    };
+
+    if (document.readyState === "complete") {
+      whenIdle();
+    } else {
+      window.addEventListener("load", whenIdle, { once: true });
+      cleanups.push(() => window.removeEventListener("load", whenIdle));
+    }
 
     return () => {
       disposed = true;
