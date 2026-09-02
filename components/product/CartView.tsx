@@ -39,7 +39,10 @@ function Line({ line }: { line: CartLine }) {
   return (
     <li className="border-hairline gap-stack grid grid-cols-[minmax(0,1fr)_auto] items-start border-t py-5">
       <div className="min-w-0">
-        <h3 className="text-heading-3 text-primary">
+        {/* A level-2 heading straight under the page's h1: the lines are the
+            page's sections, and axe's heading-order rule holds the cart to
+            the same outline as every other page. */}
+        <h2 className="text-heading-3 text-primary">
           <Link
             href={productPath(line.merchandise.product.handle)}
             className={cx(styles.tap, "text-primary")}
@@ -48,7 +51,7 @@ function Line({ line }: { line: CartLine }) {
               {line.merchandise.product.title}
             </span>
           </Link>
-        </h3>
+        </h2>
         <p className={cx(styles.figure, "text-caption text-muted mt-1")}>
           {formatPrice(line.cost.amountPerQuantity)} each
         </p>

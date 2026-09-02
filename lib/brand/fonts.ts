@@ -52,7 +52,14 @@ import { Fraunces, Inter_Tight, Martian_Mono } from "next/font/google";
 export const fraunces = Fraunces({
   subsets: ["latin"],
   display: "swap",
-  preload: true,
+  // Not preloaded, and that is a measured decision. Preloading all three
+  // faces put 185 KB of font ahead of everything else on a throttled
+  // connection, and Lighthouse's largest paint became the hero's own
+  // paragraph — re-painted at three seconds when the text face finally
+  // swapped in. Only the text face is preloaded now; the display and data
+  // faces still self-host and swap on a metric-matched fallback, so the
+  // headings arrive a moment later without moving a line.
+  preload: false,
   adjustFontFallback: true,
   axes: ["SOFT", "opsz"],
   variable: "--font-fraunces",
@@ -82,7 +89,8 @@ export const interTight = Inter_Tight({
 export const martianMono = Martian_Mono({
   subsets: ["latin"],
   display: "swap",
-  preload: true,
+  // See the note on Fraunces: only the text face is preloaded.
+  preload: false,
   adjustFontFallback: true,
   weight: ["400", "500"],
   variable: "--font-martian-mono",
