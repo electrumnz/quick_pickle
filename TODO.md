@@ -90,7 +90,6 @@ The order below is the order to do them in.
       that a real behavioural change is invisible inside it, which defeats the
       point of committing evidence at all. Fix by seeding the run id and dropping
       the timestamp — evidence should record what happened, not when.
-
       **It is not only the clock.** Some captures change with the ambient
       environment too, so seeding the run id is necessary and not sufficient.
       `lib/agents/roster/evidence/14-ward-security.txt` is the clearest case:
