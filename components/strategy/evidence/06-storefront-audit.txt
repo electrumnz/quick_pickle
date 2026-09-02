@@ -6,8 +6,8 @@ THE AVATAR AUDIT — THE LIVE STOREFRONT, CHECK BY CHECK
 Every line below was produced by fetching a real URL and reading the HTML a
 browser would have been served. Nothing here reads content/strategy.
 
-base URL:  http://localhost:3000  (already-running)
-run at:    2026-09-02T09:10:37.332Z
+base URL:  http://localhost:3400  (spawned on the demo database)
+run at:    2026-09-02T10:17:46.065Z
 command:   npx vitest run tests/strategy/storefront-audit.test.ts
 
 SCORE: 17/17 checks pass.
@@ -111,7 +111,7 @@ PASS  b2b-trade-price-published  [blocking, b2b]
 
 PASS  b2b-case-and-minimum-named  [serious, b2b]
       Q: Does the site say what a case is and what the minimum order is?
-      found:    /wholesale: "…o a case. Case size Six bottles, one label per case. We do not split cases — tha…"
+      found:    /wholesale: "…o a case. Case size Six bottles, one label per case. We do not split cases. That…"
       costs:    Six bottles to a case, never split, is the term that makes the trade margin work at all — and it is a term a venue has to agree to before it orders. Discovering it after the first enquiry reads as a condition that appeared later.
       fix:      Ship /wholesale: the trade price, the case size, the pour cost and how to ask for samples, on one page.
       from:     avatars.b2b.whatStopsThem[What is the minimum, and how often do I have to order?]

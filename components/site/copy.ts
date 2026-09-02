@@ -79,7 +79,7 @@ export const DELIVERY = {
     {
       heading: "If it arrives broken",
       // copy-audit-approved: R-19 (a remedy, worded to match legal/terms-of-sale.md and legal/shipping-returns.md, and stating that nothing here narrows the statutory position)
-      body: "Glass in a courier network sometimes loses. Tell us as soon as you open the parcel, send the batch code from the label and a photograph, and we will replace it or refund it — your choice, at our cost. Nothing on this page limits what the law already gives you.",
+      body: "Glass in a courier network sometimes loses. Tell us as soon as you open the parcel, send the batch code from the label and a photograph, and we will replace it or refund it, your choice, at our cost. Nothing on this page limits what the law already gives you.",
     },
   ],
 } as const;
@@ -117,7 +117,7 @@ export const WHOLESALE = {
   pourNote: "{count} pours a bottle at {ml} ml",
   noPour: "Measured by the spoon, not the pour",
   supplyNote:
-    "Supply-limited. It is filled when there is leaf to fill it with, so it comes and goes — do not build a printed list around it without talking to us first.",
+    "Supply-limited. It is filled when there is leaf to fill it with, so it comes and goes. Do not build a printed list around it without talking to us first.",
 
   workingEyebrow: "The working",
   workingHeading: "Where the number comes from.",
@@ -134,7 +134,7 @@ export const WHOLESALE = {
   terms: [
     {
       label: "Case size",
-      body: "Six bottles, one label per case. We do not split cases — that is the term that makes the price work for both of us.",
+      body: "Six bottles, one label per case. We do not split cases. That is the term that makes the price work for both of us.",
     },
     {
       label: "Minimum order",
@@ -162,7 +162,7 @@ export const WHOLESALE = {
   samplesHeading: "Two bottles and a spec card.",
   // copy-audit-approved: FTA-06 R-13 (the offer states what it is, who it is for and what it costs the venue, in the same sentence; the serve is named as a purchasing comparison)
   samplesLine:
-    "Two sample bottles and a spec card, delivered free to a licensed New Zealand venue that is considering the list — no order and no obligation. Pour them against the jar you use now at a pre-service line-up. Ten minutes is enough.",
+    "Two sample bottles and a spec card, delivered free to a licensed New Zealand venue that is considering the list, with no order and no obligation. Pour them against the jar you use now at a pre-service line-up. Ten minutes is enough.",
   samplesFormHeading: "Ask for the samples.",
   samplesFormLine:
     "Your address and the name of the room. Nothing else, and no call unless you ask for one.",
@@ -265,7 +265,7 @@ export const TERMS = {
     {
       heading: "Changing your mind",
       // copy-audit-approved: R-19 (accurately states what is and is not offered; makes no representation about a statutory right)
-      body: "Food that has left our hands and sat on a doorstep cannot go back on a shelf, so a change of mind on an opened bottle is not something we can take back. An unopened order that has not been dispatched can be cancelled — tell us before the Tuesday or the Thursday.",
+      body: "Food that has left our hands and sat on a doorstep cannot go back on a shelf, so a change of mind on an opened bottle is not something we can take back. An unopened order that has not been dispatched can be cancelled. Tell us before the Tuesday or the Thursday.",
     },
     {
       heading: "What we say about the product",
@@ -309,7 +309,7 @@ export const SIGNUP_PROBLEM: Readonly<Record<string, string>> = {
     "That does not look like an email address. Check it and send it again.",
   "too-long": "That is longer than an address can be.",
   store:
-    "The list could not be reached just now, so nothing was recorded. Try again in a minute — or write to us and it goes on by hand.",
+    "The list could not be reached just now, so nothing was recorded. Try again in a minute, or write to us and it goes on by hand.",
 };
 
 /* ---------------------------------------------------------------- hero */

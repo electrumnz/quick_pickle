@@ -32,7 +32,7 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
       "Frozen coupe. A V-shaped glass spills and warms; it is a bad glass and it always was.",
     ice: "Hard cubes, straight from the freezer.",
     garnish:
-      "One olive. Three if the drinker asks. Never two — that is a superstition and we keep it.",
+      "One olive. Three if the drinker asks. Never two. That is a superstition and we keep it.",
     ingredients: [
       {
         items: [
@@ -86,7 +86,7 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
       "Filthy: 30 ml of brine, 55 ml of gin, no vermouth.", // copy-audit-approved: R-13
     ],
     batch: {
-      headline: "Bottled for service — fourteen drinks",
+      headline: "Bottled for service: fourteen drinks",
       rows: [
         { label: "Gin, 47%", value: "700 ml" }, // copy-audit-approved: R-13
         { label: "No. 02 DIRTY", value: "235 ml" },
@@ -94,7 +94,7 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
         { label: "Filtered water", value: "215 ml" },
         { label: "Pour", value: "90 ml, from the freezer, no ice" },
       ],
-      note: "Freeze it in the bottle you will pour from. It will not freeze solid at this strength. Label it with the date — the vermouth is the clock and it gives you four days.",
+      note: "Freeze it in the bottle you will pour from. It will not freeze solid at this strength. Label it with the date. The vermouth is the clock and it gives you four days.",
     },
     tools: [
       "Mixing glass",
@@ -210,7 +210,7 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
     notes: [
       "This lands around 14% ABV, which is roughly a glass of wine, and it is the drink to put first on a menu so a table can have one before they have decided anything.", // copy-audit-approved: R-13
       "Vermouth-led drinks live and die on how fresh the vermouth is. If the bottle has been open a fortnight, this is not the drink to make with it.",
-      "It also works with the vermouth swapped for a dry sherry — fino, cold, and drop the brine to 10 ml.",
+      "It also works with the vermouth swapped for a dry sherry: fino, cold, and drop the brine to 10 ml.",
     ],
     tools: ["Mixing glass", "Bar spoon"],
     published: "2026-08-20",
@@ -343,7 +343,7 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
         text: "Bruise the lemon peel between your fingers over the jar so the oil goes in, then drop it in with the fennel and bay.",
       },
       {
-        text: "Pack the olives in and cover with the brine. They must be under the surface — a folded strip of baking paper on top will hold the floaters down.",
+        text: "Pack the olives in and cover with the brine. They must be under the surface. A folded strip of baking paper on top will hold the floaters down.",
       },
       {
         text: "Twelve hours in the fridge before you serve any. They are better at day three and they keep a month, covered.",
@@ -351,7 +351,7 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
     ],
     notes: [
       "This is the cheapest thing on this list and the one a bar will notice first, because the same jar seasons the drink and garnishes it.",
-      "Pour off 20 ml of the jar liquid to build a dirty martini and it is fractionally rounder than the bottle on its own — the olive has given something back.", // copy-audit-approved: R-13
+      "Pour off 20 ml of the jar liquid to build a dirty martini and it is fractionally rounder than the bottle on its own. The olive has given something back.", // copy-audit-approved: R-13
       "Do not add salt. There is no version of this where it needs salt.", // copy-audit-approved: EL-06
     ],
     swaps: [
@@ -367,7 +367,7 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
     title: "Cornichon Vinaigrette",
     kicker: "Five minutes, keeps a week",
     summary:
-      "No vinegar in it at all — the brine is the acid and the salt in one. Shake it in the jar you will store it in.", // copy-audit-approved: EL-06
+      "No vinegar in it at all. The brine is the acid and the salt in one. Shake it in the jar you will store it in.", // copy-audit-approved: EL-06
     kind: "dish",
     brine: "no-02-dirty",
     alsoWorksWith: ["no-01-house"],
@@ -468,7 +468,7 @@ export const DIRTY_RECIPES: readonly Recipe[] = [
         text: "Take the pan off the heat. Whisk in the butter one cube at a time, adding the next only when the last has gone. Put the pan back on the lowest heat for a few seconds if it stops taking the butter.",
       },
       {
-        text: "Strain out the shallot if you want it smooth, or leave it if you do not. Chives at the last moment. Serve inside ten minutes — this sauce does not wait.",
+        text: "Strain out the shallot if you want it smooth, or leave it if you do not. Chives at the last moment. Serve inside ten minutes. This sauce does not wait.",
       },
     ],
     notes: [

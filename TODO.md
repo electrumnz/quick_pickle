@@ -1,6 +1,6 @@
 # HALF SOUR — what's done, what isn't
 
-Updated 2026-08-27. Honest status, not a summary.
+Updated 2026-09-02. Honest status, not a summary.
 
 ## Needs the founder — nobody else can do these
 
@@ -104,6 +104,11 @@ The order below is the order to do them in.
       0.95 on a quiet machine. The runner is heavily contended and the spread is far
       wider than the margin, so **re-running will not clear this** and it should not be
       treated as a flake.
+      After the September 2026 redesign the CI median is 0.93 (three runs, mobile
+      preset), up from 0.90 on the same runner before it. Tried and reverted because they
+      measured worse: a hero opacity fade (deferred LCP), `preload: false` on the fonts,
+      and inlining the route CSS. Kept: Fraunces without optical axes, GSAP deferred to
+      idle, tiles lazy with `fetchPriority="low"`.
       The obvious lever was tried and does not work: dropping `MotionRoot` (GSAP + Lenis)
       saves 54 kB of script — 189,803 down to 136,173 — but measured _worse_ TBT and LCP
       under a 6x CPU throttle. GSAP and Lenis are not the bottleneck; the remaining
@@ -173,6 +178,43 @@ The order below is the order to do them in.
       Escape saved a laptop; a phone has no Escape key, so the page would not scroll and
       no link answered until a reload. Fixed in all three, with a test that fails 4
       against the old code.
+
+## Storefront redesign, September 2026
+
+The review is `docs/design-review-storefront-2026-09.md`. What it found was fixed on
+`main` and is live at `half-sour.vercel.app`:
+
+- [x] One header and footer on every public page (`StoreChrome`), with a cart chip that
+      says "Cart empty" or "Cart N". The old homepage-only header, footer, custom cursor,
+      Lenis smooth-scroll and scroll-scrubbed hero are deleted.
+- [x] The hero is a full-bleed photograph with a wordmark band and two buttons. It no
+      longer crops the bottles off the top on a phone.
+- [x] The homepage reads as a landing page rather than a one-pager: chooser, serves,
+      four bottle tiles, how it is made, list and trade. No buy panel on the homepage;
+      buying happens on the shop and product pages.
+- [x] `/cart` exists. An add lands there, with quantity, remove, the delivery charge and
+      the total, and a route to the simulated checkout. It works with scripting off.
+- [x] Shop cards carry the job, the line and the price; the chooser sits first. The set
+      has a photo composite (`SetPlate`) instead of a text card.
+- [x] Product page: notes and the run share one section, and the sticky buy bar shows at
+      every width once the panel scrolls away.
+- [x] Recipe library tiles are title-led with a seal per bottle and a jump-link nav.
+- [x] Martian Mono is a real webfont; Fraunces ships without the optical axes (36 KB, was
+      118 KB); GSAP loads after `load` and idle.
+- [x] The demo banner is gone from public pages.
+- [x] No em dashes in customer-facing copy. Recipes, policies, product, checkout and the
+      site metadata were rewritten with full stops, commas and colons.
+
+Left from the review, none of it blocking:
+
+- **`/story` and `/stockists` do not exist.** The footer still filters them out
+  (`components/home/routes.ts`). The story page is the natural home for the supplier
+  pillar once the provenance facts are verified.
+- **Delivery rates are still the invented numbers** (see "Needs the founder").
+- **The footer email is at `halfsour.co.nz`, a domain nobody has registered.** Mail to
+  it bounces. Buy the domain (see "Needs the founder") or change the address.
+- **Lighthouse performance is red at 0.93 median on CI** (floor 0.95). Was 0.90 before
+  the redesign. See the CI entry below for why it will not clear by re-running.
 
 ## In progress
 

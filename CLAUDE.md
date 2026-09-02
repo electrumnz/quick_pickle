@@ -42,7 +42,8 @@ kawakawa has strong rongoā associations — keep its copy strictly culinary.
 ## Stack
 
 Next.js App Router · TypeScript · Tailwind v4 · Vercel
-React Three Fiber + GSAP/ScrollTrigger + Lenis for the storefront
+GSAP/ScrollTrigger for the storefront reveals (loaded after `load` + idle, never on the
+critical path); React Three Fiber only at `/lab/bottle`. No Lenis, no custom cursor.
 Shopify (Storefront + Admin API) behind a provider adapter
 Supabase for everything Shopify cannot do — recipes, batches, approvals, brand rules
 Admin operations via Grok Bot (see `docs/grok-bot-adoption.md`); no in-site agent runtime
@@ -61,6 +62,14 @@ Chromium build. Do not "upgrade" these without checking why they are held back.
 - **`npm run typecheck` is not sufficient.** It has passed on trees where `npm run build`
   failed on a real error. Verify with `npm run build`.
 - No `any`, no `@ts-ignore`, no unjustified `eslint-disable`.
+- **The storefront is a flat multi-page site.** One header and footer for every public
+  page, from `components/product/StoreChrome.tsx`. No anchor-scrolling one-pager
+  patterns: a link goes to a page. Adds go to `/cart`, which is a real page with
+  quantity and remove forms that work without JavaScript.
+- **No em dashes in customer-facing copy.** Use a full stop, a comma or a colon. The
+  founder reads them as machine-written. Code comments are not copy.
+- **No demo banner on public pages.** The demo is explained once, on the simulated
+  checkout, where a visitor would otherwise expect a card field.
 - Commerce is behind `lib/commerce/provider.ts`. A conformance suite written once runs
   against both the mock and Shopify providers; `COMMERCE_PROVIDER` switches them.
 - **Take a private build directory.** Two `next build`s sharing `.next` do not fail
@@ -101,6 +110,11 @@ Two things it changes, deliberately, because every row in that database is inven
 Production is `half-sour.vercel.app`, and it tracks `main`. A push to `main` builds and
 publishes; nothing else does. `vercel.json` turns deployments off for the working branch,
 so pushing there is free — use it to park work that is not ready to be seen.
+
+The Lighthouse performance budget (0.95 on `/`, mobile preset) is red on CI and has
+been since it was set: the runner scores 0.90 to 0.93 on code that scores 0.95 on a
+quiet machine. It is documented in `TODO.md` and is not a reason to hold a merge on
+its own. Everything else in CI must be green.
 
 Never push a red build to main: Vercel keeps the last good deployment, so a failed build
 silently freezes production rather than breaking it, which is harder to notice.

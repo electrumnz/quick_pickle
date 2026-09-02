@@ -78,7 +78,7 @@ export const SMOKE_RECIPES: readonly Recipe[] = [
         text: "Ice to the top, then brine, lime, Worcestershire and soy straight into the glass. Stir once with a long spoon.",
       },
       {
-        text: "Top with the lager, poured down the inside of the tilted glass, in two goes. Leave the rest of the bottle beside the glass — that is the correct service and it is not laziness.", // copy-audit-approved: R-13
+        text: "Top with the lager, poured down the inside of the tilted glass, in two goes. Leave the rest of the bottle beside the glass. That is the correct service and it is not laziness.", // copy-audit-approved: R-13
       },
     ],
     notes: [
@@ -100,7 +100,7 @@ export const SMOKE_RECIPES: readonly Recipe[] = [
     title: "The Bloody Maria",
     kicker: "Tequila, smoke, no hot sauce", // copy-audit-approved: R-13
     summary:
-      "The Bloody Mary rebuilt around tequila and No. 03. Pull the hot sauce and the horseradish out entirely — the brine is doing both jobs.", // copy-audit-approved: R-13
+      "The Bloody Mary rebuilt around tequila and No. 03. Pull the hot sauce and the horseradish out entirely. The brine is doing both jobs.", // copy-audit-approved: R-13
     kind: "drink",
     brine: "no-03-smoke",
     alsoWorksWith: ["no-01-house"],
@@ -213,7 +213,7 @@ export const SMOKE_RECIPES: readonly Recipe[] = [
       },
     ],
     notes: [
-      "Manuka smoke and agave smoke are different things — one is wood, one is roasted plant — and putting them next to each other is why this works rather than doubling up.", // copy-audit-approved: WILD-02
+      "Manuka smoke and agave smoke are different things, one is wood and one is roasted plant, and putting them next to each other is why this works rather than doubling up.", // copy-audit-approved: WILD-02
       "If the mezcal is over 45%, drop to 25 ml. The brine cannot carry more than that.", // copy-audit-approved: R-13
       "This is the one to pour for someone who says they do not like pickle juice. It has worked more often than it has not.",
     ],
@@ -257,7 +257,7 @@ export const SMOKE_RECIPES: readonly Recipe[] = [
         items: [
           {
             amount: "150 ml",
-            item: "No. 03 SMOKE — the rest of the bottle",
+            item: "No. 03 SMOKE, the rest of the bottle",
             metricMl: 150,
           },
           { amount: "2", item: "Brown onions, halved" },
@@ -282,7 +282,7 @@ export const SMOKE_RECIPES: readonly Recipe[] = [
         text: "Brown the shoulder hard on all sides in a heavy casserole. Take your time; this is fifteen minutes of work and it is where the colour comes from.",
       },
       {
-        text: "Onions, bay, pepper and the remaining 150 ml of brine into the pot. The liquid should come no more than a third of the way up — this is a braise, not a boil.",
+        text: "Onions, bay, pepper and the remaining 150 ml of brine into the pot. The liquid should come no more than a third of the way up. This is a braise, not a boil.",
       },
       {
         text: "Lid on, into the oven for six hours. Turn the shoulder once at the three-hour mark. It is ready when a fork twists in it with no resistance at all.",
@@ -375,7 +375,7 @@ export const SMOKE_RECIPES: readonly Recipe[] = [
         seconds: 400,
       },
       {
-        text: "Brush the wings with glaze, back in for three minutes, brush again, three more. Twice, briefly — glaze on for the whole roast just burns.",
+        text: "Brush the wings with glaze, back in for three minutes, brush again, three more. Twice, briefly. Glaze on for the whole roast just burns.",
       },
       { text: "Coriander and sesame over the top, straight out of the oven." },
     ],

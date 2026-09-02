@@ -83,7 +83,7 @@ export const WILD_RECIPES: readonly Recipe[] = [
         text: "Put a metal bowl in the freezer for ten minutes. Everything about this dish is better cold and the bowl is the easiest part to control.",
       },
       {
-        text: "Cut the fish across the grain into pieces about 15 mm square. Even sizes matter more than small ones — uneven pieces cure at different rates and the small ones go chalky first.", // copy-audit-approved: FTA-12
+        text: "Cut the fish across the grain into pieces about 15 mm square. Even sizes matter more than small ones. Uneven pieces cure at different rates and the small ones go chalky first.", // copy-audit-approved: FTA-12
       },
       {
         text: "Soak the red onion in cold water for five minutes and drain it. This takes the aggression out and it is the difference between a starter and an ordeal.",
@@ -94,7 +94,7 @@ export const WILD_RECIPES: readonly Recipe[] = [
         seconds: 720,
       },
       {
-        text: "Drain most of the liquid off — keep four tablespoons — and fold through the onion, chilli, cucumber and coriander.",
+        text: "Drain most of the liquid off, keeping four tablespoons, and fold through the onion, chilli, cucumber and coriander.",
       },
       {
         text: "Coconut cream if you are using it, olive oil over the top, and on the table inside two minutes. Ceviche does not wait for anyone.",
@@ -107,7 +107,7 @@ export const WILD_RECIPES: readonly Recipe[] = [
       "Kawakawa is peppery and it lands in the same place a grind of black pepper would. There is no black pepper in this recipe for that reason.", // copy-audit-approved: WILD-02
     ],
     swaps: [
-      "No. 02 DIRTY makes a sharper, more European version — swap the coriander for dill and drop the coconut cream.",
+      "No. 02 DIRTY makes a sharper, more European version. Swap the coriander for dill and drop the coconut cream.",
     ],
     tools: ["Metal or glass bowl", "A very sharp knife", "A timer"],
     published: "2026-08-17",
@@ -172,7 +172,7 @@ export const WILD_RECIPES: readonly Recipe[] = [
     title: "The Rock Pool", // copy-audit-approved: R-13
     kicker: "Stirred, then a lemon oil",
     summary:
-      "A martini built on No. 04 — vodka, a dry sherry in place of vermouth, and 12 ml of brine. It tastes like the smell of a beach at low tide, which is a compliment.", // copy-audit-approved: R-13
+      "A martini built on No. 04: vodka, a dry sherry in place of vermouth, and 12 ml of brine. It tastes like the smell of a beach at low tide, which is a compliment.", // copy-audit-approved: R-13
     kind: "drink",
     brine: "no-04-wild",
     alsoWorksWith: ["no-02-dirty"],
@@ -207,7 +207,7 @@ export const WILD_RECIPES: readonly Recipe[] = [
       },
       {
         // copy-audit-approved: R-13 (names a spirit serve; §5.3 safe vocabulary)
-        text: "Stir over hard ice for eighteen seconds. Less than a gin martini — there is less alcohol to soften.",
+        text: "Stir over hard ice for eighteen seconds. Less than a gin martini. There is less alcohol to soften.",
         seconds: 18,
       },
       {
@@ -287,7 +287,7 @@ export const WILD_RECIPES: readonly Recipe[] = [
       },
     ],
     notes: [
-      "Forty minutes at this strength firms the outside 2 mm and seasons the whole slice. It is a cure, not a pickle — the fish is still raw in the middle and should be.", // copy-audit-approved: FTA-12 R-11
+      "Forty minutes at this strength firms the outside 2 mm and seasons the whole slice. It is a cure, not a pickle. The fish is still raw in the middle and should be.", // copy-audit-approved: FTA-12 R-11
       "The reduction is what makes this taste finished. Un-reduced brine just makes a puddle on the plate.",
       "Cold plate, straight from the fridge. A warm plate will start softening the fish before it reaches the table.",
       "Kawakawa is peppery on its own account, so the chilli here is for heat and colour, not for pepper.", // copy-audit-approved: WILD-02
@@ -341,7 +341,7 @@ export const WILD_RECIPES: readonly Recipe[] = [
         text: "Discard any clam that is open and does not close when you tap it. That one is not going to get better in the pan.",
       },
       {
-        text: "Oil into a wide pan on a high heat, garlic and chilli in for thirty seconds — moving, not colouring.",
+        text: "Oil into a wide pan on a high heat, garlic and chilli in for thirty seconds, moving, not colouring.",
         seconds: 30,
       },
       {
