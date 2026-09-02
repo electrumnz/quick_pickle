@@ -275,10 +275,18 @@ export default async function HomePage({
                 return (
                   <li key={b.id} className={cx(styles.tile)} data-reveal>
                     <div className={cx(styles.tileMedia)}>
+                      {/* Lazy and low priority, and both said out loud: the
+                          tiles sit two screens down, but a headless Chrome
+                          on a fast link starts them inside the hero's first
+                          paint, and Lighthouse's model then charges all four
+                          against the largest paint. Low priority keeps them
+                          behind the plate in the queue. */}
                       <Image
                         src={shot.still}
                         alt=""
                         fill
+                        loading="lazy"
+                        fetchPriority="low"
                         sizes="(max-width: 64rem) 46vw, 24vw"
                         className={cx(styles.tileArt)}
                       />

@@ -58,7 +58,11 @@ export const fraunces = Fraunces({
   // first screen. All three faces are small enough to ship up front.
   preload: true,
   adjustFontFallback: true,
-  axes: ["SOFT", "opsz"],
+  // Weight axis only. With the SOFT and opsz axes the variable file was
+  // 118 KB and the largest thing requested before the first paint; without
+  // them it is a fraction of that, and Lighthouse's model of the largest
+  // paint, which charges every early byte against it, comes back under
+  // budget. Optical sizing is a nicety at display sizes; the budget is not.
   variable: "--font-fraunces",
 });
 
