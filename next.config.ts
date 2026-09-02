@@ -96,6 +96,19 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
 
   /**
+   * The route's CSS goes into the HTML rather than out to three stylesheet
+   * requests. Every stylesheet is render-blocking, and on the homepage the
+   * three of them (18 KB) were the longest thing between the document and
+   * the first paint under Lighthouse's throttled model — about 450 ms of
+   * it. Inline, the first paint no longer waits on a second round trip.
+   * The cost is that the CSS is not cached across pages; at 18 KB gzipped
+   * to a few, that is the right trade for a five-page store.
+   */
+  experimental: {
+    inlineCss: true,
+  },
+
+  /**
    * Where Next writes its generated type globs.
    *
    * `next build` appends `<distDir>/types/**` to the `include` of whichever
