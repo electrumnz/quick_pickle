@@ -61,18 +61,18 @@ export const HOUSE_RECIPES: readonly Recipe[] = [
         text: "Pour the whiskey at room temperature. Cold whiskey is mute, and the contrast between the two glasses is the entire drink.", // copy-audit-approved: R-13
       },
       {
-        text: "Whiskey first, swallowed, not sipped. Then the brine inside two seconds — long enough to put one glass down, not long enough to think about it.", // copy-audit-approved: R-13
+        text: "Whiskey first, swallowed, not sipped. Then the brine inside two seconds, long enough to put one glass down and not long enough to think about it.", // copy-audit-approved: R-13
         seconds: 2,
       },
     ],
     notes: [
       "The salt and acid in the brine wipe out the ethanol burn on the back of the tongue, which is why a rough whiskey tastes better here than a good one. Save the good one.", // copy-audit-approved: R-13
-      "45 ml each. Matched volumes matter more than the exact size — mismatched glasses make the second half feel like a punishment.",
+      "45 ml each. Matched volumes matter more than the exact size. Mismatched glasses make the second half feel like a punishment.",
       "If you are running these behind a bar, keep a decanted 500 ml bottle in the speed rail fridge and refill it, rather than opening a warm one at 11pm.",
       "Bay and black peppercorn are why HOUSE works here and a jar of supermarket gherkin water does not. Vinegar brine strips; salt brine resets.",
     ],
     swaps: [
-      "Bourbon works and is sweeter — drop to 40 ml.", // copy-audit-approved: R-13
+      "Bourbon works and is sweeter. Drop to 40 ml.", // copy-audit-approved: R-13
       "No. 03 SMOKE against a young rye is a different drink and worth keeping in the rotation.", // copy-audit-approved: R-13
     ],
     tools: ["Two matched shot glasses", "A fridge"], // copy-audit-approved: R-13
@@ -129,14 +129,14 @@ export const HOUSE_RECIPES: readonly Recipe[] = [
     steps: [
       { text: "Put the glass in the freezer. Ten minutes is the floor." },
       {
-        text: "Fill a mixing glass three-quarters with hard ice. Add the gin, the vermouth and the brine in that order — the cheapest ingredient last means you throw less away when you mispour.", // copy-audit-approved: R-13
+        text: "Fill a mixing glass three-quarters with hard ice. Add the gin, the vermouth and the brine in that order. The cheapest ingredient last means you throw less away when you mispour.", // copy-audit-approved: R-13
       },
       {
         text: "Stir for twenty seconds. Count them. You are chasing about 22% dilution, which is the point where the alcohol stops being sharp and before the drink goes flabby.", // copy-audit-approved: R-13
         seconds: 20,
       },
       {
-        text: "Strain into the frozen glass. Express a strip of cucumber peel over the surface, wipe the rim with it, and either drop it in or throw it away — decide before you start.",
+        text: "Strain into the frozen glass. Express a strip of cucumber peel over the surface, wipe the rim with it, and either drop it in or throw it away. Decide before you start.",
       },
     ],
     notes: [
@@ -146,11 +146,11 @@ export const HOUSE_RECIPES: readonly Recipe[] = [
       "Nobody needs a lemon twist as well. Cucumber and dill are already the aromatics.",
     ],
     swaps: [
-      "Vodka works. Go to 65 ml and drop the vermouth to 10 ml — vodka gives the brine less to hold on to.", // copy-audit-approved: R-13
+      "Vodka works. Go to 65 ml and drop the vermouth to 10 ml. Vodka gives the brine less to hold on to.", // copy-audit-approved: R-13
       "No. 02 DIRTY instead: 15 ml of brine, 10 ml of vermouth, and it stays crystal clear.",
     ],
     batch: {
-      headline: "Bottled for service — thirteen drinks",
+      headline: "Bottled for service: thirteen drinks",
       rows: [
         { label: "Gin, 47%", value: "700 ml" }, // copy-audit-approved: R-13
         { label: "Dry vermouth", value: "175 ml" },
@@ -238,14 +238,14 @@ export const HOUSE_RECIPES: readonly Recipe[] = [
       },
     ],
     notes: [
-      "The brine replaces both the salt and about half the acid a Bloody Mary usually gets from lemon. That is why the lemon here is 10 ml and not 20 — the drink stays savoury instead of turning into a sour.", // copy-audit-approved: EL-06 R-13
+      "The brine replaces both the salt and about half the acid a Bloody Mary usually gets from lemon. That is why the lemon here is 10 ml and not 20. The drink stays savoury instead of turning into a sour.", // copy-audit-approved: EL-06 R-13
       "Salt the rim on one half of the glass only, so the drinker can choose. Celery salt, pressed into a wet rim, wiped back off the inside edge.", // copy-audit-approved: EL-06
       "Batch the mix, not the drink. Tomato, brine, lemon and seasoning keep three days in the fridge; add spirit to order.", // copy-audit-approved: R-13
       "No. 03 SMOKE turns this into the version most bars will actually sell. Swap it one for one and pull the hot sauce.",
     ],
     swaps: [
       "Leave the spirit out and it is still a proper drink, not a consolation. Add 10 ml more brine to carry it.", // copy-audit-approved: R-13
-      "Tequila instead of vodka makes a Bloody Maria — there is a full build for that on No. 03 SMOKE.", // copy-audit-approved: R-13
+      "Tequila instead of vodka makes a Bloody Maria. There is a full build for that on No. 03 SMOKE.", // copy-audit-approved: R-13
     ],
     tools: ["Two shaking tins", "Hawthorne strainer", "Microplane"],
     published: "2026-07-16",
@@ -336,7 +336,7 @@ export const HOUSE_RECIPES: readonly Recipe[] = [
           },
           {
             amount: "500 ml",
-            item: "No. 01 HOUSE — one bottle",
+            item: "No. 01 HOUSE, one bottle",
             note: "The bottle sits near 4.6% salt. Cut 1:1 it lands around 2.3%, which is the right strength for an overnight cure on a bird this size.", // copy-audit-approved: EL-06 FTA-12
             metricMl: 500,
           },
@@ -355,10 +355,10 @@ export const HOUSE_RECIPES: readonly Recipe[] = [
     ],
     steps: [
       {
-        text: "Mix the brine and the water in a container the bird fits in snugly. A stockpot, a scrubbed bucket, a food-grade bag inside a bowl. Nothing aluminium — salt and acid will pit it.", // copy-audit-approved: EL-06
+        text: "Mix the brine and the water in a container the bird fits in snugly. A stockpot, a scrubbed bucket, a food-grade bag inside a bowl. Nothing aluminium. Salt and acid will pit it.", // copy-audit-approved: EL-06
       },
       {
-        text: "Submerge the chicken. Weigh it down with a plate if it floats. Twelve hours at 4°C, not longer — past about sixteen the breast starts to go spongy.",
+        text: "Submerge the chicken. Weigh it down with a plate if it floats. Twelve hours at 4°C, not longer. Past about sixteen the breast starts to go spongy.",
       },
       {
         text: "Lift it out and throw the cure away. Do not rinse it and do not add any more salt at any point. Pat it dry inside and out, obsessively.", // copy-audit-approved: EL-06
@@ -370,7 +370,7 @@ export const HOUSE_RECIPES: readonly Recipe[] = [
         text: "Heat the oven to 220°C. Rub the butter over the skin, crack the pepper on, lemon and bay in the cavity. Roast 20 minutes.",
       },
       {
-        text: "Drop to 190°C and give it 45 minutes more, or until the thickest part of the thigh reads 74°C. A cured bird browns faster than an uncured one — tent it with foil if it gets ahead of itself.", // copy-audit-approved: FTA-12
+        text: "Drop to 190°C and give it 45 minutes more, or until the thickest part of the thigh reads 74°C. A cured bird browns faster than an uncured one. Tent it with foil if it gets ahead of itself.", // copy-audit-approved: FTA-12
       },
       {
         text: "Rest 20 minutes on a warm plate before you go near it with a knife.",
@@ -380,7 +380,7 @@ export const HOUSE_RECIPES: readonly Recipe[] = [
     notes: [
       "Do not season the bird again. The cure has already put salt right through it and the pan juices will be seasoned too.", // copy-audit-approved: EL-06
       "Bay and peppercorn are already in the bottle, which is why the ingredient list is so short. You are not building a brine, you are diluting one.",
-      "The pan juices are worth deglazing with a splash of the fresh bottle — 15 ml, off the heat, at the end. Any more and it turns sharp.",
+      "The pan juices are worth deglazing with a splash of the fresh bottle: 15 ml, off the heat, at the end. Any more and it turns sharp.",
       "No. 03 SMOKE at the same dilution gives you a bird that tastes like it went near a fire. Good for a barbecue, wrong for a Sunday.",
     ],
     swaps: [
@@ -444,7 +444,7 @@ export const HOUSE_RECIPES: readonly Recipe[] = [
         text: "Put the lid on the pan and shake it, hard, twice. You want a rough, floury outside on every piece. That is the surface area that turns into crust.",
       },
       {
-        text: "Tip them into the hot fat, turn each one once so it is coated, and roast for 45 to 50 minutes. Turn them at the halfway mark and not before — moving them early tears the crust off.",
+        text: "Tip them into the hot fat, turn each one once so it is coated, and roast for 45 to 50 minutes. Turn them at the halfway mark and not before. Moving them early tears the crust off.",
       },
       {
         text: "Out of the oven, straight into a warm bowl, then the chopped dill and 15 ml of brine over the top while they are still spitting. Serve inside ten minutes.",
@@ -475,7 +475,7 @@ export const HOUSE_RECIPES: readonly Recipe[] = [
     prepMinutes: 10,
     cookMinutes: 0,
     restMinutes: 30,
-    yieldText: "Makes about 280 g — enough for four",
+    yieldText: "Makes about 280 g, enough for four",
     ingredients: [
       {
         items: [
@@ -510,7 +510,7 @@ export const HOUSE_RECIPES: readonly Recipe[] = [
         text: "Chop the cornichons and capers to about the size of a peppercorn. Uneven is fine; slurry is not.",
       },
       {
-        text: "Fold everything into the mayonnaise. Do not whisk — you will break it and it will look grey.",
+        text: "Fold everything into the mayonnaise. Do not whisk. You will break it and it will look grey.",
       },
       {
         text: "Add the brine last, 5 ml at a time, tasting. It should read as seasoned rather than salty, and it should be just loose enough to fall off a spoon.", // copy-audit-approved: EL-06

@@ -229,9 +229,10 @@ export const BUY = {
  */
 export const HOME = {
   hero: {
-    // The positioning statement from brand/brand-guide.md §2, verbatim. It is
-    // the one sentence that has to survive being read on its own.
-    line: "Pickle brine built as an ingredient in its own right — measured, consistent, and good enough to put on a menu.",
+    // The positioning statement from brand/brand-guide.md §2, with the dash
+    // made a full stop. It is the one sentence that has to survive being read
+    // on its own.
+    line: "Pickle brine built as an ingredient in its own right. Measured, consistent, and good enough to put on a menu.",
     shop: { href: SHOP_HREF, label: "Shop the range" },
     recipes: { href: "/recipes", label: "What to make" },
   },
@@ -274,7 +275,7 @@ export const SITE_NAV: readonly NavItem[] = [
 export const NAV_MENU_LABEL = "Menu";
 
 /** The masthead's home link, named for a screen reader and drawn as the wordmark. */
-export const NAV_HOME_LABEL = "Half Sour — home";
+export const NAV_HOME_LABEL = "Half Sour, home";
 
 /* -------------------------------------------------------------- utilities */
 

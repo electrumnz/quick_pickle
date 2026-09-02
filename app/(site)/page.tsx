@@ -331,8 +331,8 @@ export default async function HomePage({
                 className={cx(styles.tap, "text-primary")}
               >
                 <span className={cx(styles.drawLink)}>{FULL_SET.name}</span>
-              </Link>{" "}
-              &mdash; {FULL_SET.descriptor.toLowerCase()},{" "}
+              </Link>
+              , {FULL_SET.descriptor.toLowerCase()},{" "}
               <span className={cx(styles.figure)}>
                 {price(FULL_SET.priceNzd)}
               </span>

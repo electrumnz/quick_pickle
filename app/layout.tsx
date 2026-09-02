@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     default: "Half Sour",
     template: "%s | Half Sour",
   },
-  description: "Half Sour — pickle brine, bottled with a straight face.",
+  description: "Half Sour. Pickle brine, bottled with a straight face.",
   applicationName: "Half Sour",
   alternates: {
     // "./" resolves against the current route, so every page is self-canonical.
@@ -42,14 +42,14 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Half Sour",
     title: "Half Sour",
-    description: "Half Sour — pickle brine, bottled with a straight face.",
+    description: "Half Sour. Pickle brine, bottled with a straight face.",
     url: "./",
     locale: "en_NZ",
   },
   twitter: {
     card: "summary_large_image",
     title: "Half Sour",
-    description: "Half Sour — pickle brine, bottled with a straight face.",
+    description: "Half Sour. Pickle brine, bottled with a straight face.",
   },
   // A demonstration must never enter a search index. Two more layers say the
   // same thing — `app/robots.ts` disallows everything and `next.config.ts`

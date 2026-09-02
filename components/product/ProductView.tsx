@@ -213,7 +213,7 @@ function Serves({ entry }: { entry: CatalogueEntry }) {
             renders, so the two cannot disagree. */}
         <p className={cx(styles.figure, "text-caption text-muted mt-stack")}>
           {total} {PRODUCT.libraryCount}
-          {" — "}
+          {". "}
           <Link href={RECIPES_HREF} className={cx(styles.tap, "text-primary")}>
             <span className={cx(styles.drawLink)}>{ADDED.libraryLink}</span>
           </Link>
@@ -308,9 +308,7 @@ function Bundle({
             {saving === null ? null : (
               <p className="text-body text-primary mt-stack">
                 {formatPrice(set.price)} for {inWords(set.bottleCount)}
-                {each === null
-                  ? null
-                  : ` — ${formatPrice(each)} a bottle`}.{" "}
+                {each === null ? null : `, ${formatPrice(each)} a bottle`}.{" "}
                 {formatPrice(saving.saving)} less than{" "}
                 {formatPrice(saving.separately)} bought one at a time.
               </p>
@@ -471,7 +469,7 @@ export function ProductView({
           <div className="max-w-page gap-block mx-auto grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
             <ProductMedia
               variant={plate}
-              label={`${entry.title}${entry.descriptor === null ? "" : ` — ${entry.descriptor}`}`}
+              label={`${entry.title}${entry.descriptor === null ? "" : `, ${entry.descriptor}`}`}
               className={cx(styles.stickyColumn)}
             />
 

@@ -84,7 +84,7 @@ export function ProductCard({
         >
           <Link href={href} className={cx(styles.cardLink, "outline-none")}>
             {entry.job}
-            <span className="sr-only"> — {entry.title}</span>
+            <span className="sr-only">, {entry.title}</span>
           </Link>
         </h3>
 

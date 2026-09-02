@@ -30,7 +30,7 @@ export const DEMO_BANNER = {
    * does not say: it does not offer a password, name one, or imply one exists
    * to be found, and it does not send anyone to a live roster.
    */
-  admin: "The admin is open — no password to look.",
+  admin: "The admin is open. No password to look.",
   /**
    * What happens to anything they do, and whose name is on it.
    *

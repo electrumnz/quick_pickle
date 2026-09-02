@@ -48,7 +48,7 @@ export const CHECKOUT = {
     "This shop is a demonstration, and this is where a real checkout would be. " +
     "There is no card field on this page, no payment provider behind it and no " +
     "money moves. Pressing the button writes an invented order into the " +
-    "demonstration database — which is the part worth showing you, because it " +
+    "demonstration database, which is the part worth showing you, because it " +
     "then appears in the admin.",
 
   /** Why it asks for an address at all, given nothing is being sent. */
@@ -102,7 +102,7 @@ export const CHECKOUT = {
   placedBody:
     "No money moved and nothing will be packed. What exists now is a row in " +
     "the demonstration database, with the number below, exactly as a real " +
-    "order would be — which is what the admin reads.",
+    "order would be, which is what the admin reads.",
   placedNumberLabel: "Order",
   placedTotalLabel: "Recorded total",
   placedEmailLabel: "Recorded against",
@@ -146,7 +146,7 @@ export const CHECKOUT_PROBLEM: Readonly<Record<string, string>> = {
     "One of those is longer than the order record will hold. Shorten it and " +
     "try again. Nothing was recorded.",
   "cart-gone":
-    "The cart went away while the form was open — it expired, or it had " +
+    "The cart went away while the form was open. It expired, or it had " +
     "already been turned into an order. Nothing was recorded and nothing was " +
     "charged.",
   "sold-out":

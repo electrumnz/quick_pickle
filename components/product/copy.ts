@@ -320,7 +320,7 @@ export const CART = {
     failed:
       "That did not go through. The cart is as it was; try again in a moment.",
     "cart-gone":
-      "That cart has gone — it expired or was already turned into an order. Start again from the shop.",
+      "That cart has gone. It expired or was already turned into an order. Start again from the shop.",
     "not-enough":
       "There are not that many in stock. The quantity was left as it was.",
   } as Readonly<Record<string, string>>,
