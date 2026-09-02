@@ -1,7 +1,8 @@
 # HALF SOUR
 
-Brand, storefront and AI-operated admin for a New Zealand pickle-brine company.
-One founder is the only human; the admin is where the rest of the company lives.
+Brand, storefront and admin for a New Zealand pickle-brine company.
+One founder is the only human; Grok Bot operates the admin as a person at the
+keyboard (see `docs/grok-bot-adoption.md`). There is no in-site agent runtime.
 
 ## Non-negotiables
 
@@ -43,8 +44,8 @@ kawakawa has strong rongoā associations — keep its copy strictly culinary.
 Next.js App Router · TypeScript · Tailwind v4 · Vercel
 React Three Fiber + GSAP/ScrollTrigger + Lenis for the storefront
 Shopify (Storefront + Admin API) behind a provider adapter
-Supabase for everything Shopify cannot do — recipes, batches, agents, approvals, brand rules
-Vercel AI SDK + Inngest for the agent runtime
+Supabase for everything Shopify cannot do — recipes, batches, approvals, brand rules
+Admin operations via Grok Bot (see `docs/grok-bot-adoption.md`); no in-site agent runtime
 
 **Pinned versions, deliberately.** ESLint 9 not 10 (eslint-config-next bundles an
 eslint-plugin-react that calls the removed `context.getFilename()`). TypeScript 6 not 7
@@ -88,16 +89,12 @@ the sealed cookie all behave as they always did. Tests assert both directions.
 
 Two things it changes, deliberately, because every row in that database is invented:
 
-- **The admin is open** — no password to look, and none to ask the team. Gated on
+- **The admin is open** — no password to look. Gated on
   `demoOpensAdmin()`, not bare `isDemoMode()`: the latter is also true when
   `HALF_SOUR_DEMO=1` sits beside a real `SUPABASE_DB_URL`, and Server Actions are
   reachable by POST without rendering a page. Writes with nobody signed in are stamped
   `actor_type = 'system'` against a row that says what it is, never against the founder.
 - **The approval gate still holds.** Deciding needs the password.
-
-The agents run on the Vercel AI Gateway via `AI_GATEWAY_API_KEY`. A deployment fixes its
-environment at build time, so a variable added after a deploy does not reach it until the
-next one — redeploy rather than debugging the code.
 
 ## Deploying
 

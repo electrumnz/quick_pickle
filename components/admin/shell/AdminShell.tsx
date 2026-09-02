@@ -47,12 +47,8 @@ export function AdminShell({
   /**
    * A control that floats over every screen, or nothing.
    *
-   * One slot, for the same reason `notice` is one slot: the thing in it today —
-   * "ask the team", open from wherever she is standing — is true of every screen
-   * at once, and a floating control a page can forget to render is a floating
-   * control that is missing from the screen she happened to be on. It is
-   * rendered last, outside `main`, so it is not part of the page's reading order
-   * and does not sit inside its landmark.
+   * Optional floating control over every screen. Unused after the in-site
+   * chat dock was removed. Kept so the shell API stays stable.
    */
   dock?: ReactNode;
   children: ReactNode;

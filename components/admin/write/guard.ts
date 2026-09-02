@@ -13,11 +13,9 @@ import {
 /**
  * The one door every write in this admin goes through.
  *
- * `app/(admin)/admin/team/actions.ts` established the shape when it built the
- * pause button: check the session inside the action, check the CSRF token the
- * form carried, then write an `audit_log` row saying what changed. Everything
- * added since — packing an order, recording a refund, releasing a batch,
- * approving a post — repeats those three steps exactly, and repeats them by
+ * Every write checks the session inside the action, checks the CSRF token the
+ * form carried, then writes an `audit_log` row saying what changed — packing
+ * an order, recording a refund, releasing a batch, approving a post — by
  * calling this file rather than by remembering to.
  *
  * The session check is not relaxed on a demonstration deployment, and this is
@@ -377,27 +375,6 @@ export const FLASH_SENTENCES = {
   // in New Zealand at all. Storing it would quietly move the post an hour.
   "schedule-no-such-time":
     "There is no such time in New Zealand that morning — the clocks go forward and that hour is skipped. Pick a time before 2am or after 3am.",
-  // Starting an agent by hand. The page beside the button says all of this in
-  // more words and with the specifics — which model, which limit — but a
-  // submission that somehow reaches the server anyway still comes back saying
-  // what happened rather than throwing her onto the error boundary.
-  "run-needs-sign-in":
-    "That one spends real money, so it needs your password first. Sign in and press it again.",
-  "run-team-stopped":
-    "The whole team is stopped, so nothing was started. Turn the company stop off on Settings first.",
-  "run-agent-paused":
-    "That agent is paused, so nothing was started. Put it back on duty first.",
-  "run-no-model":
-    "No model is configured for this deployment, so there was nothing to start. Set AI_GATEWAY_API_KEY in the Vercel project and the team can think again.",
-  "run-window-closed":
-    "That agent's model was free only until 6 September and the window has closed, so nothing was started rather than spending money nobody approved. Set HALF_SOUR_AGENT_MODEL to a model you have chosen to pay for.",
-  "run-already-going":
-    "That agent already has a job going, so a second one was not started. It appears in its work the moment it finishes.",
-  "run-finished": "Done. The job is at the top of its work below.",
-  "run-asked-you":
-    "It stopped and asked you about something before doing it. The decision is in the queue above; saying yes lets it carry on.",
-  "run-stopped-early":
-    "It stopped part way, and the job below says what stopped it and what it had spent by then.",
   packed: "Packed and posted. The customer's ticket number is on the order.",
   tracking: "The ticket number is updated.",
   cancelled: "The order is cancelled.",
@@ -408,19 +385,6 @@ export const FLASH_SENTENCES = {
   "reorder-set": "The reorder point is saved.",
   approved: "Approved.",
   declined: "Declined, with your reason on it.",
-  "bulk-approved": "Everything you ticked is approved.",
   edited: "Your wording is saved.",
   scheduled: "Approved and put in the diary.",
-  autonomy: "Saved. That takes effect on its next job.",
-  "nothing-asked":
-    "There was nothing in the box, so nothing was asked. Say what you need and press it again.",
-  asked: "Asked, and answered below.",
-  "asked-nobody":
-    "Nobody on the team does that one, and the answer below says what they can take on instead.",
-  "asked-waiting":
-    "That needs your yes before it can happen. The decision is below, on the same card as everywhere else.",
-  "asked-stopped":
-    "It was picked up and then stopped without answering. The reason is below.",
-  "new-conversation":
-    "A fresh conversation. The old one is still there, in the list above.",
 } as const;

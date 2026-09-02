@@ -57,7 +57,6 @@ export const PUBLIC_ROUTES: readonly AuditRoute[] = [
 
 export const ADMIN_ROUTES: readonly AuditRoute[] = [
   { name: "today", path: "/admin", signedIn: true },
-  { name: "chat", path: "/admin/chat", signedIn: true },
   { name: "orders", path: "/admin/orders", signedIn: true },
   { name: "stock", path: "/admin/stock", signedIn: true },
   { name: "social", path: "/admin/social", signedIn: true },
@@ -78,6 +77,7 @@ export const ADMIN_ROUTES: readonly AuditRoute[] = [
   { name: "brand messaging", path: "/admin/brand/messaging", signedIn: true },
   { name: "brand plan", path: "/admin/brand/plan", signedIn: true },
   { name: "team", path: "/admin/team", signedIn: true },
+  { name: "activity", path: "/admin/activity", signedIn: true },
   { name: "settings", path: "/admin/settings", signedIn: true },
   { name: "go live", path: "/admin/go-live", signedIn: true },
   { name: "search", path: "/admin/search?q=smoke", signedIn: true },
@@ -96,8 +96,6 @@ export const UNAUDITED_ROUTES: Readonly<Record<string, string>> = {
     "The design-token specimen sheet — a developer instrument that exists to be looked at while building, not a page the shop links to.",
   "/products":
     "A permanent redirect to /shop. There is no document to audit; `e2e/seo.spec.ts` covers that it still redirects.",
-  "/admin/team/[slug]":
-    "One agent's detail page, rendered by the same components as /admin/team, which is audited. Auditing it needs a live agent slug and measures the same markup twice.",
   "/admin/assets/[id]":
     "One asset's detail page, rendered by the same components as /admin/assets, which is audited. It needs a seeded asset id to reach.",
   "/checkout/mock/[id]":

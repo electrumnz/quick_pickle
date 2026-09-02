@@ -4,8 +4,8 @@
 -- Four months of a real small business: the four-brine line that is live in
 -- Shopify (Picklin Jews / sgu8sy-at.myshopify.com, NZD, Pacific/Auckland),
 -- 95 orders across New Zealand, versioned production recipes, batches traced
--- through to the order lines that shipped from them, five AI staff with live
--- runs, and an approvals queue with real things waiting in it.
+-- through to the order lines that shipped from them. The in-site AI roster is
+-- no longer seeded; Grok Bot uses the admin as an operator.
 --
 -- Conventions:
 --   * money is integer cents; NZ retail prices are GST-inclusive at 15%, so
@@ -19,27 +19,11 @@
 --
 -- Safe to re-run: the file truncates what it owns before writing.
 --
--- TWO TABLES IT DOES NOT OWN: `public.agents` and `public.operators`.
+-- TABLES IT DOES NOT TRUNCATE: `public.agents` and `public.operators`.
 --
--- The roster is registered by `supabase/migrations/20260103000000_agent_roster.sql`
--- from the roles declared in `lib/agents/roster/definitions.ts`, and the gateway
--- model each one runs on by `20260108000000_roster_gateway_models.sql`. Both run
--- BEFORE this file on every deployment — the demo image builder and
--- `supabase/tests/run_local.sh` both apply migrations and then this seed — so
--- truncating `agents` here deleted the roster the migrations had just written.
--- The four roles the seed does not itself describe (Ari, Vic, Pip and Cass)
--- vanished from every such deployment, and the four it does describe came back
--- naming models the runtime never resolves.
---
--- `operators` is out for the same reason and not by choice: `agents.operator_id`
--- references it, and `truncate ... cascade` empties every table with a foreign
--- key into a truncated one. Truncating operators therefore truncated agents,
--- whether or not agents was named. Keeping operator rows also keeps their ids
--- stable across a re-run, which is what lets anything still pointing at them —
--- a chat session, a marketing asset — keep resolving.
---
--- Both are upserted below instead, and the upserts write only the columns this
--- file legitimately owns: the demonstration's colour, run counters and history.
+-- Agent tables remain in the schema this PR, but this seed no longer plants
+-- agent rows or agent-raised approvals. Operators stay upserted so ids remain
+-- stable across a re-run (sessions, assets, audit).
 -- =============================================================================
 
 begin;
@@ -221,123 +205,11 @@ values
    'Sorry to hear that! DM us.', '{storefront,social}', '{}', 70, true);
 
 -- =============================================================================
--- AGENTS — the staff
---
--- The migrations own the roster: who works here, what they may do, which model
--- they run on and what their prompt is all come from
--- `lib/agents/roster/definitions.ts` by way of
--- `20260103000000_agent_roster.sql`. This file owns the DEMONSTRATION: a colour
--- per agent, a plausible run history, and the two rows that are history rather
--- than roster.
---
--- So the insert below is an upsert whose `do update` touches three columns and
--- no others. It cannot move a model, widen a tool grant, loosen an autonomy or
--- overwrite a prompt, which is exactly what it used to do to the four roles it
--- names — the Team page showed `claude-sonnet-4-5` for months because of it.
---
--- Two of these rows are not roles in the roster and are here deliberately:
---
---   scout   Bex, wholesale outreach. The job is Vic's now. Her runs, approvals
---           and outreach are referenced by rows elsewhere, and the history has
---           to keep resolving.
---   mirror  Storefront Sync. Not a role at all — it is the worker that drains
---           the Shopify webhook queue, which this codebase really does.
---
--- The Team page lists both under "Rows that are not part of the roster" rather
--- than hiding them, which is the correct behaviour and not a fault.
+-- AGENTS
+-- The in-site roster is gone. Migrations may still create `public.agents`
+-- rows (tables stay this PR). This seed no longer plants agent history or
+-- agent-raised approvals. Grok Bot uses the admin as an operator.
 -- =============================================================================
-insert into public.agents
-  (slug, name, job_title, purpose, model, tools, status, autonomy, requires_approval_for,
-   daily_spend_cap_cents, monthly_spend_cap_cents, single_action_cap_cents, schedule_cron,
-   colour_hex, last_run_at, runs_count)
-values
-  ('brine-ops', 'Marlow', 'Head of Brine Ops',
-   'Watches stock against the reorder points, plans the production calendar off forward demand, drafts purchase orders, and flags batches coming up on their best-before.',
-   'claude-sonnet-4-5',
-   '{inventory.read,inventory.adjust,batches.read,batches.plan,suppliers.read,purchase_orders.draft,approvals.create}',
-   'active', 'act_with_limits', '{purchase_order,inventory_adjustment,batch_release}', 800, 16000, 25000,
-   '0 19 * * *', '#7A8B3C', now() - interval '4 hours', 214),
-
-  ('social', 'Vinnie', 'Social and Content Lead',
-   'Drafts the fortnightly content calendar against the brand rules, writes captions, schedules posts, and reports back on what actually landed.',
-   'claude-sonnet-4-5',
-   '{brand_rules.read,content_assets.read,social.draft,social.schedule,social.metrics,approvals.create}',
-   'active', 'propose', '{social_post,content_asset,email_campaign}', 600, 12000, null,
-   '0 20 * * 1,4', '#B4482A', now() - interval '19 hours', 96),
-
-  ('concierge', 'Dot', 'Customer Concierge',
-   'Handles order questions, drafts review replies, chases delivery exceptions, and escalates anything that smells like a product fault.',
-   'claude-sonnet-4-5',
-   '{orders.read,customers.read,reviews.read,reviews.reply_draft,email.draft,batches.trace,approvals.create}',
-   'active', 'propose', '{review_reply,customer_message,refund}', 500, 10000, 15000,
-   '0 */4 * * *', '#2F3A1E', now() - interval '52 minutes', 431),
-
-  ('ledger', 'Teller', 'Finance and Pricing',
-   'Recalculates unit cost from the last three batches, watches margin by SKU, models price moves, and reconciles Shopify payouts against the bank.',
-   'claude-opus-4-1',
-   '{orders.read,batches.read,products.read,pricing.model,reports.write,approvals.create}',
-   'active', 'propose', '{price_change,discount,settings_change}', 900, 18000, null,
-   '0 8 * * 1', '#96A14B', now() - interval '2 days 3 hours', 41),
-
-  -- Retired, and seeded that way on purpose. 20260103000000_agent_roster.sql
-  -- retires her because "one company does not approach the same venue with two
-  -- voices" — that work is Vic's now. Its `update` can never fire, though:
-  -- migrations run BEFORE this file, so `scout` does not exist yet when it
-  -- looks for her. Seeding her active undid a decision the schema had already
-  -- taken, and the Team page then showed two agents doing trade outreach. The
-  -- row stays rather than being deleted: her runs, approvals and audit entries
-  -- are referenced elsewhere and the history has to keep resolving.
-  ('scout', 'Bex', 'Wholesale Outreach',
-   'Builds the trade prospect list from bar and bottle-shop data, writes the first approach, and keeps the follow-up cadence honest. Retired: this work is now Vic''s, so the trade list has one voice.',
-   'claude-sonnet-4-5',
-   '{customers.read,crm.read,email.draft,campaigns.read,approvals.create}',
-   'retired', 'propose', '{email_outreach,customer_message}', 700, 14000, null,
-   null, '#B4482A', now() - interval '5 days', 63),
-
-  ('mirror', 'Mirror', 'Storefront Sync',
-   'Keeps the local mirror honest against Shopify: drains the webhook queue, reconciles drift nightly, and reports anything the mirror and the store disagree about.',
-   'claude-haiku-4-5',
-   '{shopify.read,webhooks.drain,sync.reconcile,inventory.write}',
-   'active', 'act_with_limits', '{}', 400, 8000, null,
-   '*/15 * * * *', '#2F3A1E', now() - interval '6 minutes', 4812)
-on conflict (slug) do update set
-  colour_hex  = excluded.colour_hex,
-  last_run_at = excluded.last_run_at,
-  runs_count  = excluded.runs_count,
-  updated_at  = now();
-
--- Bex is retired, and `is_enabled` is not in the insert's column list above, so
--- it would otherwise default to true and leave her retired-but-enabled. The
--- migration's own retirement statement cannot do this either: it runs before
--- this file, when `scout` does not yet exist.
-update public.agents set is_enabled = false, updated_at = now()
- where slug = 'scout' and is_enabled;
-
--- The rest of the roster: registered by the migration, and given the same
--- demonstration colour and history as everyone else so The Team does not show
--- half a company in colour and half of it blank. Only the three demonstration
--- columns, and the roles are named rather than described — their purpose, model,
--- tools and prompt belong to the migration and are not repeated here, so there
--- is nothing for this file to drift from.
-update public.agents a
-   set colour_hex  = d.colour,
-       last_run_at = now() - d.last_run,
-       runs_count  = d.runs,
-       updated_at  = now()
-  from (values
-    -- Counts that a four-month-old company could actually have produced on the
-    -- schedule each role runs on: Cass weekly, Pip monthly, Ward every morning,
-    -- Ari and Vic only when they are asked.
-    ('marketing', '#B4482A', interval '1 day 6 hours', 34),
-    ('trade',     '#96A14B', interval '2 days',        26),
-    ('product',   '#7A8B3C', interval '9 days',         5),
-    ('analyst',   '#2F3A1E', interval '3 days 1 hour', 17),
-    ('security',  '#96A14B', interval '38 minutes',   121)
-  ) as d(slug, colour, last_run, runs)
- where a.slug = d.slug;
-
-update public.agents a set operator_id = o.id
-  from public.operators o where o.email = 'agents@halfsour.co.nz';
 
 -- =============================================================================
 -- CATALOGUE — the live Shopify products, mirrored
@@ -979,178 +851,10 @@ select ct.id, 'NZD', v.product_id, v.id, ci.qty, ci.price, ct.created_at + inter
   join public.product_variants v on v.sku = ci.sku;
 
 -- =============================================================================
--- AGENT RUNS
+-- APPROVALS
+-- Not seeded. Agent-raised approvals went with the roster. Domain Server
+-- Actions still raise rows when a human decides.
 -- =============================================================================
-insert into public.agent_runs
-  (agent_id, trigger, status, goal, outcome, error, queued_at, started_at, finished_at,
-   input_tokens, output_tokens, cost_micros, tool_call_count, context)
-select a.id, r.trigger::public.agent_run_trigger, r.status::public.agent_run_status, r.goal, r.outcome, r.error,
-       now() - r.queued, case when r.started is null then null else now() - r.started end,
-       case when r.finished is null then null else now() - r.finished end,
-       r.in_tok, r.out_tok, r.cost, r.calls, r.context::jsonb
-  from (values
-    ('mirror', 'schedule', 'succeeded', 'Drain the Shopify webhook queue and reconcile any drifted rows.',
-     'Processed 14 webhook events. One orders/updated arrived out of order and was discarded against a newer shopify_updated_at. No drift.',
-     null, interval '6 minutes', interval '6 minutes', interval '5 minutes', 8420, 610, 41200, 6,
-     '{"events_processed":14,"stale_discarded":1,"resources":["order","inventory_level"]}'),
-    ('concierge', 'schedule', 'succeeded', 'Sweep new reviews and unanswered customer email since the last run.',
-     'Three new reviews. Two are five stars and were replied to from the approved template. One is three stars about the smoke heat level — a reply is drafted and waiting on approval.',
-     null, interval '52 minutes', interval '52 minutes', interval '49 minutes', 21440, 2180, 168400, 9,
-     '{"reviews_seen":3,"replies_drafted":1,"escalations":0}'),
-    -- These two are inserted as 'running' and flipped to 'awaiting_approval'
-    -- below, once the approval they are blocked on exists: the check constraint
-    -- will not let a blocked run exist without one, which is the point of it.
-    ('brine-ops', 'schedule', 'running', 'Nightly stock sweep against reorder points and the forward production plan.',
-     null, null, interval '4 hours', interval '4 hours', null, 18900, 3410, 214600, 7,
-     '{"below_reorder":["BOTTLE_500"],"batches_expiring_60d":1,"po_drafted":"bottles"}'),
-    ('social', 'schedule', 'running', 'Draft this fortnight''s content calendar and schedule against the brand rules.',
-     null, null, interval '19 hours', interval '19 hours', null, 32100, 5640, 402800, 11,
-     '{"drafts":4,"brand_rule_failures":1,"failed_rule":"no-health-claims"}'),
-    ('ledger', 'schedule', 'succeeded', 'Recalculate unit cost from the last three batches per SKU and check margin.',
-     'No 03 SMOKE unit cost has moved from 875c to 920c across the last three batches, mostly manzano. Margin at NZ$22.00 is now 58.2%, below the 60% floor. A price change to NZ$23.50 is queued for approval.',
-     null, interval '2 days 3 hours', interval '2 days 3 hours', interval '2 days 2 hours 47 minutes',
-     44800, 6120, 812400, 12, '{"skus_reviewed":4,"below_margin_floor":["HS-03-500"]}'),
-    ('scout', 'schedule', 'succeeded', 'Build the Wellington trade prospect list and draft the first approach.',
-     'Twelve venues shortlisted from the Wellington cocktail-bar set. One outreach email drafted, approved and sent. Two replies so far.',
-     null, interval '5 days', interval '5 days', interval '5 days' + interval '-14 minutes',
-     38200, 7440, 561000, 8, '{"prospects":12,"emails_drafted":1,"replies":2}'),
-    ('mirror', 'webhook', 'failed', 'Process orders/create for a Shopify order with a line item we have no variant for.',
-     null, 'Variant gid://shopify/ProductVariant/48231847723386 is not in the mirror. The order was parked in webhook_events for replay after the next product backfill.',
-     interval '2 days 6 hours', interval '2 days 6 hours', interval '2 days 6 hours' + interval '-40 seconds',
-     3100, 210, 14800, 2, '{"topic":"orders/create","missing_variant":true}'),
-    ('brine-ops', 'manual', 'succeeded', 'Cost the No 01 HOUSE batch that came off the line and release it to stock.',
-     'Batch costed at 600c a unit against a 620c standard. QA passed at pH 3.29. Released 660 units to Sale Street.',
-     null, interval '26 days', interval '26 days', interval '26 days' + interval '-22 minutes',
-     15600, 2890, 141200, 5, '{"batch":"no-01-house","units":660,"unit_cost_cents":600}'),
-    ('concierge', 'manual', 'succeeded', 'Trace the cracked-bottle complaint back to a batch and decide whether it is a fault.',
-     'Traced to one batch via order_item_batches. Both other orders from that batch were delivered without incident, and the outer carton was crushed, so this reads as carrier damage rather than a seam fault. Full refund and a free replacement.',
-     null, interval '19 days', interval '19 days', interval '19 days' + interval '-9 minutes',
-     12400, 1980, 98600, 6, '{"verdict":"carrier_damage","batch_recall":false}'),
-    ('social', 'schedule', 'succeeded', 'Pull last fortnight''s post metrics and report what worked.',
-     'The three-up line shot outperformed everything else at 4.1% engagement. Bar-pass video is still the best for saves. Nothing tripped a brand rule.',
-     null, interval '4 days', interval '4 days', interval '4 days' + interval '-6 minutes',
-     19800, 2140, 176400, 4, '{"posts_reviewed":8,"best_format":"three_up"}'),
-    ('mirror', 'schedule', 'running', 'Nightly full reconciliation of products, variants and inventory against Shopify.',
-     null, null, interval '3 minutes', interval '3 minutes', null, 2100, 180, 9800, 1,
-     '{"phase":"products","page":2}')
-  ) as r(agent_slug, trigger, status, goal, outcome, error, queued, started, finished,
-         in_tok, out_tok, cost, calls, context)
-  join public.agents a on a.slug = r.agent_slug;
-
--- =============================================================================
--- APPROVALS — the founder's inbox. One table, every queue.
--- subject_id is filled in further down, once the rows being approved exist.
--- =============================================================================
-insert into public.approvals
-  (subject_type, subject_table, title, summary, rationale, payload, preview, risk,
-   amount_cents, status, requested_by_agent_id, requested_by_run_id, requested_at, expires_at,
-   decided_by, decided_at, decision_note, applied_at, applied_result)
-select
-  ap.subject_type::public.approval_subject, ap.subject_table, ap.title, ap.summary, ap.rationale,
-  ap.payload::jsonb, ap.preview::jsonb, ap.risk::public.approval_risk, ap.amount,
-  ap.status::public.approval_status, a.id, run.id,
-  now() - ap.requested, case when ap.expires is null then null else now() - ap.expires end,
-  case when ap.decided is null then null else op.id end,
-  case when ap.decided is null then null else now() - ap.decided end,
-  ap.decision_note,
-  case when ap.applied is null then null else now() - ap.applied end,
-  ap.applied_result::jsonb
-from (values
-  ('social_post', 'social_posts',
-   'Instagram: No 03 SMOKE back on the shelf Thursday',
-   'A single still of the No 03 bottle with a caption announcing the restock, scheduled for Thursday 5pm.',
-   'No 03 has been out of stock for nine days and it is the second most asked-about thing in the inbox. Batch D lands Wednesday.',
-   '{"action":"schedule","platform":"instagram","scheduled_for":"+2 days 17:00 Pacific/Auckland","caption_length":214}',
-   '{"caption":"No 03 SMOKE is back on Thursday. Chipotle and manzano, manuka-smoked salt, the heat arrives about three seconds late. Batch D, bottled Tuesday.","asset":"media/bottles/no-03-smoke.jpg"}',
-   'low', null, 'pending', 'social', 'Draft this fortnight''s content calendar and schedule against the brand rules.',
-   interval '19 hours', interval '-29 hours', null, null, null, null),
-
-  ('purchase_order', 'purchase_orders',
-   'Reorder 2,400 x 500ml bottles from Onehunga Glass and Closures',
-   'Bottle stock is 1,180 against a reorder point of 1,200. At the current run rate that is about nineteen days of cover and the lead time is fourteen.',
-   'Bottles are the only input with a lead time longer than a production cycle. Running out stops the line entirely, and the last two orders both slipped by three days.',
-   '{"action":"create_purchase_order","supplier":"GLASSCO","lines":[{"ingredient":"BOTTLE_500","quantity":2400,"unit_cost_cents":118}],"freight_cents":8500}',
-   '{"supplier":"Onehunga Glass and Closures","total":"NZ$2,917.00","expected":"14 days","cover_after":"about 8 weeks"}',
-   'high', 291700, 'pending', 'brine-ops', 'Nightly stock sweep against reorder points and the forward production plan.',
-   interval '4 hours', interval '-44 hours', null, null, null, null),
-
-  ('price_change', 'product_variants',
-   'Lift No 03 SMOKE from NZ$22.00 to NZ$23.50',
-   'Unit cost has moved from 875c to 920c across the last three batches. At NZ$22.00 the margin is 58.2%, under the 60% floor. NZ$23.50 puts it back at 60.9%.',
-   'Manzano chilli is up 22% since February and the manuka-smoked salt went up with it. The other two SKUs are unaffected.',
-   '{"action":"update_variant_price","sku":"HS-03-500","from_cents":2200,"to_cents":2350,"push_to_shopify":true}',
-   '{"sku":"HS-03-500","current":"NZ$22.00","proposed":"NZ$23.50","margin_before":"58.2%","margin_after":"60.9%"}',
-   'medium', 150, 'pending', 'ledger', 'Recalculate unit cost from the last three batches per SKU and check margin.',
-   interval '2 days 2 hours', interval '-22 hours', null, null, null, null),
-
-  ('review_reply', 'reviews',
-   'Reply to a three-star review about the No 03 heat level',
-   'A customer found No 03 hotter than expected. The draft acknowledges it, names the batch, and points them at No 01 rather than arguing.',
-   'The heat does vary by manzano pick. Saying so is better than a template apology, and the batch code makes it checkable.',
-   '{"action":"publish_review_reply","review_rating":3,"reply_length":186}',
-   '{"reply":"That batch did run hot — the manzano pick was hotter than the one before it, which is the honest answer. If you want the same brine without the heat, No 01 HOUSE is the same base. Email us and we will sort you out."}',
-   'low', null, 'pending', 'concierge', 'Sweep new reviews and unanswered customer email since the last run.',
-   interval '49 minutes', interval '-47 hours', null, null, null, null),
-
-  ('social_post', 'social_posts',
-   'Instagram: the Dirty Martini build at Brass and Bitters',
-   'A 22-second vertical of Kiri building a Dirty Martini with No 02 on the pass.',
-   'Kiri agreed to be filmed and the venue is our biggest trade account. This is the strongest trade proof we have.',
-   '{"action":"publish","platform":"instagram","asset":"dirty-martini-build.mp4"}',
-   '{"caption":"Kiri at Brass and Bitters, building the house Dirty with No 02. Thirty martinis to a bottle and it does not cloud the glass."}',
-   'low', null, 'approved', 'social', 'Draft this fortnight''s content calendar and schedule against the brand rules.',
-   interval '12 days', null, interval '12 days' + interval '-3 hours', 'Yes. Ask Kiri before it goes up.',
-   interval '11 days', '{"published":true,"external_post_id":"18042117993204411"}'),
-
-  ('email_outreach', 'email_sends',
-   'Cold approach to twelve Wellington cocktail bars',
-   'One email, twelve recipients, offering a sample pack of all three and a trade price list. No attachment, no follow-up scheduled without a second approval.',
-   'Wellington is 18% of retail orders and zero of trade. Twelve venues is small enough to handle by hand if they all say yes.',
-   '{"action":"send_outreach","recipients":12,"template":"trade-intro-v2","follow_up":"requires_separate_approval"}',
-   '{"subject":"A brine made for the Dirty, from Auckland","preview":"Twelve by 500ml, 18-month shelf life, 48-hour freight to Wellington."}',
-   'medium', null, 'approved', 'scout', 'Build the Wellington trade prospect list and draft the first approach.',
-   interval '5 days', null, interval '5 days' + interval '-2 hours', 'Send it. Do not follow up without asking me.',
-   interval '5 days' + interval '-2 hours', '{"sent":12,"bounced":0,"replies":2}'),
-
-  ('discount', 'discounts',
-   '20% off sitewide for Labour Weekend',
-   'A three-day sitewide code to lift a quiet weekend.',
-   'Last Labour Weekend was the slowest three days of the quarter.',
-   '{"action":"create_discount","code":"LABOUR20","value_bp":2000,"scope":"order"}',
-   '{"code":"LABOUR20","value":"20%","window":"3 days","forecast_orders":31,"forecast_margin_cents":-42000}',
-   'medium', 42000, 'rejected', 'ledger', 'Recalculate unit cost from the last three batches per SKU and check margin.',
-   interval '9 days', null, interval '9 days' + interval '-5 hours',
-   'No. We have never discounted sitewide and I do not want to teach people to wait for it. Do a free-freight code instead.',
-   null, null),
-
-  ('batch_release', 'batches',
-   'Release No 01 HOUSE batch E to stock',
-   '660 units, QA passed at pH 3.29 and 4.6% salinity, costed at 600c a unit against a 620c standard.',
-   'Everything is inside spec and the bottle stock cannot hold it much longer.',
-   '{"action":"release_batch","units":660,"location":"SALE_ST","ph":3.29,"salinity_pct":4.6}',
-   '{"batch":"No 01 HOUSE batch E","units":660,"unit_cost":"NZ$6.00","expires_in_days":540}',
-   'high', null, 'approved', 'brine-ops', 'Cost the No 01 HOUSE batch that came off the line and release it to stock.',
-   interval '26 days', null, interval '26 days' + interval '-25 minutes', 'Released. Print the labels tonight.',
-   interval '26 days' + interval '-30 minutes', '{"released":true,"units_to_stock":660}')
-) as ap(subject_type, subject_table, title, summary, rationale, payload, preview, risk, amount,
-        status, agent_slug, run_goal, requested, expires, decided, decision_note, applied, applied_result)
-join public.agents a on a.slug = ap.agent_slug
-join lateral (
-  select r.id from public.agent_runs r
-   where r.agent_id = a.id and r.goal = ap.run_goal
-   order by r.queued_at desc limit 1
-) run on true
-cross join lateral (select id from public.operators where email = 'nadia@halfsour.co.nz') op;
-
--- The two runs that stopped and asked now point at what they are waiting on,
--- and only now can legally say they are awaiting approval.
-update public.agent_runs r
-   set status = 'awaiting_approval', blocking_approval_id = ap.id
-  from public.approvals ap
- where ap.requested_by_run_id = r.id
-   and ap.status = 'pending'
-   and r.status = 'running'
-   and r.finished_at is null;
 
 -- =============================================================================
 -- PRODUCTION — suppliers and ingredients
@@ -1505,12 +1209,12 @@ select po.po_number, s.id, po.status::public.purchase_order_status,
        case when po.expected is null then null else now() - po.expected end,
        case when po.received is null then null else now() - po.received end,
        null, null,
-       a.id, ap.id
+       null::uuid, null::uuid
   from (values
-    ('PO-0101','GLASSCO','pending_approval', 283200, 8500, 0, 'Bottle reorder — 2,400 x 500ml',
-     'Drafted by Marlow off the nightly sweep. Bottle stock is under the reorder point and the lead time is fourteen days.',
-     null::interval, null::interval, null::interval, 'brine-ops',
-     'Reorder 2,400 x 500ml bottles from Onehunga Glass and Closures'),
+    ('PO-0101','GLASSCO','draft', 283200, 8500, 0, 'Bottle reorder — 2,400 x 500ml',
+     'Bottle stock is under the reorder point and the lead time is fourteen days.',
+     null::interval, null::interval, null::interval, null,
+     null),
     ('PO-0102','PUKEKOHE','received', 115200, 0, 0, 'Cucumbers for the No 01 run',
      '240kg telegraph, cut Friday.', interval '9 days', interval '6 days', interval '6 days', null, null),
     ('PO-0103','BOPSPICE','ordered', 68400, 2200, 0, 'Quarterly spice order',
@@ -1714,7 +1418,7 @@ insert into public.content_assets
    created_by_agent_id, approval_id, is_approved, usage_rights, credit, shot_at)
 select ca.slug, ca.title, ca.atype::public.content_asset_type, ca.path, ca.url, ca.mime,
        ca.w, ca.h, ca.dur, ca.size, ca.alt, ca.caption, ca.body, ca.tags::text[],
-       p.id, ba.id, ag.id, ap.id, ca.approved, ca.rights, ca.credit, now() - ca.shot_ago
+       p.id, ba.id, null::uuid, null::uuid, ca.approved, ca.rights, ca.credit, now() - ca.shot_ago
   from (values
     -- The only file in this list that exists. `public/media/bottles/no-03-smoke.jpg`,
     -- from the same shoot as the storefront's — components/product/media.ts is
@@ -1760,7 +1464,7 @@ insert into public.campaigns
    revenue_cents, target_audience, discount_id, utm_source, utm_medium, utm_campaign, owner_agent_id, notes)
 select c.slug, c.name, c.objective, c.channel::public.campaign_channel, c.status::public.campaign_status,
        now() - c.starts, case when c.ends is null then null else now() - c.ends end,
-       c.budget, c.spend, c.revenue, c.audience, d.id, c.utm_s, c.utm_m, c.utm_c, a.id, c.notes
+       c.budget, c.spend, c.revenue, c.audience, d.id, c.utm_s, c.utm_m, c.utm_c, null::uuid, c.notes
   from (values
     ('no-03-launch', 'No 03 SMOKE launch', 'Get the third SKU onto shelves and into the Bloody Mary conversation.',
      'social_organic', 'completed', interval '3 months', interval '11 weeks', 0, 0, 184600,
@@ -1783,6 +1487,23 @@ select c.slug, c.name, c.objective, c.channel::public.campaign_channel, c.status
   left join public.discounts d on d.code = c.discount_code
   left join public.agents a on a.slug = c.agent_slug;
 
+-- One pending approval (no agent) so Social has a waiting post and
+-- supabase/tests/verify.sql can probe the pending-undecided check.
+insert into public.approvals
+  (subject_type, subject_table, title, summary, rationale, payload, preview, risk,
+   amount_cents, status, requested_by_agent_id, requested_by_run_id, requested_at, expires_at,
+   decided_by, decided_at, decision_note, applied_at, applied_result)
+values
+  ('social_post', 'social_posts',
+   'Instagram: No 03 SMOKE back on the shelf Thursday',
+   'A single still of the No 03 bottle with a caption announcing the restock, scheduled for Thursday 5pm.',
+   'No 03 has been out of stock for nine days and it is the second most asked-about thing in the inbox. Batch D lands Wednesday.',
+   '{"action":"schedule","platform":"instagram","scheduled_for":"+2 days 17:00 Pacific/Auckland","caption_length":214}'::jsonb,
+   '{"caption":"No 03 SMOKE is back on Thursday. Chipotle and manzano, manuka-smoked salt, the heat arrives about three seconds late. Batch D, bottled Tuesday.","asset":"media/bottles/no-03-smoke.jpg"}'::jsonb,
+   'low', null, 'pending', null, null,
+   now() - interval '19 hours', now() + interval '29 hours',
+   null, null, null, null, null);
+
 insert into public.social_posts
   (account_id, platform, campaign_id, status, caption, hashtags, link_url, scheduled_for, published_at,
    external_post_id, permalink, impressions, reach, likes, comments_count, shares, saves, link_clicks,
@@ -1792,7 +1513,7 @@ select acc.id, acc.platform, camp.id, sp.status::public.social_post_status, sp.c
        case when sp.published is null then null else now() - sp.published end,
        sp.ext, sp.permalink, sp.impressions, sp.reach, sp.likes, sp.comments, sp.shares, sp.saves, sp.clicks,
        case when sp.published is null then null else now() - interval '3 hours' end,
-       sp.error, p.id, ag.id, ap.id, sp.brand_ok, sp.brand_notes
+       sp.error, p.id, null::uuid, ap.id, sp.brand_ok, sp.brand_notes
   from (values
     ('instagram', 'no-03-launch', 'published',
      'No 03 SMOKE. Chipotle and fresh manzano go in at day four, and the salt is cold-smoked over manuka before it ever touches water. The heat arrives about three seconds late and then sits there.',
@@ -1833,25 +1554,24 @@ select acc.id, acc.platform, camp.id, sp.status::public.social_post_status, sp.c
     ('instagram', null, 'pending_approval',
      'No 03 SMOKE is back on Thursday. Chipotle and manzano, manuka-smoked salt, the heat arrives about three seconds late. Batch D, bottled Tuesday.',
      '{halfsour,restock,smoke,brine}', 'https://halfsour.co.nz/products/no-03-smoke',
-     interval '2 days', null, null, null, 0, 0, 0, 0, 0, 0, 0, null, 'no-03-smoke', 'social',
+     interval '2 days', null, null, null, 0, 0, 0, 0, 0, 0, 0, null, 'no-03-smoke', null,
      'Instagram: No 03 SMOKE back on the shelf Thursday', true, 'Passed all eleven active rules.'),
     ('instagram', 'summer-full-set', 'draft',
      'The First Three. All three, boxed, with the three cards we actually use behind our own bar.',
      '{halfsour,gifts,thefirstthree}', 'https://halfsour.co.nz/products/the-full-set',
-     null, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, 'the-full-set', 'social', null, true, 'Passed. Held until the December bottle order lands.'),
+     null, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, 'the-full-set', null, null, true, 'Passed. Held until the December bottle order lands.'),
     ('tiktok', null, 'failed',
      'Three ways with No 02 that are not a martini.',
      '{halfsour,cooking,brine}', null,
      null, null, null, null, 0, 0, 0, 0, 0, 0, 0,
      'TikTok rejected the upload: video is 1080x1350, the API requires a 9:16 aspect ratio. Re-crop and retry.',
-     'no-02-dirty', 'social', null, true, 'Passed brand check. Failed on upload, not content.')
+     'no-02-dirty', null, null, true, 'Passed brand check. Failed on upload, not content.')
   ) as sp(platform, campaign_slug, status, caption, hashtags, link, scheduled, published, ext, permalink,
           impressions, reach, likes, comments, shares, saves, clicks, error,
           product_handle, agent_slug, approval_title, brand_ok, brand_notes)
   join public.social_accounts acc on acc.platform = sp.platform::public.social_platform
   left join public.campaigns camp on camp.slug = sp.campaign_slug
   left join public.products p on p.handle = sp.product_handle
-  left join public.agents ag on ag.slug = sp.agent_slug
   left join public.approvals ap on ap.title = sp.approval_title;
 
 insert into public.social_post_assets (post_id, asset_id, position)
@@ -1876,6 +1596,26 @@ select sp.id, ca.id, 10
     when sp.caption like 'Coastville market%' then 'market-stall-coastville'
   end;
 
+-- Outreach that left the building still needs an approval row on the check
+-- constraint. Seed a human-decided one (no agent) so the demo can show
+-- delivered trade email without planting the in-site roster.
+insert into public.approvals
+  (subject_type, subject_table, title, summary, rationale, payload, preview, risk,
+   amount_cents, status, requested_by_agent_id, requested_by_run_id, requested_at, expires_at,
+   decided_by, decided_at, decision_note, applied_at, applied_result)
+select
+  'email_outreach'::public.approval_subject, 'email_sends',
+  'Cold approach to twelve Wellington cocktail bars',
+  'Trade intro to twelve Wellington cocktail bars. Sample pack offered on reply.',
+  'Zero trade accounts in Wellington. Cold email is the opener.',
+  '{"action":"send_outreach","campaign":"wellington-trade","count":12}'::jsonb,
+  '{"subject":"A brine made for the Dirty, from Auckland"}'::jsonb,
+  'high'::public.approval_risk, null, 'approved'::public.approval_status,
+  null, null, now() - interval '5 days 2 hours', null,
+  op.id, now() - interval '5 days', 'Send it.', now() - interval '5 days',
+  '{"sent":12}'::jsonb
+  from public.operators op where op.email = 'nadia@halfsour.co.nz';
+
 insert into public.email_sends
   (campaign_id, customer_id, order_id, to_email, to_name, subject, preheader, template, body_text,
    kind, status, provider, provider_message_id, scheduled_for, sent_at, delivered_at,
@@ -1889,66 +1629,65 @@ select camp.id, c.id, o.id, e.to_email, e.to_name, e.subject, e.preheader, e.tem
        case when e.opened is null then null else now() - e.opened end,
        case when e.clicked is null then null else now() - e.clicked end,
        case when e.bounced is null then null else now() - e.bounced end,
-       e.opens, e.clicks, e.error, ag.id, ap.id
+       e.opens, e.clicks, e.error, null::uuid, ap.id
   from (values
     ('order-confirmation', null, 'aroha.wetere@gmail.com', 'Aroha Wetere',
      'Your Half Sour order is confirmed', 'We will email again the moment it ships.', 'order-confirmation',
      'Thanks Aroha. Your order is in and we will pack it tomorrow morning.',
      'transactional', 'delivered', 'msg_2Kd91nRp', null::interval, interval '2 days', interval '2 days',
-     interval '47 hours', null::interval, null::interval, 2, 0, null, null, null),
+     interval '47 hours', null::interval, null::interval, 2, 0, null, null),
     ('shipping-notification', null, 'sam.kerrison@outlook.co.nz', 'Sam Kerrison',
      'Your Half Sour order is on its way', 'Tracking inside.', 'shipping-notification',
      'On its way. NZ Post have it and the tracking number is in the link below.',
      'transactional', 'delivered', 'msg_9Lm44bTq', null, interval '3 days', interval '3 days',
-     interval '70 hours', interval '69 hours', null, 3, 1, null, null, null),
+     interval '70 hours', interval '69 hours', null, 3, 1, null, null),
     (null, null, 'nadine.oputa@gmail.com', null,
      'You left The First Three in your basket', 'Still there if you want it.', 'abandoned-cart',
      'Your basket is still sitting there with The First Three in it. No pressure, but it is one of the last of batch B.',
-     'lifecycle', 'queued', null, interval '4 hours', null, null, null, null, null, 0, 0, null, 'concierge', null),
+     'lifecycle', 'queued', null, interval '4 hours', null, null, null, null, null, 0, 0, null, null),
     ('no-03-launch', null, 'aroha.wetere@gmail.com', 'Aroha Wetere',
      'No 03 SMOKE, and why the chilli goes in late', 'Chipotle, manzano, manuka-smoked salt.', 'campaign-launch',
      'The third one is here. Chipotle and fresh manzano at day four over manuka cold-smoked salt.',
      'marketing', 'delivered', 'msg_5Qb18zXk', null, interval '3 months', interval '3 months',
-     interval '3 months' + interval '-4 hours', interval '3 months' + interval '-5 hours', null, 4, 2, null, null, null),
+     interval '3 months' + interval '-4 hours', interval '3 months' + interval '-5 hours', null, 4, 2, null, null),
     ('wellington-trade', null, 'bar@thesaltroom.co.nz', 'Dev Ramanathan',
      'A brine made for the Dirty, from Auckland', 'Twelve by 500ml, 48-hour freight to Wellington.', 'trade-intro-v2',
      'Twelve by 500ml, eighteen-month shelf life on No 01 and No 02, 48-hour freight to Wellington. About thirty martinis to a bottle. Happy to send a sample pack.',
      'outreach', 'delivered', 'msg_7Wc23yLm', null, interval '5 days', interval '5 days',
-     interval '4 days 21 hours', interval '4 days 20 hours', null, 2, 1, null, 'scout',
+     interval '4 days 21 hours', interval '4 days 20 hours', null, 2, 1, null,
      'Cold approach to twelve Wellington cocktail bars'),
     ('wellington-trade', null, 'hello@nightjarqt.nz', 'Flynn Mackereth',
      'A brine made for the Dirty, from Auckland', 'Twelve by 500ml, 48-hour freight.', 'trade-intro-v2',
      'Twelve by 500ml, eighteen-month shelf life on No 01 and No 02. About thirty martinis to a bottle.',
      'outreach', 'delivered', 'msg_7Wc23yLn', null, interval '5 days', interval '5 days',
-     interval '4 days 18 hours', null, null, 1, 0, null, 'scout',
+     interval '4 days 18 hours', null, null, 1, 0, null,
      'Cold approach to twelve Wellington cocktail bars'),
     (null, null, 'orders@brassandbitters.co.nz', 'Kiri Ngatai',
      'Your Half Sour invoice — due the 20th', 'Net 20 as agreed.', 'trade-invoice',
      'Invoice attached, due the 20th as agreed. Shout if the quantities look wrong.',
      'transactional', 'delivered', 'msg_3Rn77aVp', null, interval '9 days', interval '9 days',
-     interval '8 days 22 hours', null, null, 1, 0, null, null, null),
+     interval '8 days 22 hours', null, null, 1, 0, null, null),
     (null, null, 'priya.nair@fastmail.com', 'Priya Nair',
      'How was the No 02?', 'One question, thirty seconds.', 'review-request',
      'You picked up No 02 a couple of weeks ago. If you have thirty seconds, we would love to know what you made with it.',
      'lifecycle', 'delivered', 'msg_8Th55cWq', null, interval '11 days', interval '11 days',
-     interval '10 days 14 hours', interval '10 days 13 hours', null, 1, 1, null, 'concierge', null),
+     interval '10 days 14 hours', interval '10 days 13 hours', null, 1, 1, null, null),
     (null, null, 'jesse.lam@gmail.com', 'Jesse Lam',
      'Welcome — here is NZ$5 off', 'Code BRINETIME, valid on your first order.', 'newsletter-welcome',
      'Thanks for signing up at the market. BRINETIME takes NZ$5 off your first order over NZ$30.',
      'marketing', 'delivered', 'msg_1Vy09dZr', null, interval '9 days', interval '9 days',
-     interval '8 days 20 hours', null, null, 1, 0, null, null, null),
+     interval '8 days 20 hours', null, null, 1, 0, null, null),
     (null, null, 'bounced.address@example.invalid', null,
      'Welcome — here is NZ$5 off', 'Code BRINETIME.', 'newsletter-welcome',
      'Thanks for signing up.', 'marketing', 'bounced', 'msg_0Zx31eAs', null, interval '14 days', null,
-     null, null, interval '14 days', 0, 0, 'Hard bounce: recipient domain does not exist. Address removed from the list.', null, null)
+     null, null, interval '14 days', 0, 0, 'Hard bounce: recipient domain does not exist. Address removed from the list.', null)
   ) as e(campaign_slug, customer_email, to_email, to_name, subject, preheader, template, body, kind, status,
-         msg_id, scheduled, sent, delivered, opened, clicked, bounced, opens, clicks, error, agent_slug, approval_title)
+         msg_id, scheduled, sent, delivered, opened, clicked, bounced, opens, clicks, error, approval_title)
   left join public.campaigns camp on camp.slug = e.campaign_slug
   left join public.customers c on c.email = e.to_email
   left join public.orders o on o.id = (
     select o2.id from public.orders o2 where o2.email = e.to_email
      and e.kind = 'transactional' order by o2.placed_at desc limit 1)
-  left join public.agents ag on ag.slug = e.agent_slug
   left join public.approvals ap on ap.title = e.approval_title;
 
 insert into public.reviews
@@ -2009,14 +1748,6 @@ select p.id, v.id, c.id, o.id, r.author, r.email, r.location, r.rating, r.title,
      order by o2.placed_at desc limit 1
   ) o on r.email is not null;
 
--- Dot's drafted reply is a published statement from the brand, so it hangs off
--- an approval and stays unpublished until the founder says yes.
-update public.reviews rv
-   set approval_id = ap.id
-  from public.approvals ap
- where ap.title = 'Reply to a three-star review about the No 03 heat level'
-   and rv.rating = 3 and rv.status = 'pending';
-
 -- =============================================================================
 -- Wire each approval to the row it is about, now that those rows exist.
 -- =============================================================================
@@ -2040,170 +1771,6 @@ update public.approvals ap set subject_id = t.id
    ) u order by approval_id, id
   ) t
  where t.approval_id = ap.id and ap.subject_id is null;
-
--- =============================================================================
--- AGENT TRANSCRIPTS, TOOL CALLS AND SPEND
--- =============================================================================
-insert into public.agent_messages (run_id, seq, role, content, tool_name, tokens, model, created_at)
-select r.id, m.seq, m.role::public.agent_message_role, m.content, m.tool_name, m.tokens,
-       a.model, coalesce(r.started_at, r.queued_at) + (m.seq || ' seconds')::interval
-  from (values
-    ('Nightly stock sweep against reorder points and the forward production plan.', 0, 'system',
-     'You are Marlow, Head of Brine Ops at Half Sour. Read brand_rules before writing anything customer-facing. You may act inside your spend cap; anything above it, or any purchase order, goes to an approval.', null, 412),
-    ('Nightly stock sweep against reorder points and the forward production plan.', 1, 'user',
-     'Run the nightly sweep. Stock against reorder points, batches inside sixty days of best-before, and the forward production plan for the next fortnight.', null, 44),
-    ('Nightly stock sweep against reorder points and the forward production plan.', 2, 'assistant',
-     'Starting with inventory. I will check ingredient stock against reorder points first, then finished goods, then the batch expiry window.', null, 61),
-    ('Nightly stock sweep against reorder points and the forward production plan.', 3, 'tool',
-     '{"below_reorder":[{"code":"BOTTLE_500","on_hand":1180,"reorder_point":1200,"lead_time_days":14,"supplier":"GLASSCO"}],"near_reorder":[{"code":"DILL_FRESH","on_hand":5.1,"reorder_point":8.0}]}',
-     'inventory.read', 186),
-    ('Nightly stock sweep against reorder points and the forward production plan.', 4, 'assistant',
-     'Bottles are under the reorder point with a fourteen-day lead time, and the last two orders from Onehunga both slipped three days. At the current run rate 1,180 bottles is about nineteen days of cover, so a slip puts us on the line with nothing to fill into. Drafting a purchase order for 2,400.', null, 118),
-    ('Nightly stock sweep against reorder points and the forward production plan.', 5, 'tool',
-     '{"purchase_order":"draft","supplier":"GLASSCO","subtotal_cents":283200,"freight_cents":8500,"total_cents":291700}',
-     'purchase_orders.draft', 74),
-    ('Nightly stock sweep against reorder points and the forward production plan.', 6, 'assistant',
-     'NZ$2,917.00 is over my single-action cap of NZ$250.00, so this needs a decision rather than an action. Raising an approval and stopping here. Also flagging one batch: No 03 SMOKE batch A has 22 units left and thirty days to best-before.', null, 96),
-
-    ('Recalculate unit cost from the last three batches per SKU and check margin.', 0, 'system',
-     'You are Teller, Finance and Pricing at Half Sour. Money is always integer cents. Never propose a price without showing the cost basis it came from.', null, 388),
-    ('Recalculate unit cost from the last three batches per SKU and check margin.', 1, 'user',
-     'Weekly cost and margin review. Use the last three released batches per SKU.', null, 28),
-    ('Recalculate unit cost from the last three batches per SKU and check margin.', 2, 'tool',
-     '{"HS-01-500":{"unit_cost_cents":[610,600,592],"price_cents":1800,"margin_pct":66.6},"HS-02-500":{"unit_cost_cents":[790,775,768],"price_cents":2000,"margin_pct":61.6},"HS-03-500":{"unit_cost_cents":[900,885,920],"price_cents":2200,"margin_pct":58.2}}',
-     'batches.read', 214),
-    ('Recalculate unit cost from the last three batches per SKU and check margin.', 3, 'assistant',
-     'No 03 is the only one moving. Unit cost went 900, 885, then 920 — the last batch is the outlier and it is manzano, which is up 22% since February. At NZ$22.00 the margin is 58.2%, under the 60% floor in settings. NZ$23.50 puts it at 60.9% and keeps the shelf price under the psychological NZ$25 line. Raising it as an approval rather than changing it.', null, 142),
-
-    ('Sweep new reviews and unanswered customer email since the last run.', 0, 'system',
-     'You are Dot, Customer Concierge at Half Sour. Every reply you write is a public statement from the brand: read brand_rules first, and never publish without an approval.', null, 401),
-    ('Sweep new reviews and unanswered customer email since the last run.', 1, 'user',
-     'Sweep since the last run. Reviews, unanswered email, delivery exceptions.', null, 26),
-    ('Sweep new reviews and unanswered customer email since the last run.', 2, 'tool',
-     '{"new_reviews":3,"ratings":[5,5,3],"unanswered_email":0,"delivery_exceptions":0}', 'reviews.read', 58),
-    ('Sweep new reviews and unanswered customer email since the last run.', 3, 'assistant',
-     'The three-star is about heat on No 03. Before I write anything I want to know whether that batch actually ran hot or whether it is one palate.', null, 44),
-    ('Sweep new reviews and unanswered customer email since the last run.', 4, 'tool',
-     '{"batch_code":"HS-03-*-C","qa_notes":"Hotter pick than B — noted on the pack sheet.","other_orders_from_batch":37,"complaints_from_batch":1}',
-     'batches.trace', 92),
-    ('Sweep new reviews and unanswered customer email since the last run.', 5, 'assistant',
-     'The pack sheet says that batch ran hot, so the customer is right and a template apology would be the wrong move. Drafting a reply that says so, names the batch and offers No 01 as the same base without the heat. Queued for approval — brand rule reply-within-day gives me until tomorrow midday.', null, 108),
-
-    ('Process orders/create for a Shopify order with a line item we have no variant for.', 0, 'system',
-     'You are Mirror, Storefront Sync. Never invent a row to make a webhook fit. Park it and say so.', null, 296),
-    ('Process orders/create for a Shopify order with a line item we have no variant for.', 1, 'user',
-     'Process webhook orders/create, event 8f2c-91ab.', null, 22),
-    ('Process orders/create for a Shopify order with a line item we have no variant for.', 2, 'assistant',
-     'The order has a line item pointing at ProductVariant/48231847723386, which is not in the mirror. That is either a variant created in Shopify since the last product sync or a variant we deleted locally. I am not going to guess a product for it — parking the event as failed so it replays after the next product backfill.', null, 88)
-  ) as m(run_goal, seq, role, content, tool_name, tokens)
-  join public.agent_runs r on r.goal = m.run_goal
-  join public.agents a on a.id = r.agent_id;
-
-insert into public.agent_tool_calls
-  (run_id, message_id, seq, tool_name, arguments, result, status, error, is_mutation,
-   approval_id, started_at, finished_at)
-select r.id, msg.id, t.seq, t.tool_name, t.args::jsonb, t.result::jsonb,
-       t.status::public.tool_call_status, t.error, t.mutation, ap.id,
-       coalesce(r.started_at, r.queued_at) + (t.seq || ' seconds')::interval,
-       case when t.status in ('pending','running') then null
-            else coalesce(r.started_at, r.queued_at) + (t.seq || ' seconds')::interval + (t.ms || ' milliseconds')::interval end
-  from (values
-    ('Nightly stock sweep against reorder points and the forward production plan.', 0, 'inventory.read',
-     '{"scope":"ingredients","below_reorder_only":false}',
-     '{"checked":24,"below_reorder":1,"near_reorder":1}', 'succeeded', null, false, null, 412),
-    ('Nightly stock sweep against reorder points and the forward production plan.', 1, 'batches.read',
-     '{"expiring_within_days":60,"status":"released"}',
-     '{"matches":1,"batch":"HS-03-*-A","units_remaining":22,"days_to_expiry":30}', 'succeeded', null, false, null, 288),
-    ('Nightly stock sweep against reorder points and the forward production plan.', 2, 'purchase_orders.draft',
-     '{"supplier":"GLASSCO","lines":[{"ingredient":"BOTTLE_500","quantity":2400,"unit_cost_cents":118}],"freight_cents":8500}',
-     '{"po_number":"PO-0101","total_cents":291700,"status":"pending_approval"}', 'succeeded', null, true, null, 641),
-    ('Nightly stock sweep against reorder points and the forward production plan.', 3, 'approvals.create',
-     '{"subject_type":"purchase_order","risk":"high","amount_cents":291700}',
-     '{"approval_created":true,"run_status":"awaiting_approval"}', 'succeeded', null, true,
-     'Reorder 2,400 x 500ml bottles from Onehunga Glass and Closures', 194),
-
-    ('Recalculate unit cost from the last three batches per SKU and check margin.', 0, 'batches.read',
-     '{"last_n_per_product":3,"status":"released"}',
-     '{"products":4,"batches":10}', 'succeeded', null, false, null, 366),
-    ('Recalculate unit cost from the last three batches per SKU and check margin.', 1, 'pricing.model',
-     '{"sku":"HS-03-500","unit_cost_cents":920,"margin_floor_pct":60}',
-     '{"recommended_price_cents":2350,"margin_pct":60.9}', 'succeeded', null, false, null, 512),
-    ('Recalculate unit cost from the last three batches per SKU and check margin.', 2, 'approvals.create',
-     '{"subject_type":"price_change","sku":"HS-03-500","from_cents":2200,"to_cents":2350}',
-     '{"approval_created":true}', 'succeeded', null, true,
-     'Lift No 03 SMOKE from NZ$22.00 to NZ$23.50', 178),
-
-    ('Sweep new reviews and unanswered customer email since the last run.', 0, 'reviews.read',
-     '{"status":"pending","since":"last_run"}', '{"count":3}', 'succeeded', null, false, null, 142),
-    ('Sweep new reviews and unanswered customer email since the last run.', 1, 'batches.trace',
-     '{"product":"no-03-smoke","order_email_hash":"c9f4a1"}',
-     '{"batch_run":"C","qa_note":"hotter pick","sibling_orders":37,"sibling_complaints":1}', 'succeeded', null, false, null, 298),
-    ('Sweep new reviews and unanswered customer email since the last run.', 2, 'reviews.reply_draft',
-     '{"rating":3,"tone":"direct","name_the_batch":true}',
-     '{"draft_length":186,"brand_rules_passed":11}', 'succeeded', null, false, null, 1104),
-    ('Sweep new reviews and unanswered customer email since the last run.', 3, 'approvals.create',
-     '{"subject_type":"review_reply","risk":"low"}', '{"approval_created":true}', 'succeeded', null, true,
-     'Reply to a three-star review about the No 03 heat level', 156),
-
-    ('Draft this fortnight''s content calendar and schedule against the brand rules.', 0, 'brand_rules.read',
-     '{"active":true}', '{"rules":11,"never_rules":2}', 'succeeded', null, false, null, 96),
-    ('Draft this fortnight''s content calendar and schedule against the brand rules.', 1, 'social.draft',
-     '{"count":4,"products":["no-03-smoke","the-full-set"]}',
-     '{"drafted":4,"failed_brand_check":1,"failed_rule":"no-health-claims"}', 'succeeded', null, false, null, 2214),
-    ('Draft this fortnight''s content calendar and schedule against the brand rules.', 2, 'social.schedule',
-     '{"post":"no-03-restock","scheduled_for":"+2 days 17:00"}',
-     '{"blocked":"requires_approval"}', 'rejected', null, true,
-     'Instagram: No 03 SMOKE back on the shelf Thursday', 88),
-
-    ('Process orders/create for a Shopify order with a line item we have no variant for.', 0, 'shopify.read',
-     '{"gid":"gid://shopify/ProductVariant/48231847723386"}',
-     null, 'failed', 'Variant not present in the local mirror. Refusing to invent a product row for it.', false, null, 204),
-
-    ('Drain the Shopify webhook queue and reconcile any drifted rows.', 0, 'webhooks.drain',
-     '{"max_events":50}',
-     '{"processed":14,"skipped_stale":1,"failed":0}', 'succeeded', null, true, null, 1842),
-
-    ('Nightly full reconciliation of products, variants and inventory against Shopify.', 0, 'sync.reconcile',
-     '{"resource":"product","page":2}', null, 'running', null, false, null, 0)
-  ) as t(run_goal, seq, tool_name, args, result, status, error, mutation, approval_title, ms)
-  join public.agent_runs r on r.goal = t.run_goal
-  left join public.agent_messages msg on msg.run_id = r.id and msg.role = 'tool' and msg.seq = t.seq + 3
-  left join public.approvals ap on ap.title = t.approval_title;
-
-update public.agent_runs r
-   set tool_call_count = coalesce(tc.n, 0)
-  from (select run_id, count(*) n from public.agent_tool_calls group by run_id) tc
- where tc.run_id = r.id;
-
--- Spend ledger. cost_micros is millionths of one NZD — integer minor units at a
--- resolution below one cent, because a single call rarely costs one.
-insert into public.agent_costs
-  (agent_id, run_id, incurred_on, incurred_at, provider, model, kind,
-   input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_micros, note)
-select r.agent_id, r.id,
-       (coalesce(r.finished_at, r.started_at, r.queued_at) at time zone 'Pacific/Auckland')::date,
-       coalesce(r.finished_at, r.started_at, r.queued_at),
-       'anthropic', a.model, 'inference',
-       r.input_tokens, r.output_tokens,
-       (r.input_tokens * 6) / 10, case when r.input_tokens > 20000 then 4096 else 0 end,
-       r.cost_micros, null
-  from public.agent_runs r
-  join public.agents a on a.id = r.agent_id
- where r.cost_micros > 0;
-
-insert into public.agent_costs
-  (agent_id, run_id, incurred_on, incurred_at, provider, model, kind,
-   input_tokens, output_tokens, cost_micros, note)
-select a.id, null,
-       ((now() - x.ago) at time zone 'Pacific/Auckland')::date, now() - x.ago,
-       x.provider, x.model, x.kind, 0, 0, x.micros, x.note
-  from (values
-    ('social',    'openai',    'text-embedding-3-small', 'embedding',   84000, interval '3 days',  'Re-embedded the caption archive after the brand rules changed.'),
-    ('scout',     'exa',       'exa-search',             'search',     412000, interval '5 days',  'Wellington venue research, 62 queries.'),
-    ('mirror',    'supabase',  'storage',                'storage',     18000, interval '1 days',  'Webhook payload retention, 30 days.'),
-    ('concierge', 'anthropic', 'claude-haiku-4-5',       'inference',  126000, interval '2 days',  'Batched review sentiment pass over the archive.')
-  ) as x(agent_slug, provider, model, kind, micros, ago, note)
-  join public.agents a on a.slug = x.agent_slug;
 
 -- =============================================================================
 -- SHOPIFY WEBHOOK INBOX AND SYNC CURSORS
@@ -2277,30 +1844,6 @@ select now() - al.ago, al.actor_type::public.actor_type,
   from (values
     (interval '11 minutes', 'operator', 'Nadia Feldman', 'login', 'admin_session', 'MacBook Air — Grey Lynn',
      'Signed in from Grey Lynn.', null, null, null, null, '203.86.74.201', 'req_01K9Zc2mQ4'),
-    (interval '52 minutes', 'agent', 'Dot', 'create', 'approvals', 'Reply to a three-star review about the No 03 heat level',
-     'Raised an approval for a review reply after tracing the complaint to a batch that the pack sheet says ran hot.',
-     null, '{"status":"pending","risk":"low"}',
-     'Sweep new reviews and unanswered customer email since the last run.',
-     'Reply to a three-star review about the No 03 heat level', null, 'req_01K9Za8bR1'),
-    (interval '4 hours', 'agent', 'Marlow', 'create', 'purchase_orders', 'PO-0101',
-     'Drafted a NZ$2,917.00 bottle reorder and stopped, because it is over the single-action cap.',
-     null, '{"status":"pending_approval","total_cents":291700}',
-     'Nightly stock sweep against reorder points and the forward production plan.',
-     'Reorder 2,400 x 500ml bottles from Onehunga Glass and Closures', null, 'req_01K9Yx4cT7'),
-    (interval '19 hours', 'agent', 'Vinnie', 'create', 'social_posts', 'No 03 SMOKE restock',
-     'Drafted four posts, one failed the no-health-claims rule and was discarded, one scheduled pending approval.',
-     null, '{"drafted":4,"discarded":1,"pending_approval":1}',
-     'Draft this fortnight''s content calendar and schedule against the brand rules.',
-     'Instagram: No 03 SMOKE back on the shelf Thursday', null, 'req_01K9Yc1dV2'),
-    (interval '2 days 2 hours', 'agent', 'Teller', 'create', 'approvals', 'Lift No 03 SMOKE from NZ$22.00 to NZ$23.50',
-     'Flagged No 03 below the margin floor at 58.2% and proposed NZ$23.50.',
-     '{"price_cents":2200,"margin_pct":58.2}', '{"proposed_price_cents":2350,"margin_pct":60.9}',
-     'Recalculate unit cost from the last three batches per SKU and check margin.',
-     'Lift No 03 SMOKE from NZ$22.00 to NZ$23.50', null, 'req_01K9Wm7fX8'),
-    (interval '2 days 6 hours', 'agent', 'Mirror', 'sync', 'webhook_events', 'orders/create 8f2c91ab',
-     'Refused to process a webhook naming a variant that is not in the mirror. Parked for replay.',
-     null, '{"process_status":"failed","attempts":3}',
-     'Process orders/create for a Shopify order with a line item we have no variant for.', null, null, 'req_01K9Wd3gZ4'),
     (interval '5 days', 'operator', 'Nadia Feldman', 'approve', 'approvals', 'Cold approach to twelve Wellington cocktail bars',
      'Approved the Wellington trade approach with a condition: no follow-up without a second approval.',
      '{"status":"pending"}', '{"status":"approved"}', null,
@@ -2315,10 +1858,6 @@ select now() - al.ago, al.actor_type::public.actor_type,
     (interval '19 days', 'operator', 'Nadia Feldman', 'refund', 'orders', 'Cracked bottles in transit',
      'Refunded in full and sent a replacement at our cost after tracing the batch and finding no fault.',
      '{"financial_status":"paid"}', '{"financial_status":"refunded"}', null, null, '203.86.74.201', 'req_01K9Nc8mG7'),
-    (interval '19 days', 'agent', 'Dot', 'export', 'order_item_batches', 'Traceability trace',
-     'Traced a complaint back through order_item_batches to a single batch and checked its 37 sibling orders.',
-     null, '{"batch_sibling_orders":37,"sibling_complaints":1,"verdict":"carrier_damage"}',
-     'Trace the cracked-bottle complaint back to a batch and decide whether it is a fault.', null, null, 'req_01K9Nb1nH2'),
     (interval '26 days', 'operator', 'Nadia Feldman', 'release', 'batches', 'No 01 HOUSE batch D',
      'Released 660 units to Sale Street after QA passed at pH 3.29.',
      '{"status":"qa_hold"}', '{"status":"released","units":660}', null,
@@ -2332,11 +1871,7 @@ select now() - al.ago, al.actor_type::public.actor_type,
      '{"status":"draft"}', '{"status":"active"}', null, null, '203.86.74.201', 'req_01K8Xc2rP4'),
     (interval '8 days 22 hours', 'operator', 'Nadia Feldman', 'logout', 'admin_session', 'iPhone — market stall',
      'Revoked the market-stall session from a shared device.',
-     '{"revoked_at":null}', '{"revoked_at":"now"}', null, null, '121.99.230.14', 'req_01K9Rb6sN8'),
-    (interval '6 minutes', 'agent', 'Mirror', 'sync', 'webhook_events', 'Queue drain',
-     'Drained 14 webhook events. One orders/updated lost to a newer shopify_updated_at and was skipped.',
-     null, '{"processed":14,"skipped_stale":1}',
-     'Drain the Shopify webhook queue and reconcile any drifted rows.', null, null, 'req_01K9Zd1tQ0')
+     '{"revoked_at":null}', '{"revoked_at":"now"}', null, null, '121.99.230.14', 'req_01K9Rb6sN8')
   ) as al(ago, actor_type, actor_label, action, entity_type, entity_label, summary, before, after,
           run_goal, approval_title, ip, request_id)
   left join public.operators op on op.email = 'nadia@halfsour.co.nz'

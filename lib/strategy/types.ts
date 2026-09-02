@@ -2,7 +2,7 @@
  * The persistence shapes for the strategy layer.
  *
  * These mirror `supabase/migrations/20260102000000_strategy.sql` one for one,
- * the same way `lib/agents/types.ts` mirrors the agent tables. The domain
+ * as plain TypeScript types over the strategy tables. The domain
  * types — `BrandScript`, `FlightPlan`, `MarketModel` — live in
  * `content/strategy/types.ts` and are not repeated here; a record is a row, and
  * a row carries a body which decodes into one of those.

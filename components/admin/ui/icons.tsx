@@ -114,7 +114,7 @@ export function IconTeam({ className }: IconProps) {
   );
 }
 
-/** Ask the team — a speech bubble with a line of talk in it. */
+/** The Team — a quiet pointer to Grok Bot. */
 export function IconChat({ className }: IconProps) {
   return (
     <Svg className={className}>

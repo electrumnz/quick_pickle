@@ -31,22 +31,6 @@ The order below is the order to do them in.
 - [ ] **Change the admin password.** The current one follows the most predictable human
       pattern — a word, a year, a punctuation mark. It is the only thing between the
       internet and the whole business. `lib/auth/scripts/` generates a new argon2id hash.
-- [x] **An AI Gateway API key.** The eight roles now call real models through the
-      Vercel AI Gateway, and the one thing that cannot be created from here is the
-      key. Mint it at Vercel → AI → API Keys and paste it into the project as
-      `AI_GATEWAY_API_KEY`. Without it nothing breaks — the site, the shop and the
-      admin all work — but every agent run stops at its first model call and the
-      admin carries a banner saying so. **The default models are free only until
-      Sunday 6 September 2026**; after that the roster refuses to call them rather
-      than spending money nobody approved, and resuming means setting
-      `HALF_SOUR_AGENT_MODEL` to a model you have chosen to pay for
-      (`minimax/minimax-m3` is the paid twin, USD 0.30/1.20 per million).
-- [ ] **Decide whether customer writing may train someone else's model.** The concierge
-      and the trade role send what customers and venues wrote to MiniMax through the
-      gateway. The gateway's catalogue reports `no_training: "none"` for both free
-      model ids, so the gateway filter that would refuse such a provider cannot be turned
-      on while those are the models. `AI_GATEWAY_DISALLOW_PROMPT_TRAINING=1` plus a paid
-      id is the combination that does; it is a decision about customers, not code.
 - [ ] **Delivery rates confirmed with a courier.** `legal/shipping-returns.md` still
       carries `[$X]` for standard, rural and overnight, and for the value above which
       postage stops being charged. Nothing has been quoted by a carrier, so the delivery
@@ -83,23 +67,13 @@ The order below is the order to do them in.
       `tsconfig.json` (whitespace, no new entries); that is Next's own behaviour and is
       left alone.
 
-- [ ] **Evidence files churn on every test run.** `lib/agents/evidence/*.txt`,
-      `lib/auth/evidence/*.txt` and `components/strategy/evidence/*.txt` embed a
-      wall-clock timestamp and a fresh run UUID, so running the suite dirties the
-      tree with ~20 lines of meaningless diff. The cost is not the noise: it is
-      that a real behavioural change is invisible inside it, which defeats the
-      point of committing evidence at all. Fix by seeding the run id and dropping
-      the timestamp — evidence should record what happened, not when.
-      **It is not only the clock.** Some captures change with the ambient
-      environment too, so seeding the run id is necessary and not sufficient.
-      `lib/agents/roster/evidence/14-ward-security.txt` is the clearest case:
-      run with `HALF_SOUR_DEMO=1` its headline is "This admin opens without a
-      password", and run without it the same code reports "7 credentials are not
-      configured" and names them. Both are correct; they are answers to different
-      questions. `11-b2c-b2b-separation.txt` drifts a different way — its seeded
-      dates are anchored on `now()`, so "58 days ago" becomes "57" simply by
-      running tomorrow. A capture has to pin the environment it describes, or say
-      in the file which one it was taken in.
+- [ ] **Evidence files churn on every test run.** Auth and strategy evidence
+      files embed a wall-clock timestamp and a fresh run UUID, so running the
+      suite dirties the tree with meaningless diff. Fix by seeding the run id
+      and dropping the timestamp. Captures can also drift with
+      `HALF_SOUR_DEMO=1` vs unset, or with dates anchored on `now()`. Pin the
+      environment a capture describes, or say in the file which one it was
+      taken in.
 
 ## Built and verified
 
