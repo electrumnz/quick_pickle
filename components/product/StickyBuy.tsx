@@ -43,7 +43,6 @@ export function StickyBuy({
   const [state, setState] = useState<"off" | "away" | "here">("off");
 
   useEffect(() => {
-    const desktop = window.matchMedia("(min-width: 64rem)");
     const target = document.getElementById(watch);
     if (target === null || typeof IntersectionObserver === "undefined") return;
 
@@ -51,10 +50,6 @@ export function StickyBuy({
       (entries) => {
         const entry = entries[entries.length - 1];
         if (entry === undefined) return;
-        if (desktop.matches) {
-          setState("off");
-          return;
-        }
         setState(entry.isIntersecting ? "away" : "here");
       },
       { threshold: 0 },

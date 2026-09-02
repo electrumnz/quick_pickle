@@ -134,7 +134,7 @@ export function WholesaleView({ signup }: { signup: SignupState }) {
             <h1 id="w-h1" className="text-display-2 text-primary mt-stack">
               {WHOLESALE.heading}
             </h1>
-            <p className="text-lede text-muted mt-stack max-w-prose">
+            <p className="text-lede text-primary mt-stack max-w-prose">
               {WHOLESALE.lede}
             </p>
           </div>

@@ -150,7 +150,9 @@ export function RecipeView({ recipe }: { recipe: Recipe }) {
               <h1 className="text-display-2 text-primary mt-stack">
                 {recipe.title}
               </h1>
-              <p className="text-lede text-muted mt-stack">{recipe.summary}</p>
+              <p className="text-lede text-primary mt-stack">
+                {recipe.summary}
+              </p>
 
               <p className="text-body-sm text-muted mt-block">
                 {RECIPES.builtOn}{" "}

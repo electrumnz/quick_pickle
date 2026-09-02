@@ -4,7 +4,6 @@ import type { Cart } from "@/lib/commerce";
 
 import { AddedStrip, BuyForm, DeliveryLine } from "./BuyPanel";
 import type { CheckoutKind } from "./cart";
-import { BottlePlate } from "./BottlePlate";
 import {
   formatPrice,
   inWords,
@@ -23,6 +22,7 @@ import {
   STATE,
 } from "./copy";
 import { ProductCard } from "./ProductCard";
+import { SetPlate } from "./SetPlate";
 import styles from "./shop.module.css";
 import { cx } from "./cx";
 import { StoreFooter, StoreHeader } from "./StoreChrome";
@@ -30,11 +30,11 @@ import { StoreFooter, StoreHeader } from "./StoreChrome";
 /**
  * The collection page.
  *
- * Ordered for a decision rather than for a brand film. The four bottles are the
- * first thing under the masthead, each one led by the job it does; the box is
- * next, with the per-bottle arithmetic shown rather than asserted; and the
- * chooser — "if you are making X, reach for Y" — is last, for the shopper the
- * first two did not settle.
+ * Ordered for a decision rather than for a brand film. The chooser — "if you
+ * are making X, reach for Y" — comes first, because a stranger chooses on the
+ * drink and not on a number; the four bottles follow, each led by the job it
+ * does; and the box is last, with the per-bottle arithmetic shown rather than
+ * asserted.
  *
  * With five products a filter bar would be a puzzle, so there is not one. The
  * jobs on the cards and the eleven rows of the chooser between them cover every
@@ -51,7 +51,9 @@ function Masthead({ count }: { count: number }) {
         <h1 id="shop-h1" className="text-display-2 text-primary mt-stack">
           {SHOP.heading}
         </h1>
-        <p className="text-lede text-muted mt-stack max-w-prose">{SHOP.lede}</p>
+        <p className="text-lede text-primary mt-stack max-w-prose">
+          {SHOP.lede}
+        </p>
         <p
           className={cx(
             styles.figure,
@@ -97,12 +99,10 @@ function SetBand({
         <p className="text-eyebrow font-mono uppercase">{SHOP.setHeading}</p>
 
         <div className="gap-block mt-block grid items-center md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
-          <div
-            className={cx(styles.plate)}
-            style={{ aspectRatio: "5 / 4", borderRadius: "var(--radius-sm)" }}
-          >
-            <BottlePlate variant="set" label="" className={styles.plateArt} />
-          </div>
+          <SetPlate
+            className="rounded-[var(--radius-sm)]"
+            sizes="(max-width: 48rem) 30vw, 7rem"
+          />
 
           <div>
             <h2 id="set-h2" className="text-display-3">
@@ -171,8 +171,13 @@ function SetBand({
 }
 
 function Chooser({ entries }: { entries: readonly CatalogueEntry[] }) {
-  const titleFor = (handle: string) =>
-    entries.find((entry) => entry.handle === handle)?.title ?? handle;
+  // The bottle's short name — HOUSE, not "No. 01 HOUSE" — because the row
+  // already says what you are making, and the full title belongs on the card
+  // below, beside the job line the audit checks for.
+  const titleFor = (handle: string) => {
+    const entry = entries.find((candidate) => candidate.handle === handle);
+    return entry?.brine?.name ?? entry?.title ?? handle;
+  };
 
   return (
     <section
@@ -180,7 +185,7 @@ function Chooser({ entries }: { entries: readonly CatalogueEntry[] }) {
       // `surface-sunken` both resolve to Shelf, so the band above and this one
       // would run into each other as one field; the rule is what keeps the two
       // sections separate in both schemes.
-      className="border-strong bg-surface-sunken px-gutter py-section border-t"
+      className="border-hairline bg-surface-sunken px-gutter py-section border-y"
       aria-labelledby="chooser-h2"
     >
       <div className="max-w-page mx-auto">
@@ -282,6 +287,8 @@ export function ShopView({
           </div>
         )}
 
+        <Chooser entries={catalogue.entries} />
+
         <section
           id="bottles"
           className="px-gutter pt-block pb-section"
@@ -321,8 +328,6 @@ export function ShopView({
         {set === null ? null : (
           <SetBand set={set} bottles={bottles} degraded={catalogue.degraded} />
         )}
-
-        <Chooser entries={catalogue.entries} />
       </main>
 
       <StoreFooter />

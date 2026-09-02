@@ -6,7 +6,7 @@ import { checkoutPathFromUrl } from "@/components/checkout/link";
 import { CommerceError } from "@/lib/commerce";
 
 import { provider, readCartId, writeCartId } from "./cart";
-import { ADDED_PARAM, ERROR_PARAM, productPath } from "./copy";
+import { ADDED_PARAM, CART_PATH, ERROR_PARAM, productPath } from "./copy";
 
 /**
  * The buy path.
@@ -131,10 +131,66 @@ export async function addToCart(form: FormData): Promise<void> {
 
   // redirect() signals by throwing, so it is called outside the try above and
   // never swallowed by the catch that is there to classify commerce failures.
+  //
+  // A successful add lands on the CART, not back where the form was. The old
+  // answer was a reload of the same page with a confirmation strip pushed in
+  // above the products, which scrolled the buyer away from the bottle they had
+  // just chosen and left the cart itself with no page at all. The cart page
+  // carries the same strip, the lines, the total and the one checkout button.
+  // A failure still goes back to the form, with the reason beside it.
   redirect(
     outcome === null
-      ? `${target}${join}${ADDED_PARAM}=${encodeURIComponent(handle)}.${String(quantity)}${fragment}`
+      ? `${CART_PATH}?${ADDED_PARAM}=${encodeURIComponent(handle)}.${String(quantity)}`
       : `${target}${join}${ERROR_PARAM}=${outcome}${fragment}`,
+  );
+}
+
+/* --------------------------------------------------------------- the cart */
+
+function readLineId(form: FormData): string {
+  return readString(form, "lineId");
+}
+
+/**
+ * Change one line's quantity from the cart page. Quantity 0 removes the line,
+ * as the provider contract says; the page posts the select's value, so 0 is
+ * never sent from a live control and arrives only from a hand-built request.
+ */
+export async function updateCartLine(form: FormData): Promise<void> {
+  const lineId = readLineId(form);
+  const quantity = readQuantity(form);
+  let outcome: string | null = null;
+  try {
+    const cartId = await readCartId();
+    if (cartId === null || lineId === "") {
+      outcome = "cart-gone";
+    } else {
+      await provider().updateCartLines(cartId, [{ lineId, quantity }]);
+    }
+  } catch (error) {
+    outcome = outcomeFor(error);
+  }
+  redirect(
+    outcome === null ? CART_PATH : `${CART_PATH}?${ERROR_PARAM}=${outcome}`,
+  );
+}
+
+/** Take one line out of the cart. */
+export async function removeCartLine(form: FormData): Promise<void> {
+  const lineId = readLineId(form);
+  let outcome: string | null = null;
+  try {
+    const cartId = await readCartId();
+    if (cartId === null || lineId === "") {
+      outcome = "cart-gone";
+    } else {
+      await provider().removeCartLines(cartId, [lineId]);
+    }
+  } catch (error) {
+    outcome = outcomeFor(error);
+  }
+  redirect(
+    outcome === null ? CART_PATH : `${CART_PATH}?${ERROR_PARAM}=${outcome}`,
   );
 }
 
@@ -161,8 +217,11 @@ export async function addToCart(form: FormData): Promise<void> {
  * handoff is byte-for-byte what it was.
  */
 export async function goToCheckout(form: FormData): Promise<void> {
+  // The button lives on the cart page now, and on the product page's added
+  // strip when someone lands there by URL. Both send the buyer back to the
+  // cart on a failure: it is the page that shows what went wrong.
   const handle = readString(form, "handle");
-  const target = productPath(handle);
+  const target = handle === "" ? CART_PATH : productPath(handle);
 
   let destination: string | null = null;
   let outcome: string | null = null;

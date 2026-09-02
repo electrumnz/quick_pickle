@@ -4,6 +4,7 @@ import { BottlePlate, type PlateVariant } from "./BottlePlate";
 import { FilmMount } from "./FilmMount";
 import { PRODUCT } from "./copy";
 import { BOTTLE_SHOTS } from "./media";
+import { SetPlate } from "./SetPlate";
 import styles from "./shop.module.css";
 
 /**
@@ -37,7 +38,9 @@ export function ProductMedia({
   return (
     <figure className={className}>
       <div className={`${styles.plate} ${styles.viewerPlate}`}>
-        {shot === null ? (
+        {variant === "set" ? (
+          <SetPlate className="h-full" sizes="(max-width: 64rem) 30vw, 213px" />
+        ) : shot === null ? (
           <BottlePlate
             variant={variant}
             label={label}

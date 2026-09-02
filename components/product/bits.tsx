@@ -68,6 +68,7 @@ export function PriceBlock({
   entry,
   size = "md",
   range = false,
+  compact = false,
   className,
 }: {
   entry: CatalogueEntry;
@@ -78,6 +79,8 @@ export function PriceBlock({
    * and the price shown is that variant's.
    */
   range?: boolean;
+  /** On a card: the price alone, without the volume and unit-price line. */
+  compact?: boolean;
   className?: string;
 }) {
   const showFrom = range && entry.priceFrom !== null;
@@ -99,16 +102,18 @@ export function PriceBlock({
           formatPrice(entry.price)
         )}
       </p>
-      <p className={cx(styles.figure, "text-caption text-muted mt-1")}>
-        {[
-          entry.volumeMl === null
-            ? null
-            : `${String(entry.volumeMl)} ml${entry.bottleCount > 1 ? ` × ${String(entry.bottleCount)}` : ""}`,
-          entry.unitPriceLabel,
-        ]
-          .filter((part): part is string => part !== null)
-          .join("  ·  ")}
-      </p>
+      {compact ? null : (
+        <p className={cx(styles.figure, "text-caption text-muted mt-1")}>
+          {[
+            entry.volumeMl === null
+              ? null
+              : `${String(entry.volumeMl)} ml${entry.bottleCount > 1 ? ` × ${String(entry.bottleCount)}` : ""}`,
+            entry.unitPriceLabel,
+          ]
+            .filter((part): part is string => part !== null)
+            .join("  ·  ")}
+        </p>
+      )}
     </div>
   );
 }

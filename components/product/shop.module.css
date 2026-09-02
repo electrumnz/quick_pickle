@@ -598,8 +598,9 @@
 /* The mobile buy bar. It is NOT a duplicate control that appears on scroll and
    fights the real one: the panel above is the same form posting to the same
    action, and this bar is simply where that form lives once the panel has
-   left the screen. Above 1024 the buy panel is sticky in the column instead
-   and this bar never exists. */
+   left the screen — at every width. It was a phone-only bar, and on a
+   desktop the buy control vanished after the first screen of a page five
+   screens long. */
 .stickyBuy {
   position: fixed;
   inset-inline: 0;
@@ -627,21 +628,17 @@
   transform: translateY(110%);
 }
 
+/* On a wide screen the bar keeps to the page column: the form sits inside
+   the same gutter the page uses, and the ground runs edge to edge under it. */
 @media (min-width: 64rem) {
   .stickyBuy {
-    display: none;
+    padding-inline: max(var(--spacing-gutter), calc((100vw - 90rem) / 2));
   }
 }
 
 /* The page needs room under it or the bar covers the last thing on the page. */
 .stickySpacer {
   height: 5.5rem;
-}
-
-@media (min-width: 64rem) {
-  .stickySpacer {
-    display: none;
-  }
 }
 
 /* ------------------------------------------------------------------ sticky */
@@ -855,4 +852,38 @@
 .navRow {
   inline-size: 100%;
   justify-content: flex-start;
+}
+
+/* --------------------------------------------------------------- set plate */
+
+/* Three bottle shots in one frame, standing in for a photograph of the box.
+   Each cell is a tall slice of a 4:5 still with the bottle centred, so `cover`
+   crops to the bottle and a little of what stands beside it. The hairline gap
+   is the slate showing through, not a border. */
+.setPlate {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+  inline-size: 100%;
+  aspect-ratio: 5 / 4;
+  overflow: hidden;
+  background-color: var(--surface-inverse);
+}
+
+.setCell {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.setArt {
+  object-fit: cover;
+  object-position: 50% 50%;
+}
+
+/* A card title that may run to two lines holds the box for two, so the row
+   of cards beneath it lands on one baseline whatever the jobs do. */
+.cardTitle {
+  min-height: calc(2 * 1.2em);
 }

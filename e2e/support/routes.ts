@@ -40,6 +40,7 @@ export const SAMPLE_RECIPE_SLUG = "dirty-martini";
 export const PUBLIC_ROUTES: readonly AuditRoute[] = [
   { name: "home", path: "/" },
   { name: "shop", path: "/shop" },
+  { name: "cart", path: "/cart" },
   ...PRODUCT_HANDLES.map((handle) => ({
     name: `product ${handle}`,
     path: `/products/${handle}`,

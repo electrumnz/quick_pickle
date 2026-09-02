@@ -207,31 +207,38 @@ export const SPEC_FIGURES: readonly SpecFigure[] = [
 /* -------------------------------------------------------------------- buy */
 
 /**
- * The conversion block.
+ * The trade door, named once for the homepage's closing section.
  *
- * It used to carry two `mailto:` links and a note explaining that there was no
- * form behind either of them. Both are gone. The list is a real one-field form
- * posting to a Server Action that writes to a table (`components/site/`), and
- * the trade route is a page with the price on it rather than an invitation to
- * write a letter and wait two working days. The honesty note that sat here was
- * true when it was written and would be a lie now, so it went with them.
+ * There is no in-page "buy" block any more: the header's Buy used to be an
+ * anchor down to one, 6,300px below the top of the page, and the block's own
+ * control was a second button to the shop. Buy now means the shop.
  */
 export const BUY = {
-  kicker: "Getting hold of it",
-  title: "Buy a bottle.",
-  // copy-audit-approved: R-04 (a stated dispatch rhythm, not urgency)
-  line: "Four brines, 500 ml each. We pick and pack on Tuesdays and Thursdays, so a Friday order moves on Tuesday.",
-  shop: {
-    href: SHOP_HREF,
-    label: "Shop the range",
-    line: "Every bottle, plus the box of three.",
-  },
   trade: {
     href: "/wholesale",
     label: "See the trade price",
     heading: "For a bar or a kitchen.",
     line: "The trade price, the case size and the cost per pour, published on one page. No enquiry, no wait.",
   },
+} as const;
+
+/**
+ * The section furniture: one eyebrow and one heading per section, in the
+ * order the page runs. Structural copy, so it lives here with the rest and
+ * is scanned once.
+ */
+export const HOME = {
+  hero: {
+    // The positioning statement from brand/brand-guide.md §2, verbatim. It is
+    // the one sentence that has to survive being read on its own.
+    line: "Pickle brine built as an ingredient in its own right — measured, consistent, and good enough to put on a menu.",
+    shop: { href: SHOP_HREF, label: "Shop the range" },
+    recipes: { href: "/recipes", label: "What to make" },
+  },
+  chooser: { eyebrow: "If you are making", heading: "Start with the drink." },
+  serves: { heading: "What it\u2019s for." },
+  range: { heading: "Four brines.", all: "Every bottle" },
+  making: { eyebrow: "How it\u2019s made", heading: "Four steps." },
 } as const;
 
 /* ------------------------------------------------------------ navigation */
@@ -242,12 +249,6 @@ export interface NavItem {
   /** True for links that jump inside this page rather than leaving it. */
   readonly local?: boolean;
 }
-
-export const PRIMARY_NAV: readonly NavItem[] = [
-  { href: "#range", label: "The range", local: true },
-  { href: "#serves", label: "What it's for", local: true },
-  { href: "#making", label: "How it's made", local: true },
-];
 
 /**
  * The destinations that are not on this page.
@@ -274,57 +275,6 @@ export const NAV_MENU_LABEL = "Menu";
 
 /** The masthead's home link, named for a screen reader and drawn as the wordmark. */
 export const NAV_HOME_LABEL = "Half Sour — home";
-
-/**
- * The masthead's one call to action, kept out of PRIMARY_NAV so it can be
- * styled as a control rather than a list item.
- */
-export const HEADER_CTA: NavItem = {
-  href: "#buy",
-  label: "Buy",
-  local: true,
-};
-
-export const FOOTER_NAV: readonly {
-  readonly heading: string;
-  readonly items: readonly NavItem[];
-}[] = [
-  {
-    heading: "Bottles",
-    items: [
-      { href: "#range", label: "The range", local: true },
-      { href: SHOP_HREF, label: "Shop all" },
-      { href: fullSetHref(), label: "The First Three" },
-      { href: "#buy", label: "How to buy", local: true },
-    ],
-  },
-  {
-    heading: "Behind the bar",
-    items: [
-      { href: "#serves", label: "What it's for", local: true },
-      { href: "/recipes", label: "Recipes" },
-      { href: "/stockists", label: "Stockists" },
-    ],
-  },
-  {
-    heading: "The house",
-    items: [
-      { href: "#making", label: "How it's made", local: true },
-      { href: "/story", label: "The story" },
-      { href: "/suppliers", label: "Sourcing register" },
-      { href: "/delivery", label: "Delivery and returns" },
-      { href: "/terms", label: "Terms of sale" },
-    ],
-  },
-  {
-    heading: "Trade",
-    items: [
-      { href: "/wholesale", label: "Wholesale" },
-      { href: "/wholesale#samples", label: "Ask for two samples" },
-      { href: "mailto:hello@halfsour.co.nz", label: "hello@halfsour.co.nz" },
-    ],
-  },
-];
 
 /* -------------------------------------------------------------- utilities */
 
