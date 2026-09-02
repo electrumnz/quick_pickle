@@ -52,8 +52,8 @@ const SEVERITY_TONE: Record<string, "danger" | "accent" | "neutral"> = {
  *
  * The brand guide is a long document; this page is not a copy of it. It shows
  * the parts of the identity that are LIVE — the drawn marks, the sanctioned
- * palette, the type scale, and the `brand_rules` rows the AI team reads before
- * writing a word — and points at the guide for the rest. A screen that
+ * palette, the type scale, and the `brand_rules` rows that gate published
+ * copy — and points at the guide for the rest. A screen that
  * paraphrases a document is a third copy to keep in step.
  */
 export default async function IdentityPage() {
@@ -66,7 +66,7 @@ export default async function IdentityPage() {
     <>
       <PageHeader
         title="Identity"
-        lede="Who HALF SOUR is: the marks, the colours, the voice, and the rules the AI team is not allowed to break."
+        lede="Who HALF SOUR is: the marks, the colours, the voice, and the rules published copy is not allowed to break."
         meta={
           <>
             <span>Brand guide v1.0</span>
@@ -180,8 +180,8 @@ export default async function IdentityPage() {
         </Section>
 
         <Section
-          title="The rules the AI team reads first"
-          description="These are rows in brand_rules, not a document. Every agent loads the ones scoped to it before it writes anything, and editing a row changes what they say with no deploy."
+          title="The rules that gate published copy"
+          description="These are rows in brand_rules, not a document. Editing a row changes what the copy scanner enforces with no deploy."
         >
           {!rules.ok ? (
             <DataUnavailable problem={rules.problem} detail={rules.detail} />
@@ -236,7 +236,7 @@ export default async function IdentityPage() {
                 "Colour: no component may contain a hex. Semantic tokens only, and a unit test fails the build if one appears outside lib/brand.",
                 "Contrast: every sanctioned foreground-on-ground pair is measured in CI, not asserted. 23 of 23 pass AA.",
                 "Copy: legal/COPY-RULES.md is machine-enforced — node legal/scripts/audit-copy.mjs exits non-zero on a banned term, and the rule set cites the FSANZ and Fair Trading provisions it comes from.",
-                "Agents: brand_rules rows are loaded into every agent's system prompt before it writes, and a 'never' rule needs trigger keywords so the pre-flight check can catch it deterministically.",
+                "Brand rules: rows in brand_rules feed the copy scanner; a 'never' rule needs trigger keywords so the check can catch it deterministically.",
               ]}
             />
           </SimpleCard>
@@ -267,8 +267,8 @@ export default async function IdentityPage() {
             <CardBody className="space-y-3">
               <p className="max-w-prose text-body-sm text-primary">
                 The identity says how the company sounds. The BrandScript on the{" "}
-                <strong>Messaging</strong> tab says what it says, and it is the
-                thing the marketing agent writes from — its controlling idea is{" "}
+                <strong>Messaging</strong> tab says what it says — its
+                controlling idea is{" "}
                 <em>{strategy.strategy.brandScript.derived.controllingIdea}</em>
               </p>
               <p className="max-w-prose text-body-sm text-muted">

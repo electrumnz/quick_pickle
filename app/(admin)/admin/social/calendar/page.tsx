@@ -325,7 +325,7 @@ export default async function SocialCalendarPage({
           ]}
           coming={[
             "Actually posting: nothing here is connected to Instagram or TikTok, so a post in the diary waits for a person",
-            "Vinnie writing straight onto the calendar — an agent run raises a decision today, and a post only appears here once it is a row in the database",
+            "Writing straight onto the calendar — a post only appears here once it is a row in the database",
             "Dragging a post from one day to another with a mouse, as well as moving it with the field",
             "A view of a whole quarter, for planning a season rather than a fortnight",
           ]}

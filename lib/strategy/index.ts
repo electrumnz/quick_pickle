@@ -5,7 +5,7 @@
  * `supabase/migrations/20260102000000_strategy.sql` holds them as rows.
  * This module is the seam: it reads the rows, checks them, recomputes the
  * market model from the stored assumptions, and hands the result to whoever
- * asked — the agent runtime, or the Brand & Plan screens in the admin.
+ * asked — the Brand & Plan screens in the admin.
  */
 
 export {
@@ -45,14 +45,6 @@ export {
   type RenderedPage,
   type StorefrontPages,
 } from "./audit-pages";
-export {
-  MARKETING_SCOPES,
-  TRADE_SCOPES,
-  defineMarketingAgent,
-  defineTradeAgent,
-  loadStrategyAgents,
-  type StrategyAgents,
-} from "./agents";
 export {
   StrategyDecodeError,
   decodeAvatar,

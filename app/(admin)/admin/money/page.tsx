@@ -16,11 +16,7 @@ import {
   percent,
   plural,
 } from "@/components/admin/data/format";
-import {
-  agentSpend,
-  purchaseOrders,
-  recentBatches,
-} from "@/components/admin/data/queries";
+import { purchaseOrders, recentBatches } from "@/components/admin/data/queries";
 import { TakingsStrip } from "@/components/admin/ui/bars";
 import {
   DataUnavailable,
@@ -63,14 +59,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export default async function MoneyPage() {
   const result = await load(async () => {
     const now = new Date();
-    const [orders, batches, spend, po, products] = await Promise.all([
+    const [orders, batches, po, products] = await Promise.all([
       ordersSince(new Date(now.getTime() - 120 * DAY_MS)),
       recentBatches(20),
-      agentSpend(),
       purchaseOrders(10),
       allProducts(),
     ]);
-    return { orders, batches, spend, po, products, now };
+    return { orders, batches, po, products, now };
   });
 
   if (!result.ok) {
@@ -78,14 +73,14 @@ export default async function MoneyPage() {
       <>
         <PageHeader
           title="Money"
-          lede="Takings, GST, what each bottle costs to make, and what the AI team is spending."
+          lede="Takings, GST, what each bottle costs to make, and what is owed."
         />
         <DataUnavailable problem={result.problem} detail={result.detail} />
       </>
     );
   }
 
-  const { orders, batches, spend, po, products, now } = result.data;
+  const { orders, batches, po, products, now } = result.data;
   const week = summarise(
     between(orders, new Date(now.getTime() - 7 * DAY_MS), now),
   );
@@ -271,9 +266,15 @@ export default async function MoneyPage() {
                     hint="Ordered and not yet arrived"
                   />
                   <Stat
-                    label="AI team, this month"
-                    value={money(spend.monthCents)}
-                    hint={`${money(spend.todayCents)} of it today`}
+                    label="Open supplier orders"
+                    value={String(
+                      po.filter(
+                        (order) =>
+                          order.receivedAt === null &&
+                          order.status === "ordered",
+                      ).length,
+                    )}
+                    hint="Still waiting to arrive"
                   />
                 </StatGrid>
               </CardBody>
@@ -315,7 +316,7 @@ export default async function MoneyPage() {
             "Takings, GST and averages worked out from real orders through the commerce adapter",
             "Twelve weeks of trading at a glance",
             "Cost a bottle from the real batch costs, and the margin on each brine",
-            "What the AI team costs, day and month",
+            "What is owed to suppliers",
           ]}
           coming={[
             "A GST return period with the figure to file",

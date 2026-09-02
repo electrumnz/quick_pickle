@@ -70,7 +70,7 @@ export async function editPostAction(formData: FormData): Promise<void> {
     entityType: "social_posts",
     entityId: postId,
     entityLabel: `${before.platform} post`,
-    summary: `Reworded the ${before.platform} post${before.agentName === null ? "" : ` ${before.agentName} drafted`}. It still has to be approved before it goes anywhere.`,
+    summary: `Reworded the ${before.platform} post. It still has to be approved before it goes anywhere.`,
     before: { caption: before.caption },
     after: { caption },
     approvalId: before.approvalId,
@@ -173,7 +173,7 @@ export async function declinePostAction(formData: FormData): Promise<void> {
     entityType: "social_posts",
     entityId: postId,
     entityLabel: `${before.platform} post`,
-    summary: `Took the ${before.platform} post out of the queue${before.agentName === null ? "" : ` that ${before.agentName} drafted`}. Reason: ${note}`,
+    summary: `Took the ${before.platform} post out of the queue. Reason: ${note}`,
     before: { status: before.status },
     after: { status: "archived", decision_note: note },
     approvalId: before.approvalId,
@@ -200,9 +200,8 @@ async function postRow(postId: string): Promise<PostRow | null> {
   const result = await adminSql().query(
     `select p.id, p.platform, p.status, p.caption, p.scheduled_for,
             p.created_by_agent_id, p.approval_id,
-            a.name as agent_name, ap.status as approval_status
+            ap.status as approval_status
        from public.social_posts p
-       left join public.agents a on a.id = p.created_by_agent_id
        left join public.approvals ap on ap.id = p.approval_id
       where p.id = $1`,
     [postId],
@@ -219,7 +218,7 @@ async function postRow(postId: string): Promise<PostRow | null> {
     // into the audit row's `before_data` beside an ISO string in `after_data`,
     // so the two halves of a move cannot be compared by eye or by query.
     scheduledFor: isoOrNull(row, "scheduled_for"),
-    agentName: textOrNull(row, "agent_name"),
+    agentName: null,
     agentId: textOrNull(row, "created_by_agent_id"),
     approvalId: textOrNull(row, "approval_id"),
     approvalStatus: textOrNull(row, "approval_status"),

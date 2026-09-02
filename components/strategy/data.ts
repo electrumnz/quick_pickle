@@ -10,9 +10,9 @@ import { SqlStrategyStore } from "@/lib/strategy";
  *
  * Through the same `adminSql()` pool the rest of the admin uses, so there is one
  * connection and one failure mode. The strategy the founder reads here is the
- * same set of rows the agents reason from — if these screens loaded the code
- * copy instead, they would show her the deployed position while the AI team
- * worked from an edited one, which is the exact failure this unit exists to
+ * same set of rows the company publishes from — if these screens loaded the
+ * code copy instead, they would show her the deployed position while edits in
+ * the database disagreed, which is the exact failure this unit exists to
  * remove.
  *
  * The fallback is deliberate and it is honest. If Postgres cannot be reached the

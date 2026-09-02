@@ -89,9 +89,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           60 before. Each step below clears the tallest wrap inside its own
           range with a couple of pixels to spare, and `sm` came down from 24 to
           20 so the shorter bar does not leave a gap under a laptop page.
-
-          `components/admin/chat/ChatDock.tsx` anchors its floating panel to
-          these same three numbers plus a gutter. Change one and change both.
           Grow the copy again and these are wrong again, so measure them
           again — `components/demo/DemoBanner.tsx` says how. */}
       <body

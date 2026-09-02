@@ -90,7 +90,7 @@ export const POST_STATES: Readonly<Record<string, StateWords>> = {
     word: "Waiting on you",
     glyph: "◆",
     tone: "accent",
-    means: "An agent drafted it and it stops here until you say yes.",
+    means: "Written and waiting. It stops here until you say yes.",
   },
   scheduled: {
     word: "In the diary",
@@ -235,10 +235,7 @@ function EntryChip({
           </span>
         </span>
         {detail === "full" && (
-          <span className="mt-0.5 block text-caption">
-            {state.word}
-            {entry.agentName === null ? "" : ` · drafted by ${entry.agentName}`}
-          </span>
+          <span className="mt-0.5 block text-caption">{state.word}</span>
         )}
         {/* Clamped only in the month grid, and only where the cell is a
             seventh of the page wide. On a phone the same cell is the full
@@ -511,7 +508,7 @@ export function GapSummary({
       </p>
       <p className="mt-1.5">
         {next === undefined
-          ? "Nothing is booked ahead. The next thing that goes out is the next thing you or Vinnie writes."
+          ? "Nothing is booked ahead. The next thing that goes out is the next thing you write."
           : `Next out: ${dayInWords(next.day)} at ${time(next.instant)} on ${platformWord(next.platform)}.`}
       </p>
       {worst !== null && worst.days > 1 && (
@@ -585,7 +582,6 @@ export function UndatedPosts({
             </div>
             <p className="mt-1 text-caption text-muted">
               {platformWord(post.platform)}
-              {post.agentName === null ? "" : ` · drafted by ${post.agentName}`}
               {post.error === null ? "" : ` · ${post.error}`}
             </p>
             <div className="mt-2.5">{children(post)}</div>

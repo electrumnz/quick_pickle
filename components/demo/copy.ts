@@ -28,55 +28,28 @@ export const DEMO_BANNER = {
    * it is not behind a password, so the banner says so plainly rather than
    * leaving a visitor to guess at a sign-in they do not need. Note what it
    * does not say: it does not offer a password, name one, or imply one exists
-   * to be found.
-   *
-   * It now names asking as well as looking, because asking stopped needing the
-   * password too — see `components/admin/write/open-demo.ts`. The admin used to
-   * carry a second, longer notice at the top of every screen saying the same
-   * thing; the founder asked for it to come down here, so this line is what is
-   * left of it, and it is shorter than the two sentences it replaces.
+   * to be found, and it does not send anyone to a live roster.
    */
-  admin: "The admin is open — no password to look or to ask.",
+  admin: "The admin is open — no password to look.",
   /**
    * What happens to anything they do, and whose name is on it.
    *
-   * Two facts in one clause, because the standing admin notice that carried
-   * the first of them has been folded into this bar and the bar is not allowed
-   * to get taller. "Carry no name" is the honest replacement for that notice's
-   * claim that changing something "asks for the password first": on a demo,
-   * asking no longer does, and what lands in `audit_log` is stamped
-   * `system` against the open demonstration rather than against a person.
+   * On a demo, what lands in `audit_log` is stamped `system` against the open
+   * demonstration rather than against a person.
    */
   reset: "Changes carry no name. Gone on deploy.",
-  /** Where the short model line sends someone who wants the whole of it. */
-  modelHref: "/admin/team",
 } as const;
 
 /**
  * The note on the admin's own settings screen, where the demonstration is the
  * subject rather than the frame.
- *
- * It used to stand at the top of every admin screen. The founder asked for it
- * to come down into the bar at the bottom of the page — `DEMO_BANNER.admin`
- * and `DEMO_BANNER.reset` are what is left of it there — so this longer form is
- * now read in one place, beside `DEMO_SETTINGS_NOTE`, by someone who has gone
- * looking for how the demonstration works.
- *
- * The sentence about the password has been corrected rather than carried
- * forward. Asking the team no longer wants one: it is the surface built for the
- * founder, she reported the refusal, and the record now names the open
- * demonstration instead of a person. Everything that CHANGES the business still
- * does want one, and the note names those three rather than gesturing at
- * "changing something", because the difference is now the whole point.
  */
 export const DEMO_ADMIN_OPEN = {
   title: "You are looking at the admin without signing in",
   body:
-    "This is a demonstration, so the door is open. Every screen reads, and " +
-    "asking the team works — what comes back is recorded against the open " +
-    "demonstration rather than against you. Changing the business is the part " +
-    "that still asks for the password: packing an order, correcting a count, " +
-    "approving a post.",
+    "This is a demonstration, so the door is open. Every screen reads. " +
+    "Changing the business still asks for the password: packing an order, " +
+    "correcting a count, approving a post.",
   /** The label on the way to the real sign-in form. */
   signIn: "Sign in",
 } as const;

@@ -2,7 +2,6 @@ import type { ComponentType } from "react";
 
 import {
   IconBrand,
-  IconChat,
   IconCustomers,
   IconMoney,
   IconOrders,
@@ -15,13 +14,12 @@ import {
 } from "../ui/icons";
 
 /**
- * Ten places, and no more.
+ * Nine places, and no more.
  *
- * The tenth is second, between Today and Orders, and the order is the point.
- * Today is what needs her; Ask the team is ask for anything. Both are ways IN.
- * Everything under them is a place she goes when she already knows what she
- * wants, and a map you can hold in your head is a map whose entrances are at
- * the top.
+ * Today is what needs her. Everything under it is a place she goes when she
+ * already knows what she wants. The Team is a quiet pointer to Grok Bot — not
+ * a live roster — so the map still has somewhere to send someone looking for
+ * "who runs the company with her".
  *
  * This list is the admin's information architecture, written once. The
  * sidebar, the breadcrumbs, the command palette and the search page all read
@@ -50,27 +48,9 @@ export const DESTINATIONS: readonly Destination[] = [
     label: "Today",
     href: "/admin",
     blurb:
-      "Everything waiting on you right now, in one list: decisions the team needs, orders to pack, stock running down, and anything that has failed.",
-    keywords: ["home", "dashboard", "inbox", "start", "now", "approvals"],
+      "Everything waiting on you right now, in one list: unpaid orders, Mirror troubles, stock running down, and anything that has failed.",
+    keywords: ["home", "dashboard", "inbox", "start", "now"],
     Icon: IconToday,
-  },
-  {
-    id: "chat",
-    label: "Ask the team",
-    href: "/admin/chat",
-    blurb:
-      "Say what you need in plain words and it goes to whoever does that job — no need to know who that is.",
-    keywords: [
-      "ask",
-      "chat",
-      "help",
-      "question",
-      "talk",
-      "message",
-      "assistant",
-      "who does",
-    ],
-    Icon: IconChat,
   },
   {
     id: "orders",
@@ -152,7 +132,7 @@ export const DESTINATIONS: readonly Destination[] = [
     label: "Money",
     href: "/admin/money",
     blurb:
-      "Takings, GST, what each bottle costs to make, and what the AI team is spending.",
+      "Takings, GST, what each bottle costs to make, and what is owed to suppliers.",
     keywords: [
       "revenue",
       "sales",
@@ -161,7 +141,6 @@ export const DESTINATIONS: readonly Destination[] = [
       "ird",
       "cost",
       "margin",
-      "spend",
       "finance",
       "takings",
     ],
@@ -172,7 +151,7 @@ export const DESTINATIONS: readonly Destination[] = [
     label: "Brand & Plan",
     href: "/admin/brand",
     blurb:
-      "The brand guide and the business plan the whole company works from — the rules the AI team reads before it writes a word.",
+      "The brand guide and the business plan the whole company works from — the rules before anyone writes a word.",
     keywords: [
       "brand",
       "voice",
@@ -192,20 +171,8 @@ export const DESTINATIONS: readonly Destination[] = [
     label: "The Team",
     href: "/admin/team",
     blurb:
-      "The six AI staff who run the day to day: what each one does, what it may decide alone, and what it costs.",
-    keywords: [
-      "agents",
-      "ai",
-      "staff",
-      "marlow",
-      "vinnie",
-      "dot",
-      "teller",
-      "bex",
-      "mirror",
-      "runs",
-      "autonomy",
-    ],
+      "How Grok Bot sits at this admin keyboard. Not a live roster — a pointer to the adoption notes.",
+    keywords: ["grok", "bot", "staff", "who", "adoption", "xai"],
     Icon: IconTeam,
   },
   {

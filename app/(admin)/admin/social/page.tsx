@@ -12,12 +12,10 @@ import {
 } from "@/components/admin/data/format";
 import {
   bestPosts,
-  pendingApprovalsOf,
   socialAccounts,
   socialPosts,
   type SocialPostItem,
 } from "@/components/admin/data/queries";
-import { ApprovalQueue } from "@/components/admin/approvals/ApprovalCard";
 import { PostPreview } from "@/components/admin/social";
 import { Disclosure } from "@/components/admin/ui/controls";
 import {
@@ -59,12 +57,8 @@ export const metadata: Metadata = {
  * Social — what is scheduled, what went out, and how it did.
  *
  * The one number that matters to a small food brand is reach, so posts are
- * ranked by it rather than by likes. Everything drafted by an agent says so,
+ * ranked by it rather than by likes. Everything drafted says so when it carries a name,
  * and anything that failed says why in the words the platform used.
- *
- * The queue at the top is the same approval card that appears on Today, on The
- * Team and on an agent's own page, because every queue in this admin is one
- * filter over `public.approvals` and she should only have to learn it once.
  *
  * Approving a post here is real and permanent, and it publishes nothing. No
  * account is connected to this deployment, so a scheduled post is a post with a
@@ -126,13 +120,12 @@ export default async function SocialPage({
       : `/admin/social?q=${encodeURIComponent(query)}`;
 
   const result = await load(async () => {
-    const [accounts, posts, best, decisions] = await Promise.all([
+    const [accounts, posts, best] = await Promise.all([
       socialAccounts(),
       socialPosts(20),
       bestPosts(3),
-      pendingApprovalsOf("social_post"),
     ]);
-    return { accounts, posts, best, decisions };
+    return { accounts, posts, best };
   });
 
   if (!result.ok) {
@@ -147,8 +140,7 @@ export default async function SocialPage({
     );
   }
 
-  const { accounts, posts: everything, best, decisions } = result.data;
-  const byId = new Map(everything.map((post) => [post.id, post]));
+  const { accounts, posts: everything, best } = result.data;
   // The handle a preview shows in its account row. Null where no account for
   // that platform exists, or where one exists and is not connected — which is
   // the truthful answer and the one the preview prints.
@@ -156,52 +148,6 @@ export default async function SocialPage({
   for (const account of accounts) {
     handles[account.platform] = account.isActive ? account.handle : null;
   }
-  // A decision about a post is editable in place: the card holds the same
-  // caption box the queue below uses, so "change it first" is one control
-  // rather than a trip to another section.
-  const editors = new Map(
-    decisions.flatMap((decision) => {
-      const post =
-        decision.subjectId === null ? undefined : byId.get(decision.subjectId);
-      return post === undefined
-        ? []
-        : [
-            [
-              decision.id,
-              <PostEditor
-                key={post.id}
-                post={post}
-                csrfToken={csrfToken}
-                back={back}
-                scope="decide"
-                bare
-              />,
-            ] as const,
-          ];
-    }),
-  );
-  // What the post will look like, inside the decision about it. Same card, same
-  // place, so there is one approval surface rather than two.
-  const previews = new Map(
-    decisions.flatMap((decision) => {
-      const post =
-        decision.subjectId === null ? undefined : byId.get(decision.subjectId);
-      return post === undefined
-        ? []
-        : [
-            [
-              decision.id,
-              <PostPreview
-                key={post.id}
-                post={post}
-                handles={handles}
-                scope="decide"
-                whenWords={whenWords(post)}
-              />,
-            ] as const,
-          ];
-    }),
-  );
   const posts =
     query === ""
       ? everything
@@ -252,21 +198,58 @@ export default async function SocialPage({
 
         <Section
           title="Waiting on you"
-          description="A post an agent drafted stops here. Saying yes is written down against the post for good — and it still does not send it."
+          description="A post stops here before it can be put in the diary. Saying yes is written down against the post for good — and it still does not send it."
         >
-          <ApprovalQueue
-            approvals={decisions}
-            csrfToken={csrfToken}
-            back={back}
-            editors={editors}
-            previews={previews}
-            id="approve-ticked-social"
-            emptyHeadline="Nobody is waiting on you"
-            emptyFills="Vinnie drafts the fortnight's posts on a schedule, and each one stops here with its caption before it can go anywhere."
-          >
-            Every post an agent writes needs your yes before it can be put in
-            the diary.
-          </ApprovalQueue>
+          {everything.filter((post) => post.status === "pending_approval")
+            .length === 0 ? (
+            <Card>
+              <EmptyState
+                headline="Nobody is waiting on you"
+                fills="Drafts that need a yes before they can be diarised appear here."
+              >
+                Posts waiting for approval will show up with their captions so
+                you can reword, diarise or decline them.
+              </EmptyState>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {everything
+                .filter((post) => post.status === "pending_approval")
+                .map((post) => (
+                  <Card key={post.id}>
+                    <CardHeader
+                      title={platform(post.platform)}
+                      note={clip(post.caption, 80)}
+                    />
+                    <div className="space-y-3 border-t border-hairline px-4 py-4">
+                      <PostPreview
+                        post={post}
+                        handles={handles}
+                        scope={`decide-${post.id}`}
+                        whenWords={whenWords(post)}
+                      />
+                      <PostEditor
+                        post={post}
+                        csrfToken={csrfToken}
+                        back={back}
+                        scope={`decide-${post.id}`}
+                      />
+                      <PostDiaryForm
+                        post={post}
+                        csrfToken={csrfToken}
+                        back={back}
+                        scope={`decide-${post.id}`}
+                      />
+                      <PostDeclineForm
+                        post={post}
+                        csrfToken={csrfToken}
+                        back={back}
+                      />
+                    </div>
+                  </Card>
+                ))}
+            </div>
+          )}
         </Section>
 
         {query !== "" && (
@@ -318,13 +301,13 @@ export default async function SocialPage({
 
         <Section
           title="Waiting to go out"
-          description="Nothing here has been published. A post drafted by Vinnie stops here until you say yes, and stays here after you have."
+          description="Nothing here has been published. A post stops here until you say yes, and stays here after you have."
         >
           <Card>
             {waiting.length === 0 ? (
               <EmptyState
                 headline="Nothing is queued"
-                fills="Vinnie drafts the fortnight's posts on a schedule. Each one lands here with its caption and picture before it goes anywhere."
+                fills="Draft and waiting posts land here with their caption and picture before they go anywhere."
               >
                 This is the queue of posts that are written but not yet public.
               </EmptyState>
@@ -363,7 +346,6 @@ export default async function SocialPage({
                       {post.error ?? "No reason was recorded."}
                     </p>
                     <p className="mt-1 text-caption text-muted">
-                      {post.agentName ?? "The admin"} ·{" "}
                       {ago(
                         post.publishedAt ??
                           post.scheduledFor ??
@@ -474,7 +456,7 @@ export default async function SocialPage({
             "The picture itself inside the frame, at the crop the platform will apply, with what the crop takes off it dimmed over the top",
             "Approving a post and giving it a time, which is recorded against it for good",
             "Changing the wording before you say yes",
-            "Declining a post with a reason, which answers the agent that asked",
+            "Declining a post with a reason",
             "Approving several waiting decisions at once",
             "Failures with the platform's own reason",
             "A month and a week of everything with a date on it, on the calendar, with the gaps between them said in words",
@@ -513,7 +495,6 @@ function PostRow({
       </div>
       <p className="mt-1 text-caption text-muted">
         {platform(post.platform)}
-        {post.agentName === null ? "" : ` · drafted by ${post.agentName}`}
         {post.scheduledFor === null
           ? ""
           : ` · goes out ${dayAndTime(post.scheduledFor)}, ${until(post.scheduledFor)}`}
