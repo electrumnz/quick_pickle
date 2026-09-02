@@ -14,7 +14,7 @@ export const BRAND_AREAS = [
     id: "identity",
     label: "Identity",
     href: "/admin/brand",
-    answers: "Who we are, and the rules the AI team may not break.",
+    answers: "Who we are, and the rules published copy may not break.",
   },
   {
     id: "messaging",

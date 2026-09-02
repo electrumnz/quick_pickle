@@ -59,7 +59,7 @@ export function MobileNav({
             The parent is covered by this element, so a
             `event.target === event.currentTarget` guard up there is never
             true and tapping outside the drawer does nothing — the same defect
-            `components/admin/chat/ChatDock.tsx` documents at length. This
+            This
             drawer is the only navigation below 1024 and there is no `Escape`
             key on a phone, so a drawer that will not close on a tap outside is
             a phone that cannot leave the page it is on.

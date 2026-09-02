@@ -2,6 +2,8 @@
 
 Next.js 16 (App Router) + React 19 + Tailwind CSS v4 storefront.
 
+Grok Bot adoption (friend-facing): see [`docs/grok-bot-adoption.md`](docs/grok-bot-adoption.md).
+
 ## Getting started
 
 Node 22 is required — it is pinned in `.nvmrc`, declared in `package.json`
@@ -34,13 +36,12 @@ npm run dev
 app/(site)/     public storefront routes
 app/(admin)/    password-gated admin routes
 lib/commerce/   Shopify clients, cart + checkout
-lib/agents/     Claude-powered agents and tools
 lib/brand/      brand tokens, voice, asset manifests
 components/3d/  React Three Fiber scenes
-inngest/        background + scheduled functions
 supabase/       database migrations
 e2e/            Playwright specs
 tests/          Vitest specs
+docs/           operator notes (incl. Grok Bot adoption)
 ```
 
 ## CI

@@ -4,7 +4,10 @@ Friend-facing notes for Samuel's friend. The in-site MiniMax roster is gone.
 Half Sour keeps the brine business (stock, batches, recipes, shop, orders,
 Mirror troubles). AI work is a person at the admin keyboard: **Grok Bot**.
 
-Parked from [PR #3](https://github.com/electrumnz/pickled_jews/pull/3) (`cursor/grok-bot-deletion-retarget-ff48`, `bf0a467`). That PR is closed **without merge**. The 228-file agent-strip stays off `main`. This file is markdown only — not product code, not go-live.
+This is the product-code strip (draft PR — not go-live, do not merge until
+named). Agent SQL tables stay in the database; they are hidden in the UI, not
+dropped. Keece 365 / Outlook / OneDrive / SharePoint are not part of this
+path.
 
 ## Why the roster is gone
 
@@ -49,7 +52,7 @@ deployment as password-gated. Never share the founder password in chat.
 ## Activity log
 
 What Grok Bot does in this admin appears under **Activity** (`/admin/activity`)
-and in Today's “while you were away” rail. That list reads `public.audit_log`
+and in Today’s “while you were away” rail. That list reads `public.audit_log`
 (newest first, Pacific/Auckland). Sign-ins/sign-outs and old agent-runtime rows
 are hidden. Filters: stock / batches / orders / other.
 
@@ -68,21 +71,9 @@ Do not paste into chat, Grok, Cursor, tickets or screenshots:
 If a secret may have leaked, rotate it in Vercel / the password manager and tell
 the founder.
 
-## Parked PR #3 — intended work (markdown only)
-
-Do not merge #3. Do not undraft. Do not action this list into the codebase until
-Nigel names go-live for this company and PR.
-
-- [ ] Retarget admin from in-site MiniMax roster/chat/spend to Grok Bot (person at the keyboard).
-- [ ] Keep brine: stock, batches, recipes, shop, orders; activity from `audit_log`.
-- [ ] Leave agent SQL tables in place (no `DROP`). No new packages.
-- [ ] Strip user-facing AI-team / agent-drafted / roster-name copy (MarketExplorer, Calendar, Social, Brand, Assets, campaigns). Do not `JOIN public.agents` for display names.
-- [ ] Existing `half-sour` preview only. No Vercel prod until go-live is named. Lighthouse `minScore >= 0.95` is already red on `main` — do not treat that as this work.
-
 ## Pointers
 
 - Admin: https://half-sour.vercel.app/admin
 - Activity: https://half-sour.vercel.app/admin/activity
 - This file in the repo: `docs/grok-bot-adoption.md`
 - Brand / claims: `legal/COPY-RULES.md`
-- Abandoned strip: https://github.com/electrumnz/pickled_jews/pull/3

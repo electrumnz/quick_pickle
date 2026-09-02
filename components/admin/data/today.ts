@@ -20,40 +20,33 @@ import {
 } from "./commerce-reads";
 import {
   activity,
-  agentSpend,
   batchesInProgress,
   ingredientsRunningLow,
-  pendingApprovals,
   purchaseOrders,
   reviewsNeedingAttention,
   socialPosts,
-  team,
   troubles,
   type ActivityItem,
-  type AgentProfile,
-  type AgentSpend,
   type BatchItem,
   type IngredientItem,
 } from "./queries";
-import { money, plural } from "./format";
+import { plural } from "./format";
 
 /**
  * Today.
  *
  * The one screen that has to answer "what is my day" before she has decided
- * what to look at. Everything on it is drawn from the same four questions:
+ * what to look at. Everything on it is drawn from the same questions:
  *
- *   1. What is waiting on a decision only she can make?
- *   2. What has failed quietly and is still failing?
- *   3. What physically has to happen today — orders packed, stock ordered?
- *   4. Is the business alright?
+ *   1. What has failed quietly and is still failing? (Mirror, posts)
+ *   2. What physically has to happen today — orders packed, stock ordered?
+ *   3. Is the business alright?
+ *   4. What happened while she was away? (audit_log via activity)
  *
- * The action inbox merges the first two into one list, because to her a
- * purchase order that needs approving and a post that never went out are the
- * same thing: something is stuck and she is the reason it is stuck.
+ * Agent-raised decisions and AI spend are gone with the in-site roster.
  */
 
-export type ActionKind = "Decision" | "Not working" | "Reply owed";
+export type ActionKind = "Not working" | "Reply owed";
 
 export type ActionItem = {
   readonly id: string;
@@ -110,7 +103,6 @@ const PLATFORM_NAMES: Readonly<Record<string, string>> = {
 export type TodayData = {
   readonly now: string;
   readonly actions: readonly ActionItem[];
-  readonly decisions: number;
   readonly failures: number;
   readonly repliesOwed: number;
   readonly toPack: readonly PackOrder[];
@@ -122,44 +114,12 @@ export type TodayData = {
   readonly previousWeek: SalesWindow;
   readonly days: readonly DayTakings[];
   readonly activity: readonly ActivityItem[];
-  readonly spend: AgentSpend;
   readonly upcoming: readonly UpcomingItem[];
-  readonly team: readonly AgentProfile[];
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/**
- * What the number on an approval actually means.
- *
- * `amount_cents` is a different quantity for each kind of decision — a bill on
- * a purchase order, a per-bottle step on a price change, a ceiling on a
- * discount. Printing it bare would be a number with no unit, so it is never
- * shown without the sentence that says which one it is.
- */
-function amountLabel(subjectType: string, cents: number | null): string | null {
-  if (cents === null || cents === 0) return null;
-  switch (subjectType) {
-    case "purchase_order":
-      return `Costs ${money(cents)}`;
-    case "discount":
-      return `Up to ${money(cents)} given away`;
-    case "price_change":
-      return `${money(cents)} a bottle more`;
-    case "refund":
-      return `Refund of ${money(cents)}`;
-    default:
-      return money(cents);
-  }
-}
-
 function rank(item: { kind: ActionKind; risk: ActionItem["risk"] }): number {
-  if (item.kind === "Decision") {
-    if (item.risk === "critical") return 100;
-    if (item.risk === "high") return 90;
-    if (item.risk === "medium") return 70;
-    return 50;
-  }
   if (item.kind === "Not working") return 80;
   return 60;
 }
@@ -186,7 +146,6 @@ export async function loadToday(now: Date = new Date()): Promise<TodayData> {
   const since = new Date(now.getTime() - 90 * DAY_MS);
 
   const [
-    approvals,
     failing,
     reviews,
     packQueue,
@@ -197,12 +156,9 @@ export async function loadToday(now: Date = new Date()): Promise<TodayData> {
     lowIngredients,
     batches,
     log,
-    spend,
-    roster,
     posts,
     orders,
   ] = await Promise.all([
-    pendingApprovals(),
     troubles(),
     reviewsNeedingAttention(),
     ordersToPack(20),
@@ -213,37 +169,11 @@ export async function loadToday(now: Date = new Date()): Promise<TodayData> {
     ingredientsRunningLow(),
     batchesInProgress(),
     activity(8),
-    agentSpend(),
-    team(),
     socialPosts(12),
     purchaseOrders(8),
   ]);
 
-  // --- the action inbox ----------------------------------------------------
   const actions: ActionItem[] = [];
-
-  for (const approval of approvals) {
-    const who =
-      approval.agentName === null
-        ? "Raised inside the admin"
-        : `${approval.agentName}, ${approval.agentJobTitle ?? "the team"}`;
-    actions.push({
-      id: `approval-${approval.id}`,
-      kind: "Decision",
-      title: approval.title,
-      why: approval.rationale ?? approval.summary,
-      source: who,
-      occurredAt: approval.requestedAt,
-      expiresAt: approval.expiresAt,
-      amountLabel: amountLabel(approval.subjectType, approval.amountCents),
-      risk: approval.risk,
-      section: "Approvals",
-      // Straight to the queue, not to the top of The Team: the decision is the
-      // reason she clicked, and it is now something she can settle there.
-      href: "/admin/team#decisions",
-      urgency: rank({ kind: "Decision", risk: approval.risk }),
-    });
-  }
 
   for (const trouble of failing) {
     actions.push({
@@ -293,7 +223,6 @@ export async function loadToday(now: Date = new Date()): Promise<TodayData> {
     return left.localeCompare(right);
   });
 
-  // --- the pack queue ------------------------------------------------------
   const toPack: PackOrder[] = packQueue.map((order) => ({
     id: order.id,
     number: order.orderNumber,
@@ -306,24 +235,17 @@ export async function loadToday(now: Date = new Date()): Promise<TodayData> {
     shippingMethod: order.shippingMethod,
   }));
 
-  // --- stock ---------------------------------------------------------------
   const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY_MS);
   const recentUnits = unitsBySku(between(windowOrders, thirtyDaysAgo, now));
   const perDay = new Map<string, number>();
   for (const [sku, units] of recentUnits) perDay.set(sku, units / 30);
   const stock = stockBySku(nameStockLines(levels, products, places), perDay);
 
-  // --- money ---------------------------------------------------------------
   const weekStart = new Date(now.getTime() - 7 * DAY_MS);
   const priorStart = new Date(now.getTime() - 14 * DAY_MS);
   const week = summarise(between(windowOrders, weekStart, now));
   const previousWeek = summarise(between(windowOrders, priorStart, weekStart));
 
-  // --- what is coming ------------------------------------------------------
-  //
-  // Only things that have not happened yet, with one exception: a supplier
-  // delivery whose date has passed is *more* interesting than one that has
-  // not, so it stays and is labelled late.
   const upcoming: UpcomingItem[] = [];
   for (const order of orders) {
     if (order.receivedAt !== null || order.expectedAt === null) continue;
@@ -366,7 +288,6 @@ export async function loadToday(now: Date = new Date()): Promise<TodayData> {
   return {
     now: now.toISOString(),
     actions,
-    decisions: approvals.length,
     failures: failing.length,
     repliesOwed: reviews.length,
     toPack,
@@ -378,9 +299,7 @@ export async function loadToday(now: Date = new Date()): Promise<TodayData> {
     previousWeek,
     days: dailyTakings(windowOrders, 14, now),
     activity: log,
-    spend,
     upcoming: upcoming.slice(0, 6),
-    team: roster,
   };
 }
 
@@ -392,11 +311,6 @@ export async function loadToday(now: Date = new Date()): Promise<TodayData> {
  */
 export function summariseDay(data: TodayData): string {
   const clauses: string[] = [];
-  if (data.decisions > 0) {
-    clauses.push(
-      `${plural(data.decisions, "decision")} ${data.decisions === 1 ? "is" : "are"} waiting on you`,
-    );
-  }
   if (data.toPack.length > 0) {
     clauses.push(`${plural(data.toPack.length, "order")} to pack`);
   }
@@ -408,8 +322,13 @@ export function summariseDay(data: TodayData): string {
   if (data.repliesOwed > 0) {
     clauses.push(`${plural(data.repliesOwed, "review")} owed a reply`);
   }
+  if (data.awaitingPayment > 0) {
+    clauses.push(
+      `${plural(data.awaitingPayment, "order")} unpaid — do not pack yet`,
+    );
+  }
   if (clauses.length === 0) {
-    return "Nothing is waiting on you. The team has everything it needs, every order is packed and nothing has failed.";
+    return "Nothing is waiting on you. Every order is packed and nothing has failed.";
   }
   const last = clauses.pop() ?? "";
   const sentence =

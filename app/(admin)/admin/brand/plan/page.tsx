@@ -125,7 +125,7 @@ export default async function PlanPage() {
             <Card>
               <CardHeader
                 title="Key characteristics"
-                note="What anyone working here — human or agent — has to be"
+                note="What anyone working here has to be"
               />
               <CardBody>
                 <DefinitionList
