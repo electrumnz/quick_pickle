@@ -2,11 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { AvailabilityChip, PriceBlock } from "./bits";
-import { BottlePlate, type PlateVariant } from "./BottlePlate";
 import { BuyForm } from "./BuyPanel";
 import type { CatalogueEntry } from "./catalogue";
 import { productPath, SHOP, SHOP_PATH, STATE } from "./copy";
 import { BOTTLE_SHOTS } from "./media";
+import { SetPlate } from "./SetPlate";
 import styles from "./shop.module.css";
 import { cx } from "./cx";
 
@@ -17,18 +17,18 @@ import { cx } from "./cx";
  * upside down compared with most storefronts: the JOB is the largest thing on
  * the card, above the name and above the price. Somebody arriving here has
  * never heard of No. 02 and is not choosing on a number — they are choosing on
- * "I am making a martini". The number, the descriptor, the notes and the price
- * are all still there, in that order, once the job has done its work.
+ * "I am making a martini". The number, the descriptor and the price are still
+ * there, in that order, once the job has done its work.
+ *
+ * And that is all that is there. The card used to carry nine things — the
+ * one-line, four tasting notes, a supply note, the unit price — and the eye
+ * had nowhere to land. Those belong on the product page, where there is room
+ * to read them.
  *
  * The whole card is a link to the product page, and the add-to-cart form inside
  * it is a separate target that sits above the link overlay — so a shopper who
  * has already decided never has to open the page at all.
  */
-
-function plateVariantFor(entry: CatalogueEntry): PlateVariant {
-  if (entry.kind === "set") return "set";
-  return entry.brine?.id ?? "plain";
-}
 
 export function ProductCard({
   entry,
@@ -48,10 +48,9 @@ export function ProductCard({
     <article className={cx(styles.card)} aria-labelledby={headingId}>
       <div className={cx(styles.plate, styles.cardMedia)}>
         {shot === null ? (
-          <BottlePlate
-            variant={plateVariantFor(entry)}
-            label=""
-            className={styles.plateArt}
+          <SetPlate
+            className="h-full"
+            sizes="(max-width: 48rem) 3rem, (max-width: 80rem) 16vw, 8vw"
           />
         ) : (
           <div className={styles.photoLayer}>
@@ -79,7 +78,10 @@ export function ProductCard({
         {/* The link that covers the card. Everything else in the card is
             decoration around this one destination, which is why the accessible
             name is the job AND the bottle rather than "read more". */}
-        <h3 id={headingId} className="text-heading-2 text-primary">
+        <h3
+          id={headingId}
+          className={cx(styles.cardTitle, "text-heading-2 text-primary")}
+        >
           <Link href={href} className={cx(styles.cardLink, "outline-none")}>
             {entry.job}
             <span className="sr-only"> — {entry.title}</span>
@@ -91,23 +93,11 @@ export function ProductCard({
           {entry.descriptor === null ? null : ` · ${entry.descriptor}`}
         </p>
 
+        {/* The one line stays: it is the sentence that tells a stranger
+            which bottle is hers, and lib/strategy/audit.ts checks it sits
+            beside the name. The tasting notes and the unit price do not. */}
         {entry.line === null ? null : (
           <p className="text-body-sm text-primary">{entry.line}</p>
-        )}
-
-        {/* Four tasting notes are a luxury a 200px column does not have. They
-            return at 768, where the card is tall enough to carry them. */}
-        {entry.brine === null ? null : (
-          <ul className="gap-inline text-caption text-muted mt-1 hidden flex-wrap md:flex">
-            {entry.brine.notes.slice(0, 4).map((note) => (
-              <li
-                key={note}
-                className="after:ml-2 after:content-['·'] last:after:content-['']"
-              >
-                {note}
-              </li>
-            ))}
-          </ul>
         )}
 
         {entry.supplyLimited && !degraded ? (
@@ -115,7 +105,7 @@ export function ProductCard({
         ) : null}
 
         <div className="gap-stack mt-auto flex flex-wrap items-end justify-between pt-2">
-          <PriceBlock entry={entry} range />
+          <PriceBlock entry={entry} range compact />
           <AvailabilityChip entry={entry} />
         </div>
 

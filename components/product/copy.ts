@@ -25,6 +25,9 @@ export const FULL_SET_HANDLE = "the-full-set";
 
 export const SHOP_PATH = "/shop";
 
+/** The cart, on a page of its own. */
+export const CART_PATH = "/cart";
+
 export function productPath(handle: string): string {
   return `/products/${handle}`;
 }
@@ -212,6 +215,8 @@ export const STATE = {
   cartOne: "bottle",
   cartMany: "bottles",
   cartLabel: "Cart",
+  /** The masthead chip with nothing in it. Still a link: an empty cart is a page too. */
+  cartEmptyChip: "Cart empty",
   checkout: "Go to checkout",
   checkoutNotLive: "Checkout is not connected",
   checkoutNotLiveNote:
@@ -231,7 +236,6 @@ export const STATE = {
   keepShopping: "Keep shopping",
   quantity: "Quantity",
   size: "Size",
-  onlyOption: "One size. Nothing to choose.",
 
   /** Stock is read live from the catalogue on every render, never faked. */
   countSuffix: "in stock",
@@ -283,6 +287,45 @@ export const STATE = {
  * name says. See `FULL_SET` in `components/home/data.ts` for why it stopped
  * being "The Full Set".
  */
+/* ------------------------------------------------------------------ cart */
+
+/**
+ * The cart page.
+ *
+ * Every line here is a label on a control or a state, not a sales sentence:
+ * the cart is where a buyer checks the arithmetic, and the brand's whole
+ * voice on money is that the numbers speak for themselves.
+ */
+export const CART = {
+  title: "Your cart",
+  metaDescription:
+    "What is in your cart, what it costs, and the way to checkout.",
+  eyebrow: "In the cart",
+  heading: "Your cart.",
+  emptyHeading: "Nothing in here yet.",
+  // copy-audit-approved: R-13 (the bottle to start with; no claim about a person)
+  emptyNote: "No. 01 HOUSE is the one to start with.",
+  emptyAction: "See the range",
+  lineQuantity: "Quantity",
+  update: "Update",
+  remove: "Remove",
+  subtotal: "Bottles",
+  delivery: "Delivery",
+  deliveryFree: "No charge",
+  total: "Total",
+  totalNote: "GST is included in the prices shown.",
+  continue: "Keep shopping",
+  /** The `problem` codes a cart action can redirect back with. */
+  problem: {
+    failed:
+      "That did not go through. The cart is as it was; try again in a moment.",
+    "cart-gone":
+      "That cart has gone — it expired or was already turned into an order. Start again from the shop.",
+    "not-enough":
+      "There are not that many in stock. The quantity was left as it was.",
+  } as Readonly<Record<string, string>>,
+} as const;
+
 export const STORE_FOOTER: readonly {
   readonly heading: string;
   readonly items: readonly { readonly href: string; readonly label: string }[];

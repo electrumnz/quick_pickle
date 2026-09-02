@@ -24,6 +24,7 @@ import type { NavItem } from "./data";
  */
 const LIVE_ROUTES: ReadonlySet<string> = new Set<string>([
   "/shop",
+  "/cart",
   "/products",
   "/wholesale",
   "/recipes",

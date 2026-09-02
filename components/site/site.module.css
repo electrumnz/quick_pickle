@@ -213,43 +213,18 @@
     transform var(--motion-duration-quick) var(--motion-ease-standard);
 }
 
-/* The tile head. One ratio and one line count on every tile.
-   It holds the first three lines of the build rather than a photograph, and
-   that is not a compromise: there is no photograph of any of these drinks in
-   this repository, a picture of the bottle would be the same picture on seven
-   tiles in a row, and the build is the thing a person scanning a recipe library
-   is actually looking for. Fixed ratio, fixed line count, so the geometry is
-   identical across the grid and only the content differs.
-
-   `text-on-inverse` on `surface-inverse` is the pairing lib/brand/semantics.ts
-   sanctions for a reversed block. */
-.tileHead {
-  /* 16:9 rather than a squarer plate: the head holds a label and three short
-     lines, and a taller box would be mostly empty ground on every tile. The
-     ratio is fixed so the geometry is identical across the grid. */
-  aspect-ratio: 16 / 9;
-  min-inline-size: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: var(--spacing-inline);
-  overflow: hidden;
-  padding: var(--spacing-stack);
-  border-radius: var(--radius-xs);
-  margin-block-end: var(--spacing-stack);
-  background-color: var(--surface-inverse);
-  color: var(--text-on-inverse);
-}
-
+/* The build, as a quiet list on the card's own ground: each measure on a
+   hairline row in the mono face, so the numbers line up and read as
+   measurements rather than prose. Lines that outgrow the column wrap. */
 .tileBuild {
   min-inline-size: 0;
-  font-family: var(--font-mono);
+}
+
+.tileBuild > li {
+  padding-block: 0.3rem;
+  border-block-start: 1px solid var(--border-hairline);
+  color: var(--text-primary);
   font-variant-numeric: tabular-nums;
-  font-size: var(--text-caption);
-  line-height: 1.5;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .clamp2,

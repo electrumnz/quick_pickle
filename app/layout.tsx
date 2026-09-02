@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
-import { DemoBanner } from "@/components/demo/DemoBanner";
 import { fontVariables } from "@/lib/brand/fonts";
 import { isDemoMode } from "@/lib/demo/mode";
 import { siteUrl } from "@/lib/site";
@@ -76,31 +75,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     // next/font self-hosts both and emits a metric-matched fallback, so the
     // swap costs no layout shift. Antialiasing is set in the brand base layer.
     <html lang="en-NZ" className={`h-full ${fontVariables}`}>
-      {/* The padding is the demo banner's own height: it is fixed to the
-          bottom of the viewport, and without the reserve it would sit on top of
-          the last line of every page. Three steps, because the notice wraps to
-          several lines on a narrow phone and two on a laptop.
-
-          Measured, not guessed, and re-measured every time the copy moves. The
-          bar has just taken on both of the standing admin warnings and come out
-          SHORTER at every width, because each clause was rewritten to fit one
-          line: 158px at 320 and 360, 119px at 375 and 390, 98px at 414 to 480,
-          78px at 540 to 700, 58px from 768, 59px at 1920. It was 160/140/99/80/
-          60 before. Each step below clears the tallest wrap inside its own
-          range with a couple of pixels to spare, and `sm` came down from 24 to
-          20 so the shorter bar does not leave a gap under a laptop page.
-          Grow the copy again and these are wrong again, so measure them
-          again — `components/demo/DemoBanner.tsx` says how. */}
-      <body
-        className={
-          demo
-            ? "flex min-h-full flex-col pb-40 sm:pb-20 lg:pb-16"
-            : "flex min-h-full flex-col"
-        }
-      >
-        {children}
-        {demo ? <DemoBanner /> : null}
-      </body>
+      <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
 }

@@ -82,7 +82,7 @@ export function DeliveryView() {
             <h1 id="d-h1" className="text-display-2 text-primary mt-stack">
               {DELIVERY.heading}
             </h1>
-            <p className="text-lede text-muted mt-stack max-w-prose">
+            <p className="text-lede text-primary mt-stack max-w-prose">
               {DELIVERY.lede}
             </p>
 

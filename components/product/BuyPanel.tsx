@@ -43,17 +43,11 @@ function VariantChoice({ entry }: { entry: CatalogueEntry }) {
   const { variants, variant } = entry;
 
   // One variant is not a choice, and a select with a single option is a
-  // control that cannot be operated. State the fact and post it as a hidden
-  // field instead.
+  // control that cannot be operated. Post it as a hidden field and say
+  // nothing: a sentence where a control would be is a line of height that
+  // tells the buyer nothing they can act on.
   if (variants.length <= 1) {
-    return (
-      <>
-        <input type="hidden" name="variantId" value={variant?.id ?? ""} />
-        {variant === null ? null : (
-          <p className="text-caption text-muted">{STATE.onlyOption}</p>
-        )}
-      </>
-    );
+    return <input type="hidden" name="variantId" value={variant?.id ?? ""} />;
   }
 
   return (
@@ -336,6 +330,12 @@ function Makes({ entry }: { entry: CatalogueEntry }) {
             className={cx(styles.tap, "text-body-sm text-primary")}
           >
             <span className={cx(styles.drawLink)}>{ADDED.recipeLink}</span>
+            {/* The arrow is the affordance at rest: the drawn underline only
+                exists on hover, and a plain line of text that happens to be a
+                link reads as a caption. */}
+            <span aria-hidden="true" className="ml-2">
+              &rarr;
+            </span>
           </Link>
         </>
       )}

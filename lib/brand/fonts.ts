@@ -18,10 +18,10 @@
  *            "tight grotesk" means here. It sets long product copy and dense
  *            admin tables at the same time without changing character.
  *
- * There is deliberately no third webfont. Numerals in tables use Inter
- * Tight's tabular figures (`tabular-nums`); anything genuinely monospaced
- * falls to the platform mono stack in tokens.css. A font you do not download
- * cannot shift the layout.
+ *  Data    — Martian Mono (OFL 1.1). Prices, lot codes, eyebrows, the recipe
+ *            builds. The brand guide's own pick, and the one face it calls
+ *            the brand's whole personality — which is why it is no longer
+ *            left to whatever monospace the visitor's device happens to have.
  *
  * next/font self-hosts both at build time — no request ever leaves for
  * fonts.googleapis.com — preloads the latin subset, and emits a
@@ -47,7 +47,7 @@
  * transform requires.
  */
 
-import { Fraunces, Inter_Tight } from "next/font/google";
+import { Fraunces, Inter_Tight, Martian_Mono } from "next/font/google";
 
 export const fraunces = Fraunces({
   subsets: ["latin"],
@@ -71,7 +71,24 @@ export const interTight = Inter_Tight({
  * `--font-inter-tight`, which `lib/brand/tokens.css` reads to build
  * `--font-display` and `--font-sans`.
  */
-export const fontVariables = `${fraunces.variable} ${interTight.variable}`;
+/**
+ * Data — Martian Mono (OFL 1.1). The brand guide's own choice for prices,
+ * lot codes, eyebrows and the recipe builds: "it makes numbers look like
+ * measurements". It used to fall to the platform mono stack, which meant the
+ * one face the guide calls the brand's whole personality was Menlo on a Mac,
+ * Consolas on Windows and whatever an Android phone had. Self-hosted like the
+ * other two, with the same metric-matched fallback.
+ */
+export const martianMono = Martian_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  preload: true,
+  adjustFontFallback: true,
+  weight: ["400", "500"],
+  variable: "--font-martian-mono",
+});
+
+export const fontVariables = `${fraunces.variable} ${interTight.variable} ${martianMono.variable}`;
 
 /** Licensing, for the brand guide and any third party who asks. */
 export const FONT_LICENCES = [
@@ -84,6 +101,12 @@ export const FONT_LICENCES = [
   {
     family: "Inter Tight",
     role: "Text and UI",
+    licence: "SIL Open Font License 1.1",
+    source: "Google Fonts, self-hosted at build time by next/font",
+  },
+  {
+    family: "Martian Mono",
+    role: "Data and micro",
     licence: "SIL Open Font License 1.1",
     source: "Google Fonts, self-hosted at build time by next/font",
   },

@@ -88,8 +88,8 @@
     var(--font-inter-tight), "Inter Tight Fallback Metric", ui-sans-serif,
     system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-mono:
-    ui-monospace, "SF Mono", "SFMono-Regular", "Roboto Mono", Menlo, Consolas,
-    monospace;
+    var(--font-martian-mono), "Martian Mono Fallback", ui-monospace, "SF Mono",
+    "SFMono-Regular", "Roboto Mono", Menlo, Consolas, monospace;
 
   /* --- Type scale ------------------------------------------------------ */
   /* Fluid across 375px → 1920px. Each clamp is linear in vw with a rem

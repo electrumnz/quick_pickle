@@ -11,7 +11,7 @@ import { liveNav } from "@/components/home/routes";
 
 import { cartCount } from "./cart";
 import { cx } from "./cx";
-import { SHOP_PATH, STORE_FOOTER } from "./copy";
+import { CART_PATH, SHOP_PATH, STATE, STORE_FOOTER } from "./copy";
 import styles from "./shop.module.css";
 
 /**
@@ -34,7 +34,8 @@ import styles from "./shop.module.css";
  * word "Menu". It opens by tap, by Enter and with JavaScript switched off.
  */
 
-type Here = "shop" | "product" | "wholesale" | "recipes" | "policy";
+type Here =
+  "home" | "shop" | "product" | "wholesale" | "recipes" | "policy" | "cart";
 
 /** Which nav item, if any, is the page being looked at. */
 function currentHref(here: Here | undefined): string | null {
@@ -140,12 +141,20 @@ export async function StoreHeader({ here }: { here?: Here }) {
             </nav>
           </details>
 
-          <span
+          {/* The chip is a link to the cart, and it was not always one: it
+              used to be a label, so a shopper who had added a bottle and moved
+              on had no way back to it. `aria-current` marks it on the cart
+              page itself, like any other destination. */}
+          <Link
+            href={CART_PATH}
+            aria-current={here === "cart" ? "page" : undefined}
             className={cx(styles.chip, styles.figure, styles.chipStocked)}
             aria-live="polite"
           >
-            {count === 0 ? "Cart empty" : `Cart ${String(count)}`}
-          </span>
+            {count === 0
+              ? STATE.cartEmptyChip
+              : `${STATE.cartLabel} ${String(count)}`}
+          </Link>
         </div>
       </div>
     </header>

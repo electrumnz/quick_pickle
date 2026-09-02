@@ -11,9 +11,9 @@ import { useMotionProfile } from "./use-motion";
  *
  * Four jobs:
  *
- *  1. Smooth scroll (Lenis) — full-motion visitors only. Lenis is dynamically
- *     imported so neither it nor GSAP is in the first byte of JS the browser
- *     parses; the page is already readable before any of this arrives.
+ *  1. (Smooth scroll used to live here. Lenis is gone: a shop's scroll
+ *     belongs to the browser, and the inertia it added read as the page
+ *     moving on its own.)
  *  2. Section reveals — GSAP ScrollTrigger over `[data-reveal]`. The hidden
  *     start state is set in JavaScript, never in CSS, which is what keeps the
  *     page fully legible with scripting switched off. If this file never runs,
@@ -41,60 +41,6 @@ export function MotionRoot() {
       ]);
       if (disposed) return;
       gsap.registerPlugin(ScrollTrigger);
-
-      /* ---------------------------------------------------- smooth scroll */
-      if (!reduced) {
-        const { default: Lenis } = await import("lenis");
-        if (disposed) return;
-        const lenis = new Lenis({
-          // Long enough to feel like weight, short enough that a flick still
-          // lands where the finger threw it.
-          lerp: 0.11,
-          wheelMultiplier: 0.9,
-          touchMultiplier: 1.4,
-          // Touch devices already have momentum tuned by the platform, and
-          // hijacking it is what makes a scrubbed hero judder under a thumb.
-          syncTouch: false,
-        });
-        document.documentElement.dataset.lenis = "on";
-
-        const onScroll = () => ScrollTrigger.update();
-        lenis.on("scroll", onScroll);
-        const raf = (time: number) => lenis.raf(time * 1000);
-        gsap.ticker.add(raf);
-        gsap.ticker.lagSmoothing(0);
-
-        // In-page navigation has to go through Lenis or the browser's own jump
-        // fights the smoothing and the header offset is lost.
-        const onClick = (event: MouseEvent) => {
-          if (event.defaultPrevented || event.button !== 0) return;
-          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
-            return;
-          const anchor = (event.target as Element | null)?.closest?.(
-            'a[href^="#"]',
-          ) as HTMLAnchorElement | null;
-          if (!anchor) return;
-          const id = anchor.getAttribute("href");
-          if (!id || id === "#") return;
-          const target = document.querySelector(id);
-          if (!target) return;
-          event.preventDefault();
-          lenis.scrollTo(target as HTMLElement, { offset: -12 });
-          // Keep the keyboard where the eye went.
-          (target as HTMLElement).setAttribute("tabindex", "-1");
-          (target as HTMLElement).focus({ preventScroll: true });
-          history.replaceState(null, "", id);
-        };
-        document.addEventListener("click", onClick);
-
-        cleanups.push(() => {
-          document.removeEventListener("click", onClick);
-          gsap.ticker.remove(raf);
-          lenis.off("scroll", onScroll);
-          lenis.destroy();
-          delete document.documentElement.dataset.lenis;
-        });
-      }
 
       /* --------------------------------------------------------- reveals */
       const root = document.documentElement;

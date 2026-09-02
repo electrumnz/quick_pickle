@@ -90,58 +90,62 @@ function Identity({ entry }: { entry: CatalogueEntry }) {
   );
 }
 
-/** Tasting notes as a numbered sequence, because they arrive in an order. */
-function Notes({ notes }: { notes: readonly string[] }) {
+/**
+ * What it tastes of and what is in it, in one band.
+ *
+ * These were two sections — a numbered list on the page ground and the
+ * ingredient run on a reversed band — and together they were a screen and a
+ * half of type with nothing else in it. Side by side they are one: the notes
+ * in the order they arrive on the left, the run as it is printed on the label
+ * on the right.
+ */
+function Taste({
+  notes,
+  run,
+}: {
+  notes: readonly string[];
+  run: readonly string[];
+}) {
   return (
     <section
-      className="px-gutter py-section"
+      className="border-hairline px-gutter py-section border-t"
       aria-labelledby="notes-h2"
       id="notes"
     >
-      <div className="max-w-page mx-auto">
-        <Eyebrow className="text-muted">{PRODUCT.notesEyebrow}</Eyebrow>
-        <h2 id="notes-h2" className="text-display-3 text-primary mt-stack">
-          {PRODUCT.notesHeading}
-        </h2>
+      <div className="max-w-page gap-block mx-auto grid lg:grid-cols-2">
+        <div>
+          <Eyebrow className="text-muted">{PRODUCT.notesEyebrow}</Eyebrow>
+          <h2 id="notes-h2" className="text-display-3 text-primary mt-stack">
+            {PRODUCT.notesHeading}
+          </h2>
+          <ol className={cx(styles.seq, "mt-block")}>
+            {notes.map((note, index) => (
+              <li key={note} className={cx(styles.seqItem)}>
+                <span className={cx(styles.figure, "text-caption text-muted")}>
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className="text-heading-2 text-primary">{note}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
 
-        <ol className={cx(styles.seq, "mt-block max-w-4xl")}>
-          {notes.map((note, index) => (
-            <li key={note} className={cx(styles.seqItem)}>
-              <span className={cx(styles.figure, "text-caption text-muted")}>
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <span className="text-heading-2 text-primary">{note}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-/** The ingredient run, set the way it is set on the label. */
-function Run({ run }: { run: readonly string[] }) {
-  return (
-    <section
-      className={cx(styles.deep, "px-gutter py-section")}
-      aria-labelledby="run-h2"
-      id="run"
-    >
-      <div className="max-w-page mx-auto">
-        <Eyebrow>{PRODUCT.runEyebrow}</Eyebrow>
-        <h2 id="run-h2" className="text-display-3 mt-stack">
-          {PRODUCT.runHeading}
-        </h2>
-
-        <ul className={cx(styles.run, "mt-block text-display-3")}>
-          {run.map((item) => (
-            <li key={item} className={cx(styles.runItem)}>
-              {item}
-            </li>
-          ))}
-        </ul>
-
-        <p className="text-body-sm mt-block">{PRODUCT.runNote}</p>
+        <div id="run">
+          <Eyebrow className="text-muted">{PRODUCT.runEyebrow}</Eyebrow>
+          <h3 className="text-display-3 text-primary mt-stack">
+            {PRODUCT.runHeading}
+          </h3>
+          <ul
+            className={cx(styles.run, "mt-block text-heading-1 text-primary")}
+          >
+            {run.map((item) => (
+              <li key={item} className={cx(styles.runItem)}>
+                {item}
+              </li>
+            ))}
+          </ul>
+          <p className="text-body-sm text-muted mt-block">{PRODUCT.runNote}</p>
+        </div>
       </div>
     </section>
   );
@@ -490,8 +494,9 @@ export function ProductView({
           <BoxContents contents={boxContents} />
         ) : (
           <>
-            {entry.brine === null ? null : <Notes notes={entry.brine.notes} />}
-            {entry.brine === null ? null : <Run run={entry.brine.run} />}
+            {entry.brine === null ? null : (
+              <Taste notes={entry.brine.notes} run={entry.brine.run} />
+            )}
             <Serves entry={entry} />
             {set === null || degraded ? null : (
               <Bundle
@@ -519,8 +524,9 @@ export function ProductView({
       <StoreFooter />
 
       {/* The same form as the panel above, in the bar that appears once the
-          panel has scrolled away. Never rendered without script, never
-          rendered above 1024. */}
+          panel has scrolled away — at every width. It used to be a phone-only
+          bar, and on a desktop the buy control vanished after the first
+          screen of a page five screens long. Never rendered without script. */}
       {degraded || added !== null ? null : (
         <StickyBuy watch="buy" label={PRODUCT.stickyBuyLabel}>
           <div className="min-w-0 flex-1">

@@ -1,8 +1,8 @@
 /* =========================================================================
    HALF SOUR — homepage
    =========================================================================
-   Everything Tailwind cannot say cleanly: the masked wordmark, the scrub
-   track, the cursor, the grain. No colour is authored here — every value is a
+   Everything Tailwind cannot say cleanly: the masked wordmark, the hero, the
+   bottle tiles, the rails. No colour is authored here — every value is a
    semantic token from lib/brand/tokens.css, so the whole file re-resolves when
    the scheme flips and there is not a hex in it.
    ========================================================================= */
@@ -38,166 +38,6 @@
   aspect-ratio: 1;
 }
 
-/* ------------------------------------------------------------------- grain */
-
-/* "A little. Digital-clean reads like stock photography." — brand guide §10.
-   Generated in the browser, so it costs no request and no bytes. */
-.grain::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.32;
-  mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .grain::after {
-    mix-blend-mode: screen;
-    opacity: 0.18;
-  }
-}
-
-:root[data-theme="dark"] .grain::after {
-  mix-blend-mode: screen;
-  opacity: 0.18;
-}
-
-/* -------------------------------------------------------------- hero track */
-
-/* The pin is CSS `position: sticky`, not a ScrollTrigger pin.
-   ScrollTrigger only READS this track and scrubs values off it. That is the
-   difference between a pinned hero that survives touch momentum and iOS
-   elastic overscroll and one that detaches: sticky is resolved by the
-   compositor on the same frame as the scroll, whereas a JS pin re-parents the
-   element and has to chase the scroll position a frame late.
-
-   The track is only TALL while something is actually scrubbing it. HeroScrub
-   sets [data-scrub="on"] once GSAP has attached; until then — and forever,
-   with scripting switched off — the hero is one screen and the range is the
-   next thing you scroll to. Two and a half screens of sticky nothing is what
-   a scrub track degrades into otherwise, and that is a worse page, not a
-   plainer one. */
-.heroTrack {
-  --hero-track: 100svh;
-  --masthead-height: calc(var(--size-touch-comfortable) + 1rem + 1px);
-  position: relative;
-  height: var(--hero-track);
-}
-
-.heroTrack[data-scrub="on"] {
-  --hero-track: 260svh;
-}
-
-@media (max-width: 47.999rem) {
-  .heroTrack[data-scrub="on"] {
-    --hero-track: 200svh;
-  }
-}
-
-/* Reduced motion has no scrub, so it has no track: the hero becomes one
-   composed screen rather than a sequence. This is the designed alternative,
-   not the same page with the animation switched off — the copy that the scrub
-   would have revealed is laid out in full underneath instead. */
-@media (prefers-reduced-motion: reduce) {
-  .heroTrack,
-  .heroTrack[data-scrub="on"] {
-    --hero-track: auto;
-    height: auto;
-  }
-
-  .heroStage {
-    position: static;
-    height: auto;
-    min-height: 100svh;
-  }
-}
-
-.heroStage {
-  position: sticky;
-  top: 0;
-  height: 100svh;
-  padding-block-start: var(--masthead-height);
-  overflow: hidden;
-}
-
-.heroCanvas {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-/* ---------------------------------------------------------- hero backdrop */
-
-/* The slowest of the hero's four layers, and the only one that is not content.
-
-   Two things about the geometry are load-bearing. It is inset NEGATIVELY on
-   every side, so the layer is larger than the stage that clips it and the
-   scrub can drift it without an edge ever entering frame — an oversized layer
-   is the difference between parallax and a visible rectangle sliding. And it
-   is `z-index: 0` rather than a negative index: `.heroStage` is sticky and so
-   already a stacking context, but a negative index there paints the wash
-   behind the stage's own background rather than behind its content, which
-   put it out of sight entirely on the dark scheme.
-
-   The colour is a semantic surface token, so it re-resolves with the scheme.
-   The stop is deliberately short of the frame edge: past about 70% the wash
-   turns into a visible disc, which is the failure mode that makes this kind
-   of thing read as a template. */
-.heroBackdrop {
-  position: absolute;
-  inset: -12% -8%;
-  z-index: 0;
-  pointer-events: none;
-  /* Two washes doing two jobs.
-
-     The wide one is a pool under the bottles — an ellipse far wider than it
-     is tall, centred below the middle of the frame, so it reads as light on
-     the surface the line-up is standing on rather than as a disc behind it.
-
-     The tall one is the reason this layer exists at all: the photograph is a
-     hard-edged dark rectangle sitting on a flat bone page, and that edge is
-     the one thing in the composition that looks pasted on. A soft tint
-     bleeding out past where the picture ends gives the eye something between
-     the two, so the frame reads as sitting IN the page rather than on it.
-
-     A first pass put a single 58%-wide wash here at 0.55 and it was
-     invisible: the picture covers the middle, and the gradient had already
-     faded to nothing by the time it cleared the picture's edge. Anything
-     that cannot be seen where it is not covered is not restraint, it is
-     dead weight. */
-  background:
-    radial-gradient(
-      78% 34% at 50% 74%,
-      var(--surface-sunken) 0%,
-      transparent 72%
-    ),
-    radial-gradient(
-      96% 62% at 50% 52%,
-      var(--surface-sunken) 0%,
-      transparent 68%
-    );
-  /* Held low on purpose. This should be felt as the ground the bottles stand
-     on, never noticed as a shape of its own. */
-  opacity: 0.72;
-  /* This layer is the size of the stage and its paint is two gradients, so it
-     is the most expensive thing in the hero to rasterise and by far the
-     easiest to rasterise repeatedly by accident. Promoting it means the
-     gradients are painted once into their own texture and the scrub then only
-     moves that texture.
-
-     Measured at 1280, scrubbing the hero, headless on SwiftShader:
-
-       backdrop scaled, not promoted   20.5 fps   p95 167ms
-       backdrop translated + promoted  43.5 fps   p95  50ms
-
-     which is the whole reason the scrub tween moves this layer with `y` and
-     never with `scale`: a scaled layer has to be re-rastered at each new
-     scale, and a translated one does not. */
-  will-change: transform, opacity;
-}
-
 /* --------------------------------------------------------------- masthead */
 
 /* The masthead is out of flow, so its height is a number the hero has to know
@@ -225,290 +65,6 @@
 .tapSquare {
   justify-content: center;
   min-width: var(--size-touch-min);
-}
-
-/* ------------------------------------------------------------------ hero */
-
-/* The wordmark is the page's masthead, and above 48rem its size is bought
-   from the picture.
-
-   It ran `min(78vw, 72rem)` on a desktop, which at 1920 is 1152px wide and —
-   the mask is 784:139 — 204px TALL. The hero stage is exactly one screen, so
-   every one of those 204 pixels came off the middle grid row, and the middle
-   grid row is what the band's width is derived from. At 1920x900 that left a
-   370px row and a 961px band under a 1152px wordmark: a small plate beneath a
-   big logo, which is the founder's report written as geometry.
-
-   So the wordmark is now sized against the window's HEIGHT as well as its
-   width. 42rem is the cap and `14svh` of drawn height is the term that bites
-   on a short window — which is exactly where the row has nothing to spare.
-   Below 48rem nothing changes: the phone's band is contained rather than
-   bled, so the wordmark there is not competing with it for the same pixels.
-
-   Measured, wordmark and the row it leaves, before -> after:
-     1280x800   998x177 -> 632x112     row 332 -> 441
-     1920x900  1152x204 -> 672x119     row 370 -> 515
-     1920x1080 1152x204 -> 672x119     row 550 -> 688 */
-.heroWordmark {
-  width: min(88vw, 68rem);
-}
-
-@media (min-width: 48rem) {
-  .heroWordmark {
-    width: min(62vw, 42rem, calc(14svh * 784 / 139));
-  }
-}
-
-/* ------------------------------------------------- the two type rows */
-
-/* The hero stage is a three-row grid on a viewport-height box, so these two
-   rows and the band are in a zero-sum game: a pixel of padding here is a
-   pixel the photograph cannot have, and the photograph's WIDTH comes from its
-   height. That is not true of any other block on the page, which is why the
-   hero's own padding is written here rather than taken from the generic
-   `pt-stack` / `pb-block` utilities these two rows used to carry.
-
-   The floor is legibility, not neatness. Below these values the positioning
-   line, the serve line and the two buttons start to crowd each other and the
-   bottom pair sits on the fold; `clamp(1.5rem, 4svh, 3rem)` keeps the buttons
-   off the bottom edge on a short window and gives them room on a tall one.
-   These two paddings are worth 60px of row at 1920x900; with the smaller
-   wordmark above them the middle row gains 145px there and 138px at
-   1920x1080, and the band's width is 2.6 times whatever the row gives it. */
-.heroMark {
-  padding-block: var(--spacing-stack);
-}
-
-.heroBand {
-  padding-block: var(--spacing-stack) var(--spacing-block);
-}
-
-@media (min-width: 48rem) {
-  .heroMark {
-    padding-block: calc(var(--spacing-stack) * 0.5)
-      calc(var(--spacing-stack) * 0.75);
-  }
-
-  .heroBand {
-    padding-block: calc(var(--spacing-stack) * 0.75) clamp(1.5rem, 4svh, 3rem);
-  }
-}
-
-/* ------------------------------------------------------------- the art band */
-
-/* The cinematic band the photograph runs in, and the box that clips the zoom.
- *
- * Four jobs, in the order they matter.
- *
- * 1. IT CLIPS. The scrub scales `[data-hero-art]` — this element's child — to
- *    1.16, and a transform does not affect layout, so the scaled art used to
- *    grow over the closing band. `.heroStage` clips at the stage edge, which
- *    is nowhere near. An element clips to its OWN border box, so the clipper
- *    cannot be the thing that scales; it has to be its parent. `Hero.tsx`
- *    carries the measured overlap this removed.
- *
- * 2. IT OWNS THE HEIGHT, and above 48rem the height IS the middle grid row —
- *    `calc(100% - gap)`, not a token. A token that stopped at 30rem was
- *    leaving 430px of row unused at 2560x1440 and 74px at 1920x1080, and the
- *    row is what the width is made of. The row is definite before the image
- *    arrives — it is the stage's own viewport height less two rows of type —
- *    so the box is still definite at first layout and the CLS budget of 0.02
- *    is unaffected. Below 48rem, and under reduced motion where the stage is
- *    auto-height and a percentage has nothing to resolve against, the token
- *    is still what sizes it.
- *
- * 3. IT OWNS THE MAGNIFICATION, because at and above 48rem its width is
- *    derived from that height rather than from the window. See below.
- *
- * 4. IT BLEEDS, as far as the height lets it. `.heroStage` carries
- *    `px-gutter` for the wordmark and the closing band, and only the picture
- *    is meant to run past it. The escape is `calc(100% + 2 * gutter)`, not
- *    `100vw`: the page sets `scrollbar-gutter: stable`, so `100vw` is WIDER
- *    than the layout box by the scrollbar and would put a horizontal scrollbar
- *    on the document. Measured at 1280: scrollWidth 1265, clientWidth 1265,
- *    and 100vw is 1280.
- *
- *    WHERE FULL BLEED IS NOT REACHED, IT IS THE HEIGHT THAT REFUSED IT, and
- *    the arithmetic is worth writing down because the founder has now asked
- *    for full bleed twice and the honest answer at her window is no.
- *
- *    A band running the layout's full W paints the plate W/1.4995 tall and
- *    shows H of it. At 1920x900 the layout is 1905, so the plate paints 1270
- *    rows, and the middle row — after the wordmark and the closing band took
- *    the least they can — is 515, of which the band gets 491. Full bleed
- *    there is an aspect of 1905/491 = 3.88 and a magnification of 2.59. The
- *    founder's PREVIOUS report was "too zoomed in on desktop", measured at
- *    2.31, and label-band.mjs puts the hard cut at 3.65, where the panels
- *    reach both edges of the band. So full bleed at 1920x900 is not merely
- *    worse than today's crop: it is past the shape at which the labels are
- *    cropped at all, and there is no padding left anywhere to buy the 242px
- *    of row it would need. A 900px-tall window does not have the room, and a
- *    band that spans the viewport by cropping the labels harder fails the
- *    same founder twice.
- *
- *    Where the window is tall enough the bleed is taken in full. Measured,
- *    band width as a share of the layout box: 768x1024 100%, 1280x900 100%,
- *    1440x900 92%, 1920x1080 91%, 1280x800 86%, 2560x1440 79% (held by the
- *    upscale cap, not the zoom), 1920x900 67%.
- */
-.heroFrame {
-  /* Fixed, viewport-relative, and sized so the middle row can always carry it:
-     the smallest that row gets across the four measured widths is 370px on a
-     900px-tall window, at 1920, where the wordmark is at its largest. */
-  --hero-band-height: clamp(13rem, 44svh, 30rem);
-  /* HOW MUCH OF THE PHOTOGRAPH YOU SEE, written as the band's shape.
-   *
-   * A `cover` crop of a band W wide and H tall shows H * 1600/W of the plate's
-   * 1067 rows, so the picture is magnified over `contain` by
-   *
-   *     m = (W / H) / (1600 / 1067) = aspect / 1.4995
-   *
-   * and the band's aspect IS the magnification, up to that constant. Fixing
-   * one fixes the other at every width, which is the whole reason the width is
-   * derived from the height below rather than from the window.
-   *
-   * 2.6 is measured, not chosen. evidence/label-band.mjs finds the four cream
-   * label panels occupying rows 396–832 of the 1067-row plate: 41.0% of the
-   * frame, centred at 57.5% of its height. The share of the BAND those panels
-   * fill is 0.410 * m, and that share is what "too zoomed in" actually was —
-   * the band was as wide as the window allowed, so at 1920x900 it ran
-   * 1280x370, an aspect of 3.46, m = 2.31, and the labels filled 95% of the
-   * band's height with 1.4% of the plate above them and 1.0% below. Labels
-   * touching both edges is a photograph of a label, not of four bottles.
-   *
-   * At 2.6 the crop shows 57.7% of the plate, the panels fill 71% of the band,
-   * and there is 10.4% of the plate above them and 6.3% below — the shoulders,
-   * the necks and the bases are back in frame. label-band.mjs prints the
-   * aspect for any share: 2.75 puts the labels at three quarters of the band,
-   * 2.56 at seven tenths.
-   *
-   * Label safety, which is what the old 3.25 cap was for, is subsumed: the
-   * widest shape that still holds rows 396–832 at `object-position: 50% 63%`
-   * is 3.65, and this is 2.6. The old cap also could not deliver its own
-   * number, because it was computed from the TOKEN and not from the height the
-   * grid row actually gave the band — at 1920 the row is 370px against a 396px
-   * token, so the realised aspect was 3.46 and already past the 3.25 it was
-   * meant to hold. `aspect-ratio` cannot drift like that. */
-  --hero-band-aspect: 2.6;
-  /* The gap you can see between the picture and the copy. The clip above is
-     what makes a collision impossible; this is separation. Above 48rem it
-     comes out of the row rather than being added to it — see there. */
-  --hero-band-gap: var(--spacing-stack);
-  position: relative;
-  align-self: center;
-  inline-size: 100%;
-  block-size: min(100%, var(--hero-band-height));
-  margin-block-end: var(--hero-band-gap);
-  overflow: hidden;
-}
-
-@media (min-width: 48rem) {
-  .heroFrame {
-    /* THE HEIGHT IS THE WHOLE ROW, and the width still comes from the height.
-       `block-size` is definite, so with an `auto` inline size `aspect-ratio`
-       transfers it and the band is exactly `--hero-band-aspect` wide whatever
-       the row gave it — no CLS, since nothing here waits on the image.
-
-       `calc(100% - gap)` rather than `100%` because the gap to the closing
-       band is a MARGIN: box plus margin then comes to exactly the row, so a
-       band at its full height cannot push its own separation out through the
-       row's bottom edge and into the copy. `align-self: center` keeps the
-       margin box centred when a cap below makes the band shorter, so the gap
-       is a floor at every size rather than only at the tallest.
-
-       This replaced `min(100%, clamp(13rem, 44svh, 30rem))`. The token was
-       written when the row was the smaller of the two and it read as a guard;
-       once the wordmark above gave its height back, the token became the thing
-       holding the band in — 480px against a 910px row at 2560x1440, and 475
-       against 550 at 1920x1080 — and the width is made of the height. The row
-       is the honest bound and it is the only one left.
-
-       `max-inline-size` and `max-block-size` are the two ceilings. Both can
-       only make the band SMALLER than the aspect asks, so neither can raise
-       the magnification above `--hero-band-aspect` / 1.4995 = 1.734x.
-
-       WIDTH, first term: the layout box, which is also the full bleed. Where
-       the row is tall against the window's width the aspect asks for more
-       width than the page has and the band runs edge to edge instead. This is
-       what puts 768x1024 at 753x480, edge to edge, magnified 1.05x.
-
-       WIDTH, second term: the served asset. The plate is 1600x1067 and Next
-       will not upscale a source, so past 1600px of band the browser is
-       stretching the file. 1.25x of that is the most this allows, because a
-       photograph is soft before it is pixelated and the labels are small type:
-       2000px. It binds only past a 2000px layout box — 2560x1440 lands at
-       2000 wide rather than 2545 — and 1920 is inside it, which is the window
-       that matters. Painting the 1600px file at 1905 is a 1.19x stretch.
-
-       HEIGHT: the whole plate. A band SHORTER than 1.4995 : 1 is fine — that
-       is just less crop — but a band TALLER than the plate's own shape makes
-       `cover` crop sideways instead of down, and sideways is where the outer
-       two bottles live. 1.6 rather than 1.4995 is the margin for `100vw`
-       overstating the layout box by the stable scrollbar gutter: the realised
-       aspect is at worst (layout / 100vw) * 1.6, which is 1.57 at 768 and
-       never reaches 1.4995. It binds at 768x1024, where the row runs to
-       624px and this holds the band to 480. */
-    inline-size: auto;
-    block-size: calc(100% - var(--hero-band-gap));
-    max-block-size: calc(min(100vw, 2000px) / 1.6);
-    aspect-ratio: var(--hero-band-aspect);
-    max-inline-size: min(calc(100% + 2 * var(--spacing-gutter)), 2000px);
-    margin-block-end: var(--hero-band-gap);
-  }
-}
-
-/* The designed alternative, not the same band with the motion removed. Under
-   reduced motion the stage is static and auto-height, so its middle row is
-   sized by its content and a percentage height has nothing definite to resolve
-   against — it would fall back to `auto`, take the intrinsic height and crop
-   the bottles, which is a defect this file has already shipped once. A
-   viewport-relative length is definite wherever it is read, so that is what
-   both of these are. The desktop one is the row the scrubbed stage actually
-   gives the band, in the same units. */
-@media (prefers-reduced-motion: reduce) {
-  .heroFrame {
-    block-size: var(--hero-band-height);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) and (min-width: 48rem) {
-  .heroFrame {
-    block-size: clamp(13rem, 55svh, 40rem);
-  }
-}
-
-/* `contain` letterboxes; `cover` fills the band and crops top and bottom.
- *
- * The vertical origin is 63%, not 50%, because the labels sit below the middle
- * of the plate: evidence/label-band.json puts them in rows 396–832 of 1067,
- * with 37% of near-black headroom above them and 22% of bar top below.
- * Cropping from the true centre throws away label to keep headroom.
- *
- * 63% is not the band's centre either, and that difference is the whole reason
- * this number needed working out. `object-position: 50% P` aligns the P point
- * of the IMAGE with the P point of the BOX, so where a fraction b of the
- * plate's height is visible the window runs from (1-b)P to (1-b)P + b and its
- * centre is at (1-b)P + b/2 — which equals P only when P is 50%. Requiring
- * that window to hold rows 396–832 at every band shape this page produces
- * gives P at or above 0.612 and at or below 0.654 at 1920, and a wider range
- * at every other width; 63% sits in the middle of the tightest one. The
- * residual condition is just that the band show at least 41.1% of the plate's
- * height, which is the label band's own 40.9% plus a hair.
- *
- * BELOW 48rem THIS STAYS `contain`, and that is not an oversight. The band is
- * taller than it is wide relative to the plate at 375, so `cover` there is
- * limited by HEIGHT and crops sideways — it loses the outer two bottles, and
- * four legible labels is the picture's entire job. */
-.heroArt {
-  object-fit: contain;
-  object-position: center;
-}
-
-@media (min-width: 48rem) {
-  .heroArt {
-    object-fit: cover;
-    object-position: 50% 63%;
-  }
 }
 
 /* ---------------------------------------------------------------- buttons */
@@ -566,141 +122,6 @@
 .buttonOnDeep {
   color: var(--text-on-deep);
   border-color: var(--text-on-deep);
-}
-
-/* -------------------------------------------------------------- hero copy */
-
-/* SplitText writes its line wrappers into this element on the client. With no
-   JavaScript it is simply a paragraph, which is why the copy is written into
-   the markup rather than fed to the splitter as a string. */
-.splitLines {
-  display: block;
-}
-
-/* ------------------------------------------------------------------ cursor */
-
-/* Desktop only, and only once the pointer has actually moved: the element is
-   inert until JS sets [data-cursor-ready], so a keyboard-only or touch session
-   never gets a floating dot it cannot control. */
-.cursor {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 60;
-  pointer-events: none;
-  opacity: 0;
-  will-change: transform;
-  transition: opacity var(--motion-duration-quick) var(--motion-ease-standard);
-}
-
-.cursor[data-ready="true"] {
-  opacity: 1;
-}
-
-/* The ring sizes itself to whatever word it is carrying.
-
-   It was a fixed 4rem square in the `link` state, centred by a negative margin
-   of half that. The label inside is `white-space: nowrap` in a `place-items:
-   center` grid with no width constraint, so anything wider than 64px hung out
-   of BOTH sides of the circle, unclipped and unreadable. At 9px mono with
-   0.18em tracking that is almost every label the site has: "HOW IT'S MADE" in
-   the masthead was the reported case, and "DELIVERY AND RETURNS" in the footer
-   is the widest in the tree. The word is the affordance, so the box gives way
-   to the word rather than the other way round.
-
-   `width: max-content` with a `min-width` floor does the whole job. With no
-   label the max-content width is zero, the floor wins, and it is exactly the
-   circle it has always been; with one it grows into a pill, and `--radius-pill`
-   was already the corner so nothing else has to change.
-
-   Centring moves from `margin: -2rem 0 0 -2rem` to `translate(-50%, -50%)`,
-   because half of `max-content` is not a number a margin can hold. That does
-   not fight the parent transform: Cursor.tsx writes `transform` on `.cursor`
-   every frame, and this is a CHILD's own transform composing on top of it,
-   not a second writer of the same property. It is also cheaper — the ring now
-   grows from its own centre instead of animating a margin against a width.
-
-   `min-width` rather than `width` is what carries the state transition, since
-   `max-content` is not an interpolatable length. For a short label the two are
-   the same number and the growth animates exactly as it did; for a long one the
-   width arrives at once and the height, fill and edge still tween. */
-.cursorRing {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: grid;
-  box-sizing: border-box;
-  place-items: center;
-  width: max-content;
-  min-width: 2.5rem;
-  height: 2.5rem;
-  padding-inline: 1.125rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  transform: translate(-50%, -50%);
-  transition:
-    min-width var(--motion-duration-quick) var(--motion-ease-standard),
-    height var(--motion-duration-quick) var(--motion-ease-standard),
-    background-color var(--motion-duration-quick) var(--motion-ease-standard),
-    border-color var(--motion-duration-quick) var(--motion-ease-standard);
-}
-
-.cursorLabel {
-  font-family: var(--font-mono);
-  font-size: 0.5625rem;
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--text-on-accent);
-  opacity: 0;
-  white-space: nowrap;
-  transition: opacity var(--motion-duration-micro) var(--motion-ease-standard);
-}
-
-.cursor[data-state="link"] .cursorRing {
-  min-width: 4rem;
-  height: 4rem;
-  background-color: var(--surface-accent);
-  border-color: var(--accent-edge);
-}
-
-.cursor[data-state="pour"] .cursorRing {
-  min-width: 6.5rem;
-  height: 6.5rem;
-  background-color: var(--surface-accent);
-  border-color: var(--accent-edge);
-}
-
-.cursor[data-state="link"] .cursorLabel,
-.cursor[data-state="pour"] .cursorLabel {
-  opacity: 1;
-}
-
-.cursorDot {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 4px;
-  margin: -2px 0 0 -2px;
-  background-color: var(--text-primary);
-  border-radius: var(--radius-pill);
-  transition: opacity var(--motion-duration-micro) var(--motion-ease-standard);
-}
-
-.cursor[data-state="link"] .cursorDot,
-.cursor[data-state="pour"] .cursorDot {
-  opacity: 0;
-}
-
-/* The native cursor is only taken away once the replacement is on screen. */
-:global(html[data-cursor="custom"]) {
-  cursor: none;
-}
-
-:global(html[data-cursor="custom"]) :global(a),
-:global(html[data-cursor="custom"]) :global(button),
-:global(html[data-cursor="custom"]) :global(summary) {
-  cursor: none;
 }
 
 /* ------------------------------------------------------------------- rails */
@@ -885,40 +306,6 @@
   }
 }
 
-/* ------------------------------------------------------------------ scroll */
-
-.scrollCue {
-  width: 1px;
-  height: 3.5rem;
-  background-color: var(--border-strong);
-  transform-origin: top;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .scrollCue {
-    animation: cue 2.4s var(--motion-ease-standard) infinite;
-  }
-}
-
-@keyframes cue {
-  0% {
-    transform: scaleY(0);
-    transform-origin: top;
-  }
-  45% {
-    transform: scaleY(1);
-    transform-origin: top;
-  }
-  55% {
-    transform: scaleY(1);
-    transform-origin: bottom;
-  }
-  100% {
-    transform: scaleY(0);
-    transform-origin: bottom;
-  }
-}
-
 /* ------------------------------------------------------------------ inputs */
 
 .field {
@@ -981,4 +368,195 @@
 .navRow {
   inline-size: 100%;
   justify-content: flex-start;
+}
+
+/* ------------------------------------------------------------------ hero */
+
+/* One screen, full bleed, no scrub.
+
+   The photograph runs edge to edge and is CROPPED rather than contained: the
+   brand guide's own brief is "tight and slightly uncomfortable — cut the
+   bottle", and a 3:2 plate contained inside a wide row was the opposite of
+   that, a small picture with ground either side. `object-fit: cover` on a box
+   whose height is set from the viewport means a desktop sees all four labels
+   with a little off the top and bottom, and a phone sees the middle two
+   bottles whole and the outer two cut at the edge.
+
+   The height is a fraction of the viewport and NOT the whole of it, so that
+   the statement and both buttons in the band beneath are on the first screen
+   at 1440x900 and at 390x844. That was the founder's complaint written as a
+   number: the old hero pinned for 260vh and put its buttons under the fold. */
+.heroPhoto {
+  position: relative;
+  inline-size: 100%;
+  block-size: clamp(18rem, 50svh, 30rem);
+  overflow: hidden;
+  background-color: var(--surface-inverse);
+}
+
+@media (min-width: 48rem) {
+  .heroPhoto {
+    block-size: clamp(24rem, 62svh, 46rem);
+  }
+}
+
+/* Oversize by the parallax travel so the drift cannot expose the ground. */
+.heroArtLayer {
+  position: absolute;
+  inset: -3.5rem 0;
+}
+
+.heroArt {
+  object-fit: cover;
+  /* The labels sit a little below centre in the plate; anchoring the crop
+     there keeps every name on screen before the necks. */
+  object-position: 50% 58%;
+}
+
+/* The one entrance on the page: the plate settles from a hair larger, once,
+   on load. A transform and an opacity, so it costs no layout; under reduced
+   motion the still is simply there. */
+@media (prefers-reduced-motion: no-preference) {
+  .heroArt {
+    animation: heroSettle var(--motion-duration-deliberate)
+      var(--motion-ease-enter) both;
+  }
+}
+
+@keyframes heroSettle {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* The band under the plate: the wordmark as the page's h1, the positioning
+   line, the serve line and the two routes in. On a phone it stacks; from 64rem
+   the words take the left two thirds and the buttons sit on the right on the
+   same baseline as the last line of copy. */
+.heroBand {
+  display: grid;
+  gap: var(--spacing-block);
+  padding-block: var(--spacing-block);
+  border-block-end: 1px solid var(--border-hairline);
+}
+
+@media (min-width: 64rem) {
+  .heroBand {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    align-items: end;
+  }
+}
+
+.heroWordmark {
+  inline-size: min(72vw, 22rem);
+}
+
+@media (min-width: 48rem) {
+  .heroWordmark {
+    inline-size: min(40vw, 26rem);
+  }
+}
+
+/* ------------------------------------------------------------ bottle tiles */
+
+/* The four bottles on the homepage are four photographs, each one a link to
+   its page. The picture is the whole tile — the job, the name and the price
+   sit under it as a caption. Two across on a phone, four from 64rem. */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-stack);
+}
+
+@media (min-width: 64rem) {
+  .tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--spacing-block) var(--spacing-stack);
+  }
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-inline);
+  min-width: 0;
+}
+
+.tileMedia {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-inverse);
+}
+
+.tileArt {
+  object-fit: cover;
+  transition: transform var(--motion-duration-deliberate)
+    var(--motion-ease-enter);
+}
+
+/* The name is the link; the whole tile is the hit area, the same device the
+   shop's cards use. */
+.tileLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.tileLink:focus-visible::after {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius-sm);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tile:hover .tileArt {
+    transform: scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tileArt {
+    transition: none;
+  }
+
+  .tile:hover .tileArt {
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------- chooser */
+
+/* "If you are making X, reach for Y", one row per drink or dish, the whole
+   row a link. The same row the shop draws, restated here rather than imported
+   because the shop's module carries its own colour pairings for its own
+   grounds and this one sits on the page ground. */
+.chooserRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-stack);
+  padding-block: var(--spacing-stack);
+  border-block-start: 1px solid var(--border-hairline);
+  transition:
+    background-color var(--motion-duration-quick) var(--motion-ease-standard),
+    padding-inline var(--motion-duration-enter) var(--motion-ease-enter);
+}
+
+.chooserRow:last-child {
+  border-block-end: 1px solid var(--border-hairline);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .chooserRow:hover {
+    background-color: var(--surface-sunken);
+    padding-inline: var(--spacing-stack);
+  }
 }

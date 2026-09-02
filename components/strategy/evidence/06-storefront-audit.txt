@@ -6,8 +6,8 @@ THE AVATAR AUDIT — THE LIVE STOREFRONT, CHECK BY CHECK
 Every line below was produced by fetching a real URL and reading the HTML a
 browser would have been served. Nothing here reads content/strategy.
 
-base URL:  http://localhost:4755  (env)
-run at:    2026-08-30T03:31:00.167Z
+base URL:  http://localhost:3000  (already-running)
+run at:    2026-09-02T09:10:37.332Z
 command:   npx vitest run tests/strategy/storefront-audit.test.ts
 
 SCORE: 17/17 checks pass.
@@ -79,7 +79,7 @@ PASS  b2c-consumer-rights-reachable  [friction, b2c]
 
 PASS  b2c-serve-named-early  [friction, b2c]
       Q: In the first few lines of the homepage, does she learn this is for a glass rather than for a shelf she is not on?
-      found:    The first 300 characters name: martini, pour, stirred.
+      found:    The first 300 characters name: martini, roast, pour, stirred.
       costs:    The only pickle juice on a New Zealand shelf today is an imported bottle in a running shop, in the supplement aisle. A stranger who reads three lines without meeting a drink files this next to that bottle, and the whole culinary position is lost before she scrolls.
       fix:      Name a drink or a dish in the first sentence of the homepage.
       from:     avatars.b2c.insteadToday[The imported bottle in the running shop]
