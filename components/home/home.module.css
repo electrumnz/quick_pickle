@@ -413,26 +413,11 @@
   object-position: 50% 58%;
 }
 
-/* The one entrance on the page: the plate settles from a hair larger, once,
-   on load. A transform and an opacity, so it costs no layout; under reduced
-   motion the still is simply there. */
-@media (prefers-reduced-motion: no-preference) {
-  .heroArt {
-    animation: heroSettle var(--motion-duration-deliberate)
-      var(--motion-ease-enter) both;
-  }
-}
-
-@keyframes heroSettle {
-  from {
-    opacity: 0;
-    transform: scale(1.04);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
+/* No entrance on the plate, and that was measured rather than felt. A
+   settle from opacity 0 runs on the compositor, so the browser did not count
+   the photograph as painted until the next main-thread repaint — 2.4 seconds
+   of "render delay" on the largest paint, for a fade nobody would miss. The
+   plate is simply there, which is also what the brand guide asks of it. */
 
 /* The band under the plate: the wordmark as the page's h1, the positioning
    line, the serve line and the two routes in. On a phone it stacks; from 64rem

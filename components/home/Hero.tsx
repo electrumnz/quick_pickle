@@ -44,6 +44,11 @@ export function Hero() {
             // wide at every width.
             priority
             fetchPriority="high"
+            // Decoded on the main thread in the paint that first draws it,
+            // rather than off-thread and painted a frame or two later. On a
+            // slow CPU the "later" landed behind hydration, and Lighthouse
+            // counted the largest paint a second after the image had loaded.
+            decoding="sync"
             quality={58}
             sizes="100vw"
             className={cx(styles.heroArt)}
