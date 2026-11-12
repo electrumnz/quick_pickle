@@ -6,6 +6,7 @@ import { PACKS, PRODUCT, SHIPPING, STORE, UNCONFIRMED } from "@/content/offer";
 import { formatNzd } from "@/lib/shop/money";
 import { getPaymentProvider } from "@/lib/shop/payments";
 import { getStore } from "@/lib/shop/store";
+import { requireStaff } from "@/lib/backstage/auth/current";
 
 export const metadata: Metadata = { title: "Go-live list" };
 
@@ -14,7 +15,8 @@ export const metadata: Metadata = { title: "Go-live list" };
  * read from the same modules the site runs on, so it cannot be out of date.
  * `npm run prelaunch` checks the same things from the command line.
  */
-export default function BackstagePage() {
+export default async function GoLivePage() {
+  await requireStaff("/backstage/settings/go-live");
   const payments = (() => {
     try {
       const provider = getPaymentProvider();
@@ -55,11 +57,14 @@ export default function BackstagePage() {
   const open = UNCONFIRMED.length + systems.filter((item) => !item.ok).length;
 
   return (
-    <div className="max-w-page px-gutter mx-auto py-10 md:py-14">
-      <p className="label text-pink-deep text-[1.15rem]">Backstage</p>
-      <h1 className="varsity mt-1 text-[clamp(2.5rem,11vw,4rem)] leading-[0.95]">
-        Go-live list
-      </h1>
+    <div>
+      <Link
+        href="/backstage/settings"
+        className="label bk-muted mb-2 inline-flex min-h-11 items-center text-[1.05rem]"
+      >
+        <span className="cap-trim">&larr; Settings</span>
+      </Link>
+      <h1 className="bk-h1">Go-live list</h1>
       <p className="mt-4 max-w-[40rem] text-[1.0625rem] leading-relaxed">
         {open === 0
           ? "Everything is confirmed. The site is ready to take real orders."
@@ -151,11 +156,6 @@ export default function BackstagePage() {
               <dd>{STORE.contactEmail ?? "Not set"}</dd>
             </dl>
           </div>
-          <p className="mt-6">
-            <Link href="/backstage/brand" className="btn">
-              <span className="cap-trim">Open the brand guide</span>
-            </Link>
-          </p>
         </section>
       </div>
     </div>

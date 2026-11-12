@@ -35,7 +35,9 @@ test("buys a pack, start to finish", async ({ page }) => {
   // An empty form is refused, field by field, and focus goes to the first.
   const place = page.getByTestId("place-order");
   await place.click();
-  await expect(page.getByRole("alert")).toBeVisible();
+  // Scoped to the page's own content: after a client-side navigation Next
+  // adds a route announcer, which is an alert too.
+  await expect(page.locator("main [role=alert]")).toBeVisible();
   await expect(page.locator("#co-email")).toBeFocused();
   await expect(page.locator("#co-email")).toHaveAttribute(
     "aria-invalid",

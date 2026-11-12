@@ -5,6 +5,8 @@
  *   neither set                          Postgres in this process (PGlite):
  *                                          tests        in memory, fresh
  *                                          development  kept under .data/pglite
+ *                                                       (QP_EMBEDDED_DB=memory
+ *                                                       keeps it in memory)
  *                                          a deployment in memory, seeded with
  *                                                       demo data (see demo.ts)
  *
@@ -125,7 +127,9 @@ async function open(env: Env): Promise<DbHandle> {
     await seedDemo(handle.db);
     return handle;
   }
-  if (env.NODE_ENV === "test") return openEmbedded();
+  if (env.NODE_ENV === "test" || env.QP_EMBEDDED_DB === "memory") {
+    return openEmbedded();
+  }
 
   const { mkdir } = await import("node:fs/promises");
   const { join } = await import("node:path");

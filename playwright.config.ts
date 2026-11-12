@@ -9,6 +9,8 @@ import { defineConfig, devices } from "@playwright/test";
  * `.data/`, and payments stay on the test provider.
  */
 
+import { AUTH_URL, SETUP_CODE } from "./e2e/auth-server";
+
 const port = Number(process.env.PORT ?? 3000);
 const baseURL = `http://localhost:${String(port)}`;
 const isCI = Boolean(process.env.CI);
@@ -38,17 +40,37 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: {
-    command: isCI
-      ? `npx next start --port ${String(port)}`
-      : `npx next dev --port ${String(port)}`,
-    url: baseURL,
-    env: {
-      ORDER_STORE: "file",
-      PAYMENT_PROVIDER: "test",
-      NEXT_PUBLIC_SITE_URL: baseURL,
+  webServer: [
+    {
+      command: isCI
+        ? `npx next start --port ${String(port)}`
+        : `npx next dev --port ${String(port)}`,
+      url: baseURL,
+      env: {
+        ORDER_STORE: "file",
+        PAYMENT_PROVIDER: "test",
+        NEXT_PUBLIC_SITE_URL: baseURL,
+        QP_EMBEDDED_DB: "memory",
+      },
+      reuseExistingServer: !isCI,
+      timeout: 120_000,
     },
-    reuseExistingServer: !isCI,
-    timeout: 120_000,
-  },
+    {
+      // A second copy with the back end's door shut, for the sign-in tests
+      // (see e2e/auth-server.ts). Always the production server: Next allows
+      // one `next dev` per folder.
+      command: `npx next start --port ${String(port + 1)}`,
+      url: `${AUTH_URL}/backstage/sign-in`,
+      env: {
+        ORDER_STORE: "log",
+        PAYMENT_PROVIDER: "test",
+        NEXT_PUBLIC_SITE_URL: AUTH_URL,
+        QP_EMBEDDED_DB: "memory",
+        BACKSTAGE_AUTH: "required",
+        BACKSTAGE_SETUP_CODE: SETUP_CODE,
+      },
+      reuseExistingServer: !isCI,
+      timeout: 120_000,
+    },
+  ],
 });

@@ -36,6 +36,7 @@ import {
   VOICE,
   WORDS,
 } from "@/content/brand-guide";
+import { requireStaff } from "@/lib/backstage/auth/current";
 import { hexOf, PAIRS, PALETTE } from "@/lib/brand/colours";
 import { contrastRatio, thresholdFor } from "@/lib/brand/contrast";
 
@@ -158,9 +159,10 @@ function Tag({
   );
 }
 
-export default function BrandGuidePage() {
+export default async function BrandGuidePage() {
+  await requireStaff("/backstage/brand");
   return (
-    <>
+    <div className="bk-bleed">
       <div className="on-pink bg-pink px-gutter py-12 md:py-16">
         <div className="max-w-page mx-auto grid items-center gap-8 md:grid-cols-[1.2fr_0.8fr]">
           <div>
@@ -188,7 +190,7 @@ export default function BrandGuidePage() {
 
       <nav
         aria-label="Guide sections"
-        className="bg-paper border-navy sticky top-14 z-30 border-b-[3px]"
+        className="bg-paper border-navy sticky top-0 z-30 border-b-[3px]"
       >
         <ul className="max-w-page px-gutter no-scrollbar mx-auto flex gap-1 overflow-x-auto">
           {SECTIONS.map((section) => (
@@ -624,7 +626,14 @@ export default function BrandGuidePage() {
               <h3 className="label text-[1.25rem]">
                 Contrast, computed (WCAG 2.2 AA)
               </h3>
-              <div className="card-flat mt-3 overflow-x-auto">
+              {/* It scrolls sideways on a phone, so a keyboard has to be able
+                  to land on it and scroll it too. */}
+              <div
+                className="card-flat mt-3 overflow-x-auto"
+                role="region"
+                aria-label="Contrast table"
+                tabIndex={0}
+              >
                 <table className="w-full min-w-[26rem] text-left text-[0.9375rem]">
                   <thead>
                     <tr className="border-navy border-b-2">
@@ -821,7 +830,12 @@ export default function BrandGuidePage() {
         <Section id="motion" title="Motion" lead={MOTION.summary}>
           <div className="grid gap-10 lg:grid-cols-2 [&>*]:min-w-0">
             <Rules items={MOTION.rules} />
-            <div className="card-flat overflow-x-auto">
+            <div
+              className="card-flat overflow-x-auto"
+              role="region"
+              aria-label="Motion durations table"
+              tabIndex={0}
+            >
               <table className="w-full text-left text-[0.9375rem]">
                 <thead>
                   <tr className="border-navy border-b-2">
@@ -950,6 +964,6 @@ export default function BrandGuidePage() {
           </ul>
         </Section>
       </div>
-    </>
+    </div>
   );
 }

@@ -1,0 +1,151 @@
+"use client";
+
+import { useActionState } from "react";
+
+import { SubmitButton } from "@/components/backstage/SubmitButton";
+
+import { inviteAction, passwordLinkAction, type InviteState } from "./actions";
+
+const EMPTY: InviteState = { error: null, fields: {}, values: {}, link: null };
+
+/** A one-time link, shown once. The owner passes it on however they like. */
+function OneTimeLink({
+  link,
+}: {
+  readonly link: NonNullable<InviteState["link"]>;
+}) {
+  return (
+    <div role="status" className="bk-notice mt-4">
+      <p className="font-semibold">
+        Send this link to {link.name}. It works once and lasts three days.
+      </p>
+      <label htmlFor="one-time-link" className="sr-only">
+        One-time link
+      </label>
+      <input
+        id="one-time-link"
+        readOnly
+        value={link.url}
+        onFocus={(event) => event.currentTarget.select()}
+        className="field mt-2 font-mono text-[0.875rem]"
+      />
+      <p className="bk-muted mt-2 text-[0.9375rem] leading-snug">
+        It will not be shown again. If it gets lost, make a new one.
+      </p>
+    </div>
+  );
+}
+
+export function InviteForm() {
+  const [state, action] = useActionState(inviteAction, EMPTY);
+  return (
+    <div>
+      <form
+        action={action}
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-[1fr_1.3fr_auto_auto_auto] lg:items-end"
+        noValidate
+      >
+        <div>
+          <label htmlFor="invite-name" className="field-label">
+            Name
+          </label>
+          <input
+            id="invite-name"
+            name="name"
+            autoComplete="off"
+            required
+            defaultValue={state.values.name ?? ""}
+            aria-invalid={state.fields.name ? true : undefined}
+            className="field"
+          />
+          {state.fields.name ? (
+            <p className="field-error">{state.fields.name}</p>
+          ) : null}
+        </div>
+        <div>
+          <label htmlFor="invite-email" className="field-label">
+            Email
+          </label>
+          <input
+            id="invite-email"
+            name="email"
+            type="email"
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            required
+            defaultValue={state.values.email ?? ""}
+            aria-invalid={state.fields.email ? true : undefined}
+            className="field"
+          />
+          {state.fields.email ? (
+            <p className="field-error">{state.fields.email}</p>
+          ) : null}
+        </div>
+        <div>
+          <label htmlFor="invite-role" className="field-label">
+            Role
+          </label>
+          <select
+            id="invite-role"
+            name="role"
+            defaultValue={state.values.role ?? "staff"}
+            className="field"
+          >
+            <option value="staff">Staff</option>
+            <option value="viewer">Viewer</option>
+            <option value="owner">Owner</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="invite-kind" className="field-label">
+            Kind
+          </label>
+          <select
+            id="invite-kind"
+            name="kind"
+            defaultValue={state.values.kind ?? "person"}
+            className="field"
+          >
+            <option value="person">Person</option>
+            <option value="bot">Bot</option>
+          </select>
+        </div>
+        <SubmitButton pending="Inviting">Invite</SubmitButton>
+      </form>
+      {state.error ? (
+        <p role="alert" className="bk-notice bk-notice-bad mt-4">
+          {state.error}
+        </p>
+      ) : null}
+      {state.link ? <OneTimeLink link={state.link} /> : null}
+    </div>
+  );
+}
+
+export function PasswordLinkForm({
+  id,
+  name,
+}: {
+  readonly id: string;
+  readonly name: string;
+}) {
+  const [state, action] = useActionState(passwordLinkAction, EMPTY);
+  return (
+    <div>
+      <form action={action}>
+        <input type="hidden" name="id" value={id} />
+        <input type="hidden" name="name" value={name} />
+        <SubmitButton pending="Making link" className="bk-btn bk-btn-quiet">
+          New password link
+        </SubmitButton>
+      </form>
+      {state.error ? (
+        <p role="alert" className="bk-notice bk-notice-bad mt-3">
+          {state.error}
+        </p>
+      ) : null}
+      {state.link ? <OneTimeLink link={state.link} /> : null}
+    </div>
+  );
+}

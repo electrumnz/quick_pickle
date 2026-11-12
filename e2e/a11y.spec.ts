@@ -2,8 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 /**
- * Accessibility, measured. axe runs over every public page with no rule
- * switched off, and again with the jar open, at whichever size the project
+ * Accessibility, measured. axe runs over every public page and every
+ * back-end page with no rule switched off, and again with the jar open, at whichever size the project
  * is running (phone and desktop). A new violation fails the build.
  */
 
@@ -15,6 +15,14 @@ const PAGES = [
   "/terms",
   "/privacy",
   "/order/thanks",
+  // The back end, in demo mode (this server has no database).
+  "/backstage",
+  "/backstage/more",
+  "/backstage/brand",
+  "/backstage/settings",
+  "/backstage/settings/staff",
+  "/backstage/settings/activity",
+  "/backstage/settings/go-live",
 ];
 
 for (const path of PAGES) {
