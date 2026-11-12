@@ -127,7 +127,24 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       identified), where visits came from with the sales from each, phones against
       desktops, and how the crew list is moving.
       Today carries the pulse in two lines: today so far and yesterday, by the same rules.
-- [ ] **Xero and couriers.**
+- [x] **The courier, by file.** Packed orders go out as one file for the courier's
+      website, and the tracking numbers it gives back are pasted in (or read from the
+      courier's own file) to mark those orders shipped in one go, after a look at which
+      orders they are. NZ Post, Aramex, Post Haste and NZ Couriers are known by name, with
+      a tracking link the customer can follow; any other courier gets the number alone.
+- [x] **For the books.** What was charged and what was given back, by day, for any
+      stretch of days, with a file by day and a file by order for whoever keeps the
+      accounts.
+- [ ] **A direct line to Xero and to a courier.** Both wait on an account to try them
+      against. Xero's own file import could not be checked from here (its help pages
+      would not load), so nothing claims to be in its layout yet. For a courier: which
+      one, then labels and tracking without the file in between.
+- [ ] **What a packed box weighs.** The courier's file has no weight in it, because nobody
+      has weighed one. Once the box is real: a weight for each pack size, and the file
+      carries it.
+- [ ] **The same courier list on an order's own page.** Shipping one order by hand still
+      means typing the courier's name and pasting its tracking link. The list the courier
+      screen uses could fill the link in there too.
 - [ ] **Claude tooling (MCP).** Last, over the same operations: a small tool set, per-user
       sign-in, every call in the activity log.
 

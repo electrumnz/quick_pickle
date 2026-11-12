@@ -506,6 +506,30 @@
     border-block-end: 0;
   }
 
+  /* A table's foot is its total: one rule above it, the figures a little
+     heavier, and its name set like the rows above, not like a heading. */
+  .bk-table tfoot th,
+  .bk-table tfoot td {
+    padding: 0.65rem 0.75rem;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+    color: inherit;
+    border-block-start: 2px solid var(--color-navy);
+    border-block-end: 0;
+  }
+
+  /* A box that is only wanted for one choice in the list beside it: it is
+     put away while any other choice is the one picked. Done here and not
+     with a script, so it is right before the page's script has loaded and
+     with scripting off. */
+  .bk-other-choice:has(select option:not([value="other"]):checked)
+    .bk-when-other {
+    display: none;
+  }
+
   .bk-num {
     font-variant-numeric: tabular-nums;
     text-align: end;

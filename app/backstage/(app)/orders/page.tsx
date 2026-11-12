@@ -69,6 +69,16 @@ export default async function OrdersPage({
             ? "Nothing waiting to be packed."
             : `${String(counts.paid)} to pack${counts.packed > 0 ? `, ${String(counts.packed)} packed and waiting for the courier` : ""}.`
         }
+        actions={
+          <Link
+            href="/backstage/orders/courier"
+            className="bk-btn bk-btn-quiet"
+          >
+            <span className="cap-trim">
+              Courier{counts.packed > 0 ? ` ${String(counts.packed)}` : ""}
+            </span>
+          </Link>
+        }
       />
 
       {params.notice ? (
