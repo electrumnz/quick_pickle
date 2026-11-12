@@ -315,14 +315,14 @@ export function MeetLucky() {
             data-reveal
             className="bg-navy text-cream border-navy-deep shadow-hard-cream on-navy mt-7 rotate-[0.8deg] rounded-[18px] border-[3px] p-5 md:p-6"
           >
-            <p className="label text-olive flex items-center gap-2 text-[1.15rem]">
-              <Sparkle className="size-3.5" />
+            <p className="label text-cream flex items-center gap-2 text-[1.15rem]">
+              <Sparkle className="text-olive size-3.5" />
               <span className="cap-trim">{LUCKY.cardTitle}</span>
             </p>
             <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-5 gap-y-2">
               {LUCKY.stats.map((stat) => (
                 <div key={stat.label} className="contents">
-                  <dt className="label text-olive text-[1.05rem] leading-snug">
+                  <dt className="label text-cream text-[1.05rem] leading-snug">
                     {stat.label}
                   </dt>
                   <dd className="text-[1rem] leading-snug">{stat.value}</dd>
@@ -527,7 +527,7 @@ export function SiteFooter() {
                     <Link
                       href={link.href}
                       prefetch={false}
-                      className="hover:text-olive flex min-h-11 items-center text-[1rem] transition-colors duration-150"
+                      className="flex min-h-11 items-center text-[1rem] decoration-2 underline-offset-4 hover:underline"
                     >
                       {link.label}
                     </Link>

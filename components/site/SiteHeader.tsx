@@ -35,7 +35,7 @@ export function SiteHeader({
                 <li key={item.href}>
                   <a
                     href={item.href}
-                    className="label text-cream hover:text-olive flex min-h-11 min-w-11 items-center justify-center px-1 text-[1.15rem] transition-colors duration-150"
+                    className="label text-cream flex min-h-11 min-w-11 items-center justify-center px-1 text-[1.15rem] decoration-2 underline-offset-4 hover:underline"
                   >
                     <span className="cap-trim">{item.label}</span>
                   </a>

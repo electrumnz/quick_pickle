@@ -11,6 +11,8 @@ import { Sparkle } from "@/components/brand/Icons";
  * duration collapses to zero in tokens.css).
  *
  * It never carries information that is not somewhere else on the page.
+ * `data-marquee` marks it as cut off on purpose: it is wider than the screen
+ * by design, and the test that looks for clipped words leaves it alone.
  */
 type Props = {
   readonly items: readonly string[];
@@ -46,7 +48,7 @@ export function Ticker({
   );
 
   return (
-    <div className={`overflow-hidden ${className}`}>
+    <div data-marquee="" className={`overflow-hidden ${className}`}>
       <div
         className="animate-ticker flex w-max motion-reduce:animate-none"
         style={{

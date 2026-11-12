@@ -219,7 +219,7 @@ export const FINAL = {
   /** OFFICIAL. */
   title: ["Lucky you've", "got us."],
   lockupAlt:
-    "Quick Pickle. Lucky, the superhero cat, runs through the logo with his pickle raised.",
+    "Quick Pickle. Lucky, a superhero cat with a pickle in his fist, runs through the logo.",
   body: preorder
     ? `Pickle juice shots. ${STORE.batchName} is open for pre-order.`
     : "Pickle juice shots. Ready when your ritual is.",

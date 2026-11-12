@@ -72,7 +72,7 @@
     font-weight: 700;
     font-size: 0.95rem;
     letter-spacing: 0.08em;
-    color: var(--color-olive);
+    color: var(--color-cream);
     text-shadow: none;
   }
 
@@ -106,8 +106,10 @@
     border-block-start: 4px solid transparent;
   }
 
+  /* Olive is an accent and never small type: the bar is olive, the word
+     stays cream. */
   .bk-tab[aria-current="page"] {
-    color: var(--color-olive);
+    color: var(--color-cream);
     border-block-start-color: var(--color-olive);
   }
 

@@ -108,7 +108,7 @@ export function CrewForm() {
           <p
             id="crew-error"
             role="alert"
-            className="text-olive mt-3 text-[0.9375rem]"
+            className="text-cream mt-3 text-[0.9375rem] font-semibold"
           >
             {error}
           </p>

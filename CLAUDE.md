@@ -394,6 +394,18 @@ go-live list shows when it last ran and what is stuck.
 - **On the pink ground, sentences live on a cream card.** Cream on pink is 3.8:1 and navy
   on pink is 3.4:1: large type only. `tests/brand/tokens.test.ts` computes every pair.
 - **Never a raw hex outside `lib/brand/`.** A test enforces it.
+- **One focus ring, on every ground.** Navy, cream, navy, two pixels each, outside the
+  control (`--focus-ring`, from the brand pack's UI kit). Whatever it lands on, one band
+  stands off it by 3:1. The rule sits outside every CSS layer in `lib/brand/base.css`,
+  because a ring made of shadows has to win over the shadow a component already wears. A
+  button's ring is worn by its face so it sits above the offset; the pack picker's card
+  wears it for its hidden radio. It never animates.
+- **Olive is an accent, never small type**, on any ground: the pickle, the badge, a rule, a
+  sparkle. On navy, small labels are cream. Olive type starts at 1.2rem bold.
+- **Nothing is cut off when a reader spaces the text out** (line height 1.5, letters 0.12em,
+  words 0.16em, paragraphs 2em). `e2e/site.spec.ts` applies that and looks for clipped
+  words, after proving it can see one. A box that is clipped on purpose says so with
+  `data-marquee`.
 - **Motion is transform and opacity only**, on the guide's durations, and everything
   collapses under `prefers-reduced-motion`. Content is visible without JavaScript; scroll
   reveal only hides blocks once its observer is actually running.

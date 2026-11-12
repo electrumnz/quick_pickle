@@ -64,22 +64,11 @@
     color: var(--color-cream);
   }
 
-  /* One ring, three pixels, per the guide. Pink on light grounds; the grounds
-     where pink would vanish swap it below. */
+  /* The focus ring itself is at the foot of this file, outside the layers,
+     because it has to win over any shadow a component already wears. Here is
+     only the corner it takes on things with no corner of their own. */
   :focus-visible {
-    outline: 3px solid var(--color-pink);
-    outline-offset: 3px;
     border-radius: 6px;
-  }
-
-  .on-pink :focus-visible,
-  .on-pink:focus-visible {
-    outline-color: var(--color-navy);
-  }
-
-  .on-navy :focus-visible,
-  .on-navy:focus-visible {
-    outline-color: var(--color-olive);
   }
 
   :focus:not(:focus-visible) {
@@ -381,8 +370,6 @@
   }
 
   .field:focus-visible {
-    outline: 3px solid var(--color-pink);
-    outline-offset: 2px;
     border-radius: var(--radius-control);
   }
 
@@ -533,4 +520,41 @@ html:has(dialog.sheet[open]) {
 /* The hero's Lucky dashes in from the left once, then keeps running. */
 .hero-lucky {
   animation: qp-dash-in 620ms var(--ease-qp-out) 180ms both;
+}
+
+/* ---- the focus ring --------------------------------------------------------
+   Three bands outside the control: navy, cream, navy, two pixels each. One
+   ring for every ground, because whichever ground it lands on, at least one
+   band stands off it by 3:1 or better (navy on cream 12.7:1, cream on pink
+   3.76:1, navy on pink 3.38:1, cream on navy 12.7:1). It is the ring in the
+   brand pack's UI kit, and it is never animated.
+
+   It sits outside every layer on purpose. A ring made of shadows has to
+   replace whatever shadow a button or a card already wears, and a rule in a
+   layer would lose to the component that set that shadow.
+
+   The transparent outline is for forced colours (Windows high contrast),
+   where shadows are thrown away and an outline is drawn in the system's own
+   colour. */
+:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+/* A button's ring is worn by its face. The offset under a button is a layer
+   of its own, and a ring on the button itself would be half hidden behind
+   it. On the face it sits above the offset, as the UI kit draws it. */
+.btn:focus-visible {
+  box-shadow: none;
+}
+
+.btn:focus-visible::before {
+  box-shadow: var(--focus-ring);
+}
+
+/* A ring worn by a stand-in. The pack picker's radio is hidden, so the card
+   it belongs to wears the ring while the radio has the focus. */
+.peer:focus-visible ~ .focus-proxy {
+  box-shadow: var(--focus-ring);
 }

@@ -748,7 +748,7 @@ export default async function BrandGuidePage() {
               </div>
             </div>
             <div className="on-navy bg-navy text-cream border-navy-deep flex flex-col items-start gap-5 rounded-[18px] border-[3px] p-6">
-              <p className="label text-olive text-[1.1rem]">On navy</p>
+              <p className="label text-cream text-[1.1rem]">On navy</p>
               <button type="button" className="btn btn-on-navy">
                 <span className="cap-trim">I&apos;m in</span>
               </button>

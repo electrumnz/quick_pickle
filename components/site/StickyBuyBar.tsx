@@ -90,7 +90,7 @@ export function StickyBuyBar() {
             <span className="varsity block truncate text-[1.3rem] leading-none">
               {pack.name}
             </span>
-            <span className="label text-olive mt-1.5 block text-[1.05rem] leading-none">
+            <span className="label text-cream mt-1.5 block text-[1.05rem] leading-none">
               {pack.shots} {BUY.shots} · {formatNzd(pack.priceCents)}
             </span>
           </a>

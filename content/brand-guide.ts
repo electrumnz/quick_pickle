@@ -140,7 +140,7 @@ export const NEVER = {
     {
       line: "Superhero Cat with Pickle Power",
       status: "Held back",
-      why: "His full title in the mascot file. Power next to a food can read as a claim. He is Lucky, the superhero cat, until there is advice on it.",
+      why: "His full title in the mascot file. Power next to a food can read as a claim. He is Lucky, a superhero cat with a pickle in his fist, until there is advice on it.",
     },
   ],
   alsoAvoid:
@@ -217,7 +217,7 @@ export const NAMES = [
   {
     name: "Lucky",
     always:
-      "Capital L. He, him. Lucky, the superhero cat, the first time; Lucky after that.",
+      "Capital L. He, him. Lucky, a superhero cat with a pickle in his fist, the first time; Lucky after that.",
     never: "It. The mascot. Lucky the cat. A second Lucky.",
   },
   {
@@ -393,7 +393,7 @@ export const COLOUR_RULES = [
   "Navy does the work: outlines, text, buttons, the dark sections.",
   "Hot pink is the poster colour. It takes the hero and the big moments, and it is the offset under a navy button.",
   "On pink, only large type. Sentences go on a cream card. That rule is why the pink sections look the way they do.",
-  "Olive is a highlight and a surface. Never small olive text on a light ground.",
+  "Olive is an accent: the pickle, the badge, a highlight, a surface. Never small olive text, on any ground. On navy, small labels are cream.",
   "Cream is the page. Paper is a card sitting on it.",
   "Offsets are a hard shift, never a blur. No drop shadows, no gradients, no glows.",
   "Pink deep and olive deep exist only so small text can pass contrast. They are not brand colours.",
@@ -456,6 +456,7 @@ export const LAYOUT = [
   "The button is on the first screen, and a sticky buy bar follows the thumb after that.",
   "Tap targets are 44px or more; the main buttons are 52 to 60.",
   "Cards: paper, 3px navy rule, 18px radius, a hard 5px offset.",
+  "Focus: one ring on every ground. Navy, cream, navy, two pixels each, outside the control. It never animates.",
   "Sections alternate pink, cream and navy so a scroll has rhythm.",
   "Stickers are slapped on at an angle, a few at a time, never in a grid.",
 ] as const;
