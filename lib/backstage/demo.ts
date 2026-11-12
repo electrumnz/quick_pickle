@@ -20,6 +20,10 @@ export async function seedDemoData(db: Db): Promise<void> {
   // two batches on sale packing has to say which one is in the box.
   const { seedStockDemo } = await import("./stock/demo");
   await seedStockDemo(db, now);
+  // After everything that places or moves an order: the emails each one
+  // would have sent, written down and marked as not sent.
+  const { seedMailDemo } = await import("./mail/demo");
+  await seedMailDemo(db, now);
   // Last, because it fills in the visits that led to the orders above.
   const { seedNumbersDemo } = await import("./numbers/demo");
   await seedNumbersDemo(db, now);

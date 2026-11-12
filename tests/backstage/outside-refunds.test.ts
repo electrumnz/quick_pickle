@@ -244,11 +244,14 @@ describe("refunds that were not started here", () => {
     expect(await logOf(number)).toContain(
       `$20 was refunded on ${number} from Stripe's dashboard. Written onto the order.`,
     );
-    // The same event as any other refund, so whatever tells the customer
-    // tells them about this one too.
+    // The same event as any other refund, naming the refund it is about, so
+    // whatever tells the customer tells them about this one too, and once.
+    const [written] = await refundsOf(number);
     expect(
       (await refundedEvents(number)).map((event) => event.payload),
-    ).toEqual([{ number, amountCents: 2000, test: false }]);
+    ).toEqual([
+      { number, refundId: written?.id, amountCents: 2000, test: false },
+    ]);
   });
 
   it("writes nothing twice, however often the news arrives", async () => {

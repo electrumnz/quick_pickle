@@ -16,6 +16,18 @@ const port = Number(process.env.PORT ?? 3000);
 const baseURL = `http://localhost:${String(port)}`;
 const isCI = Boolean(process.env.CI);
 
+/**
+ * Email is never connected on a test server, whatever the machine running
+ * the tests happens to have set. (Neither server has a database, which is
+ * enough by itself to stop anything being sent. This also keeps what the
+ * screens say about email the same on every machine.)
+ */
+const NO_MAIL = {
+  MAIL_PROVIDER: "off",
+  RESEND_API_KEY: "",
+  MAIL_FROM: "",
+};
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -54,6 +66,7 @@ export default defineConfig({
         PAYMENT_PROVIDER: "test",
         NEXT_PUBLIC_SITE_URL: baseURL,
         QP_EMBEDDED_DB: "memory",
+        ...NO_MAIL,
       },
       reuseExistingServer: !isCI,
       timeout: 120_000,
@@ -70,6 +83,7 @@ export default defineConfig({
         QP_EMBEDDED_DB: "memory",
         BACKSTAGE_AUTH: "required",
         BACKSTAGE_SETUP_CODE: SETUP_CODE,
+        ...NO_MAIL,
       },
       reuseExistingServer: !isCI,
       timeout: 120_000,

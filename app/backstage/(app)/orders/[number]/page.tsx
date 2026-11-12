@@ -9,14 +9,26 @@ import {
   TestPill,
 } from "@/components/backstage/orders";
 import { SubmitButton } from "@/components/backstage/SubmitButton";
-import { Notice, PageHeader, Panel, Pill } from "@/components/backstage/ui";
+import {
+  Notice,
+  PageHeader,
+  Panel,
+  Pill,
+  When,
+  type PillTone,
+} from "@/components/backstage/ui";
 import { listActivity } from "@/lib/backstage/activity/ops";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
+import {
+  listOrderEmails,
+  type OrderEmail,
+} from "@/lib/backstage/orders/emails";
 import { getOrder, type OrderDetail } from "@/lib/backstage/orders/ops";
 import { refundsThroughStripe } from "@/lib/backstage/orders/refunds";
 import { orderStock, type OrderStock } from "@/lib/backstage/stock/ops";
+import { mailConnection } from "@/lib/mail";
 import { formatNzd, formatNzdExact } from "@/lib/shop/money";
 import { NZ_REGIONS } from "@/lib/shop/order";
 import { formatNzDateTime } from "@/lib/time";
@@ -35,6 +47,7 @@ import {
   noteAction,
   packAction,
   refundAction,
+  retryEmailAction,
   shipAction,
 } from "../actions";
 
@@ -52,16 +65,99 @@ function Number({ value }: { readonly value: string }) {
   return <input type="hidden" name="number" value={value} />;
 }
 
+/** How each state of an email reads on the order. */
+const EMAIL_STATE: Readonly<
+  Record<
+    OrderEmail["status"],
+    { readonly word: string; readonly tone: PillTone }
+  >
+> = {
+  queued: { word: "Waiting to go", tone: "doing" },
+  sent: { word: "Sent", tone: "done" },
+  not_sent: { word: "Not sent", tone: "off" },
+  failed: { word: "Did not go", tone: "todo" },
+  bounced: { word: "Came back", tone: "todo" },
+  // An order's own emails are never one of these two.
+  received: { word: "Received", tone: "plain" },
+  draft: { word: "Draft", tone: "plain" },
+};
+
+/**
+ * The emails written to the customer about this order, and what became of
+ * each. Only one marked "Sent" has reached them.
+ */
+function Emails({
+  number,
+  emails,
+  lead,
+  canWrite,
+}: {
+  readonly number: string;
+  readonly emails: readonly OrderEmail[];
+  /** Whether anything is being sent at all, in a sentence. */
+  readonly lead: string;
+  readonly canWrite: boolean;
+}) {
+  return (
+    <Panel title="Emails to the customer" flush>
+      <p className="px-4 pt-4 leading-snug md:px-6">{lead}</p>
+      {emails.length === 0 ? (
+        <p className="bk-muted px-4 pt-2 pb-4 leading-snug md:px-6">
+          None has been written for this order yet.
+        </p>
+      ) : (
+        <ul className="bk-rows mt-3" data-testid="order-emails">
+          {emails.map((email) => {
+            const state = EMAIL_STATE[email.status];
+            return (
+              <li key={email.id} className="px-4 py-3 md:px-6">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold">{email.label}</p>
+                  <Pill tone={state.tone}>{state.word}</Pill>
+                </div>
+                <p className="bk-muted mt-1 text-[0.9375rem] leading-snug [overflow-wrap:anywhere]">
+                  To {email.to}, <When at={email.at} />. Subject:{" "}
+                  {email.subject}
+                </p>
+                {email.why !== null ? (
+                  <p className="mt-1 text-[0.9375rem] leading-snug">
+                    {email.why}
+                  </p>
+                ) : null}
+                {email.canRetry && canWrite ? (
+                  <form action={retryEmailAction} className="mt-2">
+                    <Number value={number} />
+                    <input type="hidden" name="messageId" value={email.id} />
+                    <SubmitButton
+                      pending="Queuing"
+                      className="bk-btn bk-btn-quiet"
+                    >
+                      Try sending it again
+                    </SubmitButton>
+                  </form>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
 /** What to do with this order now. Only what its stage allows is offered. */
 function NextStep({
   order,
   canWrite,
   stock,
+  emailing,
 }: {
   readonly order: OrderDetail;
   readonly canWrite: boolean;
   /** Where its shots come from when it is packed (lib/backstage/stock). */
   readonly stock: OrderStock;
+  /** This order's customer is really emailed as it moves along. */
+  readonly emailing: boolean;
 }) {
   if (!canWrite) {
     return (
@@ -150,7 +246,11 @@ function NextStep({
             Mark as shipped
           </SubmitButton>
           <p className="bk-muted text-[0.9375rem] leading-snug">
-            This tells the customer it is on its way and cannot be undone.
+            {emailing
+              ? "This emails the customer that it is on its way, with the courier and the tracking details if you give them. It cannot be undone."
+              : order.isTest
+                ? "This cannot be undone. A test order's customer is not emailed."
+                : "This cannot be undone. Order emails are not being sent, so the customer is not told: let them know yourself."}
           </p>
           {can("packed") ? <ShipNote stock={stock} /> : null}
         </form>
@@ -203,9 +303,9 @@ function NextStep({
               Cancel the order
             </SubmitButton>
             <p className="bk-muted text-[0.9375rem] leading-snug">
-              If they have paid, record the refund below as well. If they had
-              not paid yet, their payment page is closed so they cannot pay for
-              it afterwards. Nothing is emailed to them: let them know yourself.
+              {emailing
+                ? "The customer is emailed that it is cancelled. If they have paid, the email says their payment is coming back, so record the refund below as well. If they had not paid yet, their payment page is closed so they cannot pay for it afterwards."
+                : "If they have paid, record the refund below as well. If they had not paid yet, their payment page is closed so they cannot pay for it afterwards. Nothing is emailed to them: let them know yourself."}
             </p>
           </form>
         </details>
@@ -250,6 +350,20 @@ export default async function OrderPage({
     caller,
   );
   const stock = await execute(orderStock, { number: order.number }, caller);
+  const emails = await execute(
+    listOrderEmails,
+    { number: order.number },
+    caller,
+  );
+  // Whether email really leaves from here, read from the same place the
+  // outbox reads it. A test order's customer is never emailed.
+  const mail = mailConnection();
+  const emailing = mail.delivers && !order.isTest;
+  const emailLead = order.isTest
+    ? "A test order: what would be sent is written down here, and not sent."
+    : mail.delivers
+      ? `Emails about this order go to ${order.email} as it moves along.`
+      : `Nothing is being emailed. ${mail.problem ?? mail.held ?? ""} What would have gone is written down here.`;
   const canWrite = staff.role !== "viewer";
   const editable = ["pending", "paid", "packed"].includes(order.status);
   const refundable =
@@ -420,6 +534,13 @@ export default async function OrderPage({
             canWrite={canWrite}
           />
 
+          <Emails
+            number={order.number}
+            emails={emails}
+            lead={emailLead}
+            canWrite={canWrite}
+          />
+
           <Panel title="History" flush>
             <div id="history" className="scroll-mt-24">
               <ActivityList lines={history} now={now} />
@@ -453,7 +574,12 @@ export default async function OrderPage({
 
         <div className="flex flex-col gap-6">
           <Panel title="Next step">
-            <NextStep order={order} canWrite={canWrite} stock={stock} />
+            <NextStep
+              order={order}
+              canWrite={canWrite}
+              stock={stock}
+              emailing={emailing}
+            />
           </Panel>
 
           <Panel title="Who and where">
@@ -725,8 +851,10 @@ export default async function OrderPage({
                   </SubmitButton>
                   <p className="bk-muted text-[0.9375rem] leading-snug">
                     {byStripe
-                      ? "This sends the money back to the customer's card through Stripe. Their bank can take a few days to show it. Nothing is emailed to them: let them know yourself."
-                      : "This only writes the refund down. The money itself has to be sent back by hand."}
+                      ? emailing
+                        ? "This sends the money back to the customer's card through Stripe, and emails them once it is on its way. Their bank can take a few days to show it."
+                        : "This sends the money back to the customer's card through Stripe. Their bank can take a few days to show it. Nothing is emailed to them: let them know yourself."
+                      : "This only writes the refund down. The money itself has to be sent back by hand, and nothing is emailed to the customer."}
                   </p>
                 </form>
               </details>

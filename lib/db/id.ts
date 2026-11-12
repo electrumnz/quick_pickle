@@ -7,7 +7,9 @@
  * one before it. Sort by `created_at`, never by id.
  */
 
-const ALPHABET = "23456789abcdefghjkmnpqrstvwxyz";
+/** The thirty characters an id is made of. */
+export const ID_ALPHABET = "23456789abcdefghjkmnpqrstvwxyz";
+const ALPHABET = ID_ALPHABET;
 
 export type IdPrefix =
   | "usr" // staff user

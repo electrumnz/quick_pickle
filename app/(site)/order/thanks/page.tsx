@@ -8,6 +8,7 @@ import { ClearJar } from "@/components/checkout/ClearJar";
 import { SiteFooter } from "@/components/site/Sections";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { CHECKOUT, CODES, JAR, SPECIAL, THANKS } from "@/content/site";
+import { mailConnection } from "@/lib/mail";
 import { formatNzdExact } from "@/lib/shop/money";
 import { checkoutMode } from "@/lib/shop/payments";
 import { settleOnReturn } from "@/lib/shop/payments/settle";
@@ -78,6 +79,10 @@ const CONFETTI = [
  * Reads the receipt cookie the checkout set (lib/shop/receipt.ts) and shows
  * the order back. With no receipt on this device it says so plainly rather
  * than showing an empty confirmation.
+ *
+ * It says a receipt is on its way only when one is: for a real, paid order
+ * placed while order emails were really being sent. Otherwise it says
+ * nothing about email at all.
  */
 export default async function ThanksPage() {
   const receipt = parseReceipt((await cookies()).get(RECEIPT_COOKIE)?.value);
@@ -97,7 +102,13 @@ export default async function ThanksPage() {
             <h1 className="varsity mt-6 text-[2.25rem] leading-none">
               {THANKS.noneTitle}
             </h1>
-            <p className="text-navy-muted mt-3">{THANKS.noneBody}</p>
+            <p className="text-navy-muted mt-3">
+              {THANKS.noneBody}
+              {
+                // Only said while a receipt really would have been sent.
+                mailConnection().delivers ? ` ${THANKS.noneCheckEmail}` : null
+              }
+            </p>
             <Link href="/" className="btn mt-7">
               <span className="cap-trim">{THANKS.home}</span>
             </Link>
@@ -347,12 +358,19 @@ export default async function ThanksPage() {
               </p>
             </div>
 
-            {isTest || settled === "review" ? null : (
-              <p className="mt-6 leading-relaxed">
+            {isTest || settled === "review" ? null : receipt.emails === true ? (
+              // Only when one really is being sent: the flag was set on the
+              // server, from how email was set up as the order was placed.
+              <p className="mt-6 leading-relaxed" data-testid="receipt-note">
                 {THANKS.emailNote} <strong>{receipt.email}</strong>.{" "}
                 {receipt.mode === "preorder"
                   ? THANKS.preorderNote
                   : THANKS.liveNote}
+              </p>
+            ) : (
+              <p className="mt-6 leading-relaxed" data-testid="keep-number">
+                {THANKS.keepNumber}
+                {receipt.mode === "preorder" ? ` ${THANKS.preorderOnly}` : null}
               </p>
             )}
 

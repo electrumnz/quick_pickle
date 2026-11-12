@@ -45,9 +45,29 @@ Updated 12 November 2026. Honest status, not a summary.
       (`BACKSTAGE_SETUP_CODE`), and choose a password.
 - [ ] **Disconnect the old Vercel project** (`half-sour`, in the Keece account). It still
       builds every push to this repository. Nothing here can touch it, on purpose.
-- [ ] **Email for the business's own domain.** Resend to start with (free tier, sending and
-      receiving); Cloudflare for the domain's DNS, and for receiving if the free tier's daily
-      cap ever bites. Both need the domain first.
+- [ ] **Connect email, so an order's emails are sent.** The receipt, on the courier,
+      cancelled and payment-on-its-way-back emails are built, and each one is being written
+      down on its order. Nothing is sent until these four things exist. It needs the domain
+      first.
+  1. **A Resend account for Quick Pickle** (resend.com; its free tier to start with),
+     apart from Keece's.
+  2. **The domain added to that account and verified.** Resend's Domains page shows the
+     DNS records to add wherever the domain's DNS is kept: DKIM and SPF as TXT records,
+     and an MX or CNAME for the return path (it defaults to the `send` subdomain). Add
+     them exactly as shown. If the DNS is at Cloudflare, leave the proxy (the orange
+     cloud) off for them. A DMARC record is separate and worth adding once those verify.
+  3. **An API key** from Resend, with sending access only.
+  4. **Three settings on production** (Vercel, the Production environment only):
+     `MAIL_PROVIDER=resend`, `RESEND_API_KEY` (the key) and `MAIL_FROM` (the address the
+     emails come from, on the verified domain, such as `orders@` it). Replies to an
+     order's email go back to that address, so it has to be one somebody reads.
+  5. **Check it.** The go-live list (`/backstage/settings/go-live`) says "Order emails:
+     Connected", `npm run prelaunch` stops listing it, and the infra run's `status` prints
+     "order emails in production: the settings are there". After that, the test purchase
+     above sends a receipt that says it was a Stripe test payment.
+- [ ] **Tell pre-order customers the ship date, by hand.** The delivery page and the
+      "order's in" page promise the ship date by email before anything is sent. Nothing sends
+      that by itself. When the date is set, somebody has to email the people with pre-orders.
 - [ ] **Vercel's free plan is not for a business taking money.** At launch: Vercel Pro
       (US$20 a month), or move hosting to Cloudflare. Decide then.
 - [ ] **A domain.**
@@ -74,8 +94,17 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       Production is on Stripe's test mode. Still to do by a person: one purchase on the live
       site with Stripe's test card (4242 4242 4242 4242), because Stripe's page will not let
       a robot press Pay. Then real keys, once Stripe's own sign-up is finished.
-- [ ] **Order emails.** Receipt, on the courier, cancelled. Plain, and free of anything
-      promotional so they stay outside the marketing-email rules.
+- [x] **Order emails.** The receipt when an order is paid, on the courier when it is marked
+      shipped (with the courier, the tracking number and the tracking link if they were
+      given), cancelled, and a payment on its way back once Stripe has taken the refund.
+      Plain text and simple HTML, and free of anything promotional so they stay outside the
+      marketing-email rules. Each is written once, read against the copy rules before it is
+      queued, and listed on its order with what became of it. A provider that is busy is
+      tried again; one that refuses shows on the order with the reason and a button to try
+      again. A test order's customer is not emailed, except that a payment made in Stripe's
+      test mode gets a receipt that says so. Still to do by a person: connect email (above);
+      until then every one of them is written down and none is sent. Not built: the
+      pre-order ship-date email, and GST on the receipt, which waits for the registration.
 - [x] **Stock and batches.** Shots on hand, counted by batch from movements that are never
       edited. A batch is planned, made, released and closed, with a best-before date and a
       production record. Packing an order is where its shots leave stock and its batch goes
@@ -90,9 +119,11 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 - [ ] **The inbox.** Mail for the business's domain lands in the back end, threaded by
       our own rules (reply headers, order numbers, the same person and subject), linked to
       customers and orders, answered from there.
-- [x] **Marketing.** Campaigns to the crew with approval before sending (they go out once
-      email is connected), a social planner, reviews read by a person before anyone sees
-      them, and partners with a written yes on file before they are named.
+- [x] **Marketing.** Campaigns to the crew with approval before sending, a social planner,
+      reviews read by a person before anyone sees them, and partners with a written yes on
+      file before they are named. Not built: a campaign that is sent is queued, one row for
+      each person, and nothing drains that queue yet. Sending those through the mail seam
+      (`lib/mail`), with the unsubscribe link each one has to carry, is still to do.
 - [x] **Codes, links and collabs.** Promo codes at the checkout (percent, dollars or free
       delivery, with dates, a limit, and once for each customer). A code or a short link
       can belong to a club, a creator or an event: their orders are counted as theirs, a
@@ -151,8 +182,11 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 
 ## Before it takes real money
 
-- [ ] **Order emails.** The "order's in" page says a receipt is on its way. Until email is
-      connected, it is not.
+- [x] **The "order's in" page tells the truth about a receipt.** It says one is on its way
+      only for a real, paid order placed while order emails were really being sent, and the
+      checkout only says the email address is for a receipt then too. Otherwise neither says
+      anything about one. Connecting email is in the first list; `npm run prelaunch` fails
+      until it is done.
 - [x] **A limit on how often one address can ask the checkout things.** From one internet
       address, in ten minutes: 20 wrong promo codes or questions that name a person, 30
       orders, 20 Pickle Crew sign-ups. After that it is asked to wait ten minutes. A real

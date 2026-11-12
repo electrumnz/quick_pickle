@@ -121,6 +121,7 @@ export const refundSettled = defineOp({
         payload: {
           number: order.number,
           amountCents: refund.amountCents,
+          refundId: refund.id,
           test: order.isTest,
         },
       });

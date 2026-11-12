@@ -154,11 +154,17 @@ function SectionTitle({
 export function CheckoutForm({
   mode,
   cancelled = false,
+  emails = false,
 }: {
   /** What paying means right now (lib/shop/payments: checkoutMode). */
   readonly mode: "practice" | "sandbox" | "live";
   /** The buyer came back from the payment page without paying. */
   readonly cancelled?: boolean;
+  /**
+   * Order emails are really being sent (lib/mail: mailConnection). Only
+   * then is the buyer told their address is for a receipt.
+   */
+  readonly emails?: boolean;
 }) {
   const { cart, ready, carriedCode, forgetCarriedCode, source } = useCart();
   const [state, action, pending] = useActionState(submitCheckout, INITIAL);
@@ -563,7 +569,11 @@ export function CheckoutForm({
             <Field
               name="email"
               label={CHECKOUT.fields.email}
-              hint={CHECKOUT.fields.emailHint}
+              hint={
+                emails
+                  ? CHECKOUT.fields.emailHint
+                  : CHECKOUT.fields.emailHintNoMail
+              }
               error={errors.email}
               defaultValue={values.email}
               type="email"

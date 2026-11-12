@@ -8,12 +8,6 @@ export type MailAddress = {
   readonly name?: string;
 };
 
-export type OutgoingAttachment = {
-  readonly filename: string;
-  readonly contentType: string;
-  readonly bytes: Uint8Array;
-};
-
 export type OutgoingMail = {
   readonly from: MailAddress;
   readonly to: readonly MailAddress[];
@@ -22,7 +16,7 @@ export type OutgoingMail = {
   readonly subject: string;
   readonly text: string;
   readonly html?: string;
-  /** In-Reply-To, References, List-Unsubscribe and the like. */
+  /** In-Reply-To, References, Auto-Submitted and the like. */
   readonly headers?: Readonly<Record<string, string>>;
   /**
    * Our own Message-ID, angle brackets and all. It is passed on where the
@@ -30,21 +24,20 @@ export type OutgoingMail = {
    * depend on the recipient seeing this one.
    */
   readonly messageId?: string;
-  readonly attachments?: readonly OutgoingAttachment[];
   /** The same key twice is the same email, and is sent once. */
   readonly idempotencyKey: string;
 };
 
 export type SendResult = {
   readonly provider: string;
-  /** The provider's own id for the email. */
+  /** The provider's own id for the email. Empty when nothing left. */
   readonly id: string;
   /**
    * The Message-ID the email really went out with, when the provider says.
    * Replies name this one, so whoever keeps the record keeps this too.
    */
   readonly messageId?: string;
-  /** False when nothing left: it was recorded and not sent. */
+  /** False when nothing left: it was not handed to anybody. */
   readonly delivered: boolean;
 };
 

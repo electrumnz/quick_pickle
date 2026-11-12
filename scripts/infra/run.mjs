@@ -244,6 +244,13 @@ async function vercelStatus() {
   console.log(
     `  BACKSTAGE_SETUP_CODE in production: ${hasInProduction(names, "BACKSTAGE_SETUP_CODE") ? "yes" : "NO"}`,
   );
+  // What sending email needs (lib/mail). Names only, as everywhere here.
+  const mailMissing = ["MAIL_PROVIDER", "RESEND_API_KEY", "MAIL_FROM"].filter(
+    (key) => !hasInProduction(names, key),
+  );
+  console.log(
+    `  order emails in production: ${mailMissing.length === 0 ? "the settings are there" : `NOT connected. Missing: ${mailMissing.join(", ")}`}`,
+  );
 }
 
 // --- Supabase -------------------------------------------------------------
@@ -325,6 +332,15 @@ async function supabaseStatus() {
     for (const row of Array.isArray(queue) ? queue : []) {
       console.log(
         `    events ${String(row.type)}: ${String(row.n)}${row.waiting > 0 ? `, ${String(row.waiting)} waiting (most tries ${String(row.most_tries)})` : ""}`,
+      );
+    }
+    // Emails by state. Counts only: never an address or a subject.
+    const mail = await readOnlyQuery(
+      "select direction, status, count(*)::int as n from public.mail_messages group by 1, 2 order by 1, 2",
+    );
+    for (const row of Array.isArray(mail) ? mail : []) {
+      console.log(
+        `    emails ${row.direction === "out" ? "out" : "in"} / ${String(row.status)}: ${String(row.n)}`,
       );
     }
     await clockStatus();

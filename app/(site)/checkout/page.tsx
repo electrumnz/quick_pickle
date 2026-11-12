@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
 import { CHECKOUT, HEADER } from "@/content/site";
+import { mailConnection } from "@/lib/mail";
 import { checkoutMode } from "@/lib/shop/payments";
 
 export const metadata: Metadata = {
@@ -45,7 +46,12 @@ export default async function CheckoutPage({
       </header>
       <main id="main" className="bg-cream px-gutter flex-1 pt-8 pb-20">
         <div className="max-w-page mx-auto">
-          <CheckoutForm mode={checkoutMode()} cancelled={cancelled} />
+          <CheckoutForm
+            mode={checkoutMode()}
+            cancelled={cancelled}
+            // A receipt is only promised where one will really be sent.
+            emails={mailConnection().delivers}
+          />
         </div>
       </main>
     </>

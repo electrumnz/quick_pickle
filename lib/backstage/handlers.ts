@@ -12,10 +12,12 @@
 import "server-only";
 
 import { on } from "./core/events";
+import { sendQueuedMail } from "./mail/listeners";
 import {
   showSpecialChange,
   stopSayingUsedUpSpecial,
 } from "./marketing/special-listeners";
+import { emailAboutOrder } from "./orders/emails";
 import { closePaymentPage } from "./orders/listeners";
 import { sendRefund } from "./orders/refunds";
 import { refreshPublicPage } from "./pages/listeners";
@@ -29,6 +31,27 @@ export function registerHandlers(): void {
 
   on("order.cancelled", "close the payment page", closePaymentPage());
   on("order.refund_requested", "send the money back", sendRefund());
+
+  // An order's emails. Each listener writes the email down (an operation);
+  // "send the email" is what hands it to the mail provider afterwards.
+  on("order.paid", "write the receipt", emailAboutOrder("receipt"));
+  on(
+    "order.shipped",
+    "write the on-the-courier email",
+    emailAboutOrder("shipped"),
+  );
+  on(
+    "order.cancelled",
+    "write the cancelled email",
+    emailAboutOrder("cancelled"),
+  );
+  on(
+    "order.refunded",
+    "write the email about the payment on its way back",
+    emailAboutOrder("refunded"),
+  );
+  on("mail.queued", "send the email", sendQueuedMail());
+
   on("page.published", "show the new words at once", refreshPublicPage());
   on("page.taken_down", "stop showing the page at once", refreshPublicPage());
   on(
@@ -41,8 +64,4 @@ export function registerHandlers(): void {
     "stop saying a special that is used up",
     stopSayingUsedUpSpecial(),
   );
-
-  // More are added here as their areas land:
-  //   on("mail.queued", "send the email", ...)
-  //   on("order.paid", "send the receipt", ...)
 }
