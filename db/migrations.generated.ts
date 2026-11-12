@@ -262,5 +262,16 @@ export const MIGRATIONS: readonly Migration[] = [
       "ALTER TABLE \"page_events\" ADD COLUMN \"page\" text DEFAULT 'home' NOT NULL;",
       "CREATE INDEX \"page_events_kind_idx\" ON \"page_events\" USING btree (\"kind\",\"at\");"
     ]
+  },
+  {
+    "tag": "0006_pages",
+    "hash": "e2cebb7a5a09d961",
+    "statements": [
+      "CREATE TABLE \"pages\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"slug\" text NOT NULL,\n\t\"name\" text NOT NULL,\n\t\"note\" text DEFAULT '' NOT NULL,\n\t\"draft\" jsonb NOT NULL,\n\t\"published\" jsonb,\n\t\"published_at\" timestamp with time zone,\n\t\"published_by\" text,\n\t\"live\" boolean DEFAULT false NOT NULL,\n\t\"copy_check\" jsonb,\n\t\"created_by\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"pages\" ENABLE ROW LEVEL SECURITY;",
+      "ALTER TABLE \"pages\" ADD CONSTRAINT \"pages_published_by_users_id_fk\" FOREIGN KEY (\"published_by\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "ALTER TABLE \"pages\" ADD CONSTRAINT \"pages_created_by_users_id_fk\" FOREIGN KEY (\"created_by\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "CREATE UNIQUE INDEX \"pages_slug_key\" ON \"pages\" USING btree (\"slug\");"
+    ]
   }
 ];

@@ -40,6 +40,7 @@ export type IdPrefix =
   | "rev" // review
   | "prt" // partner (club, stockist)
   | "pcs" // something a partnership cost
+  | "pag" // landing page
   | "pro" // promo code
   | "doc" // document
   | "ver" // document version

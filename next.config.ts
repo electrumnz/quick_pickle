@@ -76,6 +76,18 @@ const nextConfig: NextConfig = {
     return [
       { source: "/:path*", headers: securityHeaders },
       {
+        // A preview of a landing page is shown inside a frame on its own
+        // editor page in the back end, so this one path may be framed, by
+        // this site and nobody else. Everywhere else stays unframeable.
+        source: "/preview/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+          { key: "Cache-Control", value: "private, no-store" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
+      {
         // The art under /brand is content-hashed by nothing, so it is cached
         // for a day and revalidated, not forever.
         source: "/brand/:path*",

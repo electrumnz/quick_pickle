@@ -39,6 +39,8 @@ type Way = {
   readonly share: number;
   readonly source: Record<string, string>;
   readonly referrer: string | null;
+  /** The landing page they were sent to. Left out: the standard page. */
+  readonly page?: string;
 };
 
 /** How the invented visitors found the shop. Matches the demo's own links. */
@@ -76,9 +78,20 @@ const WAYS: readonly Way[] = [
   },
   { share: 12, source: {}, referrer: "google.com" },
   {
-    share: 10,
+    share: 5,
     source: { utm_source: "facebook", utm_medium: "paid" },
     referrer: null,
+  },
+  {
+    share: 5,
+    source: {
+      via: "clubs",
+      utm_source: "newsletter",
+      utm_medium: "email",
+      utm_campaign: "clubs",
+    },
+    referrer: null,
+    page: "clubs",
   },
 ];
 
@@ -113,17 +126,18 @@ export async function seedNumbersDemo(db: Db, now: Date): Promise<void> {
       const at = new Date(
         now.getTime() - daysAgo * DAY - (0.02 + random() * 0.95) * DAY,
       );
+      const landed = way.page === undefined ? "/" : `/for/${way.page}`;
       const base = {
         visit: id(),
-        page: "home",
+        page: way.page ?? "home",
         source: way.source,
         referrer: way.referrer,
         device: random() < 0.74 ? ("phone" as const) : ("desk" as const),
       };
-      step({ ...base, kind: "view", path: "/" }, at);
+      step({ ...base, kind: "view", path: landed }, at);
       if (random() >= 0.24) continue;
       step(
-        { ...base, kind: "add", path: "/" },
+        { ...base, kind: "add", path: landed },
         new Date(at.getTime() + 40_000),
       );
       if (random() >= 0.5) continue;

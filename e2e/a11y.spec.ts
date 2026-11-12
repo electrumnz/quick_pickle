@@ -15,6 +15,8 @@ const PAGES = [
   "/terms",
   "/privacy",
   "/order/thanks",
+  // A landing page: the demo's clubs page, which is live.
+  "/for/clubs",
   // The back end, in demo mode (this server has no database).
   "/backstage",
   "/backstage/more",
@@ -33,6 +35,7 @@ const PAGES = [
   "/backstage/marketing/social",
   "/backstage/marketing/social/new",
   "/backstage/marketing/links",
+  "/backstage/marketing/pages",
   "/backstage/marketing/reviews",
   "/backstage/marketing/partners",
   "/backstage/numbers",
@@ -83,13 +86,15 @@ for (const [name, list, link] of [
     "/backstage/marketing/promo-codes",
     "ROVERS10",
   ],
+  [
+    "a landing page's editor, with its preview in a frame",
+    "/backstage/marketing/pages",
+    "Clubs (sample)",
+  ],
 ] as const) {
   test(`axe: ${name}`, async ({ page }) => {
     await page.goto(list);
-    await page
-      .getByRole("link", { name: new RegExp(link) })
-      .first()
-      .click();
+    await page.getByRole("link", { name: link }).first().click();
     await expect(
       page.getByRole("heading", { level: 1, name: link }),
     ).toBeVisible();
@@ -104,6 +109,23 @@ for (const [name, list, link] of [
     ).toEqual([]);
   });
 }
+
+test("axe: a preview, with its strip across the top", async ({ page }) => {
+  await page.goto("/backstage/marketing/pages");
+  await page.getByRole("link", { name: "Sideline parents (sample)" }).click();
+  const preview = await page.locator("iframe").getAttribute("src");
+  await page.goto(preview ?? "/");
+  await expect(page.getByTestId("preview-ribbon")).toBeVisible();
+  await page.waitForTimeout(900);
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(
+    results.violations.map(
+      (v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`,
+    ),
+  ).toEqual([]);
+});
 
 test("axe: the page with a carried code on it", async ({ page }) => {
   await page.goto("/?via=rovers&code=ROVERS10");

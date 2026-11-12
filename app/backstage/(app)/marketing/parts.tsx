@@ -44,6 +44,7 @@ const SECTIONS = [
   },
   { key: "social", href: "/backstage/marketing/social", label: "Social" },
   { key: "links", href: "/backstage/marketing/links", label: "Links" },
+  { key: "pages", href: "/backstage/marketing/pages", label: "Pages" },
   { key: "reviews", href: "/backstage/marketing/reviews", label: "Reviews" },
   { key: "partners", href: "/backstage/marketing/partners", label: "Partners" },
 ] as const;

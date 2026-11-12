@@ -92,11 +92,14 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 - [ ] **Specials and a welcome code.** An offer that applies itself for a set time with no
       code to type, shown on the page; and a code for someone the moment they join the
       Pickle Crew.
-- [ ] **Pages.** Our own visit counting and the funnel, landing pages for a particular
-      advert or audience, words that change with how a visitor arrived, and A/B tests
-      between two pages. Each with its numbers in the back end and a preview before it goes
-      live. All of it off until somebody starts something: with nothing set up, everyone
-      sees the one page.
+- [x] **Landing pages.** The one page with other words at the top, for one advert or
+      audience, each at its own address with its own numbers. Written as a draft, checked
+      against the copy rules, looked at in a preview that is the real page, then published.
+      With none made, everyone sees the standard page.
+- [ ] **Who sees which page, and A/B tests.** Rules that pick a page by how a visitor
+      arrived (a link, an advert, a promo code, having bought before), a split test
+      between two pages with its numbers, and a "see it as" check before anything goes
+      live. All of it off until somebody starts something.
 - [ ] **Automations and routines.** Rules that react to events, schedules that run, a
       daily digest, and an approval queue for anything outward.
 - [x] **Plans.** The plan, the budget and what a pack costs to make and send, how-to
