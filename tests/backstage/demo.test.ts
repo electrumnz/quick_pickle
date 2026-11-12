@@ -52,7 +52,13 @@ describe("the demo records", () => {
 
   it("include one thing that needs a person, so that list is never a blank on a demo", async () => {
     const needs = await execute(needsYou, {}, viewer);
-    expect(needs.map((need) => need.key)).toEqual(["payment-review:QP-SHRT55"]);
-    expect(needs[0]?.href).toBe("/backstage/orders/QP-SHRT55");
+    // The payment that came in short is first: money is waiting on it.
+    expect(needs[0]).toMatchObject({
+      key: "payment-review:QP-SHRT55",
+      urgent: true,
+      href: "/backstage/orders/QP-SHRT55",
+    });
+    // Marketing's own waiting list is there too, after it.
+    expect(needs.some((need) => need.key.startsWith("marketing-"))).toBe(true);
   });
 });

@@ -8,4 +8,6 @@ export async function seedDemoData(db: Db): Promise<void> {
   const now = new Date();
   const { seedDemoOrders } = await import("./orders/demo");
   await seedDemoOrders(db, now);
+  const { seedMarketingDemo } = await import("./marketing/demo");
+  await seedMarketingDemo(db, now);
 }

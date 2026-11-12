@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
@@ -75,7 +75,7 @@ import {
   copyVerdict,
   restrictedIn,
 } from "@/lib/backstage/marketing/copy-check";
-import { COPY_RULES } from "@/lib/backstage/marketing/copy-rules.generated";
+import { RULES as SCANNER_RULES } from "@/legal/scripts/rules.mjs";
 import {
   dayLabel,
   instantFromFields,
@@ -423,17 +423,22 @@ const rank = (status: string) =>
 
 /* copy-audit-ignore-start: tests of the copy check have to quote what it must catch. */
 describe("the copy check", () => {
-  it("is in step with the scanner's own rule table", () => {
-    // Throws (exit 1) when the generated module is stale.
-    execFileSync("node", [
-      "lib/backstage/marketing/copy-rules.build.mjs",
-      "--check",
-    ]);
-    expect(COPY_RULES.length).toBeGreaterThan(80);
-    expect(COPY_RULES.some((rule) => rule.severity === "restricted")).toBe(
+  it("reads the scanner's own rule table, not a copy of it", () => {
+    expect(SCANNER_RULES.length).toBeGreaterThan(80);
+    expect(SCANNER_RULES.some((rule) => rule.severity === "restricted")).toBe(
       true,
     );
-  }, 30_000);
+    // Every rule the scanner has can be raised here.
+    const raised = new Set(
+      allCopyFindings(
+        "cramps, hydration, the best, free delivery, made in New Zealand",
+      ).map((finding) => finding.rule),
+    );
+    for (const id of raised) {
+      expect(SCANNER_RULES.some((rule) => rule.id === id)).toBe(true);
+    }
+    expect(raised.size).toBeGreaterThanOrEqual(4);
+  });
 
   it("catches every banned sentence in the concept deck", () => {
     const deck = fixture("consumer", "must-fail-concept-deck.tsx");

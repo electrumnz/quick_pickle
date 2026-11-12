@@ -1,7 +1,8 @@
 # Parked work
 
-Four areas of the back end, as their builders left them on 12 November 2026
-when they were stopped part-way: stock, plans, marketing and the inbox. They
+Areas of the back end, as their builders left them on 12 November 2026 when
+they were stopped part-way: stock, plans and the inbox. (Marketing was the
+fourth. It has been finished and moved in.) They
 are kept here, outside everything that is built, linted, tested or scanned,
 so that none of it is lost. Nothing in this folder runs.
 
