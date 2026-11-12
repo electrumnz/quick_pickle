@@ -66,7 +66,10 @@ jobs:
           # and team, and nobody else's.
           QP_SUPABASE_PROJECT_REF: kauxjwjrgtlherljlnbp
           QP_VERCEL_TEAM_SLUG: electrumnz-9333s-projects
-          QP_VERCEL_PROJECT: quickpickle
+          QP_VERCEL_TEAM_ID: team_UT2tbR3sJIQqiPCUkYZWLHJO
+          # The project's id, not its name: a name can be changed in the
+          # dashboard (it already has been once), an id cannot.
+          QP_VERCEL_PROJECT: prj_h0tqArvx189vlWVXsp5YtWuitc15
           QP_SUPABASE_ACCESS_TOKEN: ${{ secrets.QP_SUPABASE_ACCESS_TOKEN }}
           QP_VERCEL_TOKEN: ${{ secrets.QP_VERCEL_TOKEN }}
           QP_STRIPE_SECRET_KEY: ${{ secrets.QP_STRIPE_SECRET_KEY }}

@@ -3,7 +3,7 @@
 // Run by .github/workflows/infra.yml, never by the app. It reads four
 // repository secrets from the environment and talks to three APIs:
 //
-//   QP_VERCEL_TOKEN            Vercel, the `quickpickle` project only
+//   QP_VERCEL_TOKEN            Vercel, Quick Pickle's own project only
 //   QP_SUPABASE_ACCESS_TOKEN   Supabase, the Quick Pickle project only
 //   QP_STRIPE_SECRET_KEY       Stripe
 //
@@ -135,13 +135,49 @@ async function call(base, path, { token, method = "GET", body } = {}) {
 
 const VERCEL = "https://api.vercel.com";
 
-function vercel(path, options = {}) {
-  const joiner = path.includes("?") ? "&" : "?";
-  return call(
-    VERCEL,
-    `${path}${joiner}slug=${encodeURIComponent(vercelTeam)}`,
-    { token: required("QP_VERCEL_TOKEN"), ...options },
+/**
+ * Which team the project lives under, as the query string Vercel wants. The
+ * project is pinned by id, which is unique everywhere, so trying the team by
+ * its slug, then by its id, then the token's own account can only ever find
+ * that one project. It is worked out once.
+ */
+let vercelScope = null;
+
+async function resolveVercelScope() {
+  if (vercelScope !== null) return vercelScope;
+  const candidates = [`slug=${encodeURIComponent(vercelTeam)}`];
+  const teamId = (env.QP_VERCEL_TEAM_ID ?? "").trim();
+  if (teamId !== "") candidates.push(`teamId=${encodeURIComponent(teamId)}`);
+  candidates.push("");
+  let lastError = null;
+  for (const scope of candidates) {
+    try {
+      const project = await call(
+        VERCEL,
+        `/v9/projects/${vercelProject}${scope === "" ? "" : `?${scope}`}`,
+        { token: required("QP_VERCEL_TOKEN") },
+      );
+      if (project?.id === vercelProject) {
+        vercelScope = scope;
+        return scope;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw (
+    lastError ??
+    new Error("The Vercel project could not be found with this token.")
   );
+}
+
+async function vercel(path, options = {}) {
+  const scope = await resolveVercelScope();
+  const joiner = path.includes("?") ? "&" : "?";
+  return call(VERCEL, scope === "" ? path : `${path}${joiner}${scope}`, {
+    token: required("QP_VERCEL_TOKEN"),
+    ...options,
+  });
 }
 
 async function vercelEnvNames() {
@@ -163,12 +199,18 @@ function hasInProduction(names, key) {
 async function vercelStatus() {
   console.log("Vercel");
   const project = await vercel(`/v9/projects/${vercelProject}`);
-  if (project?.name !== vercelProject) {
+  if (project?.id !== vercelProject) {
     fail(`Vercel answered with a different project. Refusing to go on.`);
   }
   console.log(
-    `  project ${project.name}, framework ${String(project.framework)}, node ${String(project.nodeVersion)}`,
+    `  project "${String(project.name)}", framework ${String(project.framework)}, node ${String(project.nodeVersion)}`,
   );
+  const domains = await vercel(`/v9/projects/${vercelProject}/domains`);
+  for (const domain of domains?.domains ?? []) {
+    console.log(
+      `  address ${String(domain.name)}${domain.verified === false ? " (not verified)" : ""}`,
+    );
+  }
   console.log(
     `  follows ${String(project.link?.type ?? "no git link")} ${String(project.link?.org ?? "")}/${String(project.link?.repo ?? "")}, production branch ${String(project.link?.productionBranch ?? "?")}`,
   );
@@ -537,7 +579,8 @@ async function redeployIfChanged() {
   const created = await vercel(`/v13/deployments?forceNew=1`, {
     method: "POST",
     body: {
-      name: vercelProject,
+      name: String(project.name),
+      project: String(project.id),
       deploymentId: latest.uid,
       target: "production",
       withLatestCommit: true,
