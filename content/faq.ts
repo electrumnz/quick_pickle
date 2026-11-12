@@ -5,6 +5,10 @@
  * (lib/shop/offer.ts), so a price or a rate is stated in exactly one place
  * and moves when the back end moves it. Where a fact is not settled yet the
  * answer says so plainly rather than guessing.
+ *
+ * What is in the bottle is the label's own words, typed in the back end by
+ * somebody with the printed label in hand. They are shown as they were
+ * typed and nothing is added to them.
  */
 
 import type { Offer } from "@/lib/shop/offer";
@@ -54,14 +58,24 @@ function preorderAnswer(offer: Offer): readonly string[] {
   ];
 }
 
-function ingredientsAnswer(): readonly string[] {
-  if (PRODUCT.ingredients === null) {
-    return [
-      // copy-audit-approved: R-17 (refers to the mandatory nutrition information panel, not a benefit)
-      "The full ingredients list and nutrition panel will be right here before the first bottle ships, exactly as they are printed on the label.",
-    ];
-  }
-  return [`${PRODUCT.ingredients.join(", ")}.`];
+/** A line that ends in a full stop, whether or not it was typed with one. */
+export function withStop(text: string): string {
+  return /[.!?]$/.test(text) ? text : `${text}.`;
+}
+
+/**
+ * What the label says. Written for every way it can be set: no list yet,
+ * a list alone, and a list with an allergen line, a storage line or both.
+ * With no allergen line nothing is said about allergens either way.
+ */
+function labelAnswer({ label }: Pick<Offer, "label">): readonly string[] {
+  return [
+    label.ingredients === null
+      ? "The full ingredients list will be right here before the first bottle ships, exactly as it is printed on the label."
+      : withStop(label.ingredients),
+    ...(label.contains === null ? [] : [withStop(label.contains)]),
+    ...(label.storage === null ? [] : [withStop(label.storage)]),
+  ];
 }
 
 function sizeAnswer(offer: Offer): readonly string[] {
@@ -123,7 +137,7 @@ export function faqs(offer: Offer): readonly Faq[] {
       ],
     },
     { q: "How big are the packs?", a: sizeAnswer(offer) },
-    { q: "What's in it?", a: ingredientsAnswer() },
+    { q: "What's in it?", a: labelAnswer(offer) },
   ];
 
   if (offer.launchMode === "preorder") {

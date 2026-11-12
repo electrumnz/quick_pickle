@@ -41,5 +41,6 @@ export const LINK = {
   brand: "/backstage/brand",
   goLive: "/backstage/settings/go-live",
   shop: "/backstage/settings/shop",
+  label: "/backstage/settings/label",
   doc: (slug: string) => `/backstage/plans/docs/${slug}`,
 } as const;

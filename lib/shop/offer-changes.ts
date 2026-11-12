@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 
+import { isGstNumber, isNzbn } from "./company-numbers";
 import { FILE_OFFER, versioned, type Offer } from "./offer";
 
 /** The least a pack may cost: a dollar. Nothing is given away by a slip. */
@@ -41,6 +42,19 @@ const priceCents = z
   .max(MOST_PRICE_CENTS);
 const deliveryCents = z.number().int().min(0).max(MOST_DELIVERY_CENTS);
 
+/** The most letters in the ingredients list, and in any other line. */
+export const MOST_INGREDIENTS = 800;
+export const MOST_LINE = 200;
+
+/** One line of words: no line breaks, nothing but ordinary spaces. */
+const line = (most: number) =>
+  z
+    .string()
+    .trim()
+    .min(1)
+    .max(most)
+    .regex(/^[^\n\r\t]*$/, "One line, with no line breaks");
+
 /**
  * What is kept in the database: only what differs from the file. A key that
  * is absent means "as the file has it", so a later change to the file shows
@@ -67,6 +81,29 @@ export const offerChangesSchema = z
           .int()
           .min(LEAST_PRICE_CENTS)
           .max(MOST_PRICE_CENTS * 10)
+          .nullable(),
+      })
+      .partial(),
+    /** What the label says, word for word. Null takes a line off the site. */
+    label: z
+      .object({
+        ingredients: line(MOST_INGREDIENTS).nullable(),
+        contains: line(MOST_LINE).nullable(),
+        storage: line(MOST_LINE).nullable(),
+      })
+      .partial(),
+    /** Who is behind the shop. The two numbers are digits only. */
+    company: z
+      .object({
+        legalName: line(120).nullable(),
+        nzbn: z
+          .string()
+          .refine(isNzbn, "That is not a New Zealand Business Number")
+          .nullable(),
+        address: line(MOST_LINE).nullable(),
+        gstNumber: z
+          .string()
+          .refine(isGstNumber, "That is not a GST number")
           .nullable(),
       })
       .partial(),
@@ -131,8 +168,20 @@ export function offerWith(
           ? base.shipping.freeOverCents
           : changes.shipping.freeOverCents,
     },
+    label: { ...base.label, ...defined(changes.label) },
+    company: { ...base.company, ...defined(changes.company) },
     unconfirmed: base.unconfirmed.filter(
       (fact) => confirmed[fact.key] === undefined,
     ),
   });
+}
+
+/** Only the keys that were given. A key left out means "as it was". */
+function defined<T extends object>(given: T | undefined): Partial<T> {
+  const out: Partial<T> = {};
+  if (given === undefined) return out;
+  for (const key of Object.keys(given) as (keyof T)[]) {
+    if (given[key] !== undefined) out[key] = given[key];
+  }
+  return out;
 }

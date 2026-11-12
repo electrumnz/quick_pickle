@@ -1,20 +1,11 @@
 "use server";
 
-import { createHash } from "node:crypto";
-
-import { revalidatePath } from "next/cache";
-
 import { staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
 import { emailCustomer } from "@/lib/backstage/orders/emails";
 import { shipDateStanding } from "@/lib/backstage/orders/ship-date";
-import {
-  changeShop,
-  checkShopChange,
-  confirmFact,
-  shopOffer,
-} from "@/lib/backstage/shop/ops";
+import { confirmFact, shopOffer } from "@/lib/backstage/shop/ops";
 import {
   formCents,
   formText,
@@ -23,35 +14,12 @@ import {
 } from "@/lib/backstage/ui/submit";
 import { mailConnection } from "@/lib/mail";
 
+import { blankState, checkThenChange, type ShopFormState } from "./flow";
+
 /**
  * Changing the shop: prices, delivery, the ship date, pre-order or live,
- * and whether it is taking orders.
- *
- * Two presses, on purpose. The first changes nothing: it says, a sentence
- * for each thing, exactly what would move. The second makes the change, and
- * will only make the one that was shown, to the shop that was shown. Type
- * something else in between, or let somebody else change the shop in
- * between, and it shows what it would do now instead. A price with a
- * slipped digit is live for every customer the moment it is saved, so it is
- * read back first.
+ * and whether it is taking orders. Two presses (./flow.ts).
  */
-
-export type ShopFormState = {
-  readonly step: "idle" | "checked" | "done";
-  /** What was typed, handed back so nothing has to be typed twice. */
-  readonly values: Readonly<Record<string, string>>;
-  readonly error: string | null;
-  /** Which box each problem is about, by the box's name. */
-  readonly fields: Readonly<Record<string, string>>;
-  /** What would move (after a check) or what did (after a change). */
-  readonly changed: readonly string[];
-  /** A note that is not a problem: nothing to change, or checked again. */
-  readonly note: string | null;
-  /** A mark of exactly what the check was for. The second press sends it. */
-  readonly checkedFor: string | null;
-  /** The shop's word when it was checked. */
-  readonly version: string | null;
-};
 
 type Asked = {
   readonly open: boolean;
@@ -59,7 +27,6 @@ type Asked = {
   readonly batchName: string;
   readonly preorderShipsFrom: string | null;
   readonly contactEmail: string | null;
-  readonly gstRegistered: boolean | null;
   readonly prices: Record<string, number>;
   readonly shipping: {
     readonly standardCents: number;
@@ -100,7 +67,6 @@ function read(
   if (batchName === "") fields.batchName = "Give the batch a name";
   const shipDate = text("preorderShipsFrom");
   const contact = text("contactEmail");
-  const gst = text("gst");
 
   const prices: Record<string, number> = {};
   for (const sku of skus) {
@@ -119,7 +85,6 @@ function read(
     batchName,
     preorderShipsFrom: shipDate === "" ? null : shipDate,
     contactEmail: contact === "" ? null : contact,
-    gstRegistered: gst === "yes" ? true : gst === "no" ? false : null,
     prices,
     shipping: { standardCents, ruralSurchargeCents, freeOverCents },
   };
@@ -128,14 +93,6 @@ function read(
     asked: Object.keys(fields).length === 0 ? asked : null,
     fields,
   };
-}
-
-/** A mark of one set of changes to one state of the shop. */
-function markOf(asked: Asked, version: string): string {
-  return createHash("sha256")
-    .update(JSON.stringify([asked, version]))
-    .digest("hex")
-    .slice(0, 32);
 }
 
 /** Which box an operation's complaint is about. */
@@ -157,16 +114,7 @@ export async function shopAction(
     form,
     offer.packs.map((pack) => pack.sku),
   );
-  const blank: ShopFormState = {
-    step: "idle",
-    values,
-    error: null,
-    fields: {},
-    changed: [],
-    note: null,
-    checkedFor: null,
-    version: null,
-  };
+  const blank = blankState(values);
   if (asked === null) {
     return {
       ...blank,
@@ -174,57 +122,7 @@ export async function shopAction(
       fields,
     };
   }
-  const refused = (error: unknown): ShopFormState => {
-    if (!(error instanceof OpError)) throw error;
-    const boxes: Record<string, string> = {};
-    for (const [path, said] of Object.entries(error.fields)) {
-      boxes[boxFor(path)] = said;
-    }
-    return { ...blank, error: error.message, fields: boxes };
-  };
-
-  // What it would do, with nothing saved.
-  let shown: { changed: string[]; version: string };
-  try {
-    shown = await execute(checkShopChange, asked, caller);
-  } catch (error) {
-    return refused(error);
-  }
-  if (shown.changed.length === 0) {
-    return {
-      ...blank,
-      note: "Nothing to change: the shop is already like that.",
-    };
-  }
-  const mark = markOf(asked, shown.version);
-  const checked: ShopFormState = {
-    ...blank,
-    step: "checked",
-    changed: shown.changed,
-    checkedFor: mark,
-    version: shown.version,
-  };
-
-  if (formText(form, "intent") !== "change") return checked;
-  // The second press. Only for exactly what the first one showed.
-  if (formText(form, "checkedFor") !== mark) {
-    return {
-      ...checked,
-      note: "Something changed since that was checked, so here it is again as it would be now.",
-    };
-  }
-  try {
-    const done = await execute(
-      changeShop,
-      { ...asked, expectVersion: shown.version },
-      caller,
-    );
-    // The pages in the back end that show what the shop is selling.
-    revalidatePath("/backstage", "layout");
-    return { ...blank, step: "done", changed: done.changed };
-  } catch (error) {
-    return refused(error);
-  }
+  return checkThenChange(form, asked, blank, boxFor, caller);
 }
 
 /** Say that an open fact is right, or that it is not after all. */

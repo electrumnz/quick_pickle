@@ -15,12 +15,6 @@ export function shopFormValues(offer: Offer): Record<string, string> {
         ? ""
         : dollars(offer.shipping.freeOverCents),
     contactEmail: offer.contactEmail ?? "",
-    gst:
-      offer.gstRegistered === null
-        ? "unknown"
-        : offer.gstRegistered
-          ? "yes"
-          : "no",
   };
   for (const pack of offer.packs) {
     values[`price:${pack.sku}`] = dollars(pack.priceCents);

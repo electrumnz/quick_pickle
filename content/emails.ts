@@ -13,10 +13,10 @@
  * unsubscribe, and why nothing promotional may ever be added to one.
  *
  * Each names who it is from (the shop's own name) and how to reach us (reply
- * to it). The customer email address is added the day it is confirmed
- * (the shop's settings). The legal entity and GST are not confirmed either
- * (content/offer.ts UNCONFIRMED), so neither is stated: nothing here is
- * guessed.
+ * to it). The customer email address is added the day it is set (the
+ * shop's settings). A receipt names the legal seller once that is set, and
+ * says how much of the total is GST only when the business is set as
+ * registered and has its number in: nothing here is guessed.
  */
 
 import { STORE } from "./offer";
@@ -48,6 +48,12 @@ export const ORDER_EMAILS = {
   discount: CODES.discountLine,
   total: CHECKOUT.total,
   totalPaid: "Total paid",
+  /** Under the total, when the business is registered. The amount follows. */
+  gstIncluded: "Includes GST of",
+  /** Who the legal seller is. The name follows. */
+  soldBy: "Sold by",
+  /** The seller's GST number follows. */
+  gstNumber: "GST number",
   goingTo: "Going to",
 
   receipt: {

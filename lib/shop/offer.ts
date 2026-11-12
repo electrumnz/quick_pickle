@@ -30,7 +30,9 @@
  */
 
 import {
+  COMPANY,
   PACKS,
+  PRODUCT,
   SHIPPING,
   STORE,
   UNCONFIRMED,
@@ -54,6 +56,35 @@ export type Shipping = {
   readonly country: string;
 };
 
+/**
+ * What the label says, word for word. Each is null until somebody with the
+ * printed label in hand has typed it: nothing about what is in the bottle
+ * is ever guessed.
+ */
+export type Label = {
+  /** The ingredients list, as one run of words, as the label prints it. */
+  readonly ingredients: string | null;
+  /**
+   * The label's allergen line ("Contains: ..."), or null. Null says nothing
+   * either way: the site never states that there are no allergens.
+   */
+  readonly contains: string | null;
+  /** The label's storage line. */
+  readonly storage: string | null;
+};
+
+/** Who is behind the shop, for the terms of sale and a receipt. */
+export type Company = {
+  /** The legal name of whoever sells it, as it is registered. */
+  readonly legalName: string | null;
+  /** New Zealand Business Number: 13 digits. */
+  readonly nzbn: string | null;
+  /** Where the business is, on one line. */
+  readonly address: string | null;
+  /** GST number (the IRD number), digits only. */
+  readonly gstNumber: string | null;
+};
+
 export type Offer = {
   /** False when the shop is not taking orders: sold out, or shut for now. */
   readonly open: boolean;
@@ -69,6 +100,8 @@ export type Offer = {
   /** Smallest first. The page and the jar both rely on that order. */
   readonly packs: readonly Pack[];
   readonly shipping: Shipping;
+  readonly label: Label;
+  readonly company: Company;
   /** The facts that are still stand-ins. Empty means ready for search. */
   readonly unconfirmed: readonly Unconfirmed[];
   /**
@@ -82,8 +115,9 @@ export type Offer = {
 /**
  * The part of the offer a page in the browser is handed: enough to draw
  * every price and to say pre-order or live, and nothing else. The open
- * facts are notes for the people running the shop, and the contact address
- * and ship date reach a page as words the server has already written.
+ * facts are notes for the people running the shop, and the contact address,
+ * the ship date, the label and the company reach a page as words the server
+ * has already written.
  */
 export type OfferOnPage = Pick<
   Offer,
@@ -144,6 +178,12 @@ export const FILE_OFFER: Offer = versioned({
   gstRegistered: STORE.gstRegistered,
   packs: PACKS,
   shipping: { ...SHIPPING },
+  label: {
+    ingredients: PRODUCT.ingredients,
+    contains: PRODUCT.contains,
+    storage: PRODUCT.storage,
+  },
+  company: { ...COMPANY },
   unconfirmed: UNCONFIRMED,
 });
 

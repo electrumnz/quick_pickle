@@ -1,6 +1,7 @@
 /**
- * Running the shop: prices, delivery, the ship date, pre-order or live, and
- * whether it is taking orders at all, changed here with no deploy.
+ * Running the shop: prices, delivery, the ship date, pre-order or live,
+ * whether it is taking orders at all, what the label says and who the
+ * company is, changed here with no deploy.
  *
  * What the shop sells starts in `content/offer.ts`. This keeps a short list
  * of changes to lay over that file (lib/shop/offer.ts says exactly what can
@@ -14,6 +15,13 @@
  * the activity log, and raises an event whose listener throws away the
  * shop's kept pages. A fact that is still a stand-in stays open until
  * `shop.confirm`: changing a figure is not the same as saying it is right.
+ *
+ * What the label says (the ingredients list, the allergen line, the storage
+ * line) is words a customer reads, typed by a person, so it meets the copy
+ * rules before it is saved. One thing is its own: a word the Food Standards
+ * Code itself puts on an ingredients list (an additive's class name, an
+ * added vitamin or mineral) is for a person to confirm against the printed
+ * label, and nobody else can (lib/backstage/core/copy.ts).
  */
 
 import { eq } from "drizzle-orm";
@@ -21,19 +29,28 @@ import { z } from "zod";
 
 import { settings } from "@/db/schema";
 import type { DbOrTx } from "@/lib/db/types";
+import { digitsOf, formatGstNumber } from "@/lib/shop/company-numbers";
 import { formatNzd } from "@/lib/shop/money";
-import { FILE_OFFER, type Offer } from "@/lib/shop/offer";
+import {
+  FILE_OFFER,
+  type Company,
+  type Label,
+  type Offer,
+} from "@/lib/shop/offer";
 import {
   asOfferChanges,
   LEAST_PRICE_CENTS,
   MOST_DELIVERY_CENTS,
+  MOST_INGREDIENTS,
+  MOST_LINE,
   MOST_PRICE_CENTS,
   offerChangesSchema,
   offerWith,
   type OfferChanges,
 } from "@/lib/shop/offer-changes";
 
-import { refuseUnsendable } from "../core/copy";
+import type { Actor } from "../core/actor";
+import { checkOutgoing, refuseUnsendable } from "../core/copy";
 import { conflict, OpError } from "../core/errors";
 import { defineOp } from "../core/op";
 import { formatDateKey } from "../stock/dates";
@@ -76,7 +93,7 @@ export const shopOffer = defineOp({
   name: "shop.offer",
   title: "What the shop is selling right now",
   description:
-    "The offer as customers have it: each pack and its price in cents, the delivery rates, whether it is a pre-order or live, the batch's name, the ship date, the contact address, whether the shop is taking orders, and the facts that are still stand-ins. Also what the catalogue file says, and which of those have been changed from the back end. It only reads.",
+    "The offer as customers have it: each pack and its price in cents, the delivery rates, whether it is a pre-order or live, the batch's name, the ship date, the contact address, whether the shop is taking orders, what the label says (`label`: the ingredients list, the allergen line, the storage line), who the company is (`company`: legal name, NZBN, address, GST number), and the facts that are still stand-ins. Also what the catalogue file says, and which of those have been changed from the back end. It only reads.",
   access: "read",
   input: z.object({}),
   run: (ctx): Promise<ShopState> => readShop(ctx.db),
@@ -117,6 +134,18 @@ function differing(next: Offer, confirmed: OfferChanges["confirmed"]) {
   }
   if (Object.keys(prices).length > 0) changes.prices = prices;
   if (Object.keys(shipping).length > 0) changes.shipping = shipping;
+  const label: NonNullable<OfferChanges["label"]> = {};
+  for (const key of LABEL_KEYS) {
+    if (next.label[key] !== file.label[key]) label[key] = next.label[key];
+  }
+  if (Object.keys(label).length > 0) changes.label = label;
+  const company: NonNullable<OfferChanges["company"]> = {};
+  for (const key of COMPANY_KEYS) {
+    if (next.company[key] !== file.company[key]) {
+      company[key] = next.company[key];
+    }
+  }
+  if (Object.keys(company).length > 0) changes.company = company;
   if (confirmed !== undefined && Object.keys(confirmed).length > 0) {
     changes.confirmed = confirmed;
   }
@@ -145,6 +174,12 @@ async function store(
 
 const cents = z.number().int();
 
+const LABEL_KEYS = ["ingredients", "contains", "storage"] as const;
+const COMPANY_KEYS = ["legalName", "nzbn", "address", "gstNumber"] as const;
+
+/** A line as it was typed. Empty, or null, takes it off. */
+const typed = z.string().max(2000).nullable().optional();
+
 const changeInput = z.object({
   /**
    * The offer's word as the person changing it last saw it. If the shop has
@@ -172,6 +207,24 @@ const changeInput = z.object({
       freeOverCents: cents.nullable().optional(),
     })
     .optional(),
+  /** What the label says, word for word. */
+  label: z
+    .object({ ingredients: typed, contains: typed, storage: typed })
+    .optional(),
+  /** Who is behind the shop. */
+  company: z
+    .object({
+      legalName: typed,
+      nzbn: typed,
+      address: typed,
+      gstNumber: typed,
+    })
+    .optional(),
+  /**
+   * A person saying the label's lines are word for word what the printed
+   * label says. Only a person's say-so counts.
+   */
+  labelChecked: z.boolean().default(false),
 });
 
 /** Each thing that moved, in a sentence, for the activity log and the screen. */
@@ -256,6 +309,33 @@ export function whatChanged(before: Offer, after: Offer): string[] {
           : "not registered for GST",
     );
   }
+  const words = (name: string, was: string | null, now: string | null) => {
+    if (was === now) return;
+    said.push(now === null ? `${name} taken off` : `${name} to "${now}"`);
+  };
+  words(
+    "the ingredients list",
+    before.label.ingredients,
+    after.label.ingredients,
+  );
+  words("the allergen line", before.label.contains, after.label.contains);
+  words("the storage line", before.label.storage, after.label.storage);
+  words("the legal name", before.company.legalName, after.company.legalName);
+  if (before.company.nzbn !== after.company.nzbn) {
+    said.push(
+      after.company.nzbn === null
+        ? "the NZBN taken off"
+        : `the NZBN to ${after.company.nzbn}`,
+    );
+  }
+  words("the business address", before.company.address, after.company.address);
+  if (before.company.gstNumber !== after.company.gstNumber) {
+    said.push(
+      after.company.gstNumber === null
+        ? "the GST number taken off"
+        : `the GST number to ${formatGstNumber(after.company.gstNumber)}`,
+    );
+  }
   return said;
 }
 
@@ -266,9 +346,90 @@ const SAID: Readonly<Record<string, string>> = {
   preorderShipsFrom: "The ship date is a day on the calendar, like 2026-12-01",
   contactEmail: "That does not look like an email address",
   batchName: "The batch's name is 1 to 40 letters",
+  "label.ingredients": `The ingredients list is one run of words, up to ${String(MOST_INGREDIENTS)} letters`,
+  "label.contains": `The allergen line is one line, up to ${String(MOST_LINE)} letters`,
+  "label.storage": `The storage line is one line, up to ${String(MOST_LINE)} letters`,
+  "company.legalName": "The legal name is one line, up to 120 letters",
+  "company.nzbn":
+    "That is not a New Zealand Business Number. It is 13 digits, and the last one checks the rest: look for a slipped digit",
+  "company.address": `The address is one line, up to ${String(MOST_LINE)} letters`,
+  "company.gstNumber":
+    "That is not a GST number. It is 8 or 9 digits, and the last one checks the rest: look for a slipped digit",
 };
 
 type ChangeInput = z.infer<typeof changeInput>;
+
+/** One line of words as it will be kept: single spaces, or null for none. */
+function tidy(value: string | null): string | null {
+  const one = (value ?? "").replace(/\s+/g, " ").trim();
+  return one === "" ? null : one;
+}
+
+/** A number as it will be kept: its digits, or null for none. */
+function tidyNumber(value: string | null): string | null {
+  const one = tidy(value);
+  return one === null ? null : digitsOf(one);
+}
+
+/** The names the label's lines go by in a sentence, and in a complaint. */
+const LABEL_SAID: Readonly<Record<keyof Label, string>> = {
+  ingredients: "the ingredients list",
+  contains: "the allergen line",
+  storage: "the storage line",
+};
+
+/**
+ * The copy rules, over each of the label's lines that is changing.
+ *
+ * A banned word refuses the change, like anywhere else. A word that needs a
+ * person's check (which here includes the Code's own words for an additive,
+ * a vitamin or a mineral, on the ingredients list only) refuses it until a
+ * person says the lines are word for word what the printed label says.
+ */
+function readTheLabel(
+  before: Label,
+  after: Label,
+  checked: boolean,
+  actor: Actor | null,
+): string[] {
+  const parts: Record<string, string> = {};
+  for (const key of LABEL_KEYS) {
+    const now = after[key];
+    if (now !== null && now !== before[key]) parts[LABEL_SAID[key]] = now;
+  }
+  if (Object.keys(parts).length === 0) return [];
+  const options = { labelList: [LABEL_SAID.ingredients] };
+  const problems = checkOutgoing(parts, options);
+  const needsCheck = problems.filter(
+    (problem) => problem.kind === "restricted",
+  );
+  // What a person has confirmed, as it goes in the activity log.
+  const confirmed = needsCheck.map(
+    (problem) => `"${problem.found}" in ${problem.part} (${problem.rule})`,
+  );
+  if (problems.length === needsCheck.length && needsCheck.length > 0) {
+    // Only words a person may confirm stand in the way.
+    const byAPerson = actor?.type === "human";
+    if (checked && byAPerson) return confirmed;
+    const named = needsCheck
+      .map((problem) => `"${problem.found}" in ${problem.part}`)
+      .join(", ");
+    const message = byAPerson
+      ? `Check this against the printed label: ${named}. If the label says exactly that, tick the box to say so.`
+      : `Only a person can confirm what the printed label says (${named}). Whoever has the label makes this change in the back end, under Settings, The label and the company.`;
+    throw new OpError("invalid_input", message, { labelChecked: message });
+  }
+  // Anything else is refused in the rules' own words. What a person has
+  // checked is cleared, so the complaint is only about what cannot go out.
+  refuseUnsendable(parts, {
+    ...options,
+    checked:
+      checked && actor?.type === "human"
+        ? [...new Set(needsCheck.map((problem) => problem.rule))]
+        : [],
+  });
+  return [];
+}
 
 /**
  * What a change would make of the shop, checked and put into words, with
@@ -278,7 +439,8 @@ type ChangeInput = z.infer<typeof changeInput>;
 function proposed(
   before: Offer,
   input: ChangeInput,
-): { after: Offer; changed: string[] } {
+  actor: Actor | null,
+): { after: Offer; changed: string[]; labelConfirmed: string[] } {
   // Unknown packs are refused out loud here. A stored change for a pack
   // that no longer exists is dropped quietly when it is read.
   for (const sku of Object.keys(input.prices ?? {})) {
@@ -328,6 +490,39 @@ function proposed(
               : { freeOverCents: input.shipping.freeOverCents }),
           },
         }),
+    ...(input.label === undefined
+      ? {}
+      : {
+          label: {
+            ...(input.label.ingredients === undefined
+              ? {}
+              : { ingredients: tidy(input.label.ingredients) }),
+            ...(input.label.contains === undefined
+              ? {}
+              : { contains: tidy(input.label.contains) }),
+            ...(input.label.storage === undefined
+              ? {}
+              : { storage: tidy(input.label.storage) }),
+          },
+        }),
+    ...(input.company === undefined
+      ? {}
+      : {
+          company: {
+            ...(input.company.legalName === undefined
+              ? {}
+              : { legalName: tidy(input.company.legalName) }),
+            ...(input.company.nzbn === undefined
+              ? {}
+              : { nzbn: tidyNumber(input.company.nzbn) }),
+            ...(input.company.address === undefined
+              ? {}
+              : { address: tidy(input.company.address) }),
+            ...(input.company.gstNumber === undefined
+              ? {}
+              : { gstNumber: tidyNumber(input.company.gstNumber) }),
+          },
+        }),
   };
   // The same limits as what is stored: a price of at least a dollar, a
   // real date, a real address. Said field by field.
@@ -336,7 +531,8 @@ function proposed(
     const fields: Record<string, string> = {};
     for (const issue of checked.error.issues) {
       const path = issue.path.join(".");
-      fields[path] ??= SAID[path.split(".")[0] ?? ""] ?? issue.message;
+      fields[path] ??=
+        SAID[path] ?? SAID[path.split(".")[0] ?? ""] ?? issue.message;
     }
     throw new OpError(
       "invalid_input",
@@ -367,19 +563,38 @@ function proposed(
   if (after.batchName !== before.batchName) {
     refuseUnsendable({ "the batch's name": after.batchName });
   }
-  return { after, changed: whatChanged(before, after) };
+  // So are the label's lines, each as it changes.
+  const labelConfirmed = readTheLabel(
+    before.label,
+    after.label,
+    input.labelChecked,
+    actor,
+  );
+  // A GST number on a business that says it is not registered is one of
+  // the two typed wrong. Nothing a customer reads may say both.
+  if (after.gstRegistered === false && after.company.gstNumber !== null) {
+    const message =
+      "The shop is set as not registered for GST, and it has a GST number. Change one of them.";
+    throw new OpError("invalid_input", message, {
+      "company.gstNumber": message,
+    });
+  }
+  return { after, changed: whatChanged(before, after), labelConfirmed };
 }
 
 export const checkShopChange = defineOp({
   name: "shop.checkChange",
   title: "See what a change to the shop would do, without making it",
   description:
-    "Takes the same input as `shop.change` and says, in a sentence for each thing, exactly what would move (`changed`), with nothing saved. Also the offer's word as it stands (`version`): hand it to `shop.change` as `expectVersion` and the change is refused if the shop has moved in between. An empty `changed` means the shop is already like that. It refuses the same things `shop.change` does, with the same words.",
+    "Takes the same input as `shop.change` and says, in a sentence for each thing, exactly what would move (`changed`), with nothing saved. Also the offer's word as it stands (`version`): hand it to `shop.change` as `expectVersion` and the change is refused if the prices or the shop's state have moved in between. An empty `changed` means the shop is already like that. It refuses the same things `shop.change` does, with the same words.",
   access: "read",
   input: changeInput,
   async run(ctx, input): Promise<{ changed: string[]; version: string }> {
     const { offer } = await readShop(ctx.db);
-    return { changed: proposed(offer, input).changed, version: offer.version };
+    return {
+      changed: proposed(offer, input, ctx.actor).changed,
+      version: offer.version,
+    };
   },
 });
 
@@ -387,7 +602,7 @@ export const changeShop = defineOp({
   name: "shop.change",
   title: "Change what the shop sells, for how much, or when",
   description:
-    "Changes the offer customers see and are charged by, with no deploy: a pack's price (`prices`, by SKU, in cents; only a pack that exists), the delivery rates (`shipping`, in cents: `standardCents` is the flat rate and nothing means delivery is free for everybody, `ruralSurchargeCents` is the extra for a rural address, `freeOverCents` is the order value that earns free delivery or null for none), the ship date for a pre-order (`preorderShipsFrom`, like 2026-12-01, or null to take it off), pre-order or live (`launchMode`), the batch's name, whether the shop is taking orders (`open`), the contact address and whether prices include GST. Send only what is changing. It cannot add a pack, change how many shots are in one, or change the currency: those are in the catalogue file. Changing a figure does not confirm it (see `shop.confirm`). Visitors see it within a minute or so, and an order placed from a page drawn on the old prices is handed back with the new total first. Use `shop.checkChange` first to see what it would do.",
+    "Changes the offer customers see and are charged by, with no deploy: a pack's price (`prices`, by SKU, in cents; only a pack that exists), the delivery rates (`shipping`, in cents: `standardCents` is the flat rate and nothing means delivery is free for everybody, `ruralSurchargeCents` is the extra for a rural address, `freeOverCents` is the order value that earns free delivery or null for none), the ship date for a pre-order (`preorderShipsFrom`, like 2026-12-01, or null to take it off), pre-order or live (`launchMode`), the batch's name, whether the shop is taking orders (`open`), the contact address and whether prices include GST. Also what the label says (`label`: `ingredients`, `contains` for the allergen line, `storage`; each word for word as printed, or null to take it off) and who the company is (`company`: `legalName`, `nzbn`, `address`, `gstNumber`). The label's lines meet the copy rules before they are saved, and a word that needs checking against the printed label can only be confirmed by a person (`labelChecked`), never by a bot: nothing about what is in the bottle is ever guessed or drafted. Send only what is changing. It cannot add a pack, change how many shots are in one, or change the currency: those are in the catalogue file. Changing a figure does not confirm it (see `shop.confirm`). Visitors see it within a minute or so, and an order placed from a page drawn on the old prices is handed back with the new total first. Use `shop.checkChange` first to see what it would do.",
   access: "write",
   effect: "outward",
   input: changeInput,
@@ -415,7 +630,11 @@ export const changeShop = defineOp({
       );
     }
 
-    const { after, changed } = proposed(before, input);
+    const { after, changed, labelConfirmed } = proposed(
+      before,
+      input,
+      ctx.actor,
+    );
     if (changed.length === 0) {
       ctx.nothingChanged();
       return { offer: before, changed };
@@ -427,8 +646,12 @@ export const changeShop = defineOp({
       ctx.actor.type === "system" ? null : ctx.actor.userId,
     );
     await ctx.audit({
-      summary: `Changed the shop: ${changed.join("; ")}`,
-      data: { from: before.version, to: after.version },
+      summary: `Changed the shop: ${changed.join("; ")}${labelConfirmed.length === 0 ? "" : `. Said to be word for word what the printed label says: ${labelConfirmed.join(", ")}`}`,
+      data: {
+        from: before.version,
+        to: after.version,
+        ...(labelConfirmed.length === 0 ? {} : { labelConfirmed }),
+      },
     });
     await ctx.emit({
       type: "shop.changed",
@@ -449,7 +672,40 @@ const CONFIRMABLE: Readonly<Record<string, (offer: Offer) => string | null>> = {
       : "Set the ship date first.",
   "contact-email": (offer) =>
     offer.contactEmail === null ? "Set the contact address first." : null,
+  // The allergen and storage lines are only there if the label has them.
+  ingredients: (offer) =>
+    offer.label.ingredients === null
+      ? "Put the ingredients list in first."
+      : null,
+  // A sole trader has no NZBN to give, so only the name is asked for.
+  "legal-entity": (offer) =>
+    offer.company.legalName === null
+      ? "Put the legal name in first."
+      : offer.gstRegistered === null
+        ? "Say whether it is registered for GST first."
+        : offer.gstRegistered && offer.company.gstNumber === null
+          ? "Put the GST number in first."
+          : null,
 };
+
+/** Who is behind the shop, in a line, as far as it is known. */
+function companySaid(offer: Offer): string {
+  const { legalName, nzbn, address, gstNumber }: Company = offer.company;
+  const who = [
+    legalName ?? "No legal name yet",
+    ...(nzbn === null ? [] : [`NZBN ${nzbn}`]),
+    ...(address === null ? [] : [address]),
+  ].join(", ");
+  const gst =
+    offer.gstRegistered === null
+      ? "GST not known yet"
+      : offer.gstRegistered
+        ? gstNumber === null
+          ? "registered for GST, with no number in yet"
+          : `registered for GST, number ${formatGstNumber(gstNumber)}`
+        : "not registered for GST";
+  return `${who}; ${gst}`;
+}
 
 /**
  * What the site says right now for an open fact, in a line, so that whoever
@@ -489,15 +745,30 @@ export function factNow(key: string, offer: Offer): string | null {
   if (key === "contact-email") {
     return offer.contactEmail ?? "No address set: the site shows none";
   }
+  if (key === "ingredients") {
+    const { ingredients, contains, storage } = offer.label;
+    if (ingredients === null && contains === null && storage === null) {
+      return "Nothing is in yet: the site says the list is on its way";
+    }
+    const bare = (text: string) => text.replace(/[.\s]+$/, "");
+    return [
+      ingredients === null
+        ? "No ingredients list yet"
+        : `Ingredients: ${bare(ingredients)}`,
+      contains === null
+        ? "No allergen line"
+        : `Allergen line: ${bare(contains)}`,
+      storage === null ? "No storage line" : `Storage: ${bare(storage)}`,
+    ].join(". ");
+  }
+  if (key === "legal-entity") return companySaid(offer);
   return null;
 }
 
 /** Whether an open fact can be confirmed here, and if not, why not. */
 export function canConfirm(key: string, offer: Offer): string | null {
   const needs = CONFIRMABLE[key];
-  if (needs === undefined) {
-    return "This one needs the words themselves written into the site first.";
-  }
+  if (needs === undefined) return "This one cannot be settled from here.";
   return needs(offer);
 }
 
@@ -505,7 +776,7 @@ export const confirmFact = defineOp({
   name: "shop.confirm",
   title: "Say that a fact about the shop is right",
   description:
-    "Marks one of the shop's open facts as confirmed (`key`, as listed by `shop.offer` under `unconfirmed`), or as open again (`confirmed: false`). A fact that is still a stand-in keeps the site out of search engines; when the last one is confirmed the site opens to them. Only a person who knows the fact is true should do this: it records who said so and when. Facts that need words written into the site first (the ingredients, the legal entity) cannot be confirmed here.",
+    "Marks one of the shop's open facts as confirmed (`key`, as listed by `shop.offer` under `unconfirmed`), or as open again (`confirmed: false`). A fact that is still a stand-in keeps the site out of search engines; when the last one is confirmed the site opens to them. Only a person who knows the fact is true should do this: it records who said so and when. A fact whose figure or words are not in yet cannot be confirmed: set them first with `shop.change`.",
   access: "admin",
   effect: "outward",
   input: z.object({
