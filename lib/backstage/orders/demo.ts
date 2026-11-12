@@ -280,7 +280,18 @@ export async function placeDemoOrders(
           reference: `DEMO-${order.number}`,
         },
         joinCrew: order.crew ?? false,
-        ...(order.via === undefined ? {} : { source: { via: order.via } }),
+        // The visit it came from: an id made from its number, the page it
+        // saw, and the link if it followed one. Placing it writes the last
+        // step of that visit; the numbers demo fills in the ones before.
+        source: {
+          visit: `demo${order.number.replace("-", "").toLowerCase()}`.padEnd(
+            16,
+            "x",
+          ),
+          page: "home",
+          device: order.rural ? "desk" : "phone",
+          ...(order.via === undefined ? {} : { via: order.via }),
+        },
       },
       shop,
       at(0),

@@ -249,6 +249,19 @@ go-live list shows when it last ran and what is stuck.
   The privacy page says all of this; change one and change the other.
 - Every short link has a QR code (`lib/backstage/marketing/qr.ts`), which only ever holds
   the link's own address on this site. Its tests scan the code back with a reader.
+- **The shop counts its own visits, with no cookie and nobody identified.** A page tells
+  `/api/seen` that it was viewed, that something went in the jar, that the checkout was
+  opened (`lib/shop/seen.ts`). Each page load makes a random id that lives only in that
+  page's memory. A browser that asks not to be tracked (Global Privacy Control, Do Not
+  Track) sends nothing, and the server checks again. Machines that say what they are are
+  not counted, nor is anything not sent by one of our own pages, and the address answers
+  204 whatever happened. **An order is never counted on a browser's say-so**: `orders.record`
+  writes the visit's last step itself, in the order's own transaction. Visits are kept
+  thirteen months; the clock throws older ones away. The privacy page says all of this.
+- **Visits and sales are two different things, and Numbers says which is which.** Visits are
+  our own count and run a little low. Sales are the orders: paid, less refunds. Every
+  figure on `/backstage/numbers` comes from one read (`numbers.summary`) for one stretch of
+  New Zealand days, so they agree with each other.
 - `lib/shop/store` is where the shop hands an order over. The default is `db`: the back
   end's own `orders.record` operation, so an order is on the Orders screen as it is placed.
 - The "order's in" page reads a short-lived httpOnly receipt cookie. It is display only.
@@ -263,6 +276,11 @@ go-live list shows when it last ran and what is stuck.
 - **Motion is transform and opacity only**, on the guide's durations, and everything
   collapses under `prefers-reduced-motion`. Content is visible without JavaScript; scroll
   reveal only hides blocks once its observer is actually running.
+- **A chart is one colour of mark, with its numbers as a table under it.** The brand pink
+  is the mark colour (checked against the paper it sits on); words stay in ink and never
+  wear the mark's colour. Pink and olive are never used as two series side by side: to
+  someone red-green colour-blind they are too close to tell apart. Two measures of
+  different size are two charts, never two scales on one.
 - Tap targets are 44px or more. axe runs on every page at both sizes with no rule disabled.
 - **Lighthouse runs with the slow connection applied for real**, five runs, median
   (`throttlingMethod: "devtools"` in `lighthouserc.json`). Its default is to load the page
@@ -308,6 +326,9 @@ Video and reels go in the slots in `content/media.ts`, encoded by `scripts/build
 - **Never `pkill -f` on a broad pattern.** Kill by PID.
 - Playwright is pinned to the version whose Chromium is preinstalled in the cloud sandbox
   (1.63). Do not run `playwright install` there.
+- A headless browser says it is one, so the visit counter ignores it. A browser test that
+  needs a visit counted sets an ordinary user agent (`e2e/numbers.spec.ts`) and arrives
+  under a label of its own, so it can find its visit whatever else is running.
 - The browser tests start **two** servers from one build: the site (no database, so its
   back end is open and on demo data) and a second copy with `BACKSTAGE_AUTH=required` for
   the sign-in tests. React clears a form's fields when its action returns; a test that types

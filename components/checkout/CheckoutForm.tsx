@@ -17,6 +17,7 @@ import { CHECKOUT, CODES, JAR } from "@/content/site";
 import { formatNzd, formatNzdExact } from "@/lib/shop/money";
 import { NZ_REGIONS, type FieldErrors } from "@/lib/shop/order";
 import { quote } from "@/lib/shop/pricing";
+import { visitDetails } from "@/lib/shop/seen";
 
 import {
   checkCode,
@@ -160,6 +161,7 @@ export function CheckoutForm({
   const [state, action, pending] = useActionState(submitCheckout, INITIAL);
   const [rural, setRural] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const sourceRef = useRef<HTMLInputElement>(null);
 
   // A promo code. The box holds what was typed; `code` holds the server's
   // answer for it and the jar it was answered for. Only the word is ever
@@ -450,6 +452,9 @@ export function CheckoutForm({
           noValidate
           className="mt-8 flex flex-col gap-10"
           onSubmit={(event) => {
+            if (sourceRef.current !== null) {
+              sourceRef.current.value = JSON.stringify(visitDetails(source));
+            }
             // A code that is typed but not applied would change the total
             // after the button was pressed. Apply it first, show the new
             // total, and let the buyer press the button for that figure.
@@ -460,16 +465,10 @@ export function CheckoutForm({
           }}
         >
           <input type="hidden" name="lines" value={jar} readOnly />
-          {/* The link the visit came through, if there was one. A label
-              for the order: the server keeps only what it recognises. */}
-          {Object.keys(source).length > 0 ? (
-            <input
-              type="hidden"
-              name="source"
-              value={JSON.stringify(source)}
-              readOnly
-            />
-          ) : null}
+          {/* How the visit arrived and which page it saw, filled in as the
+              form is sent. A label for the order: the server keeps only
+              what it recognises, and nothing about the price depends on it. */}
+          <input ref={sourceRef} type="hidden" name="source" defaultValue="" />
           {/* Honeypot. People never see it; scripts fill it in. */}
           <div aria-hidden="true" className="hidden">
             <label>

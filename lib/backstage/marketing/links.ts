@@ -137,10 +137,22 @@ export function isCountedVisit(request: {
   readonly headers: { get(name: string): string | null };
 }): boolean {
   if (request.method.toUpperCase() !== "GET") return false;
-  const agent = (request.headers.get("user-agent") ?? "").trim();
+  return fromAPersonsBrowser(request.headers);
+}
+
+/**
+ * True when a request's headers look like a person's own browser, whatever
+ * the method: it says what it is, it is not a machine that says so, and it
+ * is not fetching a page ahead of time. The shop's visit counter uses the
+ * same test as a short link's click count.
+ */
+export function fromAPersonsBrowser(headers: {
+  get(name: string): string | null;
+}): boolean {
+  const agent = (headers.get("user-agent") ?? "").trim();
   if (agent === "" || MACHINE.test(agent)) return false;
   return !AHEAD_OF_TIME.some((name) =>
-    /prefetch|prerender|preview/i.test(request.headers.get(name) ?? ""),
+    /prefetch|prerender|preview/i.test(headers.get(name) ?? ""),
   );
 }
 

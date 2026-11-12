@@ -254,5 +254,13 @@ export const MIGRATIONS: readonly Migration[] = [
       "CREATE INDEX \"links_partner_idx\" ON \"links\" USING btree (\"partner_id\");",
       "CREATE INDEX \"promo_codes_partner_idx\" ON \"promo_codes\" USING btree (\"partner_id\");"
     ]
+  },
+  {
+    "tag": "0005_visits",
+    "hash": "7e43b65a63ce05d4",
+    "statements": [
+      "ALTER TABLE \"page_events\" ADD COLUMN \"page\" text DEFAULT 'home' NOT NULL;",
+      "CREATE INDEX \"page_events_kind_idx\" ON \"page_events\" USING btree (\"kind\",\"at\");"
+    ]
   }
 ];

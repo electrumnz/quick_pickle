@@ -104,7 +104,9 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       food business has to have in place.
 - [ ] **Run the shop from the back end.** Prices, ship date, launch mode, delivery rates
       and the announcement, without a deploy.
-- [ ] **Numbers.** Sales, the funnel (our own, no cookies), crew growth.
+- [x] **Numbers.** Sales, visits and how far they get (our own count, no cookies, nobody
+      identified), where visits came from with the sales from each, phones against
+      desktops, and how the crew list is moving.
 - [ ] **Xero and couriers.**
 - [ ] **Claude tooling (MCP).** Last, over the same operations: a small tool set, per-user
       sign-in, every call in the activity log.
@@ -127,7 +129,6 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       `scripts/build-media.mjs`.
 - [ ] Reviews, once there are real ones. None are invented.
 - [ ] Subscribe and save, once there is a second batch to subscribe to.
-- [ ] Analytics, so the page can be tuned on evidence.
 
 ## Built and verified
 

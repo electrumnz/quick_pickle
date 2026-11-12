@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { CartProvider } from "@/components/cart/CartProvider";
+import { Seen } from "@/components/site/Seen";
 import { Reveal } from "@/components/ui/Reveal";
 
 /**
@@ -15,6 +16,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
       <CartProvider>
         {children}
         <CartDrawer />
+        <Seen />
       </CartProvider>
       <Reveal />
     </>
