@@ -37,7 +37,8 @@ Updated 12 November 2026. Honest status, not a summary.
 - [ ] **One test purchase by a person.** On the live site, with Stripe's test card
       (4242 4242 4242 4242, any future date, any three digits). Stripe's payment page will
       not let a robot press Pay, so this is the one step of the paid path nobody has seen
-      work end to end.
+      work end to end. Then refund part of it from Stripe's own dashboard: within a minute
+      the order in the back end should say part refunded, with a line in its history.
 - [ ] **Make the owner login.** Quick Pickle has its own Supabase organisation and Vercel
       account, apart from Keece, and production is connected. What is left is to open
       `/backstage/set-up` once, with the set-up code from Vercel's settings
@@ -163,8 +164,14 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       as they ask. No money and nothing about a person rides on either (a partner is
       credited by orders, never by clicks), but it could pad out the numbers and a test's
       verdict. The checkout's counter would fit both.
-- [ ] **Refunds made from Stripe's own dashboard**, and card disputes, written back onto
-      the order. Today a refund has to be started from the back end to be recorded.
+- [x] **Refunds made from Stripe's own dashboard**, written back onto the order. When
+      Stripe says a payment was refunded, the refunds it holds are read and any the order
+      does not have are recorded: the order, the customer's records and the books all
+      follow. One the back end started is known by its own id and never counted twice.
+- [ ] **Card disputes**, written onto the order with the date an answer is due. A dispute
+      is rare and has a deadline, so it belongs on Today the day it arrives.
+- [ ] **A refund Stripe later says failed** (a closed card, say) is not taken back off the
+      order. Rare, and Stripe emails about it, but the order would go on saying refunded.
 
 ## Would make it sell harder
 

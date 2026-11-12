@@ -515,6 +515,7 @@ describe("handleStripeEvent", () => {
   function book() {
     const paid: Parameters<OrderBook["markPaid"]>[0][] = [];
     const closed: Parameters<OrderBook["closeUnpaid"]>[0][] = [];
+    const refunded: Parameters<OrderBook["seeRefunds"]>[0][] = [];
     const impl: OrderBook = {
       async markPaid(input) {
         paid.push(input);
@@ -523,8 +524,15 @@ describe("handleStripeEvent", () => {
       async closeUnpaid(input) {
         closed.push(input);
       },
+      async seeRefunds(input) {
+        refunded.push(input);
+        // An order of ours, unless the payment is somebody else's.
+        return input.paymentIntent === "pi_not_ours"
+          ? { number: null, written: 0 }
+          : { number: input.number ?? "QP-7K2M9X", written: 1 };
+      },
     };
-    return { paid, closed, impl };
+    return { paid, closed, refunded, impl };
   }
 
   const session = (over: Record<string, unknown> = {}) => ({
@@ -624,6 +632,82 @@ describe("handleStripeEvent", () => {
       b.impl,
     );
     expect(b.paid).toHaveLength(1);
+  });
+
+  it("has the refunds on a payment read when Stripe says one was made", async () => {
+    const b = book();
+    const outcome = await handleStripeEvent(
+      {
+        type: "charge.refunded",
+        data: {
+          object: {
+            id: "ch_1",
+            payment_intent: "pi_1",
+            metadata: { order_number: "QP-7K2M9X" },
+          },
+        },
+      },
+      b.impl,
+    );
+    expect(outcome).toEqual({
+      action: "refunds",
+      number: "QP-7K2M9X",
+      written: 1,
+    });
+    expect(b.refunded).toEqual([
+      { number: "QP-7K2M9X", paymentIntent: "pi_1" },
+    ]);
+    // It marks nothing paid and closes nothing.
+    expect(b.paid).toHaveLength(0);
+    expect(b.closed).toHaveLength(0);
+  });
+
+  it("hands over the payment alone when the charge does not say whose it is", async () => {
+    const b = book();
+    for (const metadata of [
+      undefined,
+      null,
+      {},
+      { order_number: "someone-elses" },
+    ]) {
+      await handleStripeEvent(
+        {
+          type: "charge.refunded",
+          data: { object: { payment_intent: "pi_2", metadata } },
+        },
+        b.impl,
+      );
+    }
+    expect(b.refunded).toEqual(
+      Array.from({ length: 4 }, () => ({
+        number: null,
+        paymentIntent: "pi_2",
+      })),
+    );
+  });
+
+  it("lets a refund on somebody else's payment go by", async () => {
+    const b = book();
+    expect(
+      await handleStripeEvent(
+        {
+          type: "charge.refunded",
+          data: { object: { payment_intent: "pi_not_ours" } },
+        },
+        b.impl,
+      ),
+    ).toEqual({ action: "ignored", why: "not one of our orders" });
+    // And one with nothing to go on is not even asked about.
+    expect(
+      await handleStripeEvent(
+        { type: "charge.refunded", data: { object: {} } },
+        b.impl,
+      ),
+    ).toEqual({
+      action: "ignored",
+      why: "a refund with no payment to its name",
+    });
+    expect(b.refunded).toHaveLength(1);
   });
 
   it("ignores events that are not ours to act on", async () => {

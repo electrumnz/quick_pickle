@@ -32,6 +32,12 @@ on:
           - ensure-setup-code
           - connect-database
           - stripe-check
+          - stripe-events
+          # The checkout's limit on asks from one address: the off switch
+          # and the way back. Follow either with redeploy.
+          - limits-off
+          - limits-on
+          - redeploy
       confirm:
         description: Type yes for an action that changes a setting
         type: string

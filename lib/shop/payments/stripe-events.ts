@@ -19,14 +19,22 @@ type CheckoutSessionObject = {
   readonly currency?: unknown;
 };
 
+/** A charge, as far as a refund on it concerns us. */
+type ChargeObject = {
+  readonly payment_intent?: unknown;
+  readonly metadata?: { readonly order_number?: unknown } | null;
+};
+
 export type StripeEvent = {
   readonly id?: unknown;
   readonly type?: unknown;
   readonly livemode?: unknown;
-  readonly data?: { readonly object?: CheckoutSessionObject } | null;
+  readonly data?: {
+    readonly object?: CheckoutSessionObject & ChargeObject;
+  } | null;
 };
 
-/** The three things an event can ask of the order book. */
+/** The things an event can ask of the order book. */
 export type OrderBook = {
   markPaid(input: {
     readonly number: string;
@@ -40,6 +48,16 @@ export type OrderBook = {
     readonly number: string;
     readonly reason: string;
   }): Promise<unknown>;
+  /**
+   * Money went back on a payment, by whoever's hand. The event only says
+   * that something did: the book asks Stripe what, and writes down any
+   * refund it did not already know about. `number` is the order the payment
+   * says it belongs to, when it says.
+   */
+  seeRefunds(input: {
+    readonly number: string | null;
+    readonly paymentIntent: string | null;
+  }): Promise<{ readonly number: string | null; readonly written: number }>;
 };
 
 export type EventOutcome =
@@ -52,7 +70,13 @@ export type EventOutcome =
     }
   | { readonly action: "closed"; readonly number: string }
   /** Paid for at Stripe but not yet settled (a bank transfer in flight). */
-  | { readonly action: "waiting"; readonly number: string };
+  | { readonly action: "waiting"; readonly number: string }
+  /** A refund on one of our orders, read and written down if it was news. */
+  | {
+      readonly action: "refunds";
+      readonly number: string;
+      readonly written: number;
+    };
 
 function orderNumberOf(session: CheckoutSessionObject): string | null {
   const candidates = [
@@ -73,6 +97,26 @@ export async function handleStripeEvent(
 ): Promise<EventOutcome> {
   const type = typeof event.type === "string" ? event.type : "";
   const session = event.data?.object;
+
+  // A refund, made from the back end or from Stripe's own dashboard. The
+  // same news arrives either way, and reading it twice writes nothing twice.
+  if (type === "charge.refunded") {
+    const said = session?.metadata?.order_number;
+    const number =
+      typeof said === "string" && ORDER_NUMBER_PATTERN.test(said) ? said : null;
+    const paymentIntent =
+      typeof session?.payment_intent === "string" &&
+      session.payment_intent !== ""
+        ? session.payment_intent
+        : null;
+    if (number === null && paymentIntent === null) {
+      return { action: "ignored", why: "a refund with no payment to its name" };
+    }
+    const seen = await book.seeRefunds({ number, paymentIntent });
+    return seen.number === null
+      ? { action: "ignored", why: "not one of our orders" }
+      : { action: "refunds", number: seen.number, written: seen.written };
+  }
 
   const about = [
     "checkout.session.completed",
