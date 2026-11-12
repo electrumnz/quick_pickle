@@ -50,6 +50,30 @@ describe("words that are about to leave", () => {
     });
   });
 
+  it("refuses the word recovery by itself, not only in a phrase", () => {
+    // "Aids recovery" was always caught. "Your recovery ritual" says the same
+    // thing with fewer words, and it used to pass.
+    for (const said of [
+      "Your recovery ritual, in a tiny bottle.",
+      "Recovery starts here.",
+      "Made for recovery days.",
+    ]) {
+      const problems = checkOutgoing({ body: said });
+      expect(
+        problems.map((problem) => problem.rule),
+        said,
+      ).toContain("EL-07");
+      // A tick cannot clear it: it is banned, not waiting on a check.
+      expect(() =>
+        refuseUnsendable({ body: said }, { checked: ["EL-07"] }),
+      ).toThrow(OpError);
+    }
+    // The verb, about a parcel, is ordinary shop talk.
+    expect(
+      checkOutgoing({ body: "The courier is trying to recover your parcel." }),
+    ).toEqual([]);
+  });
+
   it("says a thing once, however many times it was written", () => {
     const problems = checkOutgoing({
       body: "Hydration. More hydration. HYDRATION!",

@@ -68,6 +68,7 @@ if (dirtyJson) {
     "EL-01", // electrolytes
     "EL-02", // hydrated
     "EL-04", // recovery / workout
+    "EL-07", // the word "recovery" by itself
     "TH-01", // hangover
     "TH-04", // cramp
     "HC-01", // gut health

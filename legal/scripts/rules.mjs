@@ -339,6 +339,14 @@ export const RULES = [
     "Health claim about physical performance.",
     "FSC Std 1.2.7-18",
   ),
+  r(
+    "EL-07",
+    BANNED,
+    CONSUMER_ONLY,
+    /\brecover(?:y|ies)\b/i,
+    'Beside the product, "recovery" by itself says it does something for a body after exercise. EL-04 catches the obvious phrasings; this catches the word. (In the back end it is an ordinary word: a parcel, a password.)',
+    "FSC Std 1.2.7-18; Std 2.9.4",
+  ),
 
   // ---- Group Q: the lines in Quick Pickle's own concept deck ---------------
   // The brand was born with a claim in its mouth. These rules exist so that the
