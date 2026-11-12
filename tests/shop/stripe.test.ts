@@ -6,6 +6,8 @@ import {
   createCheckoutSession,
   createRefund,
   isStripeTestKey,
+  paymentPageLook,
+  sessionExtras,
   sessionParams,
   signForTest,
   StripeError,
@@ -113,6 +115,141 @@ describe("talking to Stripe", () => {
     expect(String(calls[0]?.init.body)).toContain(
       "client_reference_id=QP-7K2M9X",
     );
+  });
+
+  it("asks for New Zealand dollars only, and the shop's own colours", async () => {
+    const { calls, impl } = fakeFetch(200, {
+      id: "cs_test_1",
+      url: "https://x",
+    });
+    const look = paymentPageLook(
+      (token) => (token === "cream" ? "#fcf0d6" : "#22235c"),
+      "Quick Pickle",
+    );
+    await createCheckoutSession("sk_test_abc", request(), NOW, impl, look);
+    const body = new URLSearchParams(String(calls[0]?.init.body));
+    expect(body.get("adaptive_pricing[enabled]")).toBe("false");
+    expect(body.get("branding_settings[display_name]")).toBe("Quick Pickle");
+    expect(body.get("branding_settings[background_color]")).toBe("#fcf0d6");
+    expect(body.get("branding_settings[button_color]")).toBe("#22235c");
+    // The niceties never touch what is charged.
+    expect(body.get("line_items[0][price_data][unit_amount]")).toBe("8400");
+    expect(Object.keys(sessionExtras(look))).toEqual([
+      "adaptive_pricing",
+      "branding_settings",
+    ]);
+    expect(Object.keys(sessionExtras())).toEqual(["adaptive_pricing"]);
+  });
+
+  it("asks again without a nicety Stripe will not take, rather than lose the sale", async () => {
+    const calls: { key: string; body: URLSearchParams }[] = [];
+    const impl = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const body = new URLSearchParams(String(init?.body));
+      const headers = init?.headers as Record<string, string>;
+      calls.push({ key: headers["Idempotency-Key"] ?? "", body });
+      if (body.has("branding_settings[display_name]")) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              message: "Received unknown parameter: branding_settings",
+              code: "parameter_unknown",
+              param: "branding_settings",
+            },
+          }),
+          { status: 400 },
+        );
+      }
+      return new Response(
+        JSON.stringify({ id: "cs_test_2", url: "https://x" }),
+        {
+          status: 200,
+        },
+      );
+    }) as typeof fetch;
+    const look = paymentPageLook(() => "#000000", "Quick Pickle");
+
+    const session = await createCheckoutSession(
+      "sk_test_abc",
+      request(),
+      NOW,
+      impl,
+      look,
+    );
+    expect(session.id).toBe("cs_test_2");
+    expect(calls.map((call) => call.key)).toEqual([
+      "checkout-QP-7K2M9X",
+      "checkout-QP-7K2M9X-no-branding_settings",
+    ]);
+    // Only the refused one is left out. The rest of the order is untouched.
+    expect(calls[1]?.body.has("branding_settings[display_name]")).toBe(false);
+    expect(calls[1]?.body.get("adaptive_pricing[enabled]")).toBe("false");
+    expect(calls[1]?.body.get("client_reference_id")).toBe("QP-7K2M9X");
+    expect(calls[1]?.body.get("line_items[0][price_data][unit_amount]")).toBe(
+      "8400",
+    );
+  });
+
+  it("drops every nicety when Stripe will not say which one it minds", async () => {
+    const keys: string[] = [];
+    const impl = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const body = new URLSearchParams(String(init?.body));
+      keys.push(
+        (init?.headers as Record<string, string>)["Idempotency-Key"] ?? "",
+      );
+      if (body.has("adaptive_pricing[enabled]")) {
+        return new Response(
+          JSON.stringify({
+            error: { message: "Something about this request." },
+          }),
+          { status: 400 },
+        );
+      }
+      return new Response(
+        JSON.stringify({ id: "cs_test_3", url: "https://x" }),
+        {
+          status: 200,
+        },
+      );
+    }) as typeof fetch;
+    const look = paymentPageLook(() => "#000000", "Quick Pickle");
+    const session = await createCheckoutSession(
+      "sk_test_abc",
+      request(),
+      NOW,
+      impl,
+      look,
+    );
+    expect(session.id).toBe("cs_test_3");
+    expect(keys).toEqual([
+      "checkout-QP-7K2M9X",
+      "checkout-QP-7K2M9X-no-adaptive_pricing-branding_settings",
+    ]);
+  });
+
+  it("gives up when even the plain order is refused, and only asks for that once", async () => {
+    const { calls, impl } = fakeFetch(400, {
+      error: {
+        message: "Invalid integer",
+        code: "parameter_invalid_integer",
+        param: "line_items[0][price_data][unit_amount]",
+      },
+    });
+    await expect(
+      createCheckoutSession("sk_test_abc", request(), NOW, impl),
+    ).rejects.toMatchObject({ status: 400 });
+    // Once with the nicety, once plain. Not a third time.
+    expect(calls).toHaveLength(2);
+    expect(String(calls[1]?.init.body)).not.toContain("adaptive_pricing");
+  });
+
+  it("does not ask again when Stripe is down or the key is wrong", async () => {
+    for (const status of [401, 429, 500]) {
+      const { calls, impl } = fakeFetch(status, { error: { message: "No." } });
+      await expect(
+        createCheckoutSession("sk_test_abc", request(), NOW, impl),
+      ).rejects.toMatchObject({ status });
+      expect(calls).toHaveLength(1);
+    }
   });
 
   it("turns a refusal into an error that does not carry the key", async () => {

@@ -186,8 +186,9 @@ function NextStep({
               Cancel the order
             </SubmitButton>
             <p className="bk-muted text-[0.9375rem] leading-snug">
-              The customer is told. If they have paid, record the refund below
-              as well.
+              If they have paid, record the refund below as well. If they had
+              not paid yet, their payment page is closed so they cannot pay for
+              it afterwards. Nothing is emailed to them: let them know yourself.
             </p>
           </form>
         </details>
@@ -237,6 +238,7 @@ export default async function OrderPage({
     canWrite &&
     order.paymentStatus !== "unpaid" &&
     order.paymentStatus !== "failed" &&
+    order.paymentStatus !== "review" &&
     order.refundedCents < order.totalCents;
   const name = `${order.firstName} ${order.lastName}`.trim();
 
@@ -273,6 +275,17 @@ export default async function OrderPage({
         <div className="mb-4">
           <Notice>
             A test order. Nobody was charged, so there is nothing to send.
+          </Notice>
+        </div>
+      ) : null}
+      {order.paymentStatus === "review" ? (
+        <div className="mb-4">
+          <Notice tone="bad">
+            Money arrived for this order that does not match it: the amount or
+            the currency is different. It has not been marked as paid. Look the
+            payment up in Stripe by this order number, then either refund it
+            there or settle the difference with the customer. The details are in
+            the history below.
           </Notice>
         </div>
       ) : null}
@@ -638,8 +651,9 @@ export default async function OrderPage({
                     Record the refund
                   </SubmitButton>
                   <p className="bk-muted text-[0.9375rem] leading-snug">
-                    No payment processor is connected yet, so this only writes
-                    the refund down. The money has to be sent back by hand.
+                    This only writes the refund down. The money itself has to be
+                    sent back by hand: for a card payment, from the payment in
+                    Stripe.
                   </p>
                 </form>
               </details>

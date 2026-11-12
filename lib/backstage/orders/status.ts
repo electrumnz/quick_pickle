@@ -36,6 +36,7 @@ export const PAYMENT_LABEL: Readonly<Record<PaymentStatus, string>> = {
   part_refunded: "Part refunded",
   refunded: "Refunded",
   failed: "Payment failed",
+  review: "Payment needs a look",
 };
 
 /** The orders someone has to do something about. */

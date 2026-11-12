@@ -34,9 +34,10 @@ import type { DbOrTx } from "@/lib/db/types";
 import { formatNzd } from "@/lib/shop/money";
 import { NZ_REGIONS, ORDER_NUMBER_PATTERN } from "@/lib/shop/order";
 
-import { conflict, notFound, OpError } from "../core/errors";
+import { conflict, OpError } from "../core/errors";
 import { defineOp } from "../core/op";
 import { joinCrewIn } from "../crew/ops";
+import { loadOrder } from "./load";
 import { canMove, OPEN_STATUSES, STATUS_LABEL } from "./status";
 
 const STATUSES = [
@@ -411,18 +412,6 @@ export type OrderDetail = typeof orders.$inferSelect & {
   readonly next: readonly OrderStatus[];
 };
 
-async function loadOrder(
-  db: DbOrTx,
-  number: string,
-): Promise<typeof orders.$inferSelect> {
-  const [order] = await db
-    .select()
-    .from(orders)
-    .where(eq(orders.number, number));
-  if (order === undefined) throw notFound(`Order ${number}`);
-  return order;
-}
-
 export const getOrder = defineOp({
   name: "orders.get",
   title: "Open one order",
@@ -467,7 +456,9 @@ export const markPacked = defineOp({
   access: "write",
   input: z.object({ number: orderNumber, undo: z.boolean().default(false) }),
   async run(ctx, input): Promise<{ status: OrderStatus }> {
-    const order = await loadOrder(ctx.db, input.number);
+    const order = await loadOrder(ctx.db, input.number, {
+      forChange: true,
+    });
     const to: OrderStatus = input.undo ? "paid" : "packed";
     if (order.status === to) return { status: to };
     if (!canMove(order.status, to)) refuseMove(order.status, to, order.number);
@@ -520,7 +511,9 @@ export const markShipped = defineOp({
   explain: (input) =>
     `This marks ${input.number} as shipped and tells the customer it is on its way. It cannot be undone.`,
   async run(ctx, input): Promise<{ status: OrderStatus }> {
-    const order = await loadOrder(ctx.db, input.number);
+    const order = await loadOrder(ctx.db, input.number, {
+      forChange: true,
+    });
     if (!canMove(order.status, "shipped")) {
       refuseMove(order.status, "shipped", order.number);
     }
@@ -561,8 +554,13 @@ export const markDelivered = defineOp({
   access: "write",
   input: z.object({ number: orderNumber }),
   async run(ctx, input): Promise<{ status: OrderStatus }> {
-    const order = await loadOrder(ctx.db, input.number);
-    if (order.status === "delivered") return { status: "delivered" };
+    const order = await loadOrder(ctx.db, input.number, {
+      forChange: true,
+    });
+    if (order.status === "delivered") {
+      ctx.nothingChanged();
+      return { status: "delivered" };
+    }
     if (!canMove(order.status, "delivered")) {
       refuseMove(order.status, "delivered", order.number);
     }
@@ -585,17 +583,18 @@ export const cancelOrder = defineOp({
   name: "orders.cancel",
   title: "Cancel an order",
   description:
-    "Calls an order off before it has shipped, with the reason. The customer is told. Cancelling does not give money back by itself: record the refund as well if they have paid.",
+    "Calls an order off before it has shipped, with the reason. Cancelling does not give money back by itself: record the refund as well if they have paid. If the buyer had not paid yet, their payment page is closed so they cannot pay for it afterwards.",
   access: "write",
   effect: "outward",
   input: z.object({
     number: orderNumber,
     reason: z.string().trim().min(3, "Say why, in a few words").max(280),
   }),
-  explain: (input) =>
-    `This cancels ${input.number} and tells the customer. It cannot be undone.`,
+  explain: (input) => `This cancels ${input.number}. It cannot be undone.`,
   async run(ctx, input): Promise<{ status: OrderStatus }> {
-    const order = await loadOrder(ctx.db, input.number);
+    const order = await loadOrder(ctx.db, input.number, {
+      forChange: true,
+    });
     if (!canMove(order.status, "cancelled")) {
       refuseMove(order.status, "cancelled", order.number);
     }
@@ -633,7 +632,9 @@ export const addOrderNote = defineOp({
     note: z.string().trim().min(1, "Write the note first").max(1000),
   }),
   async run(ctx, input): Promise<{ ok: true }> {
-    const order = await loadOrder(ctx.db, input.number);
+    const order = await loadOrder(ctx.db, input.number, {
+      forChange: true,
+    });
     await ctx.audit({
       entity: { type: "order", id: order.id },
       summary: `Note on ${order.number}: ${input.note}`,
@@ -662,7 +663,9 @@ export const updateDelivery = defineOp({
     deliveryNotes: z.string().trim().max(280).optional(),
   }),
   async run(ctx, input): Promise<{ ok: true }> {
-    const order = await loadOrder(ctx.db, input.number);
+    const order = await loadOrder(ctx.db, input.number, {
+      forChange: true,
+    });
     if (!["pending", "paid", "packed"].includes(order.status)) {
       throw conflict(
         `${order.number} has already ${order.status === "cancelled" ? "been cancelled" : "left"}, so its address cannot be changed.`,
@@ -703,7 +706,7 @@ export const recordRefund = defineOp({
   name: "orders.recordRefund",
   title: "Record money given back on an order",
   description:
-    "Writes down a refund against an order, in cents, with the reason. Until a payment processor is connected this only records it: the money itself has to be sent back by hand. It cannot be more than what is left of what was paid.",
+    "Writes down a refund against an order, in cents, with the reason. This only records it: the money itself has to be sent back by hand (for a card payment, from the payment in Stripe). It cannot be more than what is left of what was paid.",
   access: "write",
   effect: "outward",
   input: z.object({
@@ -717,10 +720,17 @@ export const recordRefund = defineOp({
   explain: (input) =>
     `This records a refund of ${formatNzd(input.amountCents)} on ${input.number}.`,
   async run(ctx, input): Promise<{ refundedCents: number }> {
-    const order = await loadOrder(ctx.db, input.number);
+    const order = await loadOrder(ctx.db, input.number, {
+      forChange: true,
+    });
     if (order.paymentStatus === "unpaid" || order.paymentStatus === "failed") {
       throw conflict(
         `${order.number} has not been paid, so there is nothing to give back.`,
+      );
+    }
+    if (order.paymentStatus === "review") {
+      throw conflict(
+        `The money that arrived for ${order.number} does not match the order. Sort that out in Stripe first.`,
       );
     }
     const left = order.totalCents - order.refundedCents;

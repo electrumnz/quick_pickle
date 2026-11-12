@@ -23,12 +23,20 @@ type Fetch = typeof fetch;
 export class StripeError extends Error {
   readonly status: number;
   readonly code: string | null;
+  /** The field Stripe objected to, when it names one. */
+  readonly param: string | null;
 
-  constructor(message: string, status: number, code: string | null) {
+  constructor(
+    message: string,
+    status: number,
+    code: string | null,
+    param: string | null = null,
+  ) {
     super(message);
     this.name = "StripeError";
     this.status = status;
     this.code = code;
+    this.param = param;
   }
 }
 
@@ -88,12 +96,14 @@ async function call<T>(
     json = null;
   }
   if (!response.ok) {
-    const error = (json as { error?: { message?: string; code?: string } })
-      ?.error;
+    const error = (
+      json as { error?: { message?: string; code?: string; param?: string } }
+    )?.error;
     throw new StripeError(
       error?.message ?? `Stripe answered ${String(response.status)}`,
       response.status,
       error?.code ?? null,
+      error?.param ?? null,
     );
   }
   return json as T;
@@ -152,23 +162,99 @@ export function sessionParams(
   };
 }
 
-export function createCheckoutSession(
+/** How Stripe's payment page is dressed. Colours are hex values. */
+export type PaymentPageLook = {
+  readonly displayName: string;
+  readonly backgroundColour: string;
+  readonly buttonColour: string;
+};
+
+/**
+ * The look this shop asks for: the cream page and the navy button. It takes
+ * the palette as a function so that this file imports nothing at run time
+ * (scripts/infra/run.mjs loads it with plain Node to prove it against Stripe).
+ */
+export function paymentPageLook(
+  hexOf: (token: string) => string,
+  displayName: string,
+): PaymentPageLook {
+  return {
+    displayName,
+    backgroundColour: hexOf("cream"),
+    buttonColour: hexOf("navy"),
+  };
+}
+
+/**
+ * Niceties on top of the payment page. None of them changes what is charged.
+ *
+ * `adaptive_pricing` off: this shop sells in New Zealand dollars to New
+ * Zealand addresses. Left on, Stripe offers a buyer who looks to be overseas
+ * their own currency, and the figure on its page stops matching the one on
+ * our button.
+ */
+export function sessionExtras(look?: PaymentPageLook): Record<string, unknown> {
+  return {
+    adaptive_pricing: { enabled: false },
+    ...(look === undefined
+      ? {}
+      : {
+          branding_settings: {
+            display_name: look.displayName,
+            background_color: look.backgroundColour,
+            button_color: look.buttonColour,
+            border_style: "rounded",
+          },
+        }),
+  };
+}
+
+export async function createCheckoutSession(
   secretKey: string,
   request: ChargeRequest,
   now: Date,
   fetchImpl: Fetch = fetch,
+  look?: PaymentPageLook,
 ): Promise<CheckoutSession> {
-  return call<CheckoutSession>(
-    fetchImpl,
-    secretKey,
-    "POST",
-    "/v1/checkout/sessions",
-    {
-      body: sessionParams(request, now),
-      // The order number: asking twice for one order gives one payment page.
-      idempotencyKey: `checkout-${request.orderNumber}`,
-    },
-  );
+  const base = sessionParams(request, now);
+  // The order number: asking twice for one order gives one payment page.
+  const key = `checkout-${request.orderNumber}`;
+  let extras = sessionExtras(look);
+  const dropped: string[] = [];
+  for (;;) {
+    try {
+      return await call<CheckoutSession>(
+        fetchImpl,
+        secretKey,
+        "POST",
+        "/v1/checkout/sessions",
+        {
+          body: { ...base, ...extras },
+          // A request with something left out is a different request, so it
+          // gets its own key. A second press still lands on the same page.
+          idempotencyKey:
+            dropped.length === 0 ? key : `${key}-no-${dropped.join("-")}`,
+        },
+      );
+    } catch (error) {
+      // A nicety is not worth a sale. If Stripe turns the request down while
+      // any are on it, ask again without: without the one it names, or
+      // without all of them if it names none. Only the plain request, the
+      // order and nothing else, is allowed to fail.
+      const fields = Object.keys(extras);
+      const refusal =
+        error instanceof StripeError && error.status === 400 ? error : null;
+      if (refusal === null || fields.length === 0) throw error;
+      const named = fields.filter(
+        (field) => refusal.param?.startsWith(field) === true,
+      );
+      const drop = named.length > 0 ? named : fields;
+      dropped.push(...drop);
+      extras = Object.fromEntries(
+        Object.entries(extras).filter(([field]) => !drop.includes(field)),
+      );
+    }
+  }
 }
 
 export function retrieveCheckoutSession(
@@ -181,6 +267,24 @@ export function retrieveCheckoutSession(
     secretKey,
     "GET",
     `/v1/checkout/sessions/${encodeURIComponent(sessionId)}`,
+  );
+}
+
+/**
+ * Close a payment page that has not been paid, so that it cannot be paid
+ * afterwards. Stripe refuses if the page is already closed or already paid.
+ */
+export function expireCheckoutSession(
+  secretKey: string,
+  sessionId: string,
+  fetchImpl: Fetch = fetch,
+): Promise<CheckoutSession> {
+  return call<CheckoutSession>(
+    fetchImpl,
+    secretKey,
+    "POST",
+    `/v1/checkout/sessions/${encodeURIComponent(sessionId)}/expire`,
+    { body: {} },
   );
 }
 
@@ -284,6 +388,7 @@ export function isStripeTestKey(key: string): boolean {
 export function stripeProvider(
   env: Record<string, string | undefined> = process.env,
   fetchImpl: Fetch = fetch,
+  look?: PaymentPageLook,
 ): PaymentProvider {
   const key = stripeSecretKey(env);
   return {
@@ -291,7 +396,13 @@ export function stripeProvider(
     isTest: isStripeTestKey(key),
     savesFirst: true,
     async begin(request, now): Promise<PaymentStart> {
-      const session = await createCheckoutSession(key, request, now, fetchImpl);
+      const session = await createCheckoutSession(
+        key,
+        request,
+        now,
+        fetchImpl,
+        look,
+      );
       if (session.url === null || session.url === "") {
         throw new StripeError("Stripe gave no payment page", 200, null);
       }

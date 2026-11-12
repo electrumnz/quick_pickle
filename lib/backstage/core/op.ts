@@ -58,6 +58,12 @@ export type OpContext = {
   readonly now: Date;
   audit(entry: AuditEntry): Promise<void>;
   emit(event: EmittedEvent): Promise<void>;
+  /**
+   * Say that this run changed nothing, because the work had already been
+   * done (a webhook delivered twice, a button pressed twice). The activity
+   * log then gets no line for it: a line would say something happened.
+   */
+  nothingChanged(): void;
 };
 
 export type Op<I extends z.ZodType = z.ZodType, O = unknown> = {
@@ -167,6 +173,7 @@ export async function execute<I extends z.ZodType, O>(
       emit: async () => {
         throw new Error(`${op.name} is a read and cannot emit an event`);
       },
+      nothingChanged: () => {},
     };
     return op.run(ctx, input);
   }
@@ -174,6 +181,7 @@ export async function execute<I extends z.ZodType, O>(
   const emitted: string[] = [];
   const result = await db.transaction(async (tx) => {
     let audited = 0;
+    let unchanged = false;
     const actor = caller.actor;
 
     const ctx: OpContext = {
@@ -210,11 +218,15 @@ export async function execute<I extends z.ZodType, O>(
           payload: event.payload ?? {},
         });
       },
+      nothingChanged() {
+        unchanged = true;
+      },
     };
 
     const value = await op.run(ctx, input);
     // A change with no line in the log is a change nobody can account for.
-    if (audited === 0) await ctx.audit({ summary: op.title });
+    // The one way out is to say, in so many words, that nothing changed.
+    if (audited === 0 && !unchanged) await ctx.audit({ summary: op.title });
     return value;
   });
 

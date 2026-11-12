@@ -299,7 +299,7 @@ export const CHECKOUT = {
     "Payments aren't switched on yet. No money is taken and nothing will be sent. Use it to try the checkout out.",
   sandboxTitle: "Stripe test mode",
   sandboxBody:
-    "Placing the order takes you to Stripe's payment page in its test mode. Use one of Stripe's test cards there. No real money is taken and nothing will be sent.",
+    "Placing the order takes you to Stripe's payment page in its test mode. Pay there with the test card 4242 4242 4242 4242, any date in the future and any three digits. No real money is taken and nothing will be sent.",
   cancelledTitle: "Payment wasn't finished.",
   cancelledBody: "Nothing was charged. Your jar is just as you left it.",
   sections: {
@@ -380,6 +380,11 @@ export const THANKS = {
   awaitingBody:
     "We're waiting to hear back from the payment page. It usually takes a few seconds.",
   awaitingAgain: "Check again",
+  unpaidTitle: ["Not paid", "yet."],
+  unpaidBody:
+    "Your order is saved but not paid for yet. Finish paying now, or go back and change it.",
+  unpaidCta: "Finish paying",
+  unpaidChange: "Change my order",
   closedTitle: ["Not", "paid."],
   closedBody:
     "That order wasn't paid, so it has been closed. Nothing was charged, and your jar is just as you left it.",

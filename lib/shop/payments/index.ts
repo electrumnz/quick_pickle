@@ -15,8 +15,11 @@
  * buyer to this address to pay).
  */
 
+import { STORE } from "@/content/offer";
+import { hexOf } from "@/lib/brand/colours";
+
 import type { PaymentRecord } from "../order";
-import { stripeProvider } from "./stripe";
+import { paymentPageLook, stripeProvider } from "./stripe";
 
 export type ChargeRequest = {
   readonly orderNumber: string;
@@ -77,7 +80,8 @@ type Env = Record<string, string | undefined>;
 
 const providers: Readonly<Record<string, (env: Env) => PaymentProvider>> = {
   test: () => testProvider,
-  stripe: (env) => stripeProvider(env),
+  stripe: (env) =>
+    stripeProvider(env, fetch, paymentPageLook(hexOf, STORE.name)),
 };
 
 /**

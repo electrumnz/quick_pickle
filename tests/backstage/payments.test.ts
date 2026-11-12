@@ -18,6 +18,8 @@ import {
   type DbHandle,
 } from "@/lib/db/client";
 import type { PaymentProvider } from "@/lib/shop/payments";
+import { closePaymentPage } from "@/lib/backstage/orders/listeners";
+import { settleOnReturn } from "@/lib/shop/payments/settle";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
 
@@ -160,18 +162,58 @@ describe("an order that is paid for somewhere else", () => {
     const again = await paid(order.number);
     expect(again).toEqual({ outcome: "paid", alreadyPaid: true });
     expect(await eventsOf(order.number, "order.paid")).toHaveLength(1);
+
+    // And the activity log has one line for it, not three: a repeat that
+    // changed nothing leaves nothing behind.
+    const lines = await handle.db
+      .select({ summary: auditLog.summary })
+      .from(auditLog)
+      .where(eq(auditLog.operation, "orders.markPaid"));
+    expect(
+      lines.filter((line) => line.summary.includes(order.number)),
+    ).toHaveLength(1);
+    expect(
+      lines.filter(
+        (line) => line.summary === "Record that an order has been paid",
+      ),
+    ).toHaveLength(0);
   });
 
   it("is not marked paid when the amount or the currency is wrong", async () => {
     const { order } = await begin({ email: "short@example.co.nz" });
     const short = await paid(order.number, { amountCents: 100 });
     expect(short).toEqual({ outcome: "mismatch", alreadyPaid: false });
-    const wrong = await paid(order.number, { currency: "usd" });
-    expect(wrong.outcome).toBe("mismatch");
 
+    // It is not paid, and it is marked as needing a person.
     const state = await execute(paymentState, { number: order.number }, shop);
-    expect(state).toMatchObject({ status: "pending", paymentStatus: "unpaid" });
+    expect(state).toMatchObject({ status: "pending", paymentStatus: "review" });
     expect(await eventsOf(order.number, "order.paid")).toHaveLength(0);
+    expect(await eventsOf(order.number, "order.payment_mismatch")).toHaveLength(
+      1,
+    );
+
+    // The buyer's page asks again every few seconds, and a webhook can
+    // repeat. The same payment does not raise the alarm twice.
+    const sameAgain = await paid(order.number, { amountCents: 100 });
+    expect(sameAgain).toEqual({ outcome: "mismatch", alreadyPaid: false });
+    expect(await eventsOf(order.number, "order.payment_mismatch")).toHaveLength(
+      1,
+    );
+
+    // A clock does not close it either: it is waiting for a person.
+    const expired = await execute(
+      paymentExpired,
+      { number: order.number, reason: "The payment page ran out" },
+      stripe,
+    );
+    expect(expired).toEqual({ status: "pending" });
+
+    // A different payment that is also wrong is a new thing to look at.
+    const wrong = await paid(order.number, {
+      currency: "usd",
+      reference: "cs_test_another",
+    });
+    expect(wrong.outcome).toBe("mismatch");
     expect(await eventsOf(order.number, "order.payment_mismatch")).toHaveLength(
       2,
     );
@@ -334,6 +376,277 @@ describe("an order that is paid for somewhere else", () => {
   it("says no such order rather than inventing one", async () => {
     await expect(paid("QP-ZZZZZZ")).rejects.toMatchObject({
       code: "not_found",
+    });
+  });
+
+  describe("when an order is cancelled before it is paid", () => {
+    const ENV = { STRIPE_SECRET_KEY: "sk_test_abc" };
+    const owner = systemCaller("Ashleigh", "ui");
+
+    const stripeAnswers = (status: number | "down") => {
+      const asked: { url: string; method: string }[] = [];
+      const fetchImpl = (async (url: RequestInfo | URL, init?: RequestInit) => {
+        asked.push({ url: String(url), method: init?.method ?? "GET" });
+        if (status === "down") throw new Error("network");
+        return new Response(
+          JSON.stringify(
+            status === 200
+              ? { id: "cs_test_x", status: "expired" }
+              : { error: { message: "Only open sessions can be expired." } },
+          ),
+          { status },
+        );
+      }) as typeof fetch;
+      return { asked, fetchImpl };
+    };
+
+    const cancelled = async (number: string) => {
+      await execute(
+        cancelOrder,
+        { number, reason: "Asked us to stop" },
+        { ...owner, confirmed: true },
+      );
+      const [event] = await eventsOf(number, "order.cancelled");
+      if (event === undefined) throw new Error("no cancelled event");
+      return {
+        id: event.id,
+        at: event.at,
+        type: event.type,
+        entityType: event.entityType,
+        entityId: event.entityId,
+        payload: event.payload,
+        attempt: 1,
+      };
+    };
+
+    it("closes the buyer's payment page, so they cannot pay for it after", async () => {
+      const { order } = await begin();
+      const event = await cancelled(order.number);
+      const stripeApi = stripeAnswers(200);
+      await closePaymentPage({ env: ENV, fetchImpl: stripeApi.fetchImpl })(
+        event,
+        { db: handle.db, now: new Date() },
+      );
+      expect(stripeApi.asked).toEqual([
+        {
+          url: `https://api.stripe.com/v1/checkout/sessions/cs_test_${order.number}/expire`,
+          method: "POST",
+        },
+      ]);
+    });
+
+    it("takes Stripe's no for an answer, and tries again if Stripe cannot be reached", async () => {
+      const { order } = await begin();
+      const event = await cancelled(order.number);
+      const ctx = { db: handle.db, now: new Date() };
+      // Already closed, or already paid: nothing more to do.
+      await expect(
+        closePaymentPage({ env: ENV, fetchImpl: stripeAnswers(400).fetchImpl })(
+          event,
+          ctx,
+        ),
+      ).resolves.toBeUndefined();
+      // Unreachable, or having a bad moment: worth another try.
+      await expect(
+        closePaymentPage({
+          env: ENV,
+          fetchImpl: stripeAnswers("down").fetchImpl,
+        })(event, ctx),
+      ).rejects.toThrow();
+      await expect(
+        closePaymentPage({ env: ENV, fetchImpl: stripeAnswers(500).fetchImpl })(
+          event,
+          ctx,
+        ),
+      ).rejects.toThrow();
+    });
+
+    it("leaves Stripe alone for an order that was paid", async () => {
+      const { order } = await begin();
+      await paid(order.number);
+      const event = await cancelled(order.number);
+      const stripeApi = stripeAnswers(200);
+      await closePaymentPage({ env: ENV, fetchImpl: stripeApi.fetchImpl })(
+        event,
+        { db: handle.db, now: new Date() },
+      );
+      expect(stripeApi.asked).toHaveLength(0);
+    });
+  });
+
+  describe("when the buyer comes back to the site", () => {
+    const ENV = { STRIPE_SECRET_KEY: "sk_test_abc" };
+
+    /** Stripe's answer when asked about a payment page. */
+    const stripeSays = (session: Record<string, unknown> | "down") => {
+      const asked: string[] = [];
+      const fetchImpl = (async (url: RequestInfo | URL) => {
+        asked.push(String(url));
+        if (session === "down") throw new Error("network");
+        return new Response(JSON.stringify(session), { status: 200 });
+      }) as typeof fetch;
+      return { asked, fetchImpl };
+    };
+
+    const session = (number: string, over: Record<string, unknown> = {}) => ({
+      id: `cs_test_${number}`,
+      url: `https://checkout.stripe.com/c/pay/cs_test_${number}`,
+      status: "open",
+      payment_status: "unpaid",
+      amount_total: 8850,
+      currency: "nzd",
+      client_reference_id: number,
+      payment_intent: null,
+      ...over,
+    });
+
+    it("asks Stripe, and marks the order paid if Stripe says it is", async () => {
+      const { order } = await begin();
+      const stripeAnswer = stripeSays(
+        session(order.number, {
+          status: "complete",
+          payment_status: "paid",
+          url: null,
+        }),
+      );
+      const settled = await settleOnReturn(order.number, {
+        env: ENV,
+        fetchImpl: stripeAnswer.fetchImpl,
+      });
+      expect(settled).toEqual({ state: "paid" });
+      expect(stripeAnswer.asked).toEqual([
+        `https://api.stripe.com/v1/checkout/sessions/cs_test_${order.number}`,
+      ]);
+      const state = await execute(paymentState, { number: order.number }, shop);
+      // A test key: the order is kept as a test payment, never as real money.
+      expect(state).toMatchObject({ status: "paid", paymentStatus: "test" });
+
+      // Asked again (a refresh), it does not go back to Stripe at all.
+      const again = stripeSays("down");
+      expect(
+        await settleOnReturn(order.number, {
+          env: ENV,
+          fetchImpl: again.fetchImpl,
+        }),
+      ).toEqual({ state: "paid" });
+      expect(again.asked).toHaveLength(0);
+    });
+
+    it("shows the way back to a payment page that is still open", async () => {
+      const { order } = await begin();
+      const settled = await settleOnReturn(order.number, {
+        env: ENV,
+        fetchImpl: stripeSays(session(order.number)).fetchImpl,
+      });
+      expect(settled).toEqual({
+        state: "awaiting",
+        payAt: `https://checkout.stripe.com/c/pay/cs_test_${order.number}`,
+      });
+      const state = await execute(paymentState, { number: order.number }, shop);
+      expect(state.status).toBe("pending");
+    });
+
+    it("never links to a payment page that is not Stripe's", async () => {
+      const { order } = await begin();
+      for (const url of [
+        "https://checkout.stripe.com.evil.example/pay",
+        "http://checkout.stripe.com/c/pay/x",
+        "javascript:alert(1)",
+        "not a url",
+        null,
+      ]) {
+        const settled = await settleOnReturn(order.number, {
+          env: ENV,
+          fetchImpl: stripeSays(session(order.number, { url })).fetchImpl,
+        });
+        expect(settled).toEqual({ state: "awaiting", payAt: undefined });
+      }
+    });
+
+    it("waits, with no link, for a payment that is still on its way", async () => {
+      const { order } = await begin();
+      const settled = await settleOnReturn(order.number, {
+        env: ENV,
+        fetchImpl: stripeSays(
+          session(order.number, { status: "complete", url: null }),
+        ).fetchImpl,
+      });
+      expect(settled).toEqual({ state: "awaiting" });
+    });
+
+    it("closes the order when the payment page has run out", async () => {
+      const { order } = await begin();
+      const settled = await settleOnReturn(order.number, {
+        env: ENV,
+        fetchImpl: stripeSays(
+          session(order.number, { status: "expired", url: null }),
+        ).fetchImpl,
+      });
+      expect(settled).toEqual({ state: "closed" });
+      const state = await execute(paymentState, { number: order.number }, shop);
+      expect(state).toMatchObject({
+        status: "cancelled",
+        paymentStatus: "failed",
+      });
+      // And it stays closed, without asking Stripe again.
+      const again = stripeSays("down");
+      expect(
+        await settleOnReturn(order.number, {
+          env: ENV,
+          fetchImpl: again.fetchImpl,
+        }),
+      ).toEqual({ state: "closed" });
+      expect(again.asked).toHaveLength(0);
+    });
+
+    it("hands a payment of the wrong amount to a person", async () => {
+      const { order } = await begin();
+      const settled = await settleOnReturn(order.number, {
+        env: ENV,
+        fetchImpl: stripeSays(
+          session(order.number, {
+            status: "complete",
+            payment_status: "paid",
+            amount_total: 100,
+          }),
+        ).fetchImpl,
+      });
+      expect(settled).toEqual({ state: "review" });
+      const state = await execute(paymentState, { number: order.number }, shop);
+      expect(state.status).toBe("pending");
+    });
+
+    it("ignores a payment page that belongs to a different order", async () => {
+      const { order } = await begin();
+      const settled = await settleOnReturn(order.number, {
+        env: ENV,
+        fetchImpl: stripeSays(
+          session(order.number, {
+            status: "complete",
+            payment_status: "paid",
+            client_reference_id: "QP-ZZZZZZ",
+          }),
+        ).fetchImpl,
+      });
+      expect(settled).toEqual({ state: "awaiting" });
+      const state = await execute(paymentState, { number: order.number }, shop);
+      expect(state.status).toBe("pending");
+    });
+
+    it("says it cannot tell when Stripe cannot be reached, or the order is unknown", async () => {
+      const { order } = await begin();
+      expect(
+        await settleOnReturn(order.number, {
+          env: ENV,
+          fetchImpl: stripeSays("down").fetchImpl,
+        }),
+      ).toEqual({ state: "unknown" });
+      expect(
+        await settleOnReturn("QP-ZZZZZZ", {
+          env: ENV,
+          fetchImpl: stripeSays("down").fetchImpl,
+        }),
+      ).toEqual({ state: "unknown" });
     });
   });
 });
