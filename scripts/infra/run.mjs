@@ -651,6 +651,10 @@ const STRIPE_EVENTS = [
   "checkout.session.expired",
   // A refund, from the back end or from Stripe's own dashboard.
   "charge.refunded",
+  // A card dispute: opened, moved along, decided.
+  "charge.dispute.created",
+  "charge.dispute.updated",
+  "charge.dispute.closed",
 ];
 
 /** One form-encoded request to Stripe, the way the app makes them. */

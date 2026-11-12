@@ -21,6 +21,7 @@ import { lastTick } from "../clock/tick";
 import { listStuckEvents } from "../core/events";
 import { defineOp } from "../core/op";
 import { marketingNeedsYou } from "../marketing/overview";
+import { disputeNeeds } from "../orders/disputes";
 import { plansNeeds } from "../plans/needs";
 import { stockNeeds } from "../stock/needs";
 
@@ -166,6 +167,10 @@ export const needsYou = defineOp({
         href: "/backstage/settings/clock",
       });
     }
+
+    // A card dispute that is not decided yet. Rare, and it has a date: the
+    // one being waited on by the bank is urgent until it is answered.
+    for (const item of await disputeNeeds(ctx.db, ctx.now)) needs.push(item);
 
     // Stock: at most a line each for orders that cannot be filled (urgent:
     // customers have paid and are waiting), shots past their date, stock

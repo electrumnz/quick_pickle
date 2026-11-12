@@ -287,6 +287,13 @@ go-live list shows when it last ran and what is stuck.
     does not have. **Stripe's list is the record and its news only the nudge**, so being
     told twice, late or out of order writes nothing twice. A refund the back end started
     carries our own id at Stripe and is never counted again.
+  - **A card dispute is read from Stripe as it stands, never from the news about it**
+    (`lib/backstage/orders/disputes.ts`, table `payment_disputes`). Open, it is on Today
+    with the date an answer is due, urgent while the shop is the one being waited on.
+    Won, the order is untouched. Lost, the amount is written as given back
+    (`refunds`, reason "Card dispute lost"), so the order and the books are true, and it
+    raises `order.dispute_closed`, never `order.refunded`: nobody is told a refund is on
+    its way for money their bank took back. Once decided, later news changes nothing.
   - The site only hears the kinds of news its endpoint was told to send. Teach it a new
     one and add it to `STRIPE_EVENTS` in the infra script, then run `stripe-events`: that
     changes the list on the endpoint that is there, and keeps its signing secret.

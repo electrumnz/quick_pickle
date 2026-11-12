@@ -18,6 +18,7 @@ export type IdPrefix =
   | "ord" // order
   | "oli" // order line
   | "rfd" // refund
+  | "dsp" // card dispute
   | "crw" // Pickle Crew member
   | "bat" // batch
   | "stk" // stock movement

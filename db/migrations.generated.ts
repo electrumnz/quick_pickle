@@ -310,5 +310,17 @@ export const MIGRATIONS: readonly Migration[] = [
       "ALTER TABLE \"rate_hits\" ENABLE ROW LEVEL SECURITY;",
       "CREATE INDEX \"rate_hits_window_idx\" ON \"rate_hits\" USING btree (\"window_start\");"
     ]
+  },
+  {
+    "tag": "0010_disputes",
+    "hash": "e9ba05dbe4ea833b",
+    "statements": [
+      "CREATE TABLE \"payment_disputes\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"order_id\" text NOT NULL,\n\t\"provider_reference\" text NOT NULL,\n\t\"amount_cents\" integer NOT NULL,\n\t\"reason\" text NOT NULL,\n\t\"status\" text NOT NULL,\n\t\"provider_status\" text NOT NULL,\n\t\"due_at\" timestamp with time zone,\n\t\"opened_at\" timestamp with time zone NOT NULL,\n\t\"closed_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"payment_disputes\" ENABLE ROW LEVEL SECURITY;",
+      "ALTER TABLE \"payment_disputes\" ADD CONSTRAINT \"payment_disputes_order_id_orders_id_fk\" FOREIGN KEY (\"order_id\") REFERENCES \"public\".\"orders\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "CREATE UNIQUE INDEX \"payment_disputes_reference_key\" ON \"payment_disputes\" USING btree (\"provider_reference\");",
+      "CREATE INDEX \"payment_disputes_order_idx\" ON \"payment_disputes\" USING btree (\"order_id\");",
+      "CREATE INDEX \"payment_disputes_status_idx\" ON \"payment_disputes\" USING btree (\"status\");"
+    ]
   }
 ];

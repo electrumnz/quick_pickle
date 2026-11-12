@@ -516,6 +516,7 @@ describe("handleStripeEvent", () => {
     const paid: Parameters<OrderBook["markPaid"]>[0][] = [];
     const closed: Parameters<OrderBook["closeUnpaid"]>[0][] = [];
     const refunded: Parameters<OrderBook["seeRefunds"]>[0][] = [];
+    const disputed: Parameters<OrderBook["seeDispute"]>[0][] = [];
     const impl: OrderBook = {
       async markPaid(input) {
         paid.push(input);
@@ -531,8 +532,14 @@ describe("handleStripeEvent", () => {
           ? { number: null, written: 0 }
           : { number: input.number ?? "QP-7K2M9X", written: 1 };
       },
+      async seeDispute(input) {
+        disputed.push(input);
+        return input.reference === "dp_not_ours"
+          ? { number: null, status: "" }
+          : { number: "QP-7K2M9X", status: "open" };
+      },
     };
-    return { paid, closed, refunded, impl };
+    return { paid, closed, refunded, disputed, impl };
   }
 
   const session = (over: Record<string, unknown> = {}) => ({
@@ -708,6 +715,53 @@ describe("handleStripeEvent", () => {
       why: "a refund with no payment to its name",
     });
     expect(b.refunded).toHaveLength(1);
+  });
+
+  it("has a dispute read, whichever kind of news names it", async () => {
+    const b = book();
+    for (const type of [
+      "charge.dispute.created",
+      "charge.dispute.updated",
+      "charge.dispute.closed",
+    ]) {
+      expect(
+        await handleStripeEvent(
+          // Whatever the news says about the dispute is not believed: only
+          // its id is taken, and Stripe is asked how it stands.
+          { type, data: { object: { id: "dp_1", status: "lost" } } },
+          b.impl,
+        ),
+      ).toEqual({ action: "dispute", number: "QP-7K2M9X", status: "open" });
+    }
+    expect(b.disputed).toEqual([
+      { reference: "dp_1" },
+      { reference: "dp_1" },
+      { reference: "dp_1" },
+    ]);
+    expect(b.paid).toHaveLength(0);
+    expect(b.refunded).toHaveLength(0);
+  });
+
+  it("lets a dispute that is not ours, or has no id, go by", async () => {
+    const b = book();
+    expect(
+      await handleStripeEvent(
+        {
+          type: "charge.dispute.created",
+          data: { object: { id: "dp_not_ours" } },
+        },
+        b.impl,
+      ),
+    ).toEqual({ action: "ignored", why: "not one of our orders" });
+    for (const object of [{}, { id: 12 }, { id: "ch_1" }]) {
+      expect(
+        await handleStripeEvent(
+          { type: "charge.dispute.created", data: { object } },
+          b.impl,
+        ),
+      ).toEqual({ action: "ignored", why: "a dispute with no id" });
+    }
+    expect(b.disputed).toHaveLength(1);
   });
 
   it("ignores events that are not ours to act on", async () => {

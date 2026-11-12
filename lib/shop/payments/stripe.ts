@@ -332,6 +332,41 @@ export function retrieveCheckoutSession(
   );
 }
 
+export type StripeDispute = {
+  readonly id: string;
+  readonly amount: number;
+  readonly currency?: string | null;
+  readonly payment_intent?: string | null;
+  /** The bank's reason: fraudulent, product_not_received, duplicate... */
+  readonly reason?: string | null;
+  /** needs_response, under_review, won, lost, and the warning_ kinds. */
+  readonly status?: string | null;
+  /** When it was opened, in seconds since 1970. */
+  readonly created?: number | null;
+  readonly evidence_details?: {
+    /** When an answer is due by, in seconds since 1970. */
+    readonly due_by?: number | null;
+  } | null;
+};
+
+/**
+ * One card dispute, as Stripe has it now. News of a dispute can arrive late
+ * or out of order, so the news is never believed: this is asked, and what it
+ * says is what gets written down.
+ */
+export function retrieveDispute(
+  secretKey: string,
+  dispute: string,
+  fetchImpl: Fetch = fetch,
+): Promise<StripeDispute> {
+  return call<StripeDispute>(
+    fetchImpl,
+    secretKey,
+    "GET",
+    `/v1/disputes/${encodeURIComponent(dispute)}`,
+  );
+}
+
 export type StripePaymentIntent = {
   readonly id: string;
   readonly metadata?: Readonly<Record<string, string>> | null;

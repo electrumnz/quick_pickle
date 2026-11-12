@@ -1,6 +1,7 @@
 import { systemCaller } from "@/lib/backstage/core/actor";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
+import { disputeFromStripe } from "@/lib/backstage/orders/disputes";
 import { refundsFromStripe } from "@/lib/backstage/orders/outside-refunds";
 import { markPaid, paymentExpired } from "@/lib/backstage/orders/payments";
 import { verifyStripeSignature } from "@/lib/shop/payments/stripe";
@@ -61,6 +62,7 @@ export async function POST(request: Request): Promise<Response> {
       markPaid: (input) => execute(markPaid, input, stripe),
       closeUnpaid: (input) => execute(paymentExpired, input, stripe),
       seeRefunds: (input) => refundsFromStripe(input),
+      seeDispute: (input) => disputeFromStripe(input),
     });
     return Response.json(
       { received: true, action: outcome.action },
