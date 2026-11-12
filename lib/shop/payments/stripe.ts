@@ -128,6 +128,8 @@ export type CheckoutSession = {
   readonly currency: string | null;
   readonly client_reference_id: string | null;
   readonly payment_intent: string | null;
+  /** What came off: `amount_discount` is a promo code's saving, in cents. */
+  readonly total_details?: { readonly amount_discount?: number } | null;
 };
 
 /** The shortest life Stripe allows a payment page is half an hour. */

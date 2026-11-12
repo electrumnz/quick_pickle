@@ -764,11 +764,43 @@ async function stripeCheck() {
     `  ${closed.status === "expired" ? "ok  " : "FAIL"} closed again`,
   );
 
+  // An order with a promo code: the saving goes to Stripe as a one-off
+  // coupon, and the page has to come to the discounted total exactly.
+  const withCode = {
+    ...request,
+    orderNumber: `${request.orderNumber.slice(0, 8)}D`,
+    amountCents: 8010,
+    discountCents: 840,
+    discountLabel: "Code CHECK10",
+  };
+  const discounted = await createCheckoutSession(
+    key,
+    withCode,
+    now,
+    watched,
+    look,
+  );
+  const cameOff = discounted.total_details?.amount_discount;
+  const codeOk =
+    discounted.amount_total === 8010 &&
+    discounted.currency === "nzd" &&
+    cameOff === 840;
+  console.log(
+    `  ${codeOk ? "ok  " : "FAIL"} a code's saving comes off (total ${String(discounted.amount_total)}, ${String(cameOff)} off)`,
+  );
+  await stripeCall(
+    key,
+    "POST",
+    `/v1/checkout/sessions/${discounted.id}/expire`,
+    {},
+  );
+
   if (
     checks.some(([, ok]) => !ok) ||
     again.id !== session.id ||
     read.id !== session.id ||
-    closed.status !== "expired"
+    closed.status !== "expired" ||
+    !codeOk
   ) {
     fail("The Stripe check did not pass. Nothing was changed.");
   }

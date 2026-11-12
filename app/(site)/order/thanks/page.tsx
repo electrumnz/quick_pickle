@@ -7,7 +7,7 @@ import { CheckAgain } from "@/components/checkout/CheckAgain";
 import { ClearJar } from "@/components/checkout/ClearJar";
 import { SiteFooter } from "@/components/site/Sections";
 import { SiteHeader } from "@/components/site/SiteHeader";
-import { CHECKOUT, JAR, THANKS } from "@/content/site";
+import { CHECKOUT, CODES, JAR, THANKS } from "@/content/site";
 import { formatNzdExact } from "@/lib/shop/money";
 import { checkoutMode } from "@/lib/shop/payments";
 import { settleOnReturn } from "@/lib/shop/payments/settle";
@@ -311,6 +311,18 @@ export default async function ThanksPage() {
                   <dt>{CHECKOUT.subtotal}</dt>
                   <dd>{formatNzdExact(receipt.subtotalCents)}</dd>
                 </div>
+                {receipt.promoCode !== undefined ? (
+                  <div className="flex justify-between">
+                    <dt>
+                      {CODES.codeLine} {receipt.promoCode}
+                    </dt>
+                    <dd>
+                      {(receipt.discountCents ?? 0) > 0
+                        ? `-${formatNzdExact(receipt.discountCents ?? 0)}`
+                        : CODES.applied}
+                    </dd>
+                  </div>
+                ) : null}
                 <div className="flex justify-between">
                   <dt>{CHECKOUT.delivery}</dt>
                   <dd>
