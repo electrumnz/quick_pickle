@@ -378,6 +378,32 @@ go-live list shows when it last ran and what is stuck.
   - **The address is read from headers Vercel writes itself.** On another host, or with a
     proxy in front of this one, `callerOf` is the line to change. Believe the wrong header
     and either anybody picks their own address or every buyer shares the proxy's.
+- **The courier is a file out and a list back** (`lib/backstage/orders/courier.ts`, the
+  screen at `/backstage/orders/courier`). No courier's system is linked to.
+  - Out: `orders.courierFile` makes one row an order under the field names Starshipit
+    lists for a file of orders. It changes no order, and is written in the activity log
+    because customers' addresses leave the back end in it. There is no weight in it:
+    nobody has weighed a packed box, and a guess would be charged for.
+  - Back: what is pasted is read by `readTrackingBack`, shown, and only then shipped, by
+    `orders.markShipped` once for each order. The second press only acts on exactly what
+    the first showed. Only a packed order ships this way: packing is where the batch is
+    named.
+  - **Reading somebody else's file guesses nothing.** A list is an order number and a
+    tracking number and nothing else on the line. A courier's file is read by its
+    headings: the tracking column by name, the order's column by which one has our order
+    numbers in it. A phone number looks just like a tracking number, which is why no
+    column is ever picked by what its cells look like.
+  - **A courier's tracking address is read off its own page, never remembered**
+    (`lib/backstage/orders/couriers.ts` says where each came from and when). A customer
+    is sent that link. For a courier not on the list the customer gets the number alone.
+  - Every cell a customer typed is made safe for a spreadsheet (`csvCell` in
+    `lib/backstage/orders/csv.ts`): one that starts a sum gets a leading apostrophe. Any
+    new file that leaves the back end is written with `toCsv`.
+- **For the books is what moved on each day** (`lib/backstage/numbers/books.ts`): a sale
+  on the New Zealand day it was paid for, a refund on the day it was given. Numbers nets
+  a refund against the order's own day, because it asks how the shop did; a ledger asks
+  what moved when. Over a stretch that holds both, the two agree. Nothing here is in
+  Xero's own layout and nothing says it is: that waits on a Xero account to try it with.
 - `lib/shop/store` is where the shop hands an order over. The default is `db`: the back
   end's own `orders.record` operation, so an order is on the Orders screen as it is placed.
 - The "order's in" page reads a short-lived httpOnly receipt cookie. It is display only.

@@ -270,6 +270,11 @@ export default async function NumbersPage({
       <PageHeader
         title="Numbers"
         lead={`What came in, how many came by and how far they got, from ${dayLabel(numbers.firstDay)} to ${dayLabel(numbers.lastDay)}.`}
+        actions={
+          <Link href="/backstage/numbers/books" className="bk-btn bk-btn-quiet">
+            <span className="cap-trim">For the books</span>
+          </Link>
+        }
       />
 
       <nav aria-label="How far back" className="mb-5">
