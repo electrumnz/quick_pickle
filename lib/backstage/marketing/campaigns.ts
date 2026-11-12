@@ -722,7 +722,11 @@ export const approveCampaign = defineOp({
     }
     const copyCheck = await checkCampaign(ctx, campaign);
     refuseBanned(copyCheck, "This campaign", "approved");
-    const read = requireRestrictedRead(copyCheck, input.acknowledgeRestricted);
+    const read = requireRestrictedRead(
+      copyCheck,
+      input.acknowledgeRestricted,
+      ctx.actor,
+    );
 
     // The approval is for the words that were just checked, and no others.
     const approved = await ctx.db

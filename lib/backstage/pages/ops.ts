@@ -329,7 +329,11 @@ export const publishPage = defineOp({
     }
     const copyCheck = await check(ctx.db, page.draft, ctx.now);
     refuseBanned(copyCheck, "This page", "published");
-    const read = requireRestrictedRead(copyCheck, input.acknowledgeRestricted);
+    const read = requireRestrictedRead(
+      copyCheck,
+      input.acknowledgeRestricted,
+      ctx.actor,
+    );
     // The last look, by the same rules everything that leaves the back end
     // is held to, on the very words about to go out.
     refuseUnsendable(partsOf(page.draft), { checked: read });

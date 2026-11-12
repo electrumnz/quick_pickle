@@ -197,6 +197,11 @@ export default async function ClaudeSettingsPage({
                         </>
                       )}
                     </p>
+                    {each.stopped === null ? null : (
+                      <p className="text-[0.9375rem] leading-snug">
+                        {each.stopped}
+                      </p>
+                    )}
                   </div>
                   {each.yours || isOwner ? (
                     <form action={cutOffAction}>

@@ -9,7 +9,9 @@
  *   2. The operation that was asked for, run as the bot that asked, with
  *      the yes beside it. It writes its own line in the activity log under
  *      the bot's name. A bot stays a bot: anything only a person may do (a
- *      recorded check of a phrase, a label's words) is still refused.
+ *      recorded check of a phrase, a label's words) is still refused. What
+ *      was asked is checked again first, the way a bot's request is checked
+ *      when it is made: the rules may have changed in the week it waited.
  *   3. `approvals.finish`: what came back, or why it could not be done.
  *
  * This is not an operation itself: nothing outward happens inside another
@@ -24,8 +26,9 @@ import { execute, type ExecuteOptions } from "../core/op";
 import { getDb } from "@/lib/db/client";
 
 import { beginApproval, finishApproval, getApproval } from "./approvals";
-import { offeredOp } from "./catalogue";
+import { kindOf, offeredOp, whereAPersonDoes } from "./catalogue";
 import { callerFor, connectionById } from "./oauth";
+import { checked } from "./run";
 
 export type Approved =
   | { readonly ok: true; readonly result: unknown }
@@ -68,6 +71,15 @@ export async function approve(
       why: "That can no longer be done from a connection.",
     });
   }
+  if (kindOf(op) !== "ask") {
+    return finish({
+      ok: false,
+      why:
+        kindOf(op) === "person"
+          ? `That is for a person to do now, ${whereAPersonDoes(op)}. Nothing was done.`
+          : "That no longer needs a yes, so it was not done from here. Ask Claude for it again.",
+    });
+  }
   const connected =
     begun.connectionId === null
       ? null
@@ -82,7 +94,8 @@ export async function approve(
   // ties its lines in the activity log together.
   const bot: Caller = { ...callerFor(connected, id), confirmed: true };
   try {
-    const result = await execute(op, begun.input, bot, options);
+    const given = checked(op, { op: op.name, input: begun.input });
+    const result = await execute(op, given, bot, options);
     return await finish({ ok: true, result });
   } catch (error) {
     if (error instanceof OpError) {

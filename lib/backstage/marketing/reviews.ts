@@ -388,7 +388,11 @@ export const publishReview = defineOp({
     const copyCheck = await checkReview(ctx, review);
     const refusal = publishRefusal(copyCheck);
     if (refusal !== null) throw conflict(refusal);
-    const read = requireRestrictedRead(copyCheck, input.acknowledgeRestricted);
+    const read = requireRestrictedRead(
+      copyCheck,
+      input.acknowledgeRestricted,
+      ctx.actor,
+    );
     const published = await ctx.db
       .update(reviews)
       .set({
@@ -461,7 +465,11 @@ export const unpublishReview = defineOp({
   description:
     "Takes a published review off the shop and puts it back in the waiting pile, where it can be published again or rejected.",
   access: "write",
+  // It changes what customers see on the shop.
+  effect: "outward",
   input: z.object({ id: recordId }),
+  explain: () =>
+    "This takes a published review off the shop. It goes back to the waiting pile, where a person can publish it again.",
   async run(ctx, input): Promise<{ status: ReviewStatus }> {
     const review = await loadReview(ctx.db, input.id);
     if (review.status !== "published") return { status: review.status };

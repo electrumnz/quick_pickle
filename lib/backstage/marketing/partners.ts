@@ -359,11 +359,17 @@ export const setPartnerPermission = defineOp({
   description:
     "Records that a partner has agreed, in writing, to being named in public, or that they have not (or no longer do). Saying yes needs a note of where the written agreement is kept: an email and its date, a signed form. Until it is recorded nothing may name them where a customer can read it: they are left off any public list, and a campaign, caption or review that names them cannot be approved. Do not record a yes on a guess or a phone call.",
   access: "write",
+  // Recording a yes is what lets a partner's name into public copy.
+  effect: "outward",
   input: z.object({
     id: recordId,
     onFile: z.boolean(),
     note: shortText(500).default(""),
   }),
+  explain: (input) =>
+    input.onFile
+      ? `This records that a partner has agreed in writing to be named in public, so a campaign, a caption or a review may name them from now on. Where the agreement is kept: ${input.note === "" ? "nothing was said" : `"${input.note}"`}. Only say yes if you have seen it.`
+      : "This records that a partner may not be named in public. Anything that names them can no longer be approved, and they come off any public list.",
   async run(ctx, input): Promise<{ permissionOnFile: boolean }> {
     const partner = await loadPartner(ctx.db, input.id);
     if (input.onFile && input.note.length < 3) {

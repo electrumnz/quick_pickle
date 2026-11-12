@@ -136,7 +136,7 @@ export const updateContact = defineOp({
   name: "mail.updateContact",
   title: "Change a contact's details",
   description:
-    'Changes a contact\'s name, what kind of sender they are (customer, supplier, courier, partner, automated, other) or the staff notes about them. `customerEmail` ties the address to the customer with that email, so that mail from it is recognised as theirs (give "" to untie it): this is how to tell the inbox that a second address belongs to someone we already know. `supplier` does the same for a supplier, by its name or email. The tie matters: an email that quotes an order only joins the conversation about that order when it is from the customer who placed it. Tying an address also links the conversations already had with it to that customer or supplier, so they show there (`linked` says how many); untying leaves those links for a person to take off. Nothing here is shown to the contact.',
+    'Changes a contact\'s name, what kind of sender they are (customer, supplier, courier, partner, automated, other) or the staff notes about them. `customerEmail` ties the address to the customer with that email, so that mail from it is recognised as theirs (give "" to untie it): this is how to tell the inbox that a second address belongs to someone we already know. `supplier` does the same for a supplier, by its name or email. The tie matters: an email that quotes an order only joins the conversation about that order when it is from the customer who placed it. Tying an address also links the conversations already had with it to that customer or supplier, so they show there (`linked` says how many); untying leaves those links for a person to take off. Nothing here is shown to the contact. Tying and untying are for a person: a bot may change the name, the kind and the notes, and is refused the tie.',
   access: "write",
   input: z.object({
     id: contactIdSchema,
@@ -147,6 +147,19 @@ export const updateContact = defineOp({
     supplier: z.string().trim().max(254).optional(),
   }),
   async run(ctx, input): Promise<{ id: string; linked: number }> {
+    // Whose address it is, is for a person to say. Tying an address to a
+    // customer lets it into the conversations about that customer's
+    // orders, and a wrong tie puts one person's details in front of
+    // another.
+    if (
+      ctx.actor.type === "bot" &&
+      (input.customerEmail !== undefined || input.supplier !== undefined)
+    ) {
+      throw new OpError(
+        "forbidden",
+        "Saying whose address this is, is for a person to do, on the contact's own screen in the inbox: it decides who is let into the conversations about a customer's orders. Nothing was changed.",
+      );
+    }
     const [contact] = await ctx.db
       .select()
       .from(mailContacts)
@@ -278,7 +291,13 @@ export const blockContact = defineOp({
   description:
     "Blocks an address: from then on its mail is filed straight to spam and tells nobody. It still arrives and is kept, so nothing is lost if it was a mistake; `blocked: false` lifts it. Blocking does not touch conversations that are already here, and does not stop us emailing them (that is the do-not-email list).",
   access: "write",
+  // Blocked, somebody can write to the shop for ever and never be read.
+  effect: "outward",
   input: z.object({ id: contactIdSchema, blocked: z.boolean() }),
+  explain: (input) =>
+    input.blocked
+      ? "This blocks a sender: everything they write from now on is filed straight to spam and nobody is told it came."
+      : "This unblocks a sender: what they write comes into the inbox again.",
   async run(ctx, input): Promise<{ blocked: boolean }> {
     const [contact] = await ctx.db
       .select()
@@ -631,7 +650,13 @@ export const setSignature = defineOp({
   description:
     "Sets the plain-text signature added under every reply written in the inbox: a name, a line or two. It is sent to customers, so a banned phrase or an em dash is refused here. It is kept on the default mailbox; if there is none yet, one is made for the address email is sent from (MAIL_FROM). An order's own emails are not signed with it.",
   access: "write",
+  // These words go under every reply a customer is sent from then on.
+  effect: "outward",
   input: z.object({ signature: z.string().trim().max(2000) }),
+  explain: (input) =>
+    input.signature === ""
+      ? "This takes the signature off: replies from the inbox are sent with nothing under them."
+      : `This changes the words under every reply sent from the inbox, from now on, to: "${input.signature}"`,
   async run(ctx, input): Promise<{ signature: string }> {
     refuseUnkeepable({ signature: input.signature });
     const existing = await defaultMailbox(ctx.db);
@@ -720,10 +745,15 @@ export const suppressAddress = defineOp({
   description:
     "Puts an address on the do-not-email list by hand, with a note saying why. Nothing at all is sent to it from then on: replies, marketing and emails about its own orders are all refused, and screens say so wherever that address appears. Use it when someone asks not to be written to. An owner can take it off again.",
   access: "write",
+  // It stops a customer's own receipts as well as everything else, and only
+  // an owner can lift it.
+  effect: "outward",
   input: z.object({
     email: emailSchema,
     detail: oneLine(280).default(""),
   }),
+  explain: (input) =>
+    `This stops every email to ${input.email}: replies, marketing and the emails about their own orders. Only an owner can take it off the list again.`,
   async run(ctx, input): Promise<{ added: boolean }> {
     const rows = await ctx.db
       .insert(mailSuppressions)

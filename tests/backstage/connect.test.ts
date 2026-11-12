@@ -318,7 +318,7 @@ describe("letting Claude in", () => {
       expect(await handle.db.select().from(oauthClients)).toEqual([]);
     });
 
-    it("is the connection's own work, and stops when too many are waiting", async () => {
+    it("is the connection's own work", async () => {
       for (const caller of [owner, staff]) {
         await expect(
           execute(
@@ -329,14 +329,37 @@ describe("letting Claude in", () => {
           ),
         ).rejects.toMatchObject({ code: "forbidden" });
       }
-      await handle.db.insert(oauthClients).values(
-        Array.from({ length: MOST_CLIENTS }, () => ({
-          id: newId("cli"),
-          name: "Somebody's app",
-          redirectUris: [CLAUDE],
-        })),
+    });
+
+    it("cannot be shut on a real app by a flood of registrations", async () => {
+      // Anybody can register. Full of apps nobody ever said yes to, oldest
+      // first, the door used to stay shut to everybody for a day.
+      const flood = Array.from({ length: MOST_CLIENTS }, (_, index) => ({
+        id: newId("cli"),
+        name: "Somebody's app",
+        redirectUris: [CLAUDE],
+        createdAt: new Date(T0.getTime() - (MOST_CLIENTS - index) * 1000),
+      }));
+      await handle.db.insert(oauthClients).values(flood);
+      const real = await register();
+      const kept = (
+        await handle.db.select({ id: oauthClients.id }).from(oauthClients)
+      ).map((row) => row.id);
+      // Room was made by letting go of the oldest, and only that one.
+      expect(kept).toHaveLength(MOST_CLIENTS);
+      expect(kept).toContain(real.clientId);
+      expect(kept).not.toContain(flood[0]?.id);
+      expect(kept).toContain(flood[1]?.id);
+
+      // An app somebody said yes to is never let go of to make room. With
+      // nothing else to let go of, it says so, and says what to do.
+      await handle.db.update(oauthClients).set({ lastUsedAt: T0 });
+      expect(await refusedBecause(register())).toMatch(
+        /Too many apps are connected\. An owner can cut some off/,
       );
-      expect(await refusedBecause(register())).toMatch(/Too many apps/);
+      expect(await handle.db.select().from(oauthClients)).toHaveLength(
+        MOST_CLIENTS,
+      );
     });
   });
 
@@ -601,18 +624,37 @@ describe("letting Claude in", () => {
     it("can never do more than the person it works for can", async () => {
       const { accessToken } = await connect(staff, "staff");
       expect((await whoIs(accessToken))?.role).toBe("staff");
-      // Their account is turned down to looking: so is their Claude.
+      // Their account is turned down to looking. Somebody who can only
+      // look cannot have a Claude connected, so theirs stops, and the list
+      // says why it is not working.
       await handle.db
         .update(users)
         .set({ role: "viewer" })
         .where(eq(users.id, ids.Sam ?? ""));
-      expect((await whoIs(accessToken))?.role).toBe("viewer");
+      expect(await whoIs(accessToken)).toBeNull();
+      const [listed] = await execute(listConnections, {}, owner, at(T0));
+      expect(listed?.ended).toBeNull();
+      expect(listed?.stopped).toBe(
+        "It does not work while Sam's account can only look.",
+      );
+      // Turned back up, it works again, and no more than it did.
+      await handle.db
+        .update(users)
+        .set({ role: "staff" })
+        .where(eq(users.id, ids.Sam ?? ""));
+      expect((await whoIs(accessToken))?.role).toBe("staff");
+      expect(
+        (await execute(listConnections, {}, owner, at(T0)))[0]?.stopped,
+      ).toBeNull();
       // Their account is switched off: so is their Claude.
       await handle.db
         .update(users)
         .set({ disabledAt: T0 })
         .where(eq(users.id, ids.Sam ?? ""));
       expect(await whoIs(accessToken)).toBeNull();
+      expect(
+        (await execute(listConnections, {}, owner, at(T0)))[0]?.stopped,
+      ).toBe("It does not work while Sam's account is switched off.");
     });
 
     it("never gets an owner's reach, even for an owner", async () => {
@@ -696,6 +738,50 @@ describe("letting Claude in", () => {
         later(5000),
       );
       expect("cutOff" in onward).toBe(false);
+    });
+
+    it("lets that happen once, and not a third time with the same key", async () => {
+      const first = await connect();
+      const lost = await renew(first.refreshToken, first.clientId, later(3000));
+      if ("cutOff" in lost) throw new Error("It was cut off.");
+      const again = await renew(
+        first.refreshToken,
+        first.clientId,
+        later(3010),
+      );
+      if ("cutOff" in again) throw new Error("It was cut off.");
+      // Still inside the couple of minutes. The key has had its one more
+      // go: it is refused, and what the app holds now is left working.
+      expect(
+        await refusedBecause(
+          renew(first.refreshToken, first.clientId, later(3020)),
+        ),
+      ).toMatch(/no longer good/);
+      expect(await whoIs(again.accessToken, later(3030))).not.toBeNull();
+    });
+
+    it("cuts the connection off if the pair nobody heard about turns up", async () => {
+      // Whoever holds the pair that was displaced is not the app that
+      // asked again: the app never heard about it. It has no grace at all.
+      const first = await connect();
+      const lost = await renew(first.refreshToken, first.clientId, later(3000));
+      if ("cutOff" in lost) throw new Error("It was cut off.");
+      const again = await renew(
+        first.refreshToken,
+        first.clientId,
+        later(3010),
+      );
+      if ("cutOff" in again) throw new Error("It was cut off.");
+      const taken = await renew(lost.refreshToken, first.clientId, later(3011));
+      expect(taken).toHaveProperty("cutOff");
+      if (!("cutOff" in taken)) throw new Error("It was renewed.");
+      await execute(
+        cutOffForReuse,
+        { id: taken.cutOff },
+        door,
+        at(later(3012)),
+      );
+      expect(await whoIs(again.accessToken, later(3013))).toBeNull();
     });
 
     it("cuts the connection off when a replaced key turns up later", async () => {

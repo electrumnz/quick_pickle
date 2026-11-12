@@ -688,6 +688,23 @@ test("Claude is let in by a person's yes, asks before anything outward, and can 
   // It ships switched off: there is nothing there to find.
   expect((await page.request.get(documents)).status()).toBe(404);
   expect((await page.request.post(address, { data: {} })).status()).toBe(404);
+  // To any verb. Left to itself the server answers 405 to a verb with no
+  // handler, and 204 to OPTIONS, and either says there is a door here.
+  for (const path of [
+    "/.well-known/oauth-authorization-server",
+    "/.well-known/oauth-protected-resource",
+    "/api/oauth/register",
+    "/api/oauth/token",
+    "/api/mcp",
+  ]) {
+    for (const method of ["OPTIONS", "HEAD", "PUT", "DELETE"]) {
+      const answer = await page.request.fetch(`${AUTH_URL}${path}`, {
+        method,
+      });
+      expect(answer.status(), `${method} ${path}`).toBe(404);
+      expect(answer.headers().allow, `${method} ${path}`).toBeUndefined();
+    }
+  }
 
   // An owner switches it on, and is given the address to hand to Claude.
   await page.goto(`${AUTH_URL}/backstage/settings/claude`);

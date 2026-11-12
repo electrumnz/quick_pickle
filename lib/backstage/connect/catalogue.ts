@@ -16,7 +16,14 @@
  *      connection's own plumbing. Those say what is true because the shop,
  *      a payment processor or a mail provider said so. A bot saying so is
  *      not the same thing. They are listed by name in `SYSTEM_ONLY`.
- *   3. Everything else is offered, and what it may do with each is decided
+ *   3. Nothing that puts saved words in front of customers. Publishing a
+ *      page, approving a campaign or a caption, publishing a review,
+ *      switching a special on: each of those says yes to words that are
+ *      kept somewhere else and could be changed after the asking. So a
+ *      person does it, on the screen that has the words on it. A bot is
+ *      told the operation is there and where a person does it
+ *      (`PEOPLE_ONLY`).
+ *   4. Everything else is offered, and what it may do with each is decided
  *      where it is run (./run.ts): look, change, or ask a person first.
  *
  * tests/backstage/connect-catalogue.test.ts reads the source for every
@@ -248,6 +255,43 @@ export const SYSTEM_ONLY: ReadonlySet<string> = new Set([
   "approvals.decline",
 ]);
 
+/**
+ * For a person to do, on the screen where the words are. Never run for a
+ * bot, with a yes or without one.
+ *
+ * Each of these puts words in front of customers that are not in what the
+ * bot would hand over: they are kept on a page, a campaign, a post, a
+ * review or a special, and a draft can be changed between the asking and
+ * the yes. A person saying yes from a list of requests would be saying yes
+ * to words they were not shown. So it is done where the words are on the
+ * screen, by the person reading them.
+ *
+ * Beside each is where that is, said to the bot so it can tell the person.
+ */
+export const PEOPLE_ONLY: Readonly<Record<string, string>> = {
+  "pages.publish": "on the page's own screen, under Marketing, Landing pages",
+  "pages.startTest": "under Marketing, Landing pages, Who sees which page",
+  "campaigns.approve":
+    "on the campaign's own screen, under Marketing, Campaigns",
+  "social.approve": "on the post's own screen, under Marketing, Social",
+  "reviews.publish": "on the review's own screen, under Marketing, Reviews",
+  // A review is a customer's own words. Typing one in is saying a customer
+  // wrote it, and that is for somebody who has it in front of them.
+  "reviews.add": "under Marketing, Reviews",
+  "specials.switchOn": "under Marketing, Promo codes, Specials",
+};
+
+/**
+ * What a bot has to hand over in so many words, where a person at a screen
+ * may leave it to what was saved. The person saying yes is shown what the
+ * bot handed over, so whatever would be sent has to be in it.
+ */
+export const BOT_MUST_SAY: Readonly<Record<string, readonly string[]>> = {
+  // Without `body` a reply sends the saved draft, and a draft can be saved
+  // again after the asking.
+  "mail.send": ["body"],
+};
+
 /** What a bot may do with an operation it is offered. */
 export type OfferedKind =
   /** It only reads. */
@@ -255,11 +299,55 @@ export type OfferedKind =
   /** It changes something inside the back end. */
   | "change"
   /** It sends, publishes or cannot be undone: a person says yes first. */
-  | "ask";
+  | "ask"
+  /** It is there, and a person does it on its own screen. Never a bot. */
+  | "person";
 
 export function kindOf(op: Op): OfferedKind {
   if (op.access === "read") return "look";
+  if (op.name in PEOPLE_ONLY) return "person";
   return op.effect === "none" ? "change" : "ask";
+}
+
+/** Where a person does something a bot may not, said as part of a sentence. */
+export const whereAPersonDoes = (op: Op): string =>
+  PEOPLE_ONLY[op.name] ?? "in the back end";
+
+/* ---- what was handed over, and what would be read of it ------------------- */
+
+const isPlain = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * The keys of what was handed over that the operation would not read.
+ *
+ * Reading an operation's input drops whatever it does not know, without a
+ * word. For a person at a form that is harmless. For a bot it is not: a key
+ * spelt nearly right is dropped and the operation runs on what is left, and
+ * a request put in front of a person can carry a key that looks as though
+ * it matters and does nothing (a `Body` beside no `body`). So what a bot
+ * hands over is compared with what was read of it, and anything dropped on
+ * the way is named and refused.
+ *
+ * `given` is what arrived and `read` is the same thing once the operation's
+ * own schema has read it. Where the two stop being the same shape (a date
+ * read from text, say) there is nothing left to compare and it stops.
+ */
+export function unreadKeys(given: unknown, read: unknown, at = ""): string[] {
+  if (Array.isArray(given)) {
+    if (!Array.isArray(read) || read.length !== given.length) return [];
+    return given.flatMap((each, index) =>
+      unreadKeys(each, read[index], `${at}[${String(index)}]`),
+    );
+  }
+  if (!isPlain(given) || !isPlain(read)) return [];
+  const unread: string[] = [];
+  for (const [key, value] of Object.entries(given)) {
+    const where = at === "" ? key : `${at}.${key}`;
+    if (!Object.hasOwn(read, key)) unread.push(where);
+    else unread.push(...unreadKeys(value, read[key], where));
+  }
+  return unread;
 }
 
 /** The operation by that name, if a bot may be offered it. */

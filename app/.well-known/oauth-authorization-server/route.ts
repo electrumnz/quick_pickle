@@ -1,7 +1,9 @@
 import {
   doorIsOpen,
   json,
+  mayRead,
   nothingHere,
+  notThatWay,
   OPEN_TO_READ,
   serverMetadata,
 } from "@/lib/backstage/connect/http";
@@ -19,6 +21,8 @@ export async function GET(): Promise<Response> {
   return json(serverMetadata(), 200, OPEN_TO_READ);
 }
 
-export function OPTIONS(): Response {
-  return new Response(null, { status: 204, headers: OPEN_TO_READ });
-}
+export { mayRead as OPTIONS };
+
+// Every other verb, so that nothing here answers while the door is shut.
+const no = notThatWay("GET, HEAD, OPTIONS");
+export { no as POST, no as PUT, no as PATCH, no as DELETE };

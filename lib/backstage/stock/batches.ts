@@ -408,7 +408,7 @@ export const updateBatch = defineOp({
   name: "stock.updateBatch",
   title: "Change a batch's details",
   description:
-    "Corrects a batch's name, dates, cost, notes or production record. Only what is given changes. The code can be changed until the batch is released; the planned number of shots only while it is still planned (after that the count is corrected with stock.adjustCount). `madeOn` is the planned day while a batch is planned and the day it was made afterwards. The best-before date can be corrected at any time but not cleared once the batch is released. Once a batch is recalled only its notes can be changed. It does not move the batch from one state to another.",
+    "Corrects a batch's name, dates, cost, notes or production record. Only what is given changes. The code can be changed until the batch is released; the planned number of shots only while it is still planned (after that the count is corrected with stock.adjustCount). `madeOn` is the planned day while a batch is planned and the day it was made afterwards. The best-before date can be corrected at any time but not cleared once the batch is released. Once a batch is recalled only its notes can be changed. It does not move the batch from one state to another. Once a batch has been made, its dates are for a person to correct: a bot is refused.",
   access: "write",
   input: z.object({
     code: batchCodeSchema,
@@ -489,6 +489,21 @@ export const updateBatch = defineOp({
         "invalid_input",
         "The best-before date is earlier than the day it is made.",
         { bestBefore: "Earlier than the day it is made" },
+      );
+    }
+
+    // Once a batch has been made its dates are read off the batch itself,
+    // and they decide what may be sold and until when. A bot can plan a
+    // batch and write down that it was made. Correcting the dates after
+    // that is for a person, with the batch record in front of them.
+    if (
+      ctx.actor.type === "bot" &&
+      !planned &&
+      (madeOn !== batch.madeOn || bestBefore !== batch.bestBefore)
+    ) {
+      throw new OpError(
+        "forbidden",
+        `${batch.code} has been made, so its dates are for a person to correct, on the batch's own page under Stock. Nothing was changed.`,
       );
     }
 

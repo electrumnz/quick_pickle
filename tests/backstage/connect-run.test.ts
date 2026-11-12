@@ -1,16 +1,29 @@
 import { createHash } from "node:crypto";
 
 import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import {
   approvals,
   auditLog,
+  batches,
   connections,
   events,
+  mailboxes,
+  mailContacts,
   oauthClients,
   oauthCodes,
+  promoCodes,
   settings,
+  stockMovements,
   tasks,
   users,
 } from "@/db/schema";
@@ -37,12 +50,16 @@ import {
   type Connected,
 } from "@/lib/backstage/connect/oauth";
 import {
+  MOST_ASKED,
   MOST_CALLS,
   runForBot,
   type Outcome,
 } from "@/lib/backstage/connect/run";
 import { systemCaller, type Caller } from "@/lib/backstage/core/actor";
 import { execute } from "@/lib/backstage/core/op";
+import { requireRestrictedRead } from "@/lib/backstage/marketing/gate";
+import { recordMade } from "@/lib/backstage/stock/batch-states";
+import { planBatch, updateBatch } from "@/lib/backstage/stock/batches";
 import { SHOP_OFFER_KEY, shopOffer } from "@/lib/backstage/shop/ops";
 import { needsYou } from "@/lib/backstage/today/ops";
 import {
@@ -111,6 +128,11 @@ describe("what a connected Claude may do", () => {
     await handle.db.delete(oauthCodes);
     await handle.db.delete(oauthClients);
     await handle.db.delete(tasks);
+    await handle.db.delete(promoCodes);
+    await handle.db.delete(stockMovements);
+    await handle.db.delete(batches);
+    await handle.db.delete(mailContacts);
+    await handle.db.delete(mailboxes);
     await handle.db.delete(auditLog);
     await handle.db.delete(events);
     await handle.db.delete(users).where(eq(users.kind, "bot"));
@@ -602,6 +624,451 @@ describe("what a connected Claude may do", () => {
         urgent: true,
         title: "Something you said yes to did not finish",
       });
+    });
+  });
+
+  describe("what a person is shown is what would run", () => {
+    const cnv = `cnv_${"2".repeat(20)}`;
+
+    it("refuses a key the operation does not read, whichever tool it came by", async () => {
+      const claude = await connect();
+      // Looking: a filter spelt wrong would otherwise be dropped, and the
+      // answer would be about everything.
+      const [looked] = await look(claude, [
+        { op: "orders.list", input: { statuz: "paid" } },
+      ]);
+      expect(errorOf(looked)).toMatchObject({
+        code: "invalid_input",
+        message: expect.stringContaining("orders.list does not take `statuz`"),
+        fields: { statuz: "This operation does not take that." },
+      });
+      // Changing: nothing is written.
+      const [changed] = await change(claude, [
+        { op: "plans.addTask", input: { title: "Order labels", Title: "x" } },
+      ]);
+      expect(errorOf(changed)?.message).toContain("does not take `Title`");
+      expect(await handle.db.select().from(tasks)).toEqual([]);
+      // Asking: a request that carried a key dressed up to look as though
+      // it mattered would be put in front of a person as it stood. It is
+      // never written down.
+      const [asked] = await change(claude, [
+        {
+          op: "shop.change",
+          input: { prices: { "QP-SHOT-06": 3000 }, Prices: { all: 1 } },
+        },
+      ]);
+      expect(errorOf(asked)?.message).toContain("does not take `Prices`");
+      expect(await handle.db.select().from(approvals)).toEqual([]);
+      // Something that is not an object at all.
+      const [list] = await change(claude, [
+        { op: "plans.addTask", input: ["Order labels"] },
+      ]);
+      expect(errorOf(list)).toMatchObject({ code: "invalid_input" });
+    });
+
+    it("will not send a saved draft for a bot: the words have to be in what it hands over", async () => {
+      const claude = await connect();
+      const reply = {
+        conversationId: cnv,
+        to: "mere@example.co.nz",
+        subject: "Your order",
+      };
+      const [outcome] = await change(claude, [
+        { op: "mail.send", input: reply },
+      ]);
+      expect(errorOf(outcome)).toMatchObject({
+        code: "invalid_input",
+        fields: { body: "Say it in full." },
+      });
+      // A key that only looks like the one that matters is no better.
+      const [decoy] = await change(claude, [
+        { op: "mail.send", input: { ...reply, Body: "Kia ora Mere" } },
+      ]);
+      expect(errorOf(decoy)?.message).toContain("does not take `Body`");
+      expect(await handle.db.select().from(approvals)).toEqual([]);
+      // With the words in it, it is asked for, and the person is shown them.
+      const id = waitingOn(
+        (
+          await change(claude, [
+            { op: "mail.send", input: { ...reply, body: "Kia ora Mere" } },
+          ])
+        )[0],
+      );
+      const shown = await execute(getApproval, { id }, owner, at(T0));
+      expect(shown.input).toEqual({ ...reply, body: "Kia ora Mere" });
+    });
+
+    it("will not put more in front of a person than a person can read", async () => {
+      const claude = await connect();
+      const [outcome] = await change(claude, [
+        {
+          op: "mail.send",
+          input: {
+            conversationId: cnv,
+            to: "mere@example.co.nz",
+            subject: "Your order",
+            body: "a".repeat(MOST_ASKED),
+          },
+        },
+      ]);
+      expect(errorOf(outcome)?.message).toMatch(
+        /more than a person can be asked to read/,
+      );
+      expect(await handle.db.select().from(approvals)).toEqual([]);
+    });
+
+    it("leaves publishing saved words to a person, and says where", async () => {
+      const claude = await connect();
+      for (const [op, where] of [
+        ["pages.publish", "Marketing, Landing pages"],
+        ["pages.startTest", "Who sees which page"],
+        ["campaigns.approve", "Marketing, Campaigns"],
+        ["social.approve", "Marketing, Social"],
+        ["reviews.publish", "Marketing, Reviews"],
+        ["reviews.add", "Marketing, Reviews"],
+        ["specials.switchOn", "Promo codes, Specials"],
+      ] as const) {
+        const [outcome] = await change(claude, [{ op, input: { id: "x" } }]);
+        expect(errorOf(outcome), op).toMatchObject({
+          code: "forbidden",
+          message: expect.stringContaining(where),
+        });
+        expect(errorOf(outcome)?.message, op).toMatch(
+          /Nothing was done and nobody has been asked/,
+        );
+      }
+      expect(await handle.db.select().from(approvals)).toEqual([]);
+      expect(await log()).toEqual([]);
+    });
+
+    it("does not run a request that has since become a person's to do", async () => {
+      // Asked for before the rule, and still waiting: a yes does nothing.
+      const claude = await connect();
+      const id = newId("apr");
+      await handle.db.insert(approvals).values({
+        id,
+        requestedAt: T0,
+        requestedBy: claude.bot.name,
+        requestedById: claude.bot.id,
+        operation: "pages.publish",
+        input: { id: "pag_something" },
+        explain: "This publishes a landing page.",
+        status: "waiting",
+        connectionId: claude.connectionId,
+        expiresAt: later(86_400),
+      });
+      expect(await approve(id, owner, at(later(60)))).toMatchObject({
+        ok: false,
+        why: expect.stringMatching(/for a person to do now.*Landing pages/),
+      });
+      // And one that carries a key nothing reads is not run either.
+      const odd = newId("apr");
+      await handle.db.insert(approvals).values({
+        id: odd,
+        requestedAt: T0,
+        requestedBy: claude.bot.name,
+        requestedById: claude.bot.id,
+        operation: "shop.change",
+        input: { prices: { "QP-SHOT-06": 3000 }, Prices: { all: 1 } },
+        explain: "This changes a price.",
+        status: "waiting",
+        connectionId: claude.connectionId,
+        expiresAt: later(86_400),
+      });
+      expect(await approve(odd, owner, at(later(60)))).toMatchObject({
+        ok: false,
+        why: expect.stringContaining("does not take `Prices`"),
+      });
+      const { offer } = await execute(shopOffer, {}, owner, at(later(61)));
+      expect(offer.packs[0]?.priceCents).toBe(2700);
+    });
+  });
+
+  describe("what reaches a customer without an email being sent", () => {
+    it("waits for a yes: a promo code is not made until a person says so", async () => {
+      const claude = await connect();
+      const [outcome] = await change(claude, [
+        {
+          op: "promoCodes.create",
+          input: { code: "crew10", kind: "percent", value: 10 },
+        },
+      ]);
+      expect(outcome).toMatchObject({
+        ok: true,
+        waitingForAPerson: {
+          says: "This makes the promo code CREW10: 10% off. Anybody who types it at the checkout gets that, from when it starts.",
+        },
+      });
+      expect(await handle.db.select().from(promoCodes)).toEqual([]);
+      const done = await approve(waitingOn(outcome), owner, at(later(60)));
+      expect(done).toMatchObject({ ok: true, result: { code: "CREW10" } });
+      const [made] = await handle.db.select().from(promoCodes);
+      expect(made).toMatchObject({
+        code: "CREW10",
+        kind: "percent",
+        value: 10,
+      });
+      expect(await log()).toEqual([
+        "Claude, for Sam (mcp): Asked for a yes: This makes the promo code CREW10: 10% off. Anybody who types it at the checkout gets that, from when it starts.",
+        expect.stringMatching(/^Ash \(ui\): Said yes to Claude, for Sam/),
+        expect.stringMatching(/^Claude, for Sam \(mcp\): .*CREW10/),
+      ]);
+    });
+
+    it("waits for a yes: the signature, the do-not-email list, the morning email and the rest", async () => {
+      const claude = await connect();
+      const con = `con_${"2".repeat(20)}`;
+      for (const [op, input, says] of [
+        [
+          "mail.setSignature",
+          { signature: "Ash at Quick Pickle" },
+          /changes the words under every reply.*"Ash at Quick Pickle"/,
+        ],
+        [
+          "mail.suppress",
+          { email: "mere@example.co.nz" },
+          /stops every email to mere@example\.co\.nz.*their own orders/,
+        ],
+        [
+          "mail.blockContact",
+          { id: con, blocked: true },
+          /filed straight to spam and nobody is told/,
+        ],
+        [
+          "morning.set",
+          { on: true, to: "someone@elsewhere.example" },
+          /one email every morning, to someone@elsewhere\.example/,
+        ],
+        [
+          "orders.updateDelivery",
+          {
+            number: "QP-7K2M9X",
+            line1: "1 Somewhere Else Road",
+            city: "Auckland",
+            region: "Auckland",
+            postcode: "1010",
+          },
+          /changes where QP-7K2M9X is sent, to: 1 Somewhere Else Road, Auckland 1010, Auckland\./,
+        ],
+        [
+          "partners.setPermission",
+          { id: "prt_x", onFile: true, note: "Email from Kai, 3 November" },
+          /agreed in writing to be named in public.*"Email from Kai, 3 November".*Only say yes if you have seen it/,
+        ],
+        [
+          "stock.releaseBatch",
+          { code: "B001" },
+          /puts batch B001 on sale.*best-before date/,
+        ],
+        [
+          "reviews.unpublish",
+          { id: "rev_x" },
+          /takes a published review off the shop/,
+        ],
+        [
+          "crew.unsubscribe",
+          { email: "mere@example.co.nz" },
+          /takes mere@example\.co\.nz off the Pickle Crew/,
+        ],
+        [
+          "promoCodes.setActive",
+          { id: "pro_x", active: false },
+          /switches a promo code off/,
+        ],
+        [
+          "promoCodes.update",
+          { id: "pro_x", kind: "amount", value: 500, maxUses: null },
+          /it gives \$5 off; no limit on how often it is used/,
+        ],
+        [
+          "promoCodes.setCrewWelcome",
+          { id: "pro_x", on: true },
+          /everybody who joins the Pickle Crew/,
+        ],
+      ] as const) {
+        const [outcome] = await change(claude, [{ op, input }]);
+        expect(outcome, op).toHaveProperty("waitingForAPerson");
+        if (outcome !== undefined && "waitingForAPerson" in outcome) {
+          expect(outcome.waitingForAPerson.says, op).toMatch(says);
+        }
+      }
+      // Nothing was done by any of it.
+      expect(await handle.db.select().from(mailboxes)).toEqual([]);
+      expect(await handle.db.select().from(approvals)).toHaveLength(12);
+    });
+  });
+
+  describe("what only a person may say", () => {
+    it("does not take a bot's word that a phrase was read", async () => {
+      const claude = await connect();
+      const check = {
+        at: T0.toISOString(),
+        ok: true,
+        findings: [
+          {
+            rule: "R-01",
+            severity: "restricted" as const,
+            match: "natural",
+            why: "Needs a second look.",
+          },
+        ],
+      };
+      // A person's tick is taken. Without it they are asked for it.
+      expect(requireRestrictedRead(check, true, staff.actor)).toEqual(["R-01"]);
+      expect(() => requireRestrictedRead(check, false, staff.actor)).toThrow(
+        /tick the box/,
+      );
+      // A bot's is not, whatever it says. Nor is the system's.
+      for (const actor of [callerFor(claude).actor, door.actor]) {
+        expect(() => requireRestrictedRead(check, true, actor)).toThrow(
+          /needs a person to read it/,
+        );
+      }
+      // With nothing restricted there is nothing to have read.
+      expect(
+        requireRestrictedRead(
+          { ...check, findings: [] },
+          false,
+          callerFor(claude).actor,
+        ),
+      ).toEqual([]);
+    });
+
+    it("does not let a bot correct the dates of a batch that has been made", async () => {
+      const claude = await connect();
+      await execute(planBatch, { code: "B900" }, staff, at(T0));
+      // While it is only a plan, the dates are plans too.
+      const [planned] = await change(claude, [
+        {
+          op: "stock.updateBatch",
+          input: { code: "B900", madeOn: "2026-11-10" },
+        },
+      ]);
+      expect(planned).toMatchObject({ ok: true });
+      await execute(
+        recordMade,
+        {
+          code: "B900",
+          shots: 120,
+          madeOn: "2026-11-10",
+          bestBefore: "2027-05-10",
+        },
+        staff,
+        at(T0),
+      );
+      // Made: the dates decide what may be sold and until when.
+      for (const input of [
+        { code: "B900", bestBefore: "2028-01-01" },
+        { code: "B900", madeOn: "2026-11-01" },
+      ]) {
+        const [outcome] = await change(claude, [
+          { op: "stock.updateBatch", input },
+        ]);
+        expect(errorOf(outcome)).toMatchObject({
+          code: "forbidden",
+          message: expect.stringMatching(/for a person to correct/),
+        });
+      }
+      const [batch] = await handle.db.select().from(batches);
+      expect(batch).toMatchObject({
+        madeOn: "2026-11-10",
+        bestBefore: "2027-05-10",
+      });
+      // Anything else about it is still an ordinary change, and a person
+      // can still correct the dates.
+      const [notes] = await change(claude, [
+        {
+          op: "stock.updateBatch",
+          input: { code: "B900", notes: "Labels were a day late." },
+        },
+      ]);
+      expect(notes).toMatchObject({ ok: true });
+      await execute(
+        updateBatch,
+        { code: "B900", bestBefore: "2027-06-10" },
+        staff,
+        at(T0),
+      );
+      const [after] = await handle.db.select().from(batches);
+      expect(after?.bestBefore).toBe("2027-06-10");
+    });
+
+    it("does not let a bot say whose address it is", async () => {
+      const claude = await connect();
+      const id = `con_${"3".repeat(20)}`;
+      await handle.db
+        .insert(mailContacts)
+        .values({ id, email: "other@example.co.nz" });
+      for (const input of [
+        { id, customerEmail: "mere@example.co.nz" },
+        { id, customerEmail: "" },
+        { id, supplier: "Glassworks" },
+      ]) {
+        const [outcome] = await change(claude, [
+          { op: "mail.updateContact", input },
+        ]);
+        expect(errorOf(outcome)).toMatchObject({
+          code: "forbidden",
+          message: expect.stringMatching(/for a person to do/),
+        });
+      }
+      const [notes] = await change(claude, [
+        {
+          op: "mail.updateContact",
+          input: { id, notes: "Prefers a call." },
+        },
+      ]);
+      expect(notes).toMatchObject({ ok: true });
+      const [contact] = await handle.db.select().from(mailContacts);
+      expect(contact).toMatchObject({
+        notes: "Prefers a call.",
+        customerId: null,
+      });
+    });
+  });
+
+  describe("something nobody planned for", () => {
+    it("is said plainly, with nothing of the database in it, and stops there", async () => {
+      const claude = await connect();
+      const said =
+        'Failed query: select "email" from "customers" where "id" = $1 params: cus_secret';
+      const broken = new Proxy(
+        {},
+        {
+          get() {
+            throw new Error(said);
+          },
+        },
+      );
+      const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        const outcomes = await runForBot(
+          "look",
+          [{ op: "today.needs" }, { op: "approvals.list" }],
+          callerFor(claude),
+          claude.connectionId,
+          { db: broken as never, now: T0 },
+        );
+        expect(errorOf(outcomes[0])).toEqual({
+          code: "unavailable",
+          message:
+            "That failed in a way nobody planned for. It may or may not have happened: look before trying again.",
+        });
+        expect(JSON.stringify(outcomes)).not.toMatch(/select|customers|secret/);
+        // Even a look does not carry on past it.
+        expect(outcomes[1]).toEqual({
+          op: "approvals.list",
+          ok: false,
+          notTried: true,
+        });
+        // The whole of it is in the server's own log.
+        expect(quiet).toHaveBeenCalledWith(
+          expect.stringContaining("today.needs"),
+          expect.objectContaining({ message: said }),
+        );
+      } finally {
+        quiet.mockRestore();
+      }
     });
   });
 });

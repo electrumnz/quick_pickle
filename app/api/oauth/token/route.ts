@@ -1,8 +1,10 @@
 import {
   countKnock,
   doorIsOpen,
+  fromAllowedOrigin,
   json,
   nothingHere,
+  notThatWay,
   oauthError,
   SCOPE,
   tooMany,
@@ -44,6 +46,9 @@ const granted = (keys: Keys) =>
 
 export async function POST(request: Request): Promise<Response> {
   if (!(await doorIsOpen())) return nothingHere();
+  // Never from a page on somebody else's site, which could otherwise use
+  // up a visitor's tries from their own address.
+  if (!fromAllowedOrigin(request)) return json({ error: "forbidden" }, 403);
   const knock = await countKnock(request);
   if (!knock.allowed) return tooMany();
 
@@ -128,3 +133,7 @@ export async function POST(request: Request): Promise<Response> {
     throw error;
   }
 }
+
+// Every other verb, so that nothing here answers while the door is shut.
+const no = notThatWay("POST");
+export { no as GET, no as PUT, no as PATCH, no as DELETE, no as OPTIONS };

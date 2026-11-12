@@ -149,6 +149,8 @@ export const leaveCrew = defineOp({
   description:
     "Unsubscribes an address, by the token from an email's unsubscribe link or by the address itself. Takes effect at once. The row is kept so the address is never emailed or re-added by mistake.",
   access: "write",
+  // It cannot be undone from here: only the person can join again.
+  effect: "destructive",
   input: z
     .object({
       token: z.string().min(10).max(200).optional(),
@@ -157,6 +159,8 @@ export const leaveCrew = defineOp({
     .refine((value) => value.token !== undefined || value.email !== undefined, {
       message: "Give the token from the link, or the email address",
     }),
+  explain: (input) =>
+    `This takes ${input.email ?? "the address that unsubscribe link belongs to"} off the Pickle Crew. They are sent no more marketing, and nobody but them can put them back on.`,
   async run(ctx, input): Promise<{ email: string }> {
     const [member] = await ctx.db
       .select()

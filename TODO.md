@@ -268,6 +268,23 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       change) reach the whole back end. It can read and make ordinary changes; anything
       that reaches a customer or cannot be undone waits for a yes in the back end. Every
       call is in the activity log under the bot's own name.
+- [x] **The connection, hardened after an independent review (12 November 2026).** The
+      review read the whole connection cold and found two serious gaps, both closed
+      before anybody could switch it on. A bot could hand over a key the operation does
+      not read, dressed up to look like the one that matters, and the yes/no page showed
+      it: every key a bot hands over now has to be one the operation reads, a reply has
+      to carry its own words, and publishing saved words (a page, a campaign, a caption,
+      a review, a special) is a person's, on the screen that has the words on it. And a
+      dozen operations that reach a customer without sending anything ran with no yes at
+      all: a promo code, where an order is sent, the signature, the do-not-email list,
+      blocking a sender, the morning email's address, a partner's permission to be named,
+      releasing a batch, taking a review down, unsubscribing somebody. Each now waits
+      for a person. Smaller ones closed with them: a bot's tick no longer counts as a
+      person's read of a restricted phrase, the yes/no page says only its own sentences,
+      a replaced renewal key gets one more go and not many, a flood of registrations
+      cannot shut the door, a list of calls in one request is refused, every verb
+      answers 404 while it is off, and an unexpected failure tells a bot nothing of the
+      database.
 - [ ] **Connect Claude for real, once.** Nothing here could be tried against Claude
       itself, only against the protocol's own client library. After the owner login is
       made: Settings, Claude, switch it on, then in Claude add a custom connector with the
@@ -275,6 +292,24 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       `/.well-known/oauth-authorization-server` on the site first. If the consent screen
       says the app "asked to be sent back somewhere it did not register", Claude's callback
       address has moved: the two it may use are in `lib/backstage/connect/tokens.ts`.
+      **One thing to look at while doing it,** which could not be checked from here:
+      every Claude on the web is sent back to the same address at claude.ai, so our
+      consent screen cannot tell your Claude from somebody else's. What keeps a stranger
+      from getting you to press Connect for THEIR Claude is that Claude ties the answer
+      to the browser that started it, and the screen's own line: only say yes if you
+      started this yourself, just now. To check the first, start connecting in one
+      browser, copy the address of our consent screen into a different browser where you
+      are also signed in to the back end, and press Connect there. Claude should refuse
+      to finish. If it finishes, switch connecting off and tell whoever looks after this
+      code: the fix is a short code the person types across.
+- [ ] **A notice in the address is the back end's own voice on every screen but one.**
+      After a form is saved, the sentence that says how it went travels in the address
+      (`?notice=`), so a link somebody made by hand can put any sentence in a notice box
+      on a back-end page. It is text only and it is behind the sign-in, and the one page
+      where it mattered (the yes/no page a bot hands out the link to) now takes a word
+      from a fixed list instead. Doing the same everywhere means signing the notice, or
+      carrying it in a short-lived cookie: about fifty pages read it today
+      (`lib/backstage/ui/submit.ts` writes it).
 - [ ] **Say in the privacy page which tools read customers' details.** It now says the
       shop may be run with an AI assistant. If Claude is never switched on, that line can
       come out; if another tool is added, it goes in.
@@ -316,7 +351,15 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       `scripts/build-media.mjs`. Nothing on the Drive is to be used yet: on 13 November
       (New Zealand time) the brand pack marked every motion file it holds (the hero loop,
       the films, the stingers) as superseded, pending a rebuild. Never the films that carry
-      "for the quads" or "performance with pickles", whatever state they are in.
+      "for the quads" or "performance with pickles", whatever state they are in. That was
+      still so at the last look at the Drive (11:00am on 13 November, New Zealand time),
+      after which the hourly watch was switched off.
+- [ ] **Vector copies of the three official marks are on the Drive** (`02 Logos/vector/`,
+      13 November): the stacked lockup, Lucky flying and the round lockup, drawn in-house
+      from the official pictures. The pack's own notes say they are not Ashleigh's original
+      vectors and list where they differ. The site keeps what it has: her own paths where
+      she drew them as vectors, and the official pictures elsewhere. Worth a look only if a
+      sharper full-colour Lucky is wanted at a large size.
 - [ ] Reviews, once there are real ones. None are invented.
 - [ ] Subscribe and save, once there is a second batch to subscribe to.
 

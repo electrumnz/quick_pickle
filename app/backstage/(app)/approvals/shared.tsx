@@ -22,6 +22,68 @@ export function StatusPill({ status }: { readonly status: ApprovalStatus }) {
   return <Pill tone={said.tone}>{said.word}</Pill>;
 }
 
+/**
+ * What this page may say about a press of yes or no.
+ *
+ * Everywhere else in the back end the sentence travels in the address. Not
+ * here: the link to this page is handed to a person by the bot that is
+ * asking, and a sentence in the address would be the bot's own words in the
+ * back end's voice, on the one page where a person decides. So the address
+ * carries a word from this list, and the page says its own sentence for it.
+ * `when` is where the request has to stand for the sentence to be true: a
+ * link that says "done" beside a request that is still waiting says nothing.
+ */
+const OUTCOMES = {
+  done: { text: "Done.", tone: "good", when: ["done"] },
+  failed: {
+    text: "It could not be done. Why not is on this page.",
+    tone: "bad",
+    when: ["failed"],
+  },
+  declined: {
+    text: "Said no. Nothing was done.",
+    tone: "good",
+    when: ["declined"],
+  },
+  decided: {
+    text: "That had already been decided, or had waited too long. Nothing more was done.",
+    tone: "bad",
+    when: ["done", "failed", "declined", "expired", "running", "waiting"],
+  },
+  forbidden: {
+    text: "Your account cannot decide that.",
+    tone: "bad",
+    when: ["waiting"],
+  },
+  error: {
+    text: "That did not work, and nothing was decided.",
+    tone: "bad",
+    when: ["waiting"],
+  },
+} as const satisfies Record<
+  string,
+  {
+    readonly text: string;
+    readonly tone: "good" | "bad";
+    readonly when: readonly ApprovalStatus[];
+  }
+>;
+
+export type Outcome = keyof typeof OUTCOMES;
+
+/** The sentence for a word in the address, if it is true of this request. */
+export function outcomeSaid(
+  word: unknown,
+  status: ApprovalStatus,
+): { readonly text: string; readonly tone: "good" | "bad" } | null {
+  // An address can say a thing twice, and then it is a list, not a word.
+  if (typeof word !== "string" || !Object.hasOwn(OUTCOMES, word)) return null;
+  const outcome = OUTCOMES[word as Outcome];
+  return (outcome.when as readonly ApprovalStatus[]).includes(status)
+    ? { text: outcome.text, tone: outcome.tone }
+    : null;
+}
+
 /** What an operation is called on a screen: its title, or its name. */
 export const titleOf = (operation: string): string =>
   ALL_OPS.get(operation)?.title ?? operation;

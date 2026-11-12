@@ -19,7 +19,10 @@ export const REFRESH_DAYS = 30;
  * that never heard our answer asks again with the old one, and that is fair.
  */
 export const GRACE_SECONDS = 120;
-/** The most apps that may be registered and waiting at once. */
+/**
+ * The most apps that may be registered at once. At the limit, room is made
+ * by letting go of the oldest one nobody said yes to.
+ */
 export const MOST_CLIENTS = 300;
 /** An app that registered and was never let in is cleared after this long. */
 export const UNUSED_CLIENT_HOURS = 24;
