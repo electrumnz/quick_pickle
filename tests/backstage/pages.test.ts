@@ -187,6 +187,12 @@ describe("landing pages", () => {
         code: "invalid_input",
       });
     }
+    // The standard page's own name is taken: a landing page called the
+    // same would be counted as it.
+    expect(await refuse({ slug: " Home " })).toMatchObject({
+      code: "invalid_input",
+      fields: { slug: expect.stringContaining("standard page") },
+    });
     // An address is for ever, and there is only one of each.
     expect(await refuse({ slug: "clubs" })).toMatchObject({
       code: "conflict",

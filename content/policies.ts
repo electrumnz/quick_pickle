@@ -211,6 +211,14 @@ const privacy: Policy = {
       ],
     },
     {
+      heading: "Cookies",
+      body: [
+        "We don't use cookies to count visits or to advertise to you. There are three small ones we do use, each only when it is needed, and none of them says who you are.",
+        "When you place an order, one holds your order's summary for a short while, so the page that says your order is in can show it.",
+        "If we have made a page for people who found us a particular way, or are trying two versions of a page, one remembers which you were shown, so you keep seeing the same one for up to 30 days. And if a page is meant for people who have ordered before, one remembers that an order was placed from your browser.",
+      ],
+    },
+    {
       heading: "Your rights",
       body: [
         `Under the Privacy Act 2020 you can ask to see the information we hold about you and ask us to correct it. Write to ${contact}. If you're not happy with how we respond, you can contact the Office of the Privacy Commissioner.`,

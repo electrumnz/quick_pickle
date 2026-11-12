@@ -17,6 +17,7 @@ import {
   receiptFor,
 } from "@/lib/shop/receipt";
 import { quote } from "@/lib/shop/pricing";
+import { BUYER_COOKIE } from "@/lib/shop/routing";
 import { getStore } from "@/lib/shop/store";
 import { siteUrl } from "@/lib/site";
 
@@ -216,6 +217,23 @@ export async function submitCheckout(
     path: "/order",
     maxAge: RECEIPT_MAX_AGE_SECONDS,
   });
+
+  // "Has bought before" is only remembered when a rule for who sees which
+  // page asks about it (lib/shop/routing.ts). It says that an order was
+  // placed from this browser, and nothing else. Never a reason to fail.
+  try {
+    if ((await getStore().remembersBuyers?.()) === true) {
+      jar.set(BUYER_COOKIE, "1", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 365 * 24 * 60 * 60,
+      });
+    }
+  } catch {
+    // Not remembered. The order is placed all the same.
+  }
 
   // redirect() signals by throwing, so it sits outside every try above. With
   // a payment still to make, the buyer goes to the processor's page; that

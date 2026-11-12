@@ -96,10 +96,12 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       audience, each at its own address with its own numbers. Written as a draft, checked
       against the copy rules, looked at in a preview that is the real page, then published.
       With none made, everyone sees the standard page.
-- [ ] **Who sees which page, and A/B tests.** Rules that pick a page by how a visitor
-      arrived (a link, an advert, a promo code, having bought before), a split test
-      between two pages with its numbers, and a "see it as" check before anything goes
-      live. All of it off until somebody starts something.
+- [x] **Who sees which page, and A/B tests.** Rules that put a landing page at the front
+      of the shop for visitors who arrived a particular way (a link, an advert, a website,
+      a promo code, having bought before), a test that splits everybody else between two
+      pages and says which sells more, and "see it as": describe a visitor and see the page
+      they would get. All of it switched off until somebody starts something, and no cookie
+      is set for anybody until then.
 - [ ] **Automations and routines.** Rules that react to events, schedules that run, a
       daily digest, and an approval queue for anything outward.
 - [x] **Plans.** The plan, the budget and what a pack costs to make and send, how-to

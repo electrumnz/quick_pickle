@@ -50,6 +50,13 @@
       "when": 1794489134006,
       "tag": "0006_pages",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794490297062,
+      "tag": "0007_page_routing",
+      "breakpoints": true
     }
   ]
 }

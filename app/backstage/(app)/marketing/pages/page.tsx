@@ -42,6 +42,14 @@ export default async function PagesPage({
       <PageHeader
         title="Landing pages"
         lead="The shop's one page with different words at the top, for one audience or one advert. Each has its own address and its own numbers."
+        actions={
+          <Link
+            href="/backstage/marketing/pages/who"
+            className="bk-btn bk-btn-quiet"
+          >
+            <span className="cap-trim">Who sees which page</span>
+          </Link>
+        }
       />
       <MarketingNav current="pages" />
       <Flash notice={notice} tone={tone} />

@@ -355,6 +355,7 @@ export const recordOrder = defineOp({
           source.device === "phone" || source.device === "desk"
             ? source.device
             : null,
+        test: source.test ?? null,
       });
     }
 

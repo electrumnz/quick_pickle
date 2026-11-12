@@ -6,7 +6,18 @@ import {
   setPageLive,
   updatePage,
 } from "@/lib/backstage/pages/ops";
+import {
+  addPageRule,
+  movePageRule,
+  removePageRule,
+  removePageTest,
+  setPageRuleActive,
+  setUpPageTest,
+  startPageTest,
+  stopPageTest,
+} from "@/lib/backstage/pages/routing-ops";
 import { formText, submit } from "@/lib/backstage/ui/submit";
+import type { RuleKind } from "@/lib/shop/routing";
 
 /** Every button on a landing page. */
 
@@ -90,5 +101,98 @@ export async function setPageLiveAction(form: FormData): Promise<void> {
         ? "It is back up."
         : "Taken down. Its address shows the standard page now.",
     },
+  );
+}
+
+/* ---- who sees which page -------------------------------------------------- */
+
+const WHO = "/backstage/marketing/pages/who";
+
+export async function addPageRuleAction(form: FormData): Promise<void> {
+  await submit(
+    addPageRule,
+    {
+      when: formText(form, "when") as RuleKind,
+      value: formText(form, "value"),
+      pageId: formText(form, "pageId"),
+    },
+    { back: `${WHO}#rules`, done: "Rule added. It is switched on." },
+  );
+}
+
+export async function setPageRuleActiveAction(form: FormData): Promise<void> {
+  const active = formText(form, "active") === "true";
+  await submit(
+    setPageRuleActive,
+    { id: formText(form, "id"), active },
+    {
+      back: `${WHO}#rules`,
+      done: active ? "Switched on." : "Switched off.",
+    },
+  );
+}
+
+export async function removePageRuleAction(form: FormData): Promise<void> {
+  await submit(
+    removePageRule,
+    { id: formText(form, "id") },
+    { back: `${WHO}#rules`, done: "Rule removed." },
+  );
+}
+
+export async function movePageRuleAction(form: FormData): Promise<void> {
+  await submit(
+    movePageRule,
+    {
+      id: formText(form, "id"),
+      direction: formText(form, "direction") === "up" ? "up" : "down",
+    },
+    { back: `${WHO}#rules`, done: "Moved." },
+  );
+}
+
+export async function setUpPageTestAction(form: FormData): Promise<void> {
+  const a = formText(form, "aPageId");
+  await submit(
+    setUpPageTest,
+    {
+      name: formText(form, "name"),
+      aPageId: a === "" ? null : a,
+      bPageId: formText(form, "bPageId"),
+    },
+    {
+      back: `${WHO}#test`,
+      done: "Set up. It is switched off until you start it.",
+    },
+  );
+}
+
+export async function startPageTestAction(form: FormData): Promise<void> {
+  await submit(
+    startPageTest,
+    { id: formText(form, "id") },
+    {
+      back: `${WHO}#test`,
+      done: "Started. It can take a few seconds to reach every visitor.",
+    },
+  );
+}
+
+export async function stopPageTestAction(form: FormData): Promise<void> {
+  await submit(
+    stopPageTest,
+    { id: formText(form, "id") },
+    {
+      back: `${WHO}#test`,
+      done: "Stopped. Everybody sees the standard page again.",
+    },
+  );
+}
+
+export async function removePageTestAction(form: FormData): Promise<void> {
+  await submit(
+    removePageTest,
+    { id: formText(form, "id") },
+    { back: `${WHO}#test`, done: "Removed." },
   );
 }

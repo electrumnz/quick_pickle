@@ -93,7 +93,8 @@ app/(site)/            the shop: the page, /checkout, /order/thanks, the fine pr
 app/backstage/(door)/  sign-in, first-time set-up, choose a password
 app/backstage/(app)/   everything behind the door, one folder per area
 app/layout.tsx         the document, the fonts and the shop's stylesheet. No script.
-proxy.ts               in front of /backstage only: path header, no-store, noindex
+proxy.ts               in front of /backstage (path header, no-store, noindex) and of
+                       the front page, where it picks which page a visitor sees
 components/brand/      Lucky and the lockup (inline vector), raster art, icons, the bottle
 components/site/ cart/ checkout/ ui/   the shop
 components/backstage/  the back end's parts: nav, ui kit, forms
@@ -156,6 +157,46 @@ same for everybody.
   this site (the editor shows it in a phone-sized frame), and its visits are not counted.
 - The headline is set as written, a line to a line, at the biggest size its longest line
   fits (`fitFor` in `components/site/Hero.tsx`).
+
+**Who sees which page.** Two things can put a landing page at the front of the shop for
+some visitors: a rule ("people who came through Kai's link see Kai's page") and a test
+between two pages. Both are optional and both start switched off.
+
+- **With nothing switched on, nothing happens.** `pages.routing` is empty, `proxy.ts` passes
+  the front page straight through, and no cookie is read or set for anybody. That is the
+  normal state, and a test (`tests/core/proxy.test.ts`) holds it there.
+- `lib/shop/routing.ts` is the decision, one function with no imports: a rule that matches
+  how the visitor arrived this time, else what they were shown before if that still stands,
+  else a running test, else the standard page. The proxy, the back end's "see it as" and the
+  tests all call it, so they cannot disagree.
+- A landing page is served **at the front page's own address** by a rewrite. The pages are
+  already built and kept, so the proxy adds a decision and not a render.
+- The one cookie (`qp_page`) names a page and why (which rule, or which side of which
+  test). It is only set by a rule or a test, it is believed only while that rule or test
+  still exists, and it is cleared when they end. `qp_buyer` is set at the checkout only
+  while some rule asks about having bought before.
+- **"No answer" is not "nothing set up".** If the proxy cannot find out what is set up it
+  serves the standard page and touches nothing, and it goes on using the last good answer.
+  Wiping a visitor's cookie because the database blinked would flip them between two
+  versions of the shop.
+- **The proxy must never be why the front page fails or is slow.** The first visitor after a
+  start waits at most 400 ms for the answer and then gets the standard page; everybody after
+  is served from the last answer while a new one is fetched behind them. That fetch is handed
+  to `event.waitUntil`, because a host that sleeps between requests would otherwise never
+  let it land. The answer is believed, so `asRouting` checks it to the letter: one thing out
+  of place and it is no answer.
+- `home` is the standard page's name everywhere (the numbers, the cookie, a test's first
+  side), so a landing page may not take it as its address.
+- A machine that says it is one is never put in a test or sent to a landing page: a search
+  engine always gets the standard page.
+- A test counts only the visits and orders it put on a page itself (`page_events.test`, and
+  `test` in an order's `source`). Its verdict is a sentence: too early, too close to call,
+  or one page ahead by more than luck. One test at a time, and the database enforces it.
+- What the shop is told is asked for at most every ten seconds, so a change takes a few
+  seconds to reach every visitor. Nothing may promise it is instant.
+- Never start a test on a shared server from a browser test: every other test's front page
+  would be split. The split is covered by `tests/core/proxy.test.ts`; the browser test uses
+  a rule for a link of its own.
 
 ### The database
 

@@ -109,6 +109,7 @@ describe("a step of a visit, as it is stored", () => {
       // No referrer was sent, so the one remembered from arrival stands in.
       referrer: "example.co.nz",
       device: "phone",
+      test: null,
     });
   });
 
@@ -133,6 +134,21 @@ describe("a step of a visit, as it is stored", () => {
     for (const referrer of ["https://x.example/page", "a b", "", "-bad-"]) {
       expect(row({ referrer }).referrer, referrer).toBeNull();
     }
+  });
+
+  it("keeps which side of a test a visit saw, if it really is one", () => {
+    const row = (test: string | null) =>
+      seenRow({ kind: "view", visit: "abcdefghij0123456789", test }, NOW).test;
+    expect(row("pts_abcdefghijklmnopqrst.a")).toBe(
+      "pts_abcdefghijklmnopqrst.a",
+    );
+    expect(row("pts_abcdefghijklmnopqrst.b")).toBe(
+      "pts_abcdefghijklmnopqrst.b",
+    );
+    for (const junk of ["pts_abc.c", "prl_abcdefghijklmnopqrst.a", "a", ""]) {
+      expect(row(junk), junk).toBeNull();
+    }
+    expect(row(null)).toBeNull();
   });
 
   it("refuses a visit id that is not one, and a step that is not a step", () => {

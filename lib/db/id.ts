@@ -41,6 +41,8 @@ export type IdPrefix =
   | "prt" // partner (club, stockist)
   | "pcs" // something a partnership cost
   | "pag" // landing page
+  | "prl" // a rule for who sees which page
+  | "pts" // a test between two pages
   | "pro" // promo code
   | "doc" // document
   | "ver" // document version
