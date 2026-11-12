@@ -1,6 +1,6 @@
-/* The shop's stylesheet. Loaded by app/(site)/layout.tsx and by the 404, and
-   by nothing under /backstage: the back end has its own (app/backstage/
-   backstage.css), so the shop page never downloads a back-end style.
+/* The shop's stylesheet. Loaded by the root layout, in one file with the
+   fonts. The back end has its own on top (app/backstage/backstage.css), which
+   only the back end loads, so the shop page never downloads a back-end style.
 
    Tailwind only scans the folders named here. A new folder that renders on a
    public page has to be added, or its utility classes will not exist. */

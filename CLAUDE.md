@@ -81,7 +81,7 @@ checkout, our orders.
 app/(site)/            the shop: the page, /checkout, /order/thanks, the fine print
 app/backstage/(door)/  sign-in, first-time set-up, choose a password
 app/backstage/(app)/   everything behind the door, one folder per area
-app/layout.tsx         the document and fonts only. No stylesheet, no script.
+app/layout.tsx         the document, the fonts and the shop's stylesheet. No script.
 proxy.ts               in front of /backstage only: path header, no-store, noindex
 components/brand/      Lucky and the lockup (inline vector), raster art, icons, the bottle
 components/site/ cart/ checkout/ ui/   the shop
@@ -102,11 +102,13 @@ tests/  e2e/           vitest and Playwright
 
 ### The shop and the back end do not share a stylesheet or a script
 
-`app/globals.css` is the shop's and is loaded by `app/(site)/layout.tsx` (and the 404).
-`app/backstage/backstage.css` is the back end's. Both import the same tokens and the same
-brand base (`lib/brand/base.css`), each has its own copy of Tailwind, and each **only scans
-the folders it names** with `@source`. So the shop never downloads a back-end style and its
-Lighthouse budget does not move as the back end grows.
+`app/globals.css` is the shop's. It is imported by the root layout, beside the fonts, so
+the two leave as one file: imported a level down it became a second render-blocking request
+and failed the Lighthouse budget. `app/backstage/backstage.css` is the back end's, imported
+only by `app/backstage/layout.tsx`. Both use the same tokens and brand base
+(`lib/brand/base.css`), each has its own copy of Tailwind, and each **only scans the folders
+it names** with `@source`. So the shop never downloads a back-end style and its Lighthouse
+budget does not move as the back end grows.
 
 The catch: a file that renders on a public page but is not under a scanned folder loses its
 utility classes with no error. Add the folder to the list. `e2e/site.spec.ts` has a test for

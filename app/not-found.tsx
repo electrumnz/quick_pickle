@@ -6,8 +6,6 @@ import { CartProvider } from "@/components/cart/CartProvider";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { NOT_FOUND } from "@/content/site";
 
-import "./globals.css";
-
 /**
  * The 404.
  *
@@ -16,8 +14,8 @@ import "./globals.css";
  * `eager` image on this page becomes a preload on EVERY page, which is how the
  * sleeping cat (40 kB) came to be the first image the home page downloaded.
  *
- * It sits above the shop's layout, so it brings the shop's stylesheet and the
- * jar (the header's jar button needs one) in for itself.
+ * It sits above the shop's layout, so it brings the jar (the header's jar
+ * button needs one) in for itself.
  */
 export default function NotFound() {
   return (

@@ -7,12 +7,18 @@ import { THEME_COLOUR } from "@/lib/brand/colours";
 import { fontVariables } from "@/lib/brand/fonts";
 import { siteUrl } from "@/lib/site";
 
+import "./globals.css";
+
 /**
- * The root: the document, the fonts and the metadata every route shares.
+ * The root: the document, the fonts, the shop's stylesheet and the metadata
+ * every route shares. No script of its own.
  *
- * It deliberately loads no stylesheet and no script of its own. The shop and
- * the back end each bring theirs one level down (app/(site)/layout.tsx and
- * app/backstage/layout.tsx), so neither ever downloads the other's.
+ * The shop's stylesheet is imported HERE, beside the fonts, so the two leave
+ * as one file. One level down it became a second render-blocking request on
+ * every shop page, which cost enough to fail the Lighthouse budget. The back
+ * end's stylesheet is the one that must stay out of the shop, and it does:
+ * only app/backstage/layout.tsx imports it. (The back end gets this file as
+ * well. It is the same tokens and base, so nothing changes there.)
  */
 
 export const metadata: Metadata = {
