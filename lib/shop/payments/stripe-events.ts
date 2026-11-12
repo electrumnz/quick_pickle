@@ -25,12 +25,28 @@ type ChargeObject = {
   readonly metadata?: { readonly order_number?: unknown } | null;
 };
 
+/**
+ * A dispute, as the news shows it. Only its id is ever taken: how it stands
+ * is asked of Stripe, because news can arrive late or out of order.
+ */
+type DisputeObject = {
+  readonly id?: unknown;
+  readonly status?: unknown;
+};
+
+/** The kinds of news Stripe sends about a card dispute. */
+const DISPUTE_NEWS = [
+  "charge.dispute.created",
+  "charge.dispute.updated",
+  "charge.dispute.closed",
+] as const;
+
 export type StripeEvent = {
   readonly id?: unknown;
   readonly type?: unknown;
   readonly livemode?: unknown;
   readonly data?: {
-    readonly object?: CheckoutSessionObject & ChargeObject;
+    readonly object?: CheckoutSessionObject & ChargeObject & DisputeObject;
   } | null;
 };
 
@@ -58,6 +74,14 @@ export type OrderBook = {
     readonly number: string | null;
     readonly paymentIntent: string | null;
   }): Promise<{ readonly number: string | null; readonly written: number }>;
+  /**
+   * A cardholder's bank has opened, moved or closed a dispute. The event
+   * only names it: the book asks Stripe how it stands now and writes that
+   * onto the order the payment belongs to.
+   */
+  seeDispute(input: {
+    readonly reference: string;
+  }): Promise<{ readonly number: string | null; readonly status: string }>;
 };
 
 export type EventOutcome =
@@ -76,6 +100,12 @@ export type EventOutcome =
       readonly action: "refunds";
       readonly number: string;
       readonly written: number;
+    }
+  /** A card dispute on one of our orders, as it stands now. */
+  | {
+      readonly action: "dispute";
+      readonly number: string;
+      readonly status: string;
     };
 
 function orderNumberOf(session: CheckoutSessionObject): string | null {
@@ -124,6 +154,17 @@ export async function handleStripeEvent(
     "checkout.session.async_payment_failed",
     "checkout.session.expired",
   ];
+  if ((DISPUTE_NEWS as readonly string[]).includes(type)) {
+    const reference = session?.id;
+    if (typeof reference !== "string" || !reference.startsWith("dp_")) {
+      return { action: "ignored", why: "a dispute with no id" };
+    }
+    const seen = await book.seeDispute({ reference });
+    return seen.number === null
+      ? { action: "ignored", why: "not one of our orders" }
+      : { action: "dispute", number: seen.number, status: seen.status };
+  }
+
   if (!about.includes(type))
     return { action: "ignored", why: `not handled: ${type}` };
   if (session === undefined || session === null) {

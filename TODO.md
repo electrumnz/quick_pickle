@@ -168,8 +168,11 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       Stripe says a payment was refunded, the refunds it holds are read and any the order
       does not have are recorded: the order, the customer's records and the books all
       follow. One the back end started is known by its own id and never counted twice.
-- [ ] **Card disputes**, written onto the order with the date an answer is due. A dispute
-      is rare and has a deadline, so it belongs on Today the day it arrives.
+- [x] **Card disputes**, written onto the order with the date an answer is due, and on
+      Today until they are decided. A lost one is written as given back, so the order and
+      the books stay true. The answering itself is done in Stripe's dashboard.
+- [ ] **A dispute on the order's own page.** Today and the order's history say there is
+      one. The page itself has no line for it yet, and no link straight to it in Stripe.
 - [ ] **A refund Stripe later says failed** (a closed card, say) is not taken back off the
       order. Rare, and Stripe emails about it, but the order would go on saying refunded.
 

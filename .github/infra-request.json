@@ -1,6 +1,6 @@
 {
   "actions": ["stripe-events", "status"],
   "confirm": "yes",
-  "asked": "2026-11-12T17:20Z",
-  "why": "Have Stripe send news of refunds (charge.refunded), so a refund made in Stripe's own dashboard is written onto the order."
+  "asked": "2026-11-12T17:45Z",
+  "why": "Have Stripe send news of card disputes (charge.dispute.created, updated and closed), so a dispute is on Today the day it arrives."
 }

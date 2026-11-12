@@ -192,6 +192,45 @@ export const refunds = pgTable(
 ).enableRLS();
 
 /**
+ * A card dispute: the cardholder has asked their bank for the money back.
+ * The bank takes it at once, and the shop has until `dueAt` to answer. Win
+ * and the money returns; lose, or say nothing, and it is gone.
+ *
+ * Written only from the payment processor's own record, never by hand: the
+ * answering is done in the processor's dashboard, and this is the back end
+ * knowing that it has to be.
+ */
+export const disputes = pgTable(
+  "payment_disputes",
+  {
+    id: text().primaryKey(),
+    orderId: text()
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    /** The processor's own id for the dispute: dp_... */
+    providerReference: text().notNull(),
+    amountCents: integer().notNull(),
+    /** The bank's reason, in the processor's word: product_not_received. */
+    reason: text().notNull(),
+    /** open: not decided yet. won: the money stays. lost: it went back. */
+    status: text().$type<"open" | "won" | "lost">().notNull(),
+    /** The processor's own word for where it is up to: needs_response. */
+    providerStatus: text().notNull(),
+    /** When an answer is due by, while one still is. */
+    dueAt: instant("due_at"),
+    openedAt: instant("opened_at").notNull(),
+    closedAt: instant("closed_at"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("payment_disputes_reference_key").on(t.providerReference),
+    index("payment_disputes_order_idx").on(t.orderId),
+    index("payment_disputes_status_idx").on(t.status),
+  ],
+).enableRLS();
+
+/**
  * The Pickle Crew: people who asked for our emails.
  *
  * The Unsolicited Electronic Messages Act 2007 puts the burden on the sender
