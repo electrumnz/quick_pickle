@@ -105,7 +105,7 @@ export const BUY = {
     sorted: "Something not right? Email us and we'll sort it",
   },
   bottleAlt:
-    "Three illustrated Quick Pickle shot bottles: clear juice, a wide white cap, and a pink label with Lucky running across it.",
+    "Three illustrated Quick Pickle shot bottles: clear juice, a wide white cap, and a pink wrap label with the name and Lucky running across it.",
   artNote: "Illustration. Real bottle shots to come.",
 } as const;
 

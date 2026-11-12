@@ -97,6 +97,12 @@ Only the marks she drew as motion (burst lines, speed lines, dust) move.
 That vector art is her pink-ground "knockout" palette. On cream or navy use the full-colour
 raster art (`components/brand/Art.tsx`, built by `scripts/build-art.mjs`).
 
+The bottle is real: 100 ml, clear food-grade plastic, straight sides, a wide white ribbed
+screw cap, juice as clear as water, and a wrap label covering most of the body (the name in
+Summer Varsity, Lucky running under it). `components/brand/Bottle.tsx` is a drawing of that,
+standing in until the proper labels are printed and photographed. The samples seen so far
+wore temporary stickers.
+
 Poses marked "proposed" in the pack were generated from her art and are pending her nod:
 celebrate (order placed) and sleeping (empty jar, 404) are in use and flagged in the guide.
 
