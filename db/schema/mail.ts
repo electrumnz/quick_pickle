@@ -166,11 +166,24 @@ export const mailMessages = pgTable(
      *   draft     being written (ours)
      *   queued    waiting to be sent
      *   sent      handed to the mail provider
-     *   failed    the provider refused it
+     *   not_sent  written down and, on purpose, not sent: sending is not
+     *             connected, the records are invented, it is a test order.
+     *             `error` says which, in a sentence. Final.
+     *   failed    it was tried and did not go. `error` says why.
      *   bounced   it left and came back
+     *
+     * A plain text column: adding a word here changes no table.
      */
     status: text()
-      .$type<"received" | "draft" | "queued" | "sent" | "failed" | "bounced">()
+      .$type<
+        | "received"
+        | "draft"
+        | "queued"
+        | "sent"
+        | "not_sent"
+        | "failed"
+        | "bounced"
+      >()
       .notNull(),
     /** The RFC 5322 Message-ID, angle brackets and all. */
     messageId: text(),
@@ -211,6 +224,7 @@ export const mailMessages = pgTable(
     pinned: boolean().notNull().default(false),
     /** The member of staff who wrote it, for outbound. */
     authorId: text().references(() => users.id, { onDelete: "set null" }),
+    /** Why it did not go, for one of ours that failed, bounced or was not sent. */
     error: text(),
     createdAt: createdAt(),
   },

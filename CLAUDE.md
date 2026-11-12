@@ -104,6 +104,7 @@ db/migrations/         generated SQL, plus the copy embedded in the build
 lib/db/                the one connection, the migration runner, ids
 lib/backstage/         core (operations, actors, errors), auth, and one folder per area
 lib/shop/              money, jar, pricing, orders, the payment seam, the store seam
+lib/mail/              the sending seam (off, or Resend), and an email written as pieces
 lib/brand/             tokens.css (the only file with a hex), base.css, fonts, art data
 lib/time.ts            New Zealand time. Every conversion goes through it.
 legal/                 COPY-RULES.md and the scanner
@@ -112,8 +113,9 @@ tests/  e2e/           vitest and Playwright
 
 `lib/backstage/README.md` is the guide to adding an area to the back end.
 
-`.wip/` holds areas that were stopped part-built (see its README). Nothing in it is built,
-linted, tested or scanned. An area is finished and wired in by moving it out.
+`.wip/` holds what is left of an area that was stopped part-built: the inbox (see its
+README). Sending, and an order's emails, have been finished and moved out of it. Nothing in
+it is built, linted, tested or scanned. An area is finished and wired in by moving it out.
 
 ### The shop and the back end do not share a stylesheet or a script
 
@@ -448,6 +450,52 @@ go-live list shows when it last ran and what is stuck.
   made (`tracking`), orders pack exactly as they did, Today lists nothing about shots, and
   an order's page says nothing about batches. Once there is one, an order packed while no
   batch is on sale says so, because it is on no recall list.
+
+### Email
+
+- `lib/mail` is where a mail provider plugs in, named by `MAIL_PROVIDER`. Unset or `off`
+  (the default): nothing is sent, and each email is written down with the reason. `resend`:
+  Resend's HTTP API, with no SDK (`RESEND_API_KEY`, and `MAIL_FROM` for the address to send
+  from). An unknown name throws rather than falling back to off.
+- **Email only ever leaves a production deployment with a real database.** Never a Vercel
+  preview, a development server, a back end on demo data, or a test. `mailConnection()` is
+  the one answer to "is email being sent, and if not, why": the outbox, the go-live list,
+  an order's page and the shop all read it. Under a test runner the seam refuses to use the
+  network at all, so a test that reaches Resend has to bring its own `fetch`.
+- **The outbox is `mail_messages`.** An operation writes the email down as `queued` in its
+  own transaction (`writeOutbound`, `lib/backstage/mail/outbound.ts`) and leaves a
+  `mail.queued` event. A listener sends it after the commit and records what happened
+  through an operation: `sent`; `not_sent` (written down and, on purpose, not sent: `error`
+  holds the sentence why, and that is the end of it); or `failed` (tried again by the event
+  pipeline when the provider was busy, and by "Try sending it again" on the order when it
+  was not). The message's id is the idempotency key Resend is given, so one message is one
+  email however often its event is delivered. A try that got no clear answer is only
+  repeated while Resend still remembers the key (a day); after that it is parked for a
+  person, because nothing may risk a second copy on a guess.
+- **Every email is read before it is queued.** One of ours is written as pieces
+  (`lib/mail/compose.ts`): our words, the recipient's own (their name, their address) and
+  data (a number, a date, a link). `refuseUnsendable` reads the finished email with only
+  our words in it, so somebody who lives in Nelson can get a receipt and a banned word of
+  ours still stops it. A system email cannot carry a recorded human check, so a restricted
+  word stops it too: the words in `content/emails.ts` have to be clean, and a courier's
+  name or a code's word that would not pass is left out rather than sent.
+- **An order's emails** (`lib/backstage/orders/emails.ts`, one operation,
+  `orders.emailCustomer`): the receipt on `order.paid`, on the courier on `order.shipped`,
+  cancelled on `order.cancelled`, and a payment on its way back on `order.refunded` when
+  it went back through Stripe. Each is written once (its id is worked out from the order
+  and what it is about) and only when it is true. They are transactional under the
+  Unsolicited Electronic Messages Act 2007: **nothing promotional may ever be added to
+  one**, which is also why they carry no unsubscribe link.
+- **A test order's customer is not emailed**, with one exception: a payment made in
+  Stripe's test mode gets a receipt that says first that it was a test. The practice
+  checkout gets none, because pressing its button costs nothing and would let anybody make
+  the shop email any address they liked.
+- **The shop never promises an email that will not be sent.** The checkout's hint and the
+  "order's in" page are told whether email is really leaving (the receipt cookie carries
+  `emails`), and when it is not they say nothing about a receipt.
+- An address on `mail_suppressions` is sent nothing, its own order's emails included.
+- **No secret is logged or stored.** What Resend says when it refuses is scrubbed before it
+  is kept, and the go-live list names the settings that are missing, never a value.
 
 ### Design rules that came from measuring
 

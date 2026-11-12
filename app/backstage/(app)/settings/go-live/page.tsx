@@ -7,6 +7,7 @@ import { requireStaff } from "@/lib/backstage/auth/current";
 import { lastTick } from "@/lib/backstage/clock/tick";
 import { listStuckEvents } from "@/lib/backstage/core/events";
 import { getDb } from "@/lib/db/client";
+import { mailConnection } from "@/lib/mail";
 import { limitsState } from "@/lib/shop/caller";
 import { LIMITS } from "@/lib/shop/limit";
 import { formatNzd } from "@/lib/shop/money";
@@ -42,6 +43,15 @@ export default async function GoLivePage() {
 
   const mode = checkoutMode();
 
+  // Email: read from the same place the outbox reads it, so this cannot say
+  // "connected" while receipts are being written down and not sent. Only
+  // the names of what is missing are shown, never a value.
+  const mail = mailConnection();
+  const mailMissing =
+    mail.missing.length === 0
+      ? ""
+      : ` Still to set: ${mail.missing.join(", ")}.`;
+
   // The clock: the timed request that retries a step that failed and closes
   // an order nobody paid for. Quiet for 20 minutes means it has stopped.
   const db = await getDb();
@@ -60,6 +70,13 @@ export default async function GoLivePage() {
         : mode === "sandbox"
           ? `${payments.name === "stripe" ? "Stripe" : payments.name} in its test mode. Buyers reach the real payment page, and no real money moves.`
           : "Test mode. The checkout records an order and charges nobody.",
+    },
+    {
+      ok: mail.delivers,
+      label: "Order emails",
+      detail: mail.delivers
+        ? `Connected. Receipts and the emails that follow them are sent through Resend, from ${mail.from ?? "the address in MAIL_FROM"}.`
+        : `Not being sent. ${mail.problem ?? mail.held ?? ""}${mailMissing} Until they are, the shop promises nobody a receipt, and what would have gone is written down on each order.`,
     },
     {
       ok: ticking,

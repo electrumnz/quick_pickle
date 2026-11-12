@@ -93,8 +93,9 @@ export const refundsSeen = defineOp({
     const entity = { type: "order", id: order.id };
     let refundedCents = order.refundedCents;
     for (const seen of fresh) {
+      const refundId = newId("rfd");
       await ctx.db.insert(refunds).values({
-        id: newId("rfd"),
+        id: refundId,
         orderId: order.id,
         amountCents: seen.amountCents,
         reason: `Refunded from Stripe's dashboard${seen.why === undefined || WHY[seen.why] === undefined ? "" : `: ${WHY[seen.why] ?? ""}`}`,
@@ -115,6 +116,9 @@ export const refundsSeen = defineOp({
         entity,
         payload: {
           number: order.number,
+          // Which refund, so the email about it is written once and for
+          // this one (lib/backstage/orders/emails.ts).
+          refundId,
           amountCents: seen.amountCents,
           test: order.isTest,
         },

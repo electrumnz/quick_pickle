@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { CODES } from "@/content/site";
+import { mailConnection } from "@/lib/mail";
 import { countAsk } from "@/lib/shop/caller";
 import { normaliseCart } from "@/lib/shop/cart";
 import { asPromoCode } from "@/lib/shop/code";
@@ -305,8 +306,13 @@ export async function submitCheckout(
     return { status: "invalid", errors: result.errors, values };
   }
 
+  // Whether a receipt will really be emailed is decided here, on the server,
+  // from how email is set up right now. The page it is shown on only reads it.
   const jar = await cookies();
-  jar.set(RECEIPT_COOKIE, JSON.stringify(receiptFor(result.order)), {
+  const receipt = receiptFor(result.order, {
+    emails: mailConnection().delivers,
+  });
+  jar.set(RECEIPT_COOKIE, JSON.stringify(receipt), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

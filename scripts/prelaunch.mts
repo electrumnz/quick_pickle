@@ -12,6 +12,7 @@
  *   - orders with nowhere durable to be written
  *   - no clock, so nothing is retried and nothing unpaid is closed
  *   - the checkout's limit on asks from one address, switched off by hand
+ *   - order emails not connected, so nobody would get a receipt
  *
  * It reads the same modules the site does, so it cannot disagree with it.
  */
@@ -27,6 +28,11 @@ type Check = {
 const env = process.env;
 const paymentProvider = (env.PAYMENT_PROVIDER ?? "test").trim().toLowerCase();
 const orderStore = (env.ORDER_STORE ?? "").trim().toLowerCase();
+const mailProvider = (env.MAIL_PROVIDER ?? "").trim().toLowerCase();
+const mailReady =
+  mailProvider === "resend" &&
+  (env.RESEND_API_KEY ?? "").trim() !== "" &&
+  /^[^\s@<>]+@[a-z0-9-]+(?:\.[a-z0-9-]+)+$/i.test((env.MAIL_FROM ?? "").trim());
 
 const checks: Check[] = [
   ...UNCONFIRMED.map((item) => ({
@@ -57,6 +63,11 @@ const checks: Check[] = [
     ok: (env.QP_LIMITS ?? "").trim().toLowerCase() !== "off",
     label: "The checkout's limit is switched off",
     fix: "Run limits-on in the infra workflow and redeploy, so nobody can guess at promo codes or flood the order book.",
+  },
+  {
+    ok: mailReady,
+    label: "Order emails are not connected",
+    fix: "Verify the sending domain with Resend, then set MAIL_PROVIDER=resend, RESEND_API_KEY and MAIL_FROM on production. Until then nobody gets a receipt. TODO.md has the steps.",
   },
   {
     ok: orderStore !== "" && orderStore !== "log" && orderStore !== "file",

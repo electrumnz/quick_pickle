@@ -9,6 +9,7 @@ import {
   recordRefund,
   updateDelivery,
 } from "@/lib/backstage/orders/ops";
+import { retrySend } from "@/lib/backstage/mail/outbound";
 import { packedFromForm } from "@/lib/backstage/stock/pack-form";
 import { formCents, formText, submit } from "@/lib/backstage/ui/submit";
 import type { NzRegion } from "@/lib/shop/order";
@@ -88,6 +89,15 @@ export async function refundAction(form: FormData): Promise<void> {
       reason: formText(form, "reason"),
     },
     { back: page(form), done: "Refund saved." },
+  );
+}
+
+/** Put one of the order's emails that failed back in the queue. */
+export async function retryEmailAction(form: FormData): Promise<void> {
+  await submit(
+    retrySend,
+    { messageId: formText(form, "messageId") },
+    { back: page(form), done: "Queued to be sent again." },
   );
 }
 

@@ -706,7 +706,7 @@ export const markShipped = defineOp({
   name: "orders.markShipped",
   title: "Mark an order as shipped",
   description:
-    "Says the order has gone with the courier, with the tracking details if there are any. The customer is told it is on its way. It cannot be undone, so check the order number. An order shipped without being marked packed first has its shots taken out of stock here if only one batch is on sale; if there is a choice of batch it is refused, and has to be marked packed first with the batch that is in the box (orders.markPacked).",
+    "Says the order has gone with the courier, with the tracking details if there are any. Where order emails are connected the customer is emailed that it is on its way, with the courier's name, the tracking number and the tracking link if they were given (orders.emails says what was sent). A test order's customer is not emailed. It cannot be undone, so check the order number. An order shipped without being marked packed first has its shots taken out of stock here if only one batch is on sale; if there is a choice of batch it is refused, and has to be marked packed first with the batch that is in the box (orders.markPacked).",
   access: "write",
   effect: "outward",
   input: z.object({
@@ -723,7 +723,7 @@ export const markShipped = defineOp({
       .or(z.literal("")),
   }),
   explain: (input) =>
-    `This marks ${input.number} as shipped and tells the customer it is on its way. It cannot be undone.`,
+    `This marks ${input.number} as shipped and, where order emails are connected, tells the customer it is on its way. It cannot be undone.`,
   async run(ctx, input): Promise<{ status: OrderStatus }> {
     const order = await loadOrder(ctx.db, input.number, {
       forChange: true,
@@ -809,7 +809,7 @@ export const cancelOrder = defineOp({
   name: "orders.cancel",
   title: "Cancel an order",
   description:
-    "Calls an order off before it has shipped, with the reason. Cancelling does not give money back by itself: record the refund as well if they have paid. If the buyer had not paid yet, their payment page is closed so they cannot pay for it afterwards. If the order had been packed, its shots come off the order: with `restock` true they go back on the shelf in the batches they came from, and otherwise they are written off, because nothing goes back on the shelf unless a person says it has.",
+    "Calls an order off before it has shipped, with the reason. Cancelling does not give money back by itself: record the refund as well if they have paid. Where order emails are connected the customer is emailed that it is cancelled (never the reason, which is a note for staff), and if they had paid the email says their payment is coming back. If the buyer had not paid yet, their payment page is closed so they cannot pay for it afterwards. If the order had been packed, its shots come off the order: with `restock` true they go back on the shelf in the batches they came from, and otherwise they are written off, because nothing goes back on the shelf unless a person says it has.",
   access: "write",
   effect: "outward",
   input: z.object({
@@ -818,7 +818,8 @@ export const cancelOrder = defineOp({
     /** The packed bottles are going back on the shelf. */
     restock: z.boolean().default(false),
   }),
-  explain: (input) => `This cancels ${input.number}. It cannot be undone.`,
+  explain: (input) =>
+    `This cancels ${input.number} and, where order emails are connected, tells the customer. It cannot be undone.`,
   async run(ctx, input): Promise<{ status: OrderStatus }> {
     const order = await loadOrder(ctx.db, input.number, {
       forChange: true,
@@ -940,7 +941,7 @@ export const recordRefund = defineOp({
   name: "orders.recordRefund",
   title: "Give money back on an order",
   description:
-    "Refunds an amount on an order, in cents, with the reason. For an order paid by card through Stripe the money is sent back to the card: the refund shows as on its way until Stripe confirms it, and is taken back off the order if Stripe refuses. For any other order this only writes the refund down and the money has to be sent back by hand. It cannot be more than what is left of what was paid.",
+    "Refunds an amount on an order, in cents, with the reason. For an order paid by card through Stripe the money is sent back to the card: the refund shows as on its way until Stripe confirms it, and is taken back off the order if Stripe refuses. Once Stripe has taken it, and where order emails are connected, the customer is emailed that the amount is on its way back. For any other order this only writes the refund down, the money has to be sent back by hand, and nobody is emailed. It cannot be more than what is left of what was paid.",
   access: "write",
   effect: "outward",
   input: z.object({
@@ -1023,6 +1024,7 @@ export const recordRefund = defineOp({
             payload: {
               number: order.number,
               amountCents: input.amountCents,
+              refundId,
               test: order.isTest,
             },
           },

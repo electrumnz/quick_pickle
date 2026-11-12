@@ -22,8 +22,13 @@ export const metadata: Metadata = { title: "Clock and failed steps" };
 
 /** What each kind of step is, in the words a person would use. */
 const WHAT: Readonly<Record<string, string>> = {
-  "order.cancelled": "Close the payment page of a cancelled order",
+  "order.paid": "Write an order's receipt",
+  "order.shipped": "Write the email saying an order is on the courier",
+  "order.cancelled":
+    "Close the payment page of a cancelled order, and write the email saying it is cancelled",
+  "order.refunded": "Write the email saying a payment is on its way back",
   "order.refund_requested": "Send a refund back through Stripe",
+  "mail.queued": "Send an email",
 };
 
 /**
@@ -50,7 +55,7 @@ export default async function ClockPage({
     <>
       <PageHeader
         title="Clock and failed steps"
-        lead="Some things happen just after a change: money going back to a card, a payment page being closed. Each is tried, tried again with a longer wait, and after eight tries left here for you."
+        lead="Some things happen just after a change: money going back to a card, a payment page being closed, an email being sent. Each is tried, tried again with a longer wait, and after eight tries left here for you."
         back={{ href: "/backstage/settings", label: "Settings" }}
       />
 

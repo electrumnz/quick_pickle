@@ -313,7 +313,10 @@ export const CHECKOUT = {
   },
   fields: {
     email: "Email",
+    /** Shown when order emails are really being sent. */
     emailHint: "For your receipt and delivery updates.",
+    /** And when they are not: nothing is promised that will not arrive. */
+    emailHintNoMail: "So we can reach you about your order.",
     phone: "Mobile (optional)",
     phoneHint: "Only used if the courier can't find you.",
     firstName: "First name",
@@ -471,9 +474,19 @@ export const THANKS = {
   lead: "Lucky's on it.",
   cheers: "Cheers",
   numberLabel: "Order number",
+  /**
+   * The three lines about email are only shown when a receipt really is
+   * being sent for this order (the receipt cookie's `emails` flag, set by
+   * the server from lib/mail). Otherwise the page says `keepNumber`.
+   */
   emailNote: "A receipt is on its way to",
   preorderNote: `This is a ${STORE.batchName} pre-order. We'll email you the ship date, and again when it's on the courier.`,
   liveNote: "We'll email you again when it's on the courier.",
+  /** When no receipt is being emailed: what is true instead. */
+  keepNumber:
+    "Keep a note of your order number. It's how we'll find your order if you get in touch.",
+  /** After `keepNumber`, for a pre-order. */
+  preorderOnly: `This is a ${STORE.batchName} pre-order, so it ships when the batch is ready.`,
   testNote:
     "This was a test order. Nothing was charged and nothing will be sent.",
   summary: "What you ordered",
@@ -498,8 +511,9 @@ export const THANKS = {
   reviewNote:
     "Your payment came through, but there's something on this order we need to check by hand. We'll email you about it shortly.",
   noneTitle: "No order to show.",
-  noneBody:
-    "There's no recent order on this device. If you just placed one, check your email for the receipt.",
+  noneBody: "There's no recent order on this device.",
+  /** After `noneBody`, only while receipts are really being emailed. */
+  noneCheckEmail: "If you just placed one, check your email for the receipt.",
 } as const;
 
 export const NOT_FOUND = {

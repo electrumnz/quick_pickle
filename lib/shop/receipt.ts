@@ -27,6 +27,12 @@ export const receiptSchema = z.object({
   test: z.boolean(),
   /** True when the buyer was sent away to pay and may not have yet. */
   pending: z.boolean().optional(),
+  /**
+   * True when order emails were really being sent as this order was placed,
+   * so the page may say a receipt is on its way. Absent, it says nothing
+   * about one. Like the rest of this cookie it only decides what is shown.
+   */
+  emails: z.boolean().optional(),
   firstName: z.string().max(60),
   email: z.string().max(254),
   city: z.string().max(80),
@@ -55,13 +61,20 @@ export const receiptSchema = z.object({
 
 export type Receipt = z.infer<typeof receiptSchema>;
 
-export function receiptFor(order: Order): Receipt {
+export function receiptFor(
+  order: Order,
+  options: {
+    /** Order emails really leave from here (lib/mail `mailConnection`). */
+    readonly emails?: boolean;
+  } = {},
+): Receipt {
   return {
     number: order.number,
     placedAt: order.placedAt,
     mode: order.mode,
     test: order.payment.status === "test",
     pending: order.payment.status === "pending",
+    ...(options.emails === true ? { emails: true } : {}),
     firstName: order.customer.firstName,
     email: order.customer.email,
     city: order.delivery.city,

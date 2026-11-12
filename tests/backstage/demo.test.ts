@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { mailMessages } from "@/db/schema";
 import { systemCaller } from "@/lib/backstage/core/actor";
 import { execute } from "@/lib/backstage/core/op";
 import { seedDemoData } from "@/lib/backstage/demo";
+import { listOrderEmails } from "@/lib/backstage/orders/emails";
 import { countOrders, listOrders } from "@/lib/backstage/orders/ops";
 import { stockPicture } from "@/lib/backstage/stock/ops";
 import { needsYou } from "@/lib/backstage/today/ops";
@@ -69,6 +71,48 @@ describe("the demo records", () => {
       ["stock-purchase-overdue", false],
       ["stock-near-best-before", false],
     ]);
+  });
+
+  it("show the emails each order would have sent, every one written down and none sent", async () => {
+    const said = async (number: string) =>
+      (await execute(listOrderEmails, { number }, viewer)).map((email) => [
+        email.label,
+        email.status,
+        email.why,
+      ]);
+    const invented =
+      "This back end is running on invented records, which never sends email.";
+    // Shipped: a receipt, then the email that it is on the courier.
+    expect(await said("QP-SENT66")).toEqual([
+      ["Receipt", "not_sent", invented],
+      ["On the courier", "not_sent", invented],
+    ]);
+    // Cancelled after paying.
+    expect(await said("QP-NAHH88")).toEqual([
+      ["Receipt", "not_sent", invented],
+      ["Cancelled", "not_sent", invented],
+    ]);
+    // Still waiting to be paid for: there is nothing true to send yet.
+    expect(await said("QP-WAYT99")).toEqual([]);
+    // The practice checkout's order gets no receipt, and says why.
+    expect(await said("QP-TEST22")).toEqual([
+      [
+        "Receipt",
+        "not_sent",
+        "A test order: nobody was charged, so there is no receipt to send.",
+      ],
+    ]);
+    // And across every order in the demo, nothing at all has gone anywhere.
+    const all = await handle.db
+      .select({ status: mailMessages.status, to: mailMessages.toAddresses })
+      .from(mailMessages);
+    expect(all.length).toBeGreaterThan(10);
+    expect(new Set(all.map((row) => row.status))).toEqual(
+      new Set(["not_sent"]),
+    );
+    for (const row of all) {
+      expect(row.to.join(",")).toMatch(/@example\.co\.nz$/);
+    }
   });
 
   it("put stock on the shelf, and give every box already packed its batch", async () => {
