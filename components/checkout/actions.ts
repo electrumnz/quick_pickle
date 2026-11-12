@@ -1,11 +1,12 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { z } from "zod";
 
 import { CODES } from "@/content/site";
+import { countAsk } from "@/lib/shop/caller";
 import { normaliseCart } from "@/lib/shop/cart";
 import { asPromoCode } from "@/lib/shop/code";
 import { cartLineSchema, type FieldErrors } from "@/lib/shop/order";
@@ -31,7 +32,8 @@ import { siteUrl } from "@/lib/site";
  */
 
 export type CheckoutState = {
-  readonly status: "idle" | "invalid" | "failed";
+  /** "slow": too many orders from one address just now (lib/shop/limit.ts). */
+  readonly status: "idle" | "invalid" | "failed" | "slow";
   readonly errors: FieldErrors;
   /** What the buyer typed, handed back so a failed submit loses nothing. */
   readonly values: Readonly<Record<string, string>>;
@@ -63,15 +65,33 @@ export async function checkCode(
   rural: boolean,
   email?: string,
 ): Promise<CodeAnswer> {
-  if (typeof code !== "string" || code.trim() === "" || code.length > 60) {
-    return { ok: false, reason: CODES.unknown };
-  }
   // Some codes work once for each customer. If the email is already typed,
   // say so now; if not, placing the order checks it anyway.
   const who =
     typeof email === "string" && email.length <= 254 && email.includes("@")
       ? email.trim().toLowerCase()
       : undefined;
+  const counted = await countAsk("code", await headers());
+  if (!counted.allowed) return { ok: false, reason: CODES.slowDown };
+  const { personal, ...answer } = await codeAnswer(code, linesJson, rural, who);
+  // A code we do not know stays counted: it may be a guess. So does an
+  // answer about one person (whether this email has had the code before).
+  // Everything else was about a real code, and a crowd may ask about one of
+  // those as often as it likes.
+  const guess = !answer.ok && answer.reason === CODES.unknown;
+  if (!guess && personal !== true) await counted.forget();
+  return answer;
+}
+
+async function codeAnswer(
+  code: string,
+  linesJson: string,
+  rural: boolean,
+  who: string | undefined,
+): Promise<CodeAnswer & { readonly personal?: true }> {
+  if (typeof code !== "string" || code.trim() === "" || code.length > 60) {
+    return { ok: false, reason: CODES.unknown };
+  }
   let lines: z.infer<typeof codeLines>;
   try {
     lines = codeLines.parse(JSON.parse(linesJson));
@@ -95,7 +115,14 @@ export async function checkCode(
       { rural: rural === true },
       answer,
     );
-    if (after.totalCents < 100) return { ok: false, reason: CODES.wouldBeFree };
+    if (after.totalCents < 100) {
+      // Still an answer about them, if it was one: it says they could use it.
+      return {
+        ok: false,
+        reason: CODES.wouldBeFree,
+        ...(answer.personal === true ? { personal: true } : {}),
+      };
+    }
     return answer;
   } catch {
     return { ok: false, reason: CODES.unavailable };
@@ -115,11 +142,24 @@ export type CarriedCode =
 export async function describeCode(code: string): Promise<CarriedCode> {
   const wanted = asPromoCode(code);
   if (wanted === null) return { ok: false };
+  // Counted with the checkout's own code box: it is the same question.
+  const counted = await countAsk("code", await headers());
+  if (!counted.allowed) return { ok: false };
   try {
     const store = getStore();
-    if (store.describeCode === undefined) return { ok: false };
-    return await store.describeCode(wanted);
+    if (store.describeCode === undefined) {
+      await counted.forget();
+      return { ok: false };
+    }
+    const answer = await store.describeCode(wanted);
+    // Only a code we do not know stays counted. One that has finished is a
+    // real code, and everybody who followed its link is carrying it.
+    if (answer.ok || answer.known) await counted.forget();
+    return answer.ok
+      ? { ok: true, code: answer.code, label: answer.label }
+      : { ok: false };
   } catch {
+    await counted.forget();
     return { ok: false };
   }
 }
@@ -228,6 +268,9 @@ export async function submitCheckout(
     return { status: "failed", errors: {}, values };
   }
 
+  const counted = await countAsk("order", await headers());
+  if (!counted.allowed) return { status: "slow", errors: {}, values };
+
   const raw: RawCheckout = {
     ...Object.fromEntries(TEXT_FIELDS.map((key) => [key, values[key]])),
     rural: values.rural === "on",
@@ -252,9 +295,14 @@ export async function submitCheckout(
   }
 
   if (!result.ok) {
-    return result.reason === "invalid"
-      ? { status: "invalid", errors: result.errors, values }
-      : { status: "failed", errors: {}, values };
+    if (result.reason !== "invalid") {
+      return { status: "failed", errors: {}, values };
+    }
+    // A form handed back to have a field put right is not an order, and
+    // counts for nothing. One that was told something about a code stays
+    // counted: that answer is what somebody guessing is after.
+    if (result.errors.promoCode === undefined) await counted.forget();
+    return { status: "invalid", errors: result.errors, values };
   }
 
   const jar = await cookies();

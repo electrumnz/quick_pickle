@@ -659,7 +659,8 @@ describe("the demo's month of visits", () => {
     handle = await openEmbedded();
     useDbHandle(handle);
     await seedDemoData(handle.db);
-  });
+    // Every area's demo, a few hundred operations: slow on a busy machine.
+  }, 60_000);
   afterAll(async () => {
     await closeDb();
   });

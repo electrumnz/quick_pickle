@@ -715,11 +715,20 @@ describe("collabs, from a code at the checkout to what came back", () => {
         { code: "WELCOME", subtotalCents: 4800, deliveryCents: 700, email },
         shop,
       );
-    expect(await ask()).toMatchObject({ ok: true, discountCents: 480 });
-    expect(await ask("new@example.co.nz")).toMatchObject({ ok: true });
+    // With nobody named, the answer is about the code alone.
+    const plain = await ask();
+    expect(plain).toMatchObject({ ok: true, discountCents: 480 });
+    expect(plain).not.toHaveProperty("personal");
+    // With an email it is about a person, yes or no, and says that it is:
+    // the shop counts those asks (tests/shop/limit.test.ts).
+    expect(await ask("new@example.co.nz")).toMatchObject({
+      ok: true,
+      personal: true,
+    });
     expect(await ask("ONCE@example.co.nz")).toEqual({
       ok: false,
       reason: CODES.alreadyUsed,
+      personal: true,
     });
 
     // An order that was called off did not use anything up.
@@ -849,8 +858,14 @@ describe("collabs, from a code at the checkout to what came back", () => {
       { code: "ASLEEP", kind: "delivery", active: false },
       staff,
     );
-    for (const code of ["LASTWEEK", "ASLEEP", "NOSUCHCODE", "", "<script>"]) {
-      expect(await peek(code), code).toEqual({ ok: false });
+    // A plain no either way. It does say whether the word is a code of
+    // ours at all: the shop counts wrong guesses with that, and never
+    // passes it on to the visitor (tests/shop/limit.test.ts).
+    for (const code of ["LASTWEEK", "ASLEEP"]) {
+      expect(await peek(code), code).toEqual({ ok: false, known: true });
+    }
+    for (const code of ["NOSUCHCODE", "", "<script>"]) {
+      expect(await peek(code), code).toEqual({ ok: false, known: false });
     }
   });
 });

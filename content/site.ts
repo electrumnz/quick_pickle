@@ -208,6 +208,9 @@ export const CREW = {
   success: "You're in. Welcome to the crew.",
   invalid: "That email doesn't look right. Have another go.",
   failed: "That didn't go through. Give it another go in a minute.",
+  /** Too many sign-ups from one internet address (lib/shop/limit.ts). */
+  slowDown:
+    "That's a lot of sign-ups from one place in a short time. Give it ten minutes and try again.",
   stickersAlt: "Quick Pickle stickers",
 } as const;
 
@@ -354,6 +357,9 @@ export const CHECKOUT = {
   problem: "A few things need another look before we can place this.",
   failed:
     "Something went wrong placing your order. Nothing was charged. Please try again.",
+  /** Too many orders from one internet address (lib/shop/limit.ts). */
+  slowDown:
+    "That's a lot of orders from one place in a short time, so this one was not placed and nothing was charged. Give it ten minutes and try again.",
   edit: "Edit jar",
   showSummary: "Show order",
   hideSummary: "Hide order",
@@ -396,6 +402,9 @@ export const CODES = {
   changed:
     "That code changed while you were checking out. Have another look at the total and try again.",
   unavailable: "We couldn't check that code just now. Try again in a moment.",
+  /** Too many wrong codes from one internet address (lib/shop/limit.ts). */
+  slowDown:
+    "That's a lot of codes from one place in a short time. Give it ten minutes and try again.",
   alreadyUsed:
     "You've already used that code. It works once for each customer.",
   /**

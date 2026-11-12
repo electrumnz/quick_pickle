@@ -176,3 +176,23 @@ export const demoMarker = pgTable("demo_marker", {
   seededAt: instant("seeded_at").notNull().defaultNow(),
   isDemo: boolean().notNull().default(true),
 }).enableRLS();
+
+/**
+ * How often the shop has been asked something by one caller, a window at a
+ * time: a promo code checked, the order button pressed, the crew joined.
+ * It is what stops a machine guessing at codes or hammering the checkout.
+ *
+ * `key` names what was asked, the window, and a scrambled mark of who asked.
+ * The mark is a keyed hash that changes with every window. No address is
+ * ever stored, and the clock throws a row away a couple of hours after its
+ * window (lib/backstage/limits/ops.ts).
+ */
+export const rateHits = pgTable(
+  "rate_hits",
+  {
+    key: text().primaryKey(),
+    windowStart: instant("window_start").notNull(),
+    hits: integer().notNull().default(1),
+  },
+  (t) => [index("rate_hits_window_idx").on(t.windowStart)],
+).enableRLS();

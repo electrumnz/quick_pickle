@@ -301,5 +301,14 @@ export const MIGRATIONS: readonly Migration[] = [
       "ALTER TABLE \"promo_codes\" ADD COLUMN \"crew_welcome\" boolean DEFAULT false NOT NULL;",
       "CREATE UNIQUE INDEX \"promo_codes_one_crew_welcome\" ON \"promo_codes\" USING btree (\"crew_welcome\") WHERE \"promo_codes\".\"crew_welcome\";"
     ]
+  },
+  {
+    "tag": "0009_rate_hits",
+    "hash": "f775f8f2159d66d6",
+    "statements": [
+      "CREATE TABLE \"rate_hits\" (\n\t\"key\" text PRIMARY KEY NOT NULL,\n\t\"window_start\" timestamp with time zone NOT NULL,\n\t\"hits\" integer DEFAULT 1 NOT NULL\n);",
+      "ALTER TABLE \"rate_hits\" ENABLE ROW LEVEL SECURITY;",
+      "CREATE INDEX \"rate_hits_window_idx\" ON \"rate_hits\" USING btree (\"window_start\");"
+    ]
   }
 ];

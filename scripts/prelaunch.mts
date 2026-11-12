@@ -11,6 +11,7 @@
  *   - payments in test mode, or a processor on its own test key
  *   - orders with nowhere durable to be written
  *   - no clock, so nothing is retried and nothing unpaid is closed
+ *   - the checkout's limit on asks from one address, switched off by hand
  *
  * It reads the same modules the site does, so it cannot disagree with it.
  */
@@ -50,6 +51,12 @@ const checks: Check[] = [
     ok: (env.CRON_SECRET ?? "").trim().length >= 16,
     label: "The clock is not set up",
     fix: "Run connect-clock in the infra workflow, so failed steps are tried again and unpaid orders are closed.",
+  },
+  {
+    // On by itself whenever there is a database (lib/shop/caller.ts).
+    ok: (env.QP_LIMITS ?? "").trim().toLowerCase() !== "off",
+    label: "The checkout's limit is switched off",
+    fix: "Run limits-on in the infra workflow and redeploy, so nobody can guess at promo codes or flood the order book.",
   },
   {
     ok: orderStore !== "" && orderStore !== "log" && orderStore !== "file",

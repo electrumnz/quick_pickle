@@ -441,6 +441,12 @@ export const setPromoCodeActive = defineOp({
   },
 });
 
+/**
+ * What a code is worth, and whether the answer was about one person: true
+ * when a once-for-each-customer code was looked up against an email.
+ */
+export type PromoChecked = PromoEvaluation & { readonly personal?: true };
+
 export const checkPromoCode = defineOp({
   name: "promoCodes.check",
   title: "What a code is worth on an order",
@@ -454,7 +460,7 @@ export const checkPromoCode = defineOp({
     deliveryCents: z.number().int().min(0).max(100_000_000),
     email: z.string().max(254).optional(),
   }),
-  async run(ctx, input): Promise<PromoEvaluation> {
+  async run(ctx, input): Promise<PromoChecked> {
     const promo = await findPromo(ctx.db, input.code);
     const worth = evaluatePromo(promo, {
       subtotalCents: input.subtotalCents,
@@ -462,14 +468,17 @@ export const checkPromoCode = defineOp({
       now: ctx.now,
     });
     if (
-      worth.ok &&
-      promo?.oncePerCustomer === true &&
-      input.email !== undefined &&
-      (await usedByCustomer(ctx.db, promo.code, input.email))
+      !worth.ok ||
+      promo?.oncePerCustomer !== true ||
+      input.email === undefined
     ) {
-      return { ok: false, reason: CODES.alreadyUsed };
+      return worth;
     }
-    return worth;
+    // From here the answer says something about one person: whether this
+    // email has had the code before. The shop counts those asks.
+    return (await usedByCustomer(ctx.db, promo.code, input.email))
+      ? { ok: false, reason: CODES.alreadyUsed, personal: true }
+      : { ...worth, personal: true };
   },
 });
 
@@ -480,19 +489,29 @@ export type PromoPeek =
       /** "10% off", "$5 off", "Free standard delivery". */
       readonly label: string;
     }
+  | {
+      readonly ok: false;
+      /** A code of ours that cannot be used right now, or no code at all. */
+      readonly known: boolean;
+    };
+
+/** The code a new member of the Pickle Crew is given, or a plain no. */
+export type WelcomePromo =
+  | { readonly ok: true; readonly code: string; readonly label: string }
   | { readonly ok: false };
 
 export const peekPromoCode = defineOp({
   name: "promoCodes.peek",
   title: "What a code gives, if it is live",
   description:
-    "For the shop, when a visitor arrives by a link that carries a code: says what the code gives in a few words (10% off), but only if a customer could use it right now. Anything else (no such code, switched off, finished, used up, not started) is a plain no with no reason, so nothing is promised that the checkout would then refuse. It counts nothing.",
+    "For the shop, when a visitor arrives by a link that carries a code: says what the code gives in a few words (10% off), but only if a customer could use it right now. Anything else (no such code, switched off, finished, used up, not started) is a plain no with no reason, so nothing is promised that the checkout would then refuse. The no does say whether the word is a code of ours at all (`known`): the shop counts wrong guesses with it and never passes it on to the visitor. It counts no use of the code.",
   access: "read",
   input: z.object({ code: z.string().max(60) }),
   async run(ctx, input): Promise<PromoPeek> {
     const promo = await findPromo(ctx.db, input.code);
-    if (promo === null || promoState(promo, ctx.now) !== "live") {
-      return { ok: false };
+    if (promo === null) return { ok: false, known: false };
+    if (promoState(promo, ctx.now) !== "live") {
+      return { ok: false, known: true };
     }
     return { ok: true, code: promo.code, label: promoLabel(promo) };
   },
@@ -556,7 +575,7 @@ export const crewWelcomeCode = defineOp({
     "For the shop, when somebody joins the Pickle Crew: the code to give them and what it gives in a few words, but only if one has been chosen and a customer could use it right now. Anything else is a plain no, so nobody is handed a code the checkout would refuse. It counts nothing.",
   access: "read",
   input: z.object({}),
-  async run(ctx): Promise<PromoPeek> {
+  async run(ctx): Promise<WelcomePromo> {
     const [promo] = await ctx.db
       .select()
       .from(promoCodes)

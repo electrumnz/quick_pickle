@@ -7,6 +7,8 @@ import { requireStaff } from "@/lib/backstage/auth/current";
 import { lastTick } from "@/lib/backstage/clock/tick";
 import { listStuckEvents } from "@/lib/backstage/core/events";
 import { getDb } from "@/lib/db/client";
+import { limitsState } from "@/lib/shop/caller";
+import { LIMITS } from "@/lib/shop/limit";
 import { formatNzd } from "@/lib/shop/money";
 import { checkoutMode, getPaymentProvider } from "@/lib/shop/payments";
 import { getStore } from "@/lib/shop/store";
@@ -88,6 +90,20 @@ export default async function GoLivePage() {
             : `Saving to ${store.name}.`,
     },
   ];
+
+  // The ceiling on how often one internet address can ask the checkout
+  // things. On whenever there is a database, unless switched off by hand.
+  const limits = limitsState();
+  systems.push({
+    ok: limits === "on",
+    label: "The checkout's limit",
+    detail:
+      limits === "on"
+        ? `On. One internet address gets ${String(LIMITS.code.most)} wrong promo codes, ${String(LIMITS.order.most)} orders and ${String(LIMITS.crew.most)} Pickle Crew sign-ups every ten minutes. After that it is asked to wait.`
+        : limits === "off"
+          ? "Switched off by hand (QP_LIMITS is off). Anybody can guess at promo codes and place orders as fast as they like."
+          : "Not counting: there is no database, so no real records to protect.",
+  });
 
   const open = UNCONFIRMED.length + systems.filter((item) => !item.ok).length;
 

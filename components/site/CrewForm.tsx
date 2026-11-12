@@ -3,6 +3,7 @@
 import { useActionState, useEffect } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
+import { crewProblem } from "@/components/checkout/problem";
 import { CREW, WELCOME } from "@/content/site";
 
 import { joinCrew, type CrewState } from "./actions";
@@ -51,12 +52,7 @@ export function CrewForm() {
     );
   }
 
-  const error =
-    state.status === "invalid"
-      ? CREW.invalid
-      : state.status === "failed"
-        ? CREW.failed
-        : null;
+  const error = crewProblem(state.status);
 
   return (
     <>
@@ -76,6 +72,9 @@ export function CrewForm() {
               inputMode="email"
               autoComplete="email"
               required
+              // React empties a form when its action answers. On a no, what
+              // was typed goes back in, so there is only the fix to make.
+              defaultValue={state.email ?? ""}
               placeholder={CREW.placeholder}
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? "crew-error" : undefined}

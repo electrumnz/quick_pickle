@@ -34,6 +34,7 @@ import { systemCaller } from "../core/actor";
 import { processEvents, type ProcessResult } from "../core/events";
 import { execute } from "../core/op";
 import { registerHandlers } from "../handlers";
+import { pruneHits } from "../limits/ops";
 import { keepSpecialsFresh } from "../marketing/special-listeners";
 import { pruneVisits } from "../numbers/ops";
 import { paymentExpired } from "../orders/payments";
@@ -146,6 +147,9 @@ export async function tick(options: TickOptions = {}): Promise<TickSummary> {
   // Visits older than we keep them for are thrown away. A failure here is
   // housekeeping left for the next round, never a reason to fail the tick.
   await pruneVisits(db, now).catch(() => 0);
+  // So are the counts of how often the checkout was asked things, once
+  // they are a couple of hours old (lib/shop/limit.ts).
+  await pruneHits(db, now).catch(() => 0);
   // While a special is switched on, the shop's kept pages are replaced each
   // round, so a first day arriving or a last day passing shows within
   // minutes. Housekeeping too: never a reason to fail the tick.

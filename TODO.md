@@ -135,10 +135,17 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 
 - [ ] **Order emails.** The "order's in" page says a receipt is on its way. Until email is
       connected, it is not.
-- [ ] **A limit on how often one address can ask the checkout things.** The order form and
-      the promo code check answer anybody, as often as they ask. That is enough to guess at
-      codes, or to ask, one email at a time, whether somebody has already used a once-only
-      code.
+- [x] **A limit on how often one address can ask the checkout things.** From one internet
+      address, in ten minutes: 20 wrong promo codes or questions that name a person, 30
+      orders, 20 Pickle Crew sign-ups. After that it is asked to wait ten minutes. A real
+      code, and a form handed back to fix a field, count for nothing, so a crowd on one
+      wifi never meets it. No address is kept. The go-live list says whether it is on, and
+      the infra workflow's `limits-off` stops it without a change to the code.
+- [ ] **The visit counter and the short links' counts can still be flooded.** `/api/seen`
+      writes a row, and `/go/<slug>` adds one to a link's count, for whoever asks, as often
+      as they ask. No money and nothing about a person rides on either (a partner is
+      credited by orders, never by clicks), but it could pad out the numbers and a test's
+      verdict. The checkout's counter would fit both.
 - [ ] **Refunds made from Stripe's own dashboard**, and card disputes, written back onto
       the order. Today a refund has to be started from the back end to be recorded.
 

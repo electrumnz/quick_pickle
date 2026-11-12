@@ -196,6 +196,22 @@ test.describe("the page", () => {
     await expect(page.getByText("Nope. No pickles, no bits")).toBeVisible();
   });
 
+  test("hands back what was typed when the Pickle Crew form says no", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const crew = page.getByRole("textbox", { name: "Email address" });
+    await crew.scrollIntoViewIfNeeded();
+    await crew.fill("not-an-email");
+    await page.getByRole("button", { name: "I'm in" }).click();
+    await expect(page.locator("#crew-error")).toContainText(
+      "That email doesn't look right.",
+    );
+    // React empties a form when its action answers. The typo is still
+    // there to fix, not gone.
+    await expect(crew).toHaveValue("not-an-email");
+  });
+
   test("reads whole with JavaScript switched off", async ({ browser }) => {
     const context = await browser.newContext({ javaScriptEnabled: false });
     const page = await context.newPage();

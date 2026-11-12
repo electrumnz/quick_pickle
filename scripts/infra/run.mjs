@@ -903,6 +903,38 @@ async function disconnectStripe() {
   changedSettings = true;
 }
 
+// --- The checkout's limit ------------------------------------------------------
+
+/**
+ * The checkout counts how often one internet address asks it things
+ * (lib/shop/limit.ts) whenever production has a database. These two are the
+ * off switch and the way back. A ceiling can refuse a real buyer: put the
+ * site behind something that makes every visitor look like one address and
+ * it would, so stopping it must never wait for a change to the code. Follow
+ * either with "redeploy". The go-live list in the back end says which it is.
+ */
+async function setLimits(value, said) {
+  if (!confirmed) fail('This changes a setting. Ask again with confirm "yes".');
+  await vercel(`/v10/projects/${vercelProject}/env?upsert=true`, {
+    method: "POST",
+    body: {
+      key: "QP_LIMITS",
+      value,
+      type: "plain",
+      target: ["production"],
+      comment:
+        'The checkout\'s limit on asks from one address. "off" stops it; anything else leaves it to run. Set by the infra workflow.',
+    },
+  });
+  console.log(`  ${said}`);
+  changedSettings = true;
+}
+
+const limitsOff = () =>
+  setLimits("off", "the checkout's limit is switched off for production.");
+const limitsOn = () =>
+  setLimits("auto", "the checkout's limit is back on for production.");
+
 // --- The clock --------------------------------------------------------------
 
 const CLOCK_JOB = "qp-tick";
@@ -1079,6 +1111,8 @@ const ACTIONS = {
   "disconnect-stripe": disconnectStripe,
   "connect-clock": connectClock,
   "disconnect-clock": disconnectClock,
+  "limits-off": limitsOff,
+  "limits-on": limitsOn,
   redeploy: redeployIfChanged,
 };
 
