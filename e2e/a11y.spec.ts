@@ -29,6 +29,7 @@ const PAGES = [
   "/backstage/settings/staff",
   "/backstage/settings/activity",
   "/backstage/settings/go-live",
+  "/backstage/settings/clock",
 ];
 
 for (const path of PAGES) {

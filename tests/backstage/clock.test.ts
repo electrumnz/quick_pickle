@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { GET, POST } from "@/app/api/tick/route";
 import { events, orders, settings } from "@/db/schema";
+import { clockStatus, dropStep, retryStep } from "@/lib/backstage/clock/ops";
 import {
   lastTick,
   tick,
@@ -259,6 +260,107 @@ describe("the clock", () => {
     expect(first?.at).toBe(minutes(3).toISOString());
     await tick({ now: minutes(8) });
     expect((await lastTick(handle.db))?.at).toBe(minutes(8).toISOString());
+  });
+
+  describe("a step that failed", () => {
+    const ash = { ...systemCaller("Ashleigh", "ui"), confirmed: true };
+
+    /** A listener that fails until told to stop, and an event for it. */
+    const failing = async () => {
+      const state = { broken: true, calls: 0 };
+      on("order.placed", "always down", async () => {
+        state.calls += 1;
+        if (state.broken) throw new Error("the courier's site is down");
+      });
+      await sentToPay("stuck@example.co.nz", T0);
+      await tick({ now: minutes(1) });
+      return state;
+    };
+
+    it("shows up with what it was, how many tries, and why", async () => {
+      await failing();
+      const { stuck, last } = await execute(clockStatus, {}, shop);
+      expect(last?.at).toBe(minutes(1).toISOString());
+      expect(stuck).toHaveLength(1);
+      expect(stuck[0]).toMatchObject({
+        type: "order.placed",
+        attempts: 1,
+        gaveUp: false,
+        lastError: "always down: the courier's site is down",
+      });
+      expect(stuck[0]?.nextTry?.getTime()).toBeGreaterThan(
+        minutes(1).getTime(),
+      );
+      expect(typeof stuck[0]?.payload.number).toBe("string");
+    });
+
+    it("can be sent round again by a person, with a line in the log", async () => {
+      const state = await failing();
+      const [step] = (await execute(clockStatus, {}, shop)).stuck;
+      const id = step?.id ?? "";
+
+      state.broken = false;
+      await execute(retryStep, { id }, ash);
+      // It no longer waits out its delay: the very next round takes it.
+      const round = await tick({ now: new Date(minutes(1).getTime() + 1000) });
+      expect(round.events).toEqual({ handled: 1, failed: 0, gaveUp: 0 });
+      expect((await execute(clockStatus, {}, shop)).stuck).toHaveLength(0);
+
+      // A step that has finished cannot be sent round again.
+      await expect(execute(retryStep, { id }, ash)).rejects.toMatchObject({
+        code: "conflict",
+      });
+    });
+
+    it("can be given up on, by an owner, who has to say why", async () => {
+      const state = await failing();
+      const [step] = (await execute(clockStatus, {}, shop)).stuck;
+      const id = step?.id ?? "";
+
+      const staffOnly = {
+        actor: {
+          type: "human" as const,
+          userId: "usr_staff",
+          name: "Sam",
+          role: "staff" as const,
+        },
+        via: "ui" as const,
+        confirmed: true,
+      };
+      await expect(
+        execute(dropStep, { id, reason: "No longer needed" }, staffOnly),
+      ).rejects.toMatchObject({ code: "forbidden" });
+      await expect(
+        execute(dropStep, { id, reason: "" }, ash),
+      ).rejects.toMatchObject({ code: "invalid_input" });
+      // And never without a yes.
+      await expect(
+        execute(
+          dropStep,
+          { id, reason: "No longer needed" },
+          { ...ash, confirmed: false },
+        ),
+      ).rejects.toMatchObject({ code: "needs_confirmation" });
+
+      await execute(dropStep, { id, reason: "No longer needed" }, ash);
+      expect((await execute(clockStatus, {}, shop)).stuck).toHaveLength(0);
+
+      // Gone for good: nothing tries it again, however long it waits.
+      const calls = state.calls;
+      await tick({ now: minutes(600) });
+      expect(state.calls).toBe(calls);
+      const [row] = await handle.db
+        .select({ lastError: events.lastError })
+        .from(events)
+        .where(eq(events.id, id));
+      expect(row?.lastError).toBe("Dropped by Ashleigh: No longer needed");
+    });
+
+    it("refuses an id that is not a step's", async () => {
+      await expect(
+        execute(retryStep, { id: "ord_123456" }, ash),
+      ).rejects.toMatchObject({ code: "invalid_input" });
+    });
   });
 
   describe("the request that arrives on a timer", () => {
