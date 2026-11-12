@@ -1,0 +1,32 @@
+Return-Path: <liam@carterfamily.example.com>
+Delivered-To: hello@quickpickle.example
+From: "Carter, Liam" <liam@carterfamily.example.com>
+To: hello@quickpickle.example
+Subject: Following up from my other email
+Date: Wed, 11 Nov 2026 07:02:00 +1300
+Message-ID: <CAF-work-7781@mail.carterfamily.example.com>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt-0001"
+
+--alt-0001
+Content-Type: text/plain; charset=utf-8
+
+Morning. I wrote yesterday from my other address about order qp-sent66
+and thought I would try this one too in case that went to junk.
+
+Any news?
+
+Liam Carter
+
+--alt-0001
+Content-Type: text/html; charset=utf-8
+
+<html><body>
+<p>Morning. I wrote yesterday from my other address about order
+<b>qp-sent66</b> and thought I would try this one too in case that went to
+junk.</p>
+<p>Any news?</p>
+<p>Liam Carter</p>
+</body></html>
+
+--alt-0001--

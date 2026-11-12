@@ -1,0 +1,60 @@
+Return-Path: <jo@bottles.example.co.nz>
+Delivered-To: hello@quickpickle.example
+From: Jo Example <jo@bottles.example.co.nz>
+To: hello@quickpickle.example
+Cc: Accounts <accounts@bottles.example.co.nz>
+Reply-To: Jo at the quotes desk <quotes@bottles.example.co.nz>
+Subject: Quote for bottles and caps
+Date: Mon, 9 Nov 2026 16:20:00 +1300
+Message-ID: <quote-5521@bottles.example.co.nz>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="mixed-0001"
+
+--mixed-0001
+Content-Type: multipart/related; boundary="related-0001"
+
+--related-0001
+Content-Type: multipart/alternative; boundary="alt-0002"
+
+--alt-0002
+Content-Type: text/plain; charset=utf-8
+
+Hi,
+
+The quote we talked about is attached. It is good for 30 days.
+
+Jo
+
+--alt-0002
+Content-Type: text/html; charset=utf-8
+
+<div>
+<p>Hi,</p>
+<p>The quote we talked about is attached. It is good for 30 days.</p>
+<p>Jo</p>
+<p><img src="cid:logo-1@bottles.example.co.nz" alt="Example Bottle Co" width="8" height="8">
+<img src="cid:nothing-with-this-id@bottles.example.co.nz" alt="missing"></p>
+</div>
+
+--alt-0002--
+
+--related-0001
+Content-Type: image/png; name="logo.png"
+Content-Transfer-Encoding: base64
+Content-ID: <logo-1@bottles.example.co.nz>
+Content-Disposition: inline; filename="logo.png"
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGA
+hKmMIQAAAABJRU5ErkJggg==
+
+--related-0001--
+
+--mixed-0001
+Content-Type: text/plain; charset=utf-8; name="../../quote 5521.txt"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="../../quote 5521.txt"
+
+VGhpcyBpcyBhbiBpbnZlbnRlZCBxdW90ZSBmb3IgYSB0ZXN0LiBJdCBxdW90ZXMgbm90aGlu
+Zy4K
+
+--mixed-0001--

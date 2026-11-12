@@ -20,6 +20,7 @@ import {
   markShipped,
   recordOrder,
 } from "./ops";
+import { markPaid } from "./payments";
 
 type DemoOrder = {
   readonly number: string;
@@ -34,7 +35,8 @@ type DemoOrder = {
   readonly packs: readonly (readonly [sku: string, qty: number])[];
   readonly crew?: boolean;
   readonly payment?: "paid" | "pending" | "test";
-  readonly then?: "packed" | "shipped" | "delivered" | "cancelled";
+  /** "mismatch": money arrived for it that was not the order's total. */
+  readonly then?: "packed" | "shipped" | "delivered" | "cancelled" | "mismatch";
   readonly note?: string;
 };
 
@@ -125,6 +127,20 @@ const DEMO: readonly DemoOrder[] = [
     line1: "12 Warm Up Way",
     packs: [["QP-SHOT-24", 1]],
     payment: "pending",
+  },
+  {
+    // One for the "Needs you" list: a payment that came in short.
+    number: "QP-SHRT55",
+    hoursAgo: 5,
+    first: "Hana",
+    last: "Whaanga",
+    city: "Gisborne",
+    region: "Gisborne",
+    postcode: "4010",
+    line1: "3 Second Half Street",
+    packs: [["QP-SHOT-12", 1]],
+    payment: "pending",
+    then: "mismatch",
   },
   {
     number: "QP-TEST22",
@@ -245,6 +261,23 @@ export async function seedDemoOrders(db: Db, now: Date): Promise<void> {
         demo,
         at(2),
       );
+    }
+    if (order.then === "mismatch") {
+      await execute(
+        markPaid,
+        {
+          number: order.number,
+          provider: "demo",
+          reference: `DEMO-${order.number}`,
+          // The delivery charge is missing from what arrived.
+          amountCents: subtotalCents,
+          currency: "nzd",
+          test: false,
+        },
+        demo,
+        at(1),
+      );
+      continue;
     }
     if (order.then === "cancelled") {
       await execute(

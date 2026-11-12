@@ -22,6 +22,7 @@ const PAGES = [
   "/backstage/orders?status=all",
   "/backstage/orders/QP-PACK22",
   "/backstage/orders/QP-SENT66",
+  "/backstage/orders/QP-SHRT55",
   "/backstage/orders/QP-PACK22/slip",
   "/backstage/customers",
   "/backstage/brand",
