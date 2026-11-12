@@ -12,16 +12,22 @@ Updated 12 November 2026. Honest status, not a summary.
       site is built without it. "Performance with pickles" and "for the quads" are softer
       but lean the same way and are held back too. If anyone wants them back, that is a
       conversation with a food lawyer or MPI first. `legal/COPY-RULES.md` has the detail.
-- [ ] **Pack sizes and prices.** 6 / 12 / 24 at $27 / $48 / $84 are stand-ins.
-      `content/offer.ts`.
-- [ ] **The bottle.** How many millilitres a shot is, and real shots of it. The page is
-      showing an illustration.
+- [ ] **Pack sizes, names and prices.** 6 / 12 / 24 at $27 / $48 / $84 are stand-ins, and
+      so are the names (The Trial, The Starter, The Squad). `content/offer.ts`.
+- [ ] **Clean shots of the real bottle.** It is confirmed as a 100 ml food-grade plastic
+      bottle with a white cap, and the page shows a drawing of it. One straight-on photo on
+      plain card, once the real labels are printed, replaces the drawing.
 - [ ] **Ingredients and the nutrition panel**, exactly as printed on the label. Until then
       the page says nothing about what is in it. Also: where it is made, and how it should
       be stored. None of that is guessed.
 - [ ] **The ship date for Batch 001**, if this launches as a pre-order. A pre-order with no
       date is not something to take money for.
-- [ ] **Delivery rates from a courier.** $7 flat, $4.50 rural, free over $60 are stand-ins.
+- [ ] **Delivery rates from a courier.** $7 flat, $4.50 rural, free over $60 are stand-ins,
+      and so is "anywhere in New Zealand".
+- [ ] **Read the fine print and agree to it.** The delivery, returns, terms and privacy pages
+      make promises on the business's behalf: a replacement or refund if an order arrives
+      damaged, and a full refund on a pre-order cancelled before it ships. They are sensible
+      and in line with the Consumer Guarantees Act, but they are yours to make.
 - [ ] **A customer email address.** The policies and FAQ leave a gap where it goes.
 - [ ] **The legal entity, NZBN and GST status.** The terms of sale name no company yet, and
       receipts cannot show GST until the registration is confirmed.

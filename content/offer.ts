@@ -137,7 +137,7 @@ export type Unconfirmed = {
 export const UNCONFIRMED: readonly Unconfirmed[] = [
   {
     key: "packs",
-    what: "Pack sizes and prices (6 / 12 / 24 at $27 / $48 / $84 are stand-ins)",
+    what: "Pack sizes, names and prices (The Trial, The Starter and The Squad: 6 / 12 / 24 at $27 / $48 / $84 are stand-ins)",
     ask: "Ashleigh",
   },
   {
@@ -153,8 +153,14 @@ export const UNCONFIRMED: readonly Unconfirmed[] = [
   },
   {
     key: "shipping-rates",
-    what: "Delivery rates ($7 flat, $4.50 rural, free over $60 are stand-ins)",
+    what: "Where we deliver and what it costs (NZ-wide, $7 flat, $4.50 rural, free over $60 are stand-ins)",
     ask: "a courier, for a quote",
+  },
+  {
+    key: "returns-promises",
+    // copy-audit-approved: R-19 (a go-live note shown only in the back end; it describes the policy in content/policies.ts)
+    what: "The promises in the fine print: a replacement or refund if an order arrives damaged, and a full refund on a pre-order cancelled before it ships",
+    ask: "whoever runs the business side",
   },
   {
     key: "contact-email",
