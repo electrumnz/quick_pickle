@@ -4529,8 +4529,11 @@ describe("the demo data", () => {
       expect(page.get("marketing")).toContain("nothing posts to social media");
       expect(page.get("campaigns")).toContain("Email is not connected yet.");
       expect(page.get("campaign: draft")).toContain("Approve it");
-      expect(page.get("promo codes")).toContain(
-        "The checkout does not take promo codes yet.",
+      // Codes work at the checkout now, so nothing says otherwise.
+      expect(page.get("promo codes")).toContain("One code an order.");
+      expect(page.get("promo codes")).not.toContain("does not take promo");
+      expect(page.get("promo code: live")).toContain(
+        "A customer can use it at the checkout now.",
       );
       expect(page.get("social planner")).toContain(
         "Nothing here posts for you.",
