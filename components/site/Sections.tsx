@@ -10,8 +10,10 @@ import {
   Sparkle,
   StraightIcon,
 } from "@/components/brand/Icons";
+import { LoopVideo } from "@/components/ui/LoopVideo";
 import { Ticker } from "@/components/ui/Ticker";
 import { faqs, shipDateText } from "@/content/faq";
+import { MEDIA } from "@/content/media";
 import {
   BUY,
   CREW,
@@ -20,6 +22,7 @@ import {
   FOOTER,
   LUCKY,
   OFFICIAL,
+  REELS,
   RITUAL,
   TICKER,
   TRUTHS,
@@ -27,6 +30,7 @@ import {
 
 import { BuyBox } from "./BuyBox";
 import { CrewForm } from "./CrewForm";
+import { Reels } from "./Reels";
 
 /* The static sections of the page, top to bottom. All server-rendered: the
    only JavaScript any of them needs belongs to the buy box and the crew form,
@@ -82,7 +86,7 @@ export function Shop() {
           </h2>
           <p className="mt-3 max-w-[34rem]">{BUY.body}</p>
         </div>
-        <BuyBox shipDate={shipDateText()} />
+        <BuyBox shipDate={shipDateText()} productLoop={MEDIA.productLoop} />
       </div>
     </section>
   );
@@ -235,16 +239,24 @@ export function MeetLucky() {
           data-reveal
           className="mx-auto w-[62%] max-w-[19rem] md:w-full md:max-w-[24rem]"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element -- a static vector file; there is nothing for the optimiser to do */}
-          <img
-            src="/brand/lucky-up.svg"
-            alt={LUCKY.alt}
-            width={166}
-            height={237}
-            loading="lazy"
-            decoding="async"
-            className="animate-bob h-auto w-full motion-reduce:animate-none"
-          />
+          {MEDIA.luckyLoop ? (
+            <div className="border-navy shadow-hard-cream overflow-hidden rounded-[22px] border-[3px]">
+              <LoopVideo media={MEDIA.luckyLoop} className="h-auto w-full" />
+            </div>
+          ) : (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element -- a static vector file; there is nothing for the optimiser to do */}
+              <img
+                src="/brand/lucky-up.svg"
+                alt={LUCKY.alt}
+                width={166}
+                height={237}
+                loading="lazy"
+                decoding="async"
+                className="animate-bob h-auto w-full motion-reduce:animate-none"
+              />
+            </>
+          )}
         </div>
 
         <div>
@@ -291,6 +303,30 @@ export function MeetLucky() {
             </dl>
           </div>
         </div>
+      </div>
+    </section>
+  );
+}
+
+/** The swipeable rail of clips. Not rendered until there is a clip to show. */
+export function ReelsSection() {
+  if (MEDIA.reels.length === 0) return null;
+  return (
+    <section
+      aria-labelledby="reels-title"
+      className="bg-olive-wash border-navy overflow-hidden border-y-[3px] py-14 md:py-20"
+    >
+      <div className="max-w-page px-gutter mx-auto" data-reveal>
+        <p className="label text-pink-deep text-[1.2rem]">{REELS.eyebrow}</p>
+        <h2
+          id="reels-title"
+          className="varsity mt-2 text-[clamp(2.6rem,13vw,4.75rem)] leading-[0.95]"
+        >
+          {REELS.title}
+        </h2>
+      </div>
+      <div className="mt-8">
+        <Reels reels={MEDIA.reels} label={REELS.title} />
       </div>
     </section>
   );

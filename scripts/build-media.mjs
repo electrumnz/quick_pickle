@@ -6,7 +6,7 @@
  *
  * Writes into public/media/:
  *   <slug>.mp4          H.264, muted, faststart. Plays everywhere.
- *   <slug>.webm         VP9. Smaller where it is supported.
+ *   <slug>.webm         VP9. Kept only when it comes out smaller than the MP4.
  *   <slug>-poster.webp  The first frame, shown before (or instead of) the clip.
  *
  * and prints the entry to paste into content/media.ts.
@@ -19,7 +19,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, statSync } from "node:fs";
+import { mkdirSync, rmSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const args = process.argv.slice(2);
@@ -125,6 +125,12 @@ ffmpeg([
 
 ffmpeg(["-i", input, "-vf", scale, "-frames:v", "1", "-q:v", "82", poster]);
 
+// WebM is listed first in the markup, so a browser that can play it will.
+// That is only a win if it is actually the smaller file; on flat, simple
+// animation H.264 often beats VP9, and then the WebM is just dead weight.
+const keepWebm = kb(webm) < kb(mp4) * 0.9;
+if (!keepWebm) rmSync(webm);
+
 const probe = JSON.parse(
   execFileSync("ffprobe", [
     "-v",
@@ -143,7 +149,11 @@ const seconds = Number(probe.format.duration).toFixed(1);
 
 console.log(`\n${slug}: ${width}x${height}, ${seconds}s`);
 console.log(`  mp4  ${kb(mp4)} kB (crf ${crf})`);
-console.log(`  webm ${kb(webm)} kB`);
+console.log(
+  keepWebm
+    ? `  webm ${kb(webm)} kB`
+    : "  webm dropped: it came out no smaller than the mp4",
+);
 console.log(`  poster ${kb(poster)} kB`);
 if (kb(mp4) > maxKb) {
   console.log(
@@ -152,5 +162,5 @@ if (kb(mp4) > maxKb) {
 }
 console.log(`\nPaste into content/media.ts:\n`);
 console.log(
-  `{\n  src: "/media/${slug}",\n  width: ${width},\n  height: ${height},\n  alt: "DESCRIBE WHAT THE CLIP SHOWS",\n  formats: ["webm", "mp4"],\n}`,
+  `{\n  src: "/media/${slug}",\n  width: ${width},\n  height: ${height},\n  alt: "DESCRIBE WHAT THE CLIP SHOWS",\n  formats: ${keepWebm ? '["webm", "mp4"]' : '["mp4"]'},\n}`,
 );

@@ -69,8 +69,8 @@ export const PRODUCT = {
   name: "Quick Pickle",
   kind: "Pickle juice shots",
   /**
-   * Millilitres per shot. Confirmed by Sam, 12 November 2026: a 100 ml
-   * food-grade plastic bottle with a white screw cap.
+   * Millilitres per shot. Confirmed 12 November 2026, with photos of the
+   * real thing: a 100 ml food-grade plastic bottle with a white screw cap.
    */
   shotVolumeMl: 100 as number | null,
   /**
@@ -154,22 +154,17 @@ export const UNCONFIRMED: readonly Unconfirmed[] = [
   {
     key: "shipping-rates",
     what: "Delivery rates ($7 flat, $4.50 rural, free over $60 are stand-ins)",
-    ask: "A courier quote",
+    ask: "a courier, for a quote",
   },
   {
     key: "contact-email",
     what: "The customer email address",
-    ask: "Sam",
+    ask: "whoever runs the business side",
   },
   {
     key: "legal-entity",
     what: "The legal entity, NZBN and GST status behind the store",
-    ask: "Sam",
-  },
-  {
-    key: "payments",
-    what: "A payment processor (checkout runs in test mode until one is connected)",
-    ask: "Sam",
+    ask: "whoever runs the business side",
   },
 ];
 

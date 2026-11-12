@@ -164,6 +164,11 @@ export const RITUAL = {
   ],
 } as const;
 
+export const REELS = {
+  eyebrow: "On the sideline",
+  title: "See it in action.",
+} as const;
+
 export const LUCKY = {
   title: "Meet Lucky.",
   /** Her Meet Lucky page, minus the lines the law will not let a food say. */

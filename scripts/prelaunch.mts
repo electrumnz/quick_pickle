@@ -30,7 +30,7 @@ const checks: Check[] = [
   ...UNCONFIRMED.map((item) => ({
     ok: false,
     label: `Not confirmed: ${item.what}`,
-    fix: `Ask ${item.ask}, put the real value in content/offer.ts, then delete "${item.key}" from UNCONFIRMED.`,
+    fix: `Ask ${item.ask}. Put the real value in content/offer.ts, then delete "${item.key}" from UNCONFIRMED.`,
   })),
   {
     ok: paymentProvider !== "test" && paymentProvider !== "",

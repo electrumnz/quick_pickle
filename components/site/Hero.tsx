@@ -73,7 +73,11 @@ export function Hero() {
         <div className="relative mt-3 md:mt-0">
           {MEDIA.heroLoop ? (
             <div className="border-navy shadow-hard-cream mx-auto max-w-[24rem] overflow-hidden rounded-[22px] border-[3px] md:max-w-none">
-              <LoopVideo media={MEDIA.heroLoop} eager className="w-full" />
+              <LoopVideo
+                media={MEDIA.heroLoop}
+                eager
+                className="h-[min(36svh,22rem)] w-full object-cover md:h-auto"
+              />
             </div>
           ) : (
             <div className="hero-lucky mx-auto w-full max-w-[27rem] md:max-w-none">

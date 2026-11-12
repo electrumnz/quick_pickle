@@ -12,6 +12,8 @@ import {
   TruckIcon,
 } from "@/components/brand/Icons";
 import { useCart } from "@/components/cart/CartProvider";
+import { LoopVideo } from "@/components/ui/LoopVideo";
+import type { Media } from "@/content/media";
 import {
   MAX_PACKS_PER_LINE,
   PACKS,
@@ -45,9 +47,11 @@ import { formatNzd } from "@/lib/shop/money";
 type Props = {
   /** "14 February 2027" once the ship date is locked in, else null. */
   readonly shipDate: string | null;
+  /** A product clip to show in place of the illustration, when there is one. */
+  readonly productLoop: Media | null;
 };
 
-export function BuyBox({ shipDate }: Props) {
+export function BuyBox({ shipDate, productLoop }: Props) {
   const { add, open, selectedSku, select } = useCart();
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
@@ -89,24 +93,32 @@ export function BuyBox({ shipDate }: Props) {
             aria-hidden="true"
             className="pattern-dots absolute inset-0 opacity-[0.07]"
           />
-          <div
-            role="img"
-            aria-label={BUY.bottleAlt}
-            className="relative flex items-end justify-center gap-1"
-          >
-            <Bottle className="h-36 w-auto -rotate-[7deg] translate-y-1 md:h-48" />
-            <Bottle className="z-10 h-48 w-auto md:h-64" />
-            <Bottle className="h-36 w-auto translate-y-1 rotate-[7deg] md:h-48" />
-          </div>
+          {productLoop ? (
+            <div className="border-navy relative overflow-hidden rounded-[14px] border-[3px]">
+              <LoopVideo media={productLoop} className="h-auto w-full" />
+            </div>
+          ) : (
+            <div
+              role="img"
+              aria-label={BUY.bottleAlt}
+              className="relative flex items-end justify-center gap-1"
+            >
+              <Bottle className="h-36 w-auto -rotate-[7deg] translate-y-1 md:h-48" />
+              <Bottle className="z-10 h-48 w-auto md:h-64" />
+              <Bottle className="h-36 w-auto translate-y-1 rotate-[7deg] md:h-48" />
+            </div>
+          )}
           <p className="label bg-navy text-cream relative mx-auto mt-4 w-fit rounded-full px-4 py-1.5 text-[1.15rem] leading-none">
             <span className="cap-trim inline-block">
               {pack.shots} {BUY.shots} · {formatNzd(perShotCents(pack))}{" "}
               {BUY.perShot}
             </span>
           </p>
-          <p className="text-navy-muted relative mt-3 text-center text-[0.8125rem]">
-            {BUY.artNote}
-          </p>
+          {productLoop ? null : (
+            <p className="text-navy-muted relative mt-3 text-center text-[0.8125rem]">
+              {BUY.artNote}
+            </p>
+          )}
         </div>
       </div>
 

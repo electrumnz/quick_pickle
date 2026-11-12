@@ -5,6 +5,7 @@ import {
   Faq,
   FinalCta,
   MeetLucky,
+  ReelsSection,
   Ritual,
   Shop,
   SiteFooter,
@@ -23,6 +24,7 @@ import { StickyBuyBar } from "@/components/site/StickyBuyBar";
  *   shop       pick a pack, put it in the jar
  *   truths     the three things we can stand behind
  *   ritual     where it fits in a game day
+ *   reels      the clips, once there are clips (content/media.ts)
  *   lucky      who is asking
  *   crew       not ready to buy? stay close
  *   faq        the fair questions
@@ -46,6 +48,7 @@ export default function HomePage() {
         <Shop />
         <Truths />
         <Ritual />
+        <ReelsSection />
         <MeetLucky />
         <Crew />
         <Faq />
