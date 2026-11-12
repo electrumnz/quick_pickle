@@ -1,0 +1,1 @@
+ALTER TABLE "events" ADD COLUMN "not_before" timestamp with time zone;
