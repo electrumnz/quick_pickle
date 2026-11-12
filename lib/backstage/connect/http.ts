@@ -72,6 +72,30 @@ export function json(
 /** What every one of these says while the door is shut. */
 export const nothingHere = () => json({ error: "not_found" }, 404);
 
+/**
+ * The answer to a verb an address does not take.
+ *
+ * Left to itself the framework answers these for us: 405 to a verb with no
+ * handler and 204 to OPTIONS, switched on or not. Either one says there is
+ * a door here. So every verb has a handler, and while the door is shut each
+ * says what an address that does not exist says.
+ */
+export function notThatWay(allow: string): () => Promise<Response> {
+  return async () =>
+    (await doorIsOpen())
+      ? json({ error: "method_not_allowed" }, 405, { Allow: allow })
+      : nothingHere();
+}
+
+/** Is this a body sent as JSON, and said to be? */
+export function saidToBeJson(request: Request): boolean {
+  const type = (request.headers.get("content-type") ?? "")
+    .split(";")[0]
+    ?.trim()
+    .toLowerCase();
+  return type === "application/json";
+}
+
 /** An OAuth refusal, in OAuth's own shape. */
 export const oauthError = (
   error:
@@ -96,6 +120,12 @@ export const OPEN_TO_READ = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "*",
 } as const;
+
+/** A browser asking first whether it may read one of the two documents. */
+export async function mayRead(): Promise<Response> {
+  if (!(await doorIsOpen())) return nothingHere();
+  return new Response(null, { status: 204, headers: OPEN_TO_READ });
+}
 
 /** Which server this is, and who to ask for a key to it (RFC 9728). */
 export function resourceMetadata(site?: string) {

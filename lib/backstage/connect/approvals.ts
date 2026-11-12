@@ -29,7 +29,7 @@ import "server-only";
 import { and, asc, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { approvals } from "@/db/schema";
+import { approvals, connections } from "@/db/schema";
 import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
 import { minutesSince } from "@/lib/time";
@@ -134,6 +134,15 @@ export const askApproval = defineOp({
     if (ctx.actor.type !== "bot") {
       throw new OpError("forbidden", "Only a connection asks this way.");
     }
+    // One ask at a time for each connection: the row is held to the end of
+    // this transaction. Two asks at once would otherwise both find nothing
+    // waiting, and both be written down, past the limit below.
+    const [held] = await ctx.db
+      .select({ id: connections.id })
+      .from(connections)
+      .where(eq(connections.id, input.connectionId))
+      .for("update");
+    if (held === undefined) throw notFound("That connection");
     const waiting = await ctx.db
       .select()
       .from(approvals)

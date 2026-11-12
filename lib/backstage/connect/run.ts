@@ -10,11 +10,22 @@
  *   ask     it sends, publishes or cannot be undone, so it is NOT run. What
  *           it would do is written down for a person to say yes or no to
  *           (./approvals.ts), and the bot is told it is waiting.
+ *   person  it puts saved words in front of customers, so it is NOT run and
+ *           nobody is asked: a person does it on the screen that has the
+ *           words on it, and the bot is told where that is.
  *
  * The same checks as for anybody else come first: the operation has to be
  * one a bot is offered (./catalogue.ts), what it was handed has to make
  * sense, and the connection's role has to allow it. A request that could
  * never run is refused on the spot and never put in front of a person.
+ *
+ * Two checks are a bot's alone, because of what a person saying yes is
+ * shown: exactly what the bot handed over.
+ *
+ *   - Every key it hands over has to be one the operation reads. Reading
+ *     drops what it does not know, so without this a request could carry a
+ *     key that looks as though it matters and does nothing.
+ *   - What is put in front of a person has to be short enough to read.
  */
 
 import "server-only";
@@ -27,12 +38,24 @@ import { can, type Caller } from "../core/actor";
 import { OpError } from "../core/errors";
 import { execute, type ExecuteOptions, type Op } from "../core/op";
 import { askApproval } from "./approvals";
-import { kindOf, offeredOp } from "./catalogue";
+import {
+  BOT_MUST_SAY,
+  kindOf,
+  offeredOp,
+  unreadKeys,
+  whereAPersonDoes,
+} from "./catalogue";
 
 /** The most a bot may do in one go. */
 export const MOST_CALLS = 10;
 /** The most that is handed back for one call, in letters. */
 export const MOST_ANSWER = 60_000;
+/**
+ * The most that is put in front of a person to say yes to, in letters. A
+ * person reads all of it before deciding, so it has to be something a
+ * person can read.
+ */
+export const MOST_ASKED = 20_000;
 
 export type Call = { readonly op: string; readonly input?: unknown };
 
@@ -92,6 +115,56 @@ function fieldErrors(error: z.ZodError): Record<string, string> {
   return out;
 }
 
+const isPlain = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * What a bot handed over, checked the way only a bot's is: it makes sense
+ * to the operation, every key of it is one the operation reads, and
+ * anything a bot has to say in so many words is there.
+ *
+ * What comes back is what was handed over, untouched. It is what is run and
+ * what a person is shown, so the two cannot differ.
+ */
+export function checked(op: Op, call: Call): Record<string, unknown> {
+  const given = call.input ?? {};
+  if (!isPlain(given)) {
+    throw new OpError(
+      "invalid_input",
+      `Hand ${op.name} an object: the names of what it takes, and a value for each.`,
+    );
+  }
+  const read = op.input.safeParse(given);
+  if (!read.success) {
+    throw new OpError(
+      "invalid_input",
+      "Some of that does not look right.",
+      fieldErrors(read.error),
+    );
+  }
+  const unread = unreadKeys(given, read.data);
+  if (unread.length > 0) {
+    throw new OpError(
+      "invalid_input",
+      `${op.name} does not take ${unread.map((key) => `\`${key}\``).join(", ")}. Nothing was done. Call find with its name to see exactly what it takes.`,
+      Object.fromEntries(
+        unread.map((key) => [key, "This operation does not take that."]),
+      ),
+    );
+  }
+  const missing = (BOT_MUST_SAY[op.name] ?? []).filter(
+    (key) => given[key] === undefined || given[key] === null,
+  );
+  if (missing.length > 0) {
+    throw new OpError(
+      "invalid_input",
+      `Give ${missing.map((key) => `\`${key}\``).join(", ")} in so many words. A person is shown exactly what you hand over before they say yes, so it cannot be left to what was saved.`,
+      Object.fromEntries(missing.map((key) => [key, "Say it in full."])),
+    );
+  }
+  return given;
+}
+
 /** What came back, if it is small enough to hand to a bot. */
 function fitted(op: string, result: unknown): Outcome {
   const size = (JSON.stringify(result ?? null) ?? "").length;
@@ -112,39 +185,36 @@ export const decideAt = (approvalId: string) =>
 
 async function ask(
   op: Op,
-  call: Call,
+  given: Record<string, unknown>,
   caller: Caller,
   connectionId: string,
   options: ExecuteOptions,
 ): Promise<Outcome> {
   // Everything that would stop it running is checked now, so a person is
   // never asked to say yes to something that cannot be done.
-  const parsed = op.input.safeParse(call.input ?? {});
-  if (!parsed.success) {
-    throw new OpError(
-      "invalid_input",
-      "Some of that does not look right.",
-      fieldErrors(parsed.error),
-    );
-  }
   if (!can(caller.actor, op.access)) {
     throw new OpError(
       "forbidden",
       "This connection can look but not change things.",
     );
   }
+  const size = JSON.stringify(given).length;
+  if (size > MOST_ASKED) {
+    throw new OpError(
+      "invalid_input",
+      `That is ${String(size)} letters, which is more than a person can be asked to read before saying yes (${String(MOST_ASKED)}). Ask for less in one go.`,
+    );
+  }
+  // Read again here only to say what it would do. `given` was read by
+  // `checked` a moment ago, so this cannot fail.
   const says =
-    op.explain?.(parsed.data) ??
+    op.explain?.(op.input.parse(given)) ??
     `${op.title}. This ${op.effect === "destructive" ? "cannot be undone" : "reaches outside the back end"}.`;
-  const raw = call.input ?? {};
   const asked = await execute(
     askApproval,
     {
       operation: op.name,
-      input:
-        typeof raw === "object" && raw !== null && !Array.isArray(raw)
-          ? (raw as Record<string, unknown>)
-          : {},
+      input: given,
       says: says.slice(0, 2000),
       connectionId,
     },
@@ -201,16 +271,42 @@ export async function runForBot(
           `${op.name} only reads. Use the look tool for it.`,
         );
       }
+      if (kind === "person") {
+        throw new OpError(
+          "forbidden",
+          `${op.title} is for a person to do, ${whereAPersonDoes(op)}: it puts words in front of customers, and the person saying yes has to have those words in front of them. Nothing was done and nobody has been asked. Tell the person it is ready for them there.`,
+        );
+      }
+      const given = checked(op, call);
       if (kind === "ask") {
-        outcomes.push(await ask(op, call, caller, connectionId, options));
+        outcomes.push(await ask(op, given, caller, connectionId, options));
         continue;
       }
       // Never with a yes: `caller.confirmed` is not set for a connection.
-      const result = await execute(op, call.input ?? {}, caller, options);
+      const result = await execute(op, given, caller, options);
       outcomes.push(fitted(op.name, result));
     } catch (error) {
-      if (!(error instanceof OpError)) throw error;
-      outcomes.push(refusal(call.op, error));
+      if (error instanceof OpError) {
+        outcomes.push(refusal(call.op, error));
+      } else {
+        // Something nobody planned for: a database that would not answer,
+        // a bug. What it says can hold a query and what was in it, so the
+        // bot is told only that it failed. The whole of it goes to the
+        // server's own log, where the people who run this can read it.
+        console.error(`[connect] ${call.op} failed unexpectedly`, error);
+        outcomes.push(
+          refusal(
+            call.op,
+            new OpError(
+              "unavailable",
+              "That failed in a way nobody planned for. It may or may not have happened: look before trying again.",
+            ),
+          ),
+        );
+        // Whatever it was, do not carry on past it.
+        stopped = true;
+        continue;
+      }
       if (how === "change") stopped = true;
     }
   }

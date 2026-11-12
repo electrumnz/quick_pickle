@@ -28,8 +28,9 @@
  *
  *   - Never more than the person who made it, and never more than staff: a
  *     bot is not an owner. Somebody whose own account can only look cannot
- *     connect one. If the person's account is switched off or turned down
- *     to "can look", so is their Claude, on its next call.
+ *     connect one. If the person's account is switched off, or turned down
+ *     to "can look", their Claude stops working on its next call, and
+ *     starts again if the account is put back.
  *   - Its work is written in the activity log under a bot account of its
  *     own, named for the person, so the log says who did what.
  *   - Anything that sends, publishes or cannot be undone is not done. It
@@ -41,7 +42,7 @@
 
 import "server-only";
 
-import { and, desc, eq, gt, isNull, lt, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, lt, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -167,6 +168,12 @@ const appName = z
   .transform((value) => value.replace(/\s+/g, " ").trim().slice(0, 80))
   .pipe(z.string().min(1));
 
+/** An app that registered and that nobody has said yes to. */
+const neverLetIn = and(
+  isNull(oauthClients.lastUsedAt),
+  sql`not exists (select 1 from ${connections} where ${connections.clientId} = "oauth_clients"."id")`,
+);
+
 export type RegisteredClient = {
   readonly clientId: string;
   readonly name: string;
@@ -203,10 +210,23 @@ export const registerClient = defineOp({
       .select({ n: sql<number>`count(*)::int` })
       .from(oauthClients);
     if ((count?.n ?? 0) >= MOST_CLIENTS) {
-      throw new OpError(
-        "unavailable",
-        "Too many apps are waiting to be connected. Try again in an hour.",
-      );
+      // Full. Anybody can register, so a flood of registrations must not
+      // be able to shut the door on a real one: room is made by letting go
+      // of the oldest app that registered and was never let in. An app a
+      // person said yes to is never let go of this way.
+      const [oldest] = await ctx.db
+        .select({ id: oauthClients.id })
+        .from(oauthClients)
+        .where(neverLetIn)
+        .orderBy(asc(oauthClients.createdAt))
+        .limit(1);
+      if (oldest === undefined) {
+        throw new OpError(
+          "unavailable",
+          "Too many apps are connected. An owner can cut some off under Settings, Claude.",
+        );
+      }
+      await ctx.db.delete(oauthClients).where(eq(oauthClients.id, oldest.id));
     }
     const clientId = newId("cli");
     await ctx.db.insert(oauthClients).values({
@@ -506,7 +526,7 @@ export const refreshKeys = defineOp({
   name: "connect.refresh",
   title: "Renew a connection's keys",
   description:
-    "For the connection's own plumbing: the app hands in its renewal key and is given a new pair, and the old renewal key stops working. An app that never heard the answer may ask once more with the old one for a couple of minutes. After that, an old key turning up means somebody else has a copy, and the connection is cut off. Not something a person or a bot runs.",
+    "For the connection's own plumbing: the app hands in its renewal key and is given a new pair, and the old renewal key stops working. An app that never heard the answer may ask once more with the old one, within a couple of minutes, and that once only: the pair it was not heard about is then dead, and turning up later it cuts the connection off. Any other old key turning up means somebody else has a copy, and the connection is cut off. Not something a person or a bot runs.",
   // Bookkeeping: it happens every hour for ever, and a line in the activity
   // log for each would bury what people did. Each step is one guarded
   // statement, so two renewals at once cannot both win.
@@ -568,11 +588,19 @@ export const refreshKeys = defineOp({
     if (old === undefined) throw refused("That key is no longer good.");
     const since = ctx.now.getTime() - (old.rotatedAt?.getTime() ?? 0);
     if (since <= GRACE_SECONDS * 1000) {
-      // The app never heard our answer, and asks again. Fair: give it a
-      // new pair. The clock on the old key is not started again.
+      // The app never heard our answer, and asks again. Fair, once: give
+      // it a new pair. The pair it never heard about is dead from here, and
+      // it is the one remembered now, with no grace left on it
+      // (`rotatedAt` long ago). So this key cannot be handed in a third
+      // time, and if the dead pair ever turns up, somebody else was
+      // holding it and the connection is cut off.
       const again = await ctx.db
         .update(connections)
-        .set(row)
+        .set({
+          ...row,
+          prevRefreshHash: sql`${connections.refreshHash}`,
+          rotatedAt: new Date(0),
+        })
         .where(
           and(
             eq(connections.id, old.id),
@@ -661,6 +689,10 @@ async function usable(
       ),
     );
   if (row === undefined || !isOurResource(row.resource)) return null;
+  // Somebody who can only look cannot have a Claude connected: they could
+  // not make one, and they could not cut one off. Turned down to that, the
+  // connection stops, and starts again if they are turned back up.
+  if (row.personRole === "viewer") return null;
   const [bot] = await db
     .select({ id: users.id, name: users.name, disabledAt: users.disabledAt })
     .from(users)
@@ -668,8 +700,7 @@ async function usable(
   if (bot === undefined || bot.disabledAt !== null) return null;
   return {
     connectionId: row.id,
-    role:
-      row.role === "staff" && row.personRole !== "viewer" ? "staff" : "viewer",
+    role: row.role,
     clientName: row.clientName,
     person: { id: row.personId, name: row.personName },
     bot: { id: bot.id, name: bot.name },
@@ -759,13 +790,18 @@ export type ConnectionListed = {
   readonly lastUsedAt: Date | null;
   /** Null while it is working. */
   readonly ended: { readonly at: Date; readonly why: string } | null;
+  /**
+   * Why it is not working for now, though it has not ended: the account it
+   * works for has been switched off or can only look. Null otherwise.
+   */
+  readonly stopped: string | null;
 };
 
 export const listConnections = defineOp({
   name: "connect.list",
   title: "List the connections to Claude",
   description:
-    "The connections that have been made: what was connected, for whom, what it may do, when it was made and last used, and whether it has been cut off or has lapsed. An owner sees everybody's; anybody else sees their own.",
+    "The connections that have been made: what was connected, for whom, what it may do, when it was made and last used, whether it has been cut off or has lapsed (`ended`), and whether it is stopped for now because the account it works for is switched off or can only look (`stopped`). An owner sees everybody's; anybody else sees their own.",
   access: "read",
   input: z.object({ limit: z.number().int().min(1).max(100).default(50) }),
   async run(ctx, input): Promise<ConnectionListed[]> {
@@ -778,6 +814,8 @@ export const listConnections = defineOp({
         role: connections.role,
         userId: connections.userId,
         forName: users.name,
+        forRole: users.role,
+        forDisabledAt: users.disabledAt,
         createdAt: connections.createdAt,
         lastUsedAt: connections.lastUsedAt,
         revokedAt: connections.revokedAt,
@@ -805,6 +843,12 @@ export const listConnections = defineOp({
                 at: row.refreshExpiresAt,
                 why: `Nobody used it for ${String(REFRESH_DAYS)} days, so it lapsed.`,
               }
+            : null,
+      stopped:
+        row.forDisabledAt !== null
+          ? `It does not work while ${row.forName}'s account is switched off.`
+          : row.forRole === "viewer"
+            ? `It does not work while ${row.forName}'s account can only look.`
             : null,
     }));
   },
@@ -875,13 +919,7 @@ export async function tidyConnections(db: DbOrTx, now: Date): Promise<number> {
   const unused = new Date(now.getTime() - UNUSED_CLIENT_HOURS * 3_600_000);
   const apps = await db
     .delete(oauthClients)
-    .where(
-      and(
-        lt(oauthClients.createdAt, unused),
-        isNull(oauthClients.lastUsedAt),
-        sql`not exists (select 1 from ${connections} where ${connections.clientId} = "oauth_clients"."id")`,
-      ),
-    )
+    .where(and(lt(oauthClients.createdAt, unused), neverLetIn))
     .returning({ id: oauthClients.id });
   return codes.length + apps.length;
 }

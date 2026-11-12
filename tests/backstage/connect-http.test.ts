@@ -300,6 +300,44 @@ describe("connecting an app, end to end", () => {
       ).toBe(404);
     });
 
+    it("says the same to every verb: a door that is off does not say it is a door", async () => {
+      // Left to itself the framework answers 405 to a verb with no handler
+      // and 204 to OPTIONS, switched on or not, and either says something
+      // is here. Every verb has a handler, and each says nothing is.
+      for (const path of [
+        "/.well-known/oauth-protected-resource",
+        "/.well-known/oauth-protected-resource/api/mcp",
+        "/.well-known/oauth-authorization-server",
+        "/api/oauth/register",
+        "/api/oauth/token",
+        "/api/mcp",
+      ]) {
+        for (const method of [
+          "GET",
+          "POST",
+          "PUT",
+          "PATCH",
+          "DELETE",
+          "OPTIONS",
+        ]) {
+          const answer = await site(
+            new Request(`${SITE}${path}`, {
+              method,
+              ...(method === "GET" || method === "OPTIONS"
+                ? {}
+                : { body: "{}" }),
+            }),
+          );
+          expect(answer.status, `${method} ${path}`).toBe(404);
+          expect(
+            answer.headers.get("access-control-allow-origin"),
+            `${method} ${path}`,
+          ).toBeNull();
+          expect(answer.headers.get("allow"), `${method} ${path}`).toBeNull();
+        }
+      }
+    });
+
     it("stays that way on invented records, whatever the switch says", async () => {
       await open();
       vi.stubEnv("BACKSTAGE_AUTH", "");
@@ -404,6 +442,91 @@ describe("connecting an app, end to end", () => {
           .status,
       ).toBe(400);
       expect(await handle.db.select().from(oauthClients)).toHaveLength(1);
+    });
+
+    it("says which verbs an address takes, once it is switched on", async () => {
+      const ask = (path: string, method: string) =>
+        site(new Request(`${SITE}${path}`, { method }));
+      // A browser may ask first whether it can read the two documents.
+      for (const path of [
+        "/.well-known/oauth-protected-resource",
+        "/.well-known/oauth-authorization-server",
+      ]) {
+        const first = await ask(path, "OPTIONS");
+        expect(first.status).toBe(204);
+        expect(first.headers.get("access-control-allow-origin")).toBe("*");
+        const wrong = await ask(path, "DELETE");
+        expect(wrong.status).toBe(405);
+        expect(wrong.headers.get("allow")).toBe("GET, HEAD, OPTIONS");
+      }
+      for (const path of ["/api/oauth/register", "/api/oauth/token"]) {
+        for (const method of ["GET", "PUT", "OPTIONS"]) {
+          const wrong = await ask(path, method);
+          expect(wrong.status, `${method} ${path}`).toBe(405);
+          expect(wrong.headers.get("allow")).toBe("POST");
+          // And no site is told it may read anything here.
+          expect(wrong.headers.get("access-control-allow-origin")).toBeNull();
+        }
+      }
+      expect((await ask("/api/mcp", "OPTIONS")).status).toBe(405);
+    });
+
+    it("does not register or swap anything for a page on somebody else's site", async () => {
+      const from = (path: string, type: string, origin: string | null) =>
+        site(
+          new Request(`${SITE}${path}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": type,
+              "x-real-ip": "203.0.113.7",
+              ...(origin === null ? {} : { Origin: origin }),
+            },
+            body: JSON.stringify({
+              client_name: "Claude",
+              redirect_uris: ["https://claude.ai/api/mcp/auth_callback"],
+            }),
+          }),
+        );
+      // A page elsewhere can make a visitor's browser post plain text
+      // without asking first. That is not how an app registers.
+      const plain = await from("/api/oauth/register", "text/plain", null);
+      expect(plain.status).toBe(415);
+      expect(await plain.json()).toMatchObject({
+        error: "invalid_client_metadata",
+      });
+      // And a browser always says which site sent it.
+      expect(
+        (
+          await from(
+            "/api/oauth/register",
+            "application/json",
+            "https://evil.example",
+          )
+        ).status,
+      ).toBe(403);
+      expect(
+        (
+          await from(
+            "/api/oauth/token",
+            "application/x-www-form-urlencoded",
+            "https://evil.example",
+          )
+        ).status,
+      ).toBe(403);
+      expect(await handle.db.select().from(oauthClients)).toEqual([]);
+      // An app, which says no such thing, registers as before.
+      expect(
+        (await from("/api/oauth/register", "application/json", null)).status,
+      ).toBe(201);
+      expect(
+        (
+          await from(
+            "/api/oauth/register",
+            "application/json; charset=utf-8",
+            "https://claude.ai",
+          )
+        ).status,
+      ).toBe(201);
     });
 
     it("asks an address that keeps knocking to wait", async () => {
@@ -668,6 +791,64 @@ describe("connecting an app, end to end", () => {
         }),
       );
       expect(end.status).toBe(405);
+    });
+
+    it("takes one call in a request: not a list, not something too long to read", async () => {
+      const { client, app } = await connected(staff, "staff");
+      const key = (app.kept as { access_token: string }).access_token;
+      const say = (body: string, headers: Record<string, string> = {}) =>
+        site(
+          new Request(MCP, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${key}`,
+              "Content-Type": "application/json",
+              Accept: "application/json, text/event-stream",
+              ...headers,
+            },
+            body,
+          }),
+        );
+      const call = (id: number) => ({
+        jsonrpc: "2.0",
+        id,
+        method: "tools/call",
+        params: {
+          name: "change",
+          arguments: {
+            calls: [{ op: "plans.addTask", input: { title: `Task ${id}` } }],
+          },
+        },
+      });
+      // The older form of the protocol takes a list of calls in one
+      // request. Here that would be counted as one call and run as many.
+      const list = await say(JSON.stringify([call(1), call(2), call(3)]));
+      expect(list.status).toBe(400);
+      expect(await list.json()).toMatchObject({
+        error: {
+          code: -32600,
+          message: "One call in each request, not a list.",
+        },
+      });
+      expect(await handle.db.select().from(tasks)).toEqual([]);
+
+      const long = await say(JSON.stringify({ pad: "x".repeat(1_000_001) }));
+      expect(long.status).toBe(413);
+      const garbled = await say("{ not json");
+      expect(garbled.status).toBe(400);
+      expect(await garbled.json()).toMatchObject({ error: { code: -32700 } });
+      // An ordinary call still goes through, after all that.
+      const added = answer(
+        await client.callTool({
+          name: "change",
+          arguments: {
+            calls: [{ op: "plans.addTask", input: { title: "Order labels" } }],
+          },
+        }),
+      ) as { outcomes: { ok: boolean }[] };
+      expect(added.outcomes[0]?.ok).toBe(true);
+      expect(await handle.db.select().from(tasks)).toHaveLength(1);
+      await client.close().catch(() => undefined);
     });
 
     it("never reached the outside world", () => {

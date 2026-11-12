@@ -369,7 +369,11 @@ export const approveSocialPost = defineOp({
     }
     const copyCheck = await checkCaption(ctx, post.caption);
     refuseBanned(copyCheck, "This caption", "approved");
-    const read = requireRestrictedRead(copyCheck, input.acknowledgeRestricted);
+    const read = requireRestrictedRead(
+      copyCheck,
+      input.acknowledgeRestricted,
+      ctx.actor,
+    );
     // The approval is for the caption that was just checked, and no other.
     const approved = await ctx.db
       .update(socialPosts)

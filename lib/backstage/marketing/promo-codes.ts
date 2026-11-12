@@ -216,6 +216,78 @@ function termsInWords(promo: {
   return parts.join(", ");
 }
 
+/** What a change to a code's terms asks for, a phrase for each thing. */
+function changesInWords(input: {
+  readonly kind?: PromoKind | undefined;
+  readonly value?: number | undefined;
+  readonly minSubtotalCents?: number | undefined;
+  readonly startsAt?: Date | null | undefined;
+  readonly endsAt?: Date | null | undefined;
+  readonly maxUses?: number | null | undefined;
+  readonly note?: string | undefined;
+  readonly partnerId?: string | null | undefined;
+  readonly oncePerCustomer?: boolean | undefined;
+}): string[] {
+  const changes: string[] = [];
+  if (input.kind !== undefined && input.value !== undefined) {
+    changes.push(
+      `it gives ${promoLabel({ kind: input.kind, value: input.value }).toLowerCase()}`,
+    );
+  } else if (input.kind !== undefined) {
+    changes.push(`the kind of code becomes ${input.kind}`);
+  } else if (input.value !== undefined) {
+    // Without the kind there is no telling a percentage from cents, so
+    // both readings are said.
+    changes.push(
+      `what it gives becomes ${String(input.value)} (${String(input.value)}% on a percentage code, ${formatNzd(input.value)} on a money-off code)`,
+    );
+  }
+  if (input.minSubtotalCents !== undefined) {
+    changes.push(
+      input.minSubtotalCents === 0
+        ? "no smallest order"
+        : `the smallest order becomes ${formatNzd(input.minSubtotalCents)}`,
+    );
+  }
+  if (input.startsAt !== undefined) {
+    changes.push(
+      input.startsAt === null
+        ? "it works straight away"
+        : `it starts ${formatNzDateTime(input.startsAt)}`,
+    );
+  }
+  if (input.endsAt !== undefined) {
+    changes.push(
+      input.endsAt === null
+        ? "it never runs out"
+        : `it stops ${formatNzDateTime(input.endsAt)}`,
+    );
+  }
+  if (input.maxUses !== undefined) {
+    changes.push(
+      input.maxUses === null
+        ? "no limit on how often it is used"
+        : `${String(input.maxUses)} uses at most`,
+    );
+  }
+  if (input.oncePerCustomer !== undefined) {
+    changes.push(
+      input.oncePerCustomer
+        ? "once for each customer"
+        : "a customer may use it more than once",
+    );
+  }
+  if (input.partnerId !== undefined) {
+    changes.push(
+      input.partnerId === null
+        ? "it becomes the shop's own, credited to nobody"
+        : "orders placed with it are credited to a different partner",
+    );
+  }
+  if (input.note !== undefined) changes.push("its note");
+  return changes;
+}
+
 export const listPromoCodes = defineOp({
   name: "promoCodes.list",
   title: "List promo codes",
@@ -277,6 +349,9 @@ export const createPromoCode = defineOp({
   description:
     "Makes a code a customer can type at the checkout. `kind` is percent (`value` is a whole percentage, 1 to 100, worked out on the goods and rounded to the cent in the customer's favour), amount (`value` is cents off) or delivery (free standard delivery; a rural extra still applies). One code per order: codes do not stack. Optional terms: a smallest order (`minSubtotalCents`), the instant it starts and the instant it stops working, the most times it can be used, and `oncePerCustomer` (one use for each email address). A code can belong to a partner (`partnerId`: a club or creator): orders placed with it are then credited to them, with whatever cut that partner is on. The code is stored in capitals with no spaces, and a code that already exists is refused. It is live at the checkout as soon as it is made unless `active` is false. No code may take an order below a dollar.",
   access: "write",
+  // A code is money off for anybody who types it. Making one reaches the
+  // checkout at once, so it is a person's yes.
+  effect: "outward",
   input: z.object({
     code: codeField,
     kind: z.enum(PROMO_KINDS, { error: "Pick what the code gives" }),
@@ -290,6 +365,12 @@ export const createPromoCode = defineOp({
     partnerId: recordId.nullable().default(null),
     oncePerCustomer: z.boolean().default(false),
   }),
+  explain: (input) =>
+    `This makes the promo code ${input.code}: ${termsInWords(input)}. ${
+      input.active
+        ? "Anybody who types it at the checkout gets that, from when it starts."
+        : "It is made switched off, and gives nothing until it is switched on."
+    }${input.partnerId === null ? "" : " Orders placed with it are credited to a partner."}`,
   async run(ctx, input): Promise<{ id: string; code: string }> {
     const terms = checkTerms(input);
     const partnerName = await partnerNameOf(ctx.db, input.partnerId);
@@ -342,6 +423,7 @@ export const updatePromoCode = defineOp({
   description:
     "Changes what a code gives, its smallest order, its dates, its limit or its note. Leave a field out to keep it. The code itself cannot be renamed: switch it off and make a new one. Once a code has been used, what kind of code it is can no longer change. Pass null for a date or the limit to remove it. `partnerId` says whose code it is (null: the shop's own) and `oncePerCustomer` whether each customer may use it once. An order keeps who it was credited to when it was placed, so handing a code to somebody else only affects orders from now on.",
   access: "write",
+  effect: "outward",
   input: z.object({
     id: recordId,
     kind: z.enum(PROMO_KINDS).optional(),
@@ -354,6 +436,12 @@ export const updatePromoCode = defineOp({
     partnerId: recordId.nullable().optional(),
     oncePerCustomer: z.boolean().optional(),
   }),
+  explain: (input) => {
+    const changes = changesInWords(input);
+    return changes.length === 0
+      ? "This changes nothing about the promo code."
+      : `This changes a promo code that customers can type at the checkout: ${changes.join("; ")}. Every order placed with the code from now on gets the new terms.`;
+  },
   async run(ctx, input): Promise<{ id: string }> {
     const promo = await loadPromo(ctx.db, input.id);
     refuseSpecial(promo);
@@ -421,7 +509,12 @@ export const setPromoCodeActive = defineOp({
   description:
     "Switches a code off so the checkout stops taking it, or back on. Its dates and limit still apply when it is on. Nothing is deleted, and orders that already used it are not changed.",
   access: "write",
+  effect: "outward",
   input: z.object({ id: recordId, active: z.boolean() }),
+  explain: (input) =>
+    input.active
+      ? "This switches a promo code on. The checkout takes it from now, within its dates and its limit."
+      : "This switches a promo code off. The checkout stops taking it, and anybody holding it gets nothing for it.",
   async run(ctx, input): Promise<{ active: boolean }> {
     const promo = await loadPromo(ctx.db, input.id);
     refuseSpecial(promo);
@@ -523,7 +616,12 @@ export const setCrewWelcomeCode = defineOp({
   description:
     "Makes one promo code the code people are given when they join the Pickle Crew on the site (`on: true`), or stops handing it out (`on: false`). There is at most one: choosing a code takes over from whichever was chosen before. The code has to be the shop's own (not a partner's) and not a special. Choosing it also makes it work once for each customer, which is what a welcome code should do; that can be changed afterwards. It is only handed out while it could be used: a code that is switched off, finished or used up is not shown to anybody.",
   access: "write",
+  effect: "outward",
   input: z.object({ id: recordId, on: z.boolean() }),
+  explain: (input) =>
+    input.on
+      ? "This hands a promo code to everybody who joins the Pickle Crew on the site, from now. It takes over from whichever code was handed out before."
+      : "This stops handing a promo code to people who join the Pickle Crew.",
   async run(ctx, input): Promise<{ code: string; on: boolean }> {
     const promo = await loadPromo(ctx.db, input.id);
     refuseSpecial(promo);

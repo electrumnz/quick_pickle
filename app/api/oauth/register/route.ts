@@ -1,9 +1,12 @@
 import {
   countKnock,
   doorIsOpen,
+  fromAllowedOrigin,
   json,
   nothingHere,
+  notThatWay,
   oauthError,
+  saidToBeJson,
   tooMany,
 } from "@/lib/backstage/connect/http";
 import { registerClient } from "@/lib/backstage/connect/oauth";
@@ -30,6 +33,18 @@ const MOST_BYTES = 8_000;
 
 export async function POST(request: Request): Promise<Response> {
   if (!(await doorIsOpen())) return nothingHere();
+  // A page on somebody else's site can make a visitor's browser post plain
+  // text here without asking first, and so register from a thousand
+  // addresses. It cannot post JSON that way, and a browser always says
+  // which site sent it. A real app is stopped by neither check.
+  if (!fromAllowedOrigin(request)) return json({ error: "forbidden" }, 403);
+  if (!saidToBeJson(request)) {
+    return oauthError(
+      "invalid_client_metadata",
+      "Send it as application/json.",
+      415,
+    );
+  }
   if (!(await countKnock(request)).allowed) return tooMany();
 
   const raw = await request.text();
@@ -89,3 +104,7 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 }
+
+// Every other verb, so that nothing here answers while the door is shut.
+const no = notThatWay("POST");
+export { no as GET, no as PUT, no as PATCH, no as DELETE, no as OPTIONS };

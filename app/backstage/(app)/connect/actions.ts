@@ -35,7 +35,12 @@ export async function decideConnectAction(form: FormData): Promise<void> {
     codeChallenge: formText(form, "code_challenge"),
     resource: formText(form, "resource") || null,
   };
-  const state = formText(form, "state").slice(0, 1000);
+  // Handed back to the app exactly as it came. Cut short it would be a
+  // different word, and the app would not know its own request.
+  const state = formText(form, "state");
+  if (state.length > 4000) {
+    sayAndGo(SETTINGS, "That request was too long to be real.", "bad");
+  }
   const yes = formText(form, "decision") === "yes";
 
   let back: URL;

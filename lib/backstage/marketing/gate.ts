@@ -20,6 +20,7 @@ import { eq } from "drizzle-orm";
 import { partners, type CopyCheck } from "@/db/schema";
 import type { DbOrTx } from "@/lib/db/types";
 
+import type { Actor } from "../core/actor";
 import { conflict, OpError } from "../core/errors";
 import {
   bannedIn,
@@ -157,13 +158,25 @@ export function refuseBanned(
 /**
  * Refuse to let copy with a restricted finding through until the person
  * approving has ticked that they have read it.
+ *
+ * The tick is a person's. A bot's say-so is not taken, and neither is the
+ * system's: a restricted phrase is one somebody has to have read, and only
+ * somebody signed in to the back end can have.
  */
 export function requireRestrictedRead(
   check: CopyCheck,
   acknowledged: boolean,
+  actor: Actor,
 ): readonly string[] {
   const restricted = restrictedIn(check);
-  if (restricted.length > 0 && !acknowledged) {
+  if (restricted.length === 0) return [];
+  if (actor.type !== "human") {
+    const message = `Some of the wording needs a person to read it: ${nameFindings(restricted)}. That check is recorded by a person, signed in to the back end, on the screen where the words are.`;
+    throw new OpError("forbidden", message, {
+      acknowledgeRestricted: message,
+    });
+  }
+  if (!acknowledged) {
     const message = `Some of the wording needs a second look: ${nameFindings(restricted)}. Read what the copy check says about it, then tick the box to say it is right.`;
     throw new OpError("invalid_input", message, {
       acknowledgeRestricted: message,

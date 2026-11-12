@@ -609,7 +609,11 @@ export const switchSpecialOn = defineOp({
     let read: readonly string[] = [];
     if (copyCheck !== null) {
       refuseBanned(copyCheck, "This special", "switched on");
-      read = requireRestrictedRead(copyCheck, input.acknowledgeRestricted);
+      read = requireRestrictedRead(
+        copyCheck,
+        input.acknowledgeRestricted,
+        ctx.actor,
+      );
       refuseUnsendable(
         { "the special's name": promo.publicName },
         { checked: read },

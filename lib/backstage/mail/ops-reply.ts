@@ -391,7 +391,7 @@ export const sendReply = defineOp({
     acknowledgeRestricted: z.boolean().default(false),
   }),
   explain: (input) =>
-    `This sends "${input.subject}" to ${input.to}. Once it has gone it cannot be called back.`,
+    `This sends "${input.subject}" to ${input.to}${input.body === undefined ? ", with the words of the saved draft" : ""}, with the inbox's signature under it. Once it has gone it cannot be called back.`,
   async run(
     ctx,
     input,
@@ -402,6 +402,16 @@ export const sendReply = defineOp({
     /** True when this reply had gone already and nothing was sent again. */
     already: boolean;
   }> {
+    // A bot says the words in so many words. A person saying yes to its
+    // request is shown what it handed over, and a draft can be saved again
+    // after the asking.
+    if (ctx.actor.type === "bot" && input.body === undefined) {
+      throw new OpError(
+        "invalid_input",
+        "Give the words of the reply in `body`. A saved draft cannot be sent from a connection.",
+        { body: "Say the words of the reply in full" },
+      );
+    }
     const conversation = await conversationFor(ctx.db, input.conversationId);
     const existing = await draftIn(ctx.db, conversation, input.draftId);
     if (existing !== undefined && existing.status !== "draft") {

@@ -4566,12 +4566,14 @@ describe("who may do what", () => {
     ).toBe("released");
 
     // Everything else in stock stays inside the back end and needs no yes.
+    // Releasing a batch is putting food on sale, so it is on the list.
     const needYes = STOCK_OPS.filter((op) => op.effect !== "none").map(
       (op) => `${op.name}: ${op.effect}`,
     );
-    expect(needYes).toEqual([
-      "stock.recallBatch: destructive",
+    expect(needYes.sort()).toEqual([
       "stock.markPurchaseSent: outward",
+      "stock.recallBatch: destructive",
+      "stock.releaseBatch: outward",
     ]);
     for (const op of STOCK_OPS) {
       if (op.effect !== "none")

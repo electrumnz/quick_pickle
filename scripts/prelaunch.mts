@@ -87,7 +87,7 @@ const checks: Check[] = [
     (item) => ({
       ok: false,
       label: `Not confirmed: ${item.what}`,
-      fix: `Ask ${item.ask}. Prices, delivery, the ship date and the contact address are set in the back end (Settings, The shop) and confirmed by an owner on its go-live list. Anything else goes into content/offer.ts, and "${item.key}" comes off UNCONFIRMED.${confirmed.asked ? "" : " (No database was asked, so nothing confirmed in the back end is counted here.)"}`,
+      fix: `Ask ${item.ask}. It is set in the back end (Settings: The shop, or The label and the company) and confirmed by an owner on its go-live list.${confirmed.asked ? "" : " (No database was asked, so nothing confirmed in the back end is counted here.)"}`,
     }),
   ),
   {

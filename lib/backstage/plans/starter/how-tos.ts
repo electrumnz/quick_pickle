@@ -570,18 +570,20 @@ const workWithClaude: StarterDocument = {
 
 ## What it has to ask you for
 
-Anything that reaches a customer or cannot be undone: sending an email, a refund, a price, a page going live, a campaign, deleting something. Claude cannot do these. It can only ask.
+Anything that reaches a customer or cannot be undone: sending an email, a refund, a price, a promo code, where an order is sent, the words under your replies, putting a batch on sale, sending a campaign you have approved, deleting something. Claude cannot do these. It can only ask.
 
 5. [ ] When it asks, it gives you a link. [Today](${LINK.today}) shows it too, and so does [Waiting for a yes](${LINK.approvals}).
-6. [ ] Open it and read it. It says what would happen in plain words, and shows exactly what would be sent.
+6. [ ] Open it and read it. It says what would happen in plain words, and shows exactly what Claude handed over, word for word. That is all that will be done.
 7. [ ] Press **Yes, do it** or **No**. Yes does it there and then. Nothing you type to Claude in the chat counts as a yes.
 8. [ ] If you leave it for a week it lapses, and nothing is done.
 
 ## What it can never do
 
+- Publish. Putting a landing page up, approving a campaign or a caption, publishing a review, switching a special on: Claude can write the draft, and you publish it yourself, on its own screen, with the words in front of you.
 - Anything only an owner may do: staff accounts, the go-live list, cutting off somebody else's Claude.
 - Say an order was paid for, or a refund went through. Those come from the payment processor.
 - Confirm what the printed label says. Only a person with the label in hand does that.
+- Correct the dates on a batch once it has been made, or say that a second email address belongs to a customer. Those are yours.
 - Write a claim about what the product does to a body. The copy rules stop it, the same as they stop anybody.
 
 ## Cut it off

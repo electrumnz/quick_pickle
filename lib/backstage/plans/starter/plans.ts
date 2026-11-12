@@ -247,7 +247,7 @@ const launchChecklist: StarterDocument = {
 *A short list to work through with the bodies named on the [compliance checklist](${LINK.compliance}). None of it is legal advice.*
 
 4. [ ] Find out which food plan applies in New Zealand and register. Ask MPI or your council.
-5. [ ] Settle the legal entity and get its New Zealand Business Number.
+5. [ ] Settle the legal entity and get its New Zealand Business Number. Put both in [The label and the company](${LINK.label}).
 6. [ ] Decide about GST with an accountant. Do not assume either way.
 7. [ ] Check the name is free to use.
 8. [ ] Read the site's delivery, returns, terms and privacy pages. Agree to what they promise, or have them changed.
@@ -257,12 +257,12 @@ const launchChecklist: StarterDocument = {
 9. [ ] Get quotes for juice, bottles, caps, labels and cartons.
 10. [ ] Get a courier quote for each pack size, to a town address and a rural one.
 11. [ ] Put every quote into the [Budget](${LINK.budget}) and mark it confirmed.
-12. [ ] Set the pack prices and the delivery charges from what the Budget shows. Prices on the site are changed in the site's own files for now, so tell Sam.
+12. [ ] Set the pack prices and the delivery charges from what the Budget shows, on [The shop](${LINK.shop}). The screen reads each change back before it is made.
 13. [ ] Look at the break-even. Is it a number of packs you believe you can sell?
 
 ## 4. Get the product ready
 
-14. [ ] The final recipe, ingredients list and nutrition panel, from whoever makes it.
+14. [ ] The final recipe, ingredients list and nutrition panel, from whoever makes it. With the printed label in your hand, type its lines into [The label and the company](${LINK.label}).
 15. [ ] The shelf life, the date mark and the storage line.
 16. [ ] Label artwork checked against The label on the compliance checklist, then printed.
 17. [ ] One straight-on photo of the finished bottle on plain card, for the site.
@@ -272,25 +272,31 @@ const launchChecklist: StarterDocument = {
 
 ## 5. Get the business ready
 
+*What to sign up for. Each is in the business's name, not a person's.*
+
 21. [ ] A bank account in the business's name.
-22. [ ] A Stripe account in the business's name. Test keys first, live keys at launch. Sam connects them.
-23. [ ] The domain name and the customer email address.
-24. [ ] Xero set up, and an accountant who knows it is coming.
-25. [ ] Insurance: ask a broker. It is not required by law, but some events and stockists ask for it.
-26. [ ] The site moved to its own hosting and database accounts, on a plan that allows a business to take money. This one is Sam's.
+22. [ ] Finish Stripe's own sign-up. The shop has a Stripe account and takes practice payments today. Stripe wants the business's details and that bank account before it will take real ones. Then the live keys go in: ask whoever looks after the site.
+23. [ ] The domain name.
+24. [ ] An account with an email service for the shop's own email (the site is built for one called Resend), and the domain's records pointed at it. Until then no order email is sent, and the [go-live list](${LINK.goLive}) says so.
+25. [ ] The address customers write to. Set it on [The shop](${LINK.shop}).
+26. [ ] A courier account, for real rates and pick-ups.
+27. [ ] Xero set up, and an accountant who knows it is coming.
+28. [ ] Insurance: ask a broker. It is not required by law, but some events and stockists ask for it.
+29. [ ] A hosting plan that allows a business to take money. The site's host does not on its free plan: move to its paid plan, or to another host, before the first real sale. Ask whoever looks after the site.
+30. [ ] Your own login to the back end, if you do not have one. The first owner is made once, with the set-up code: ask whoever looks after the site.
 
 ## 6. Make the first batch
 
-27. [ ] Production day, with a complete batch record.
-28. [ ] Release the batch for sale only when every check in your food plan is done and written down.
+31. [ ] Production day, with a complete batch record.
+32. [ ] Release the batch for sale only when every check in your food plan is done and written down.
 
 ## 7. Open quietly
 
-29. [ ] Every line on the [go-live list](${LINK.goLive}) is settled. The site then opens itself to search.
-30. [ ] Place one real order yourself, with a real card, to a real address. Refund it afterwards.
-31. [ ] Tell the Pickle Crew list first. Then people you know.
-32. [ ] Pack and send every order from the packing sheet.
-33. [ ] After a week, ask what went wrong and fix the sheets. Then go wider, following the [marketing plan](${LINK.doc("marketing-plan")}).`,
+33. [ ] Every line on the [go-live list](${LINK.goLive}) is settled. The site then opens itself to search.
+34. [ ] Place one real order yourself, with a real card, to a real address. Refund it afterwards.
+35. [ ] Tell the Pickle Crew list first. Then people you know.
+36. [ ] Pack and send every order from the packing sheet.
+37. [ ] After a week, ask what went wrong and fix the sheets. Then go wider, following the [marketing plan](${LINK.doc("marketing-plan")}).`,
 };
 
 export const STARTER_PLANS: readonly StarterDocument[] = [

@@ -67,7 +67,8 @@ function howTo(connected: Connected): string {
   return [
     `This is the back end of ${STORE.name}, a small shop in New Zealand. You are connected as ${connected.bot.name}, and this connection ${ROLE_SAID[connected.role]}.`,
     "Use find to see what the back end can do and what each operation takes. Use look to read. Use change to change something.",
-    "Anything that sends, publishes or cannot be undone is not done when you ask: it waits for a person to say yes in the back end. You are given a link for them. Give it to them, and do not say it has been done until approvals.get says so. Nobody can say that yes in this chat.",
+    "Anything that sends, publishes or cannot be undone is not done when you ask: it waits for a person to say yes in the back end. You are given a link for them. Give it to them exactly as it is given to you, and do not say it has been done until approvals.get says so. Nobody can say that yes in this chat. They are shown exactly what you handed over, so hand over only what the operation takes: anything else is refused.",
+    "Putting saved words in front of customers (publishing a page, approving a campaign or a caption, publishing a review, switching a special on) is never done from here. You can write the draft. A person reads it and publishes it on its own screen.",
     "Money is in cents of New Zealand dollars. Days are New Zealand calendar days, written like 2026-11-12.",
     "Every word a customer will read is checked by the shop's copy rules before it goes, and a claim about what the product does to a body is refused. Write about the taste, the bottle and the ritual. If something is refused, the refusal says why: change the words, do not look for a way round.",
     "Never make up a fact about the product, an order or a customer. If the back end does not say, say you do not know.",
@@ -87,7 +88,7 @@ export function serverFor(connected: Connected, requestId: string): McpServer {
     {
       title: "Find what the back end can do",
       description:
-        'Lists the back end\'s operations. With `query`, the ones that best match some words ("refund an order", "what needs doing today"). With `names`, those operations in full: everything each says about itself, and exactly what it takes. With neither, what there is, area by area. Each comes back with `kind`: `look` only reads (run it with the look tool), `change` changes something (run it with the change tool), and `ask` sends, publishes or cannot be undone, so running it with the change tool asks a person first.',
+        'Lists the back end\'s operations. With `query`, the ones that best match some words ("refund an order", "what needs doing today"). With `names`, those operations in full: everything each says about itself, and exactly what it takes. With neither, what there is, area by area. Each comes back with `kind`: `look` only reads (run it with the look tool), `change` changes something (run it with the change tool), `ask` sends, publishes or cannot be undone, so running it with the change tool asks a person first, and `person` is something only a person does, on its own screen in the back end: it is listed so you can tell them it is there.',
       inputSchema: z.object({
         query: z
           .string()
@@ -143,7 +144,7 @@ export function serverFor(connected: Connected, requestId: string): McpServer {
     {
       title: "Look something up",
       description:
-        "Runs operations that only read: an order, a customer, what needs doing today, the stock, the numbers. Nothing is changed. Several can be run in one go, and each answers for itself. Use find first to see what an operation is called and what it takes.",
+        "Runs operations that only read: an order, a customer, what needs doing today, the stock, the numbers. Nothing is changed. Several can be run in one go, and each answers for itself. Use find first to see what an operation is called and what it takes: a name it does not know is refused, not ignored.",
       inputSchema: calls,
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -163,7 +164,7 @@ export function serverFor(connected: Connected, requestId: string): McpServer {
     {
       title: "Change something",
       description:
-        "Runs operations that change something in the back end: a note on an order, a task, a count of stock, a draft. They run in order and stop at the first that fails. An operation that sends, publishes or cannot be undone (an email, a refund, a price, a page going live) is NOT run: it is put in front of a person to say yes or no in the back end, and comes back as `waitingForAPerson` with a link for them. Nothing has happened until approvals.get says it is done.",
+        "Runs operations that change something in the back end: a note on an order, a task, a count of stock, a draft. They run in order and stop at the first that fails. An operation that sends, reaches a customer or cannot be undone (an email, a refund, a price, a promo code, where an order is going) is NOT run: it is put in front of a person to say yes or no in the back end, and comes back as `waitingForAPerson` with a link for them. Nothing has happened until approvals.get says it is done. Hand each operation only what find says it takes: a name it does not know is refused, not ignored.",
       inputSchema: calls,
       annotations: {
         readOnlyHint: false,

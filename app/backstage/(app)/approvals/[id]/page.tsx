@@ -9,7 +9,14 @@ import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
 
 import { approveAction, declineAction } from "../actions";
-import { asWords, plainFirst, Shown, StatusPill, titleOf } from "../shared";
+import {
+  asWords,
+  outcomeSaid,
+  plainFirst,
+  Shown,
+  StatusPill,
+  titleOf,
+} from "../shared";
 
 export const metadata: Metadata = { title: "Waiting for a yes" };
 
@@ -24,7 +31,7 @@ export default async function ApprovalPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ notice?: string; tone?: string }>;
+  searchParams: Promise<{ said?: string }>;
 }) {
   const { id } = await params;
   const staff = await requireStaff(`/backstage/approvals/${id}`);
@@ -40,6 +47,9 @@ export default async function ApprovalPage({
   if (approval === null) notFound();
 
   const now = new Date();
+  // A word from the address, said in this page's own sentence, and only
+  // where it is true of the request as it stands.
+  const said = outcomeSaid(told.said, approval.status);
   const handed = plainFirst(Object.entries(approval.input));
   const canDecide = approval.status === "waiting" && staff.role !== "viewer";
   const lapsed =
@@ -54,13 +64,11 @@ export default async function ApprovalPage({
         back={{ href: "/backstage/approvals", label: "Waiting for a yes" }}
         lead={`${approval.requestedBy} asked for this.`}
       />
-      {told.notice ? (
+      {said === null ? null : (
         <div className="mb-5">
-          <Notice tone={told.tone === "bad" ? "bad" : "good"}>
-            {told.notice}
-          </Notice>
+          <Notice tone={said.tone}>{said.text}</Notice>
         </div>
-      ) : null}
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Panel>

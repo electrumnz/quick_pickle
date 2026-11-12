@@ -148,7 +148,12 @@ export const releaseBatch = defineOp({
   description:
     "Clears a batch that has been made, so orders can be filled from it. Only for a batch that is made and not yet released, and only once it has a best-before date that has not passed: a batch with no date, or past its date, is refused (set the date with stock.updateBatch). From then on its shots count as ready to sell until the end of its best-before day. It writes no movement: the count does not change. A released batch cannot be un-released; if it must stop being sold, close it or recall it.",
   access: "write",
+  // Putting food on sale. Whoever says yes should have the batch record in
+  // front of them.
+  effect: "outward",
   input: z.object({ code: batchCodeSchema }),
+  explain: (input) =>
+    `This puts batch ${input.code} on sale: orders are filled from it from now until the end of its best-before day. Look at its best-before date and its count on the batch's own page before saying yes.`,
   async run(
     ctx,
     input,

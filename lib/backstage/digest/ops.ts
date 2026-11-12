@@ -192,6 +192,8 @@ export const setMorningEmail = defineOp({
   description:
     "Switches the morning email on or off (`on`) and says which address it goes to (`to`). Switched on, one email is written each New Zealand morning, around seven, with how many things need a person, how many orders are waiting and what yesterday came to. It needs an address to be switched on. It carries no customer's details.",
   access: "write",
+  // It decides whether the shop emails somebody every day, and whom.
+  effect: "outward",
   input: z.object({
     on: z.boolean(),
     to: z
@@ -203,6 +205,17 @@ export const setMorningEmail = defineOp({
       .nullable()
       .optional(),
   }),
+  explain: (input) => {
+    const where =
+      input.to === undefined
+        ? "the address it is set to go to"
+        : input.to === null
+          ? "nobody: the address is taken off"
+          : input.to;
+    return input.on
+      ? `This switches the morning email on: one email every morning, to ${where}.`
+      : `This switches the morning email off${input.to === undefined ? "" : `, and sets where it would go to ${where}`}.`;
+  },
   async run(ctx, input): Promise<MorningSettings> {
     const before = await readMorning(ctx.db);
     const to = input.to === undefined ? before.to : input.to;

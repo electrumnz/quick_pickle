@@ -69,6 +69,22 @@ Rules that are easy to get wrong:
   checkout) or is plumbing a person never runs. If in doubt, hold it back. An operation
   with an `effect` is never run for a bot: it waits for a person's yes, so write its
   `explain` for the person who will read it cold.
+- **"Outward" is anything that reaches a customer, not only what sends an email.** Money
+  off at the checkout, where a box is sent, the words under every reply, who is never
+  written to again, what food is on sale: none of those sends anything, and a bot ran
+  every one of them by itself until a review said so. Ask of a new operation: could a
+  customer be worse off for this having been done wrongly, before a person saw it? Then
+  it has an `effect`.
+- **Whatever would go out has to be in the input.** A person saying yes to a bot's
+  request is shown what the bot handed over and nothing else. An operation that
+  publishes words kept somewhere else (a draft, a page, a campaign) is saying yes to
+  words that can change after the asking: put it in `PEOPLE_ONLY`, so a person does it
+  on the screen that has the words on it. If only one field is like that, name it in
+  `BOT_MUST_SAY`.
+- **Read the input as a plain `z.object`.** A bot's input is compared with what the
+  schema read of it, and a key that was dropped on the way is refused, so a request can
+  never carry a key that looks as though it matters and does nothing. A schema that
+  reshapes the whole object would slip past that comparison; a test fails if one does.
 
 ## Screens
 

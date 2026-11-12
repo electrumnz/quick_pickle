@@ -682,7 +682,9 @@ screen. `lib/backstage/connect/` is all of it.
 
 - **It ships shut.** Until an owner switches it on, every address it has answers 404: the
   two discovery documents, registration, the token endpoint and `/api/mcp`. On invented
-  records it is shut whatever the switch says. A door that is off does not say it is a door.
+  records it is shut whatever the switch says. A door that is off does not say it is a
+  door, **to any verb**: left alone the framework answers 405 to a verb with no handler
+  and 204 to OPTIONS, so every verb on those addresses has one (`notThatWay`).
 - **Three tools, not two hundred** (`server.ts`): `find` (what there is, and what each
   takes), `look` (run operations that read) and `change` (run operations that change). The
   model finds what it needs, so a couple of hundred operations cost it nothing until it
@@ -698,6 +700,31 @@ screen. `lib/backstage/connect/` is all of it.
   told there is no such operation. A test reads the source for every `defineOp`, fails if
   one is missing from the list, and pins how many are held back in each area. **Add an
   operation and decide which it is.**
+- **"Outward" is whatever reaches a customer, not only what sends something.** A promo
+  code, where an order is sent, the signature under replies, the do-not-email list,
+  blocking a sender, releasing a batch for sale, taking a review down: none sends an
+  email, each can leave a customer worse off, and each has an `effect` and waits for a
+  yes. An independent review found a bot running all of them by itself (12 November
+  2026). `tests/backstage/connect-catalogue.test.ts` names them.
+- **A person saying yes is shown exactly what the bot handed over, so that has to be the
+  whole of it.** Three rules follow, all in `catalogue.ts` and `run.ts`:
+  - Every key a bot hands over has to be one the operation reads (`unreadKeys`). Reading
+    drops what it does not know, so a request could otherwise carry a `Body` that looks
+    like the words and does nothing, beside no `body` at all. It holds for looking and
+    changing too, where a filter spelt wrong would be answered as if it were not there.
+  - **Publishing saved words is never a bot's, with a yes or without** (`PEOPLE_ONLY`):
+    a landing page, a campaign, a caption, a review, a special, starting a test. The
+    words are kept somewhere else and a draft can be saved again after the asking. A
+    person does it on the screen that has the words on it; the bot is told where.
+  - Where one field is like that it is named in `BOT_MUST_SAY`: a reply needs its `body`,
+    because without one `mail.send` sends the saved draft.
+  - What is put in front of a person is at most 20,000 letters, and it is all checked
+    again as it is run, a week later if need be.
+- **Some things only a person may say, inside an operation a bot may otherwise run:** that
+  a restricted phrase was read (`requireRestrictedRead` takes the actor, and a bot's tick
+  or the system's is refused), what a printed label says, whose a second email address
+  is (`mail.updateContact`), and the dates of a batch once it has been made
+  (`stock.updateBatch`). The operation refuses and says where a person does it.
 - **Anything outward waits for a person, in the back end and not in the chat**
   (`approvals.ts`, `approve.ts`). An operation with an effect is never run for a bot. What
   it would do is written down, shown on Today and at `/backstage/approvals`, and done only
@@ -705,12 +732,16 @@ screen. `lib/backstage/connect/` is all of it.
   asked. A request that could never run is refused on the spot and never put in front of
   anybody. A yes typed into a chat is not a yes. Being approved does not make a bot a
   person: what only a person may record (a restricted phrase, a label's words) is still
-  refused. A request lapses after a week.
+  refused. A request lapses after a week. **The yes/no page says only its own
+  sentences:** the link to it is handed over by the bot, so how a press went travels in
+  the address as a word from a fixed list (`outcomeSaid`), never as a sentence, and it
+  is only said where it is true of the request.
 - **A connection is one person's, and never more than they are** (`oauth.ts`). It acts
   under a bot account named for them ("Claude, for Ash"), so the activity log says who did
   what. What it may do is the lesser of what was chosen on the consent screen and what the
   person may do, never an owner's reach, and it is read again on every call: switch the
-  person off and their Claude is off. Somebody who can only look cannot connect one.
+  person off and their Claude is off. Somebody who can only look cannot connect one, and
+  turned down to that, theirs stops until they are turned back up.
 - **The way in is OAuth, with nothing taken on trust.** An app registers itself and can
   only ever be sent back to Claude's own callback or to the person's own computer
   (`tokens.ts`), so a code can never go to somebody else's site whatever an app registers.
@@ -718,9 +749,19 @@ screen. `lib/backstage/connect/` is all of it.
   before it draws and again before it hands out a code. The code works once, for a minute,
   with the app's own secret (PKCE). A key lasts an hour and renews by rotation; a replaced
   renewal key turning up after two minutes means somebody else has a copy, and the
-  connection is cut off. Only hashes are kept. A key is good for this site's own address
-  and no other, so **moving the site to a new address ends every connection**: people
-  connect again.
+  connection is cut off. Inside the two minutes it gets one more go, for an app that
+  never heard the answer, and the pair that displaces is remembered with no grace at
+  all. Only hashes are kept. A key is good for this site's own address and no other, so
+  **moving the site to a new address ends every connection**: people connect again.
+- **Anybody can register an app, so registering must never be how the door is shut.** It
+  lets nothing in. At the limit, room is made by letting go of the oldest app nobody said
+  yes to. It takes JSON said to be JSON, and nothing from a page on another site.
+- **One call in a request.** The protocol's older form takes a list, which would be
+  counted once and run many times: `/api/mcp` reads the body itself, refuses a list and
+  anything over a megabyte, and hands the rest on already read.
+- **A failure nobody planned for tells a bot nothing.** What a database says when it
+  fails holds the query and what was in it. The bot gets one plain sentence, the batch
+  stops, and the whole of it goes to the server's log.
 - **The protocol is the official SDK's** (`@modelcontextprotocol/server`), and stateless: a
   fresh server for each call, one JSON answer, no sessions, nothing subscribed to. It runs
   the same on any host. It speaks the July 2026 revision and answers 2025-era apps from
@@ -729,7 +770,8 @@ screen. `lib/backstage/connect/` is all of it.
   protocol's own client library, which does what a real app does: in vitest against the
   handlers (`tests/backstage/connect-http.test.ts`) and through the real consent screen in
   the browser tests. The first connection from claude.ai is a person's to make, and
-  `TODO.md` says what to look at if it does not go through.
+  `TODO.md` says what to look at if it does not go through, and the one thing about
+  Claude's own side that could not be checked from here.
 - Connecting Claude means customers' details are read by Claude. The owner's switch and
   the consent screen both say so, and the privacy page says the shop may be run with one.
   Change one and change the others.

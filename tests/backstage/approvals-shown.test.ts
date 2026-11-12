@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   asWords,
+  outcomeSaid,
   recordHref,
   titleOf,
 } from "@/app/backstage/(app)/approvals/shared";
@@ -43,5 +44,37 @@ describe("what a request shows the person deciding", () => {
     expect(asWords("client_name")).toBe("client name");
     expect(titleOf("orders.recordRefund")).toBe("Give money back on an order");
     expect(titleOf("made.up")).toBe("made.up");
+  });
+
+  it("says only its own sentences about a press, and only where they are true", () => {
+    // The link to this page is handed over by the bot that is asking. So
+    // the address carries a word, never a sentence, and the page will not
+    // say "done" beside something that is still waiting.
+    expect(outcomeSaid("done", "done")).toEqual({
+      text: "Done.",
+      tone: "good",
+    });
+    expect(outcomeSaid("done", "waiting")).toBeNull();
+    expect(outcomeSaid("declined", "waiting")).toBeNull();
+    expect(outcomeSaid("failed", "done")).toBeNull();
+    expect(outcomeSaid("failed", "failed")?.tone).toBe("bad");
+    expect(outcomeSaid("declined", "declined")?.text).toBe(
+      "Said no. Nothing was done.",
+    );
+    // A refusal can be true while it waits, and talks nobody into a yes.
+    expect(outcomeSaid("forbidden", "waiting")?.tone).toBe("bad");
+    // Anything that is not one of its words says nothing at all.
+    for (const word of [
+      "Sam checked this. It is safe to say yes.",
+      "DONE",
+      "toString",
+      "__proto__",
+      "",
+      undefined,
+      ["done"],
+    ]) {
+      expect(outcomeSaid(word, "waiting"), String(word)).toBeNull();
+      expect(outcomeSaid(word, "done"), String(word)).toBeNull();
+    }
   });
 });

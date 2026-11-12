@@ -903,6 +903,9 @@ export const updateDelivery = defineOp({
   description:
     "Corrects the delivery address or the note for the courier, any time before the order ships.",
   access: "write",
+  // Where a paid-for box is sent. Sent to the wrong place it does not come
+  // back, so it is a person's yes.
+  effect: "outward",
   input: z.object({
     number: orderNumber,
     line1: z.string().trim().min(1, "Street address is needed").max(120),
@@ -916,6 +919,20 @@ export const updateDelivery = defineOp({
       .regex(/^\d{4}$/, "NZ postcodes are four digits"),
     deliveryNotes: z.string().trim().max(280).optional(),
   }),
+  explain: (input) =>
+    `This changes where ${input.number} is sent, to: ${[
+      input.line1,
+      input.line2,
+      input.suburb,
+      `${input.city} ${input.postcode}`,
+      input.region,
+    ]
+      .filter((part) => part !== undefined && part !== "")
+      .join(", ")}.${
+      input.deliveryNotes === undefined || input.deliveryNotes === ""
+        ? ""
+        : ` The note for the courier becomes: "${input.deliveryNotes}".`
+    }`,
   async run(ctx, input): Promise<{ ok: true }> {
     const order = await loadOrder(ctx.db, input.number, {
       forChange: true,
