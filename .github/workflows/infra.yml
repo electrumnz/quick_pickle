@@ -60,6 +60,25 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      # GitHub does not tell a workflow which files a push changed, so it is
+      # worked out here: the request file is compared with how it stood before
+      # the push.
+      - name: Did this push change the request?
+        id: request
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          changed=false
+          if [ "$EVENT" = "push" ] && [ -n "$BEFORE" ] &&
+            git fetch --quiet --depth=1 origin "$BEFORE" 2>/dev/null; then
+            if ! git diff --quiet "$BEFORE" HEAD -- .github/infra-request.json; then
+              changed=true
+            fi
+          fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "request changed in this push: $changed"
+
       - name: Run
         env:
           # Pinned here, not taken from an input: Quick Pickle's own project
@@ -77,10 +96,5 @@ jobs:
           INFRA_EVENT: ${{ github.event_name }}
           INFRA_ACTION: ${{ inputs.action }}
           INFRA_CONFIRM: ${{ inputs.confirm }}
-          # True when a commit in this push added or changed the request file.
-          INFRA_REQUEST_CHANGED: >-
-            ${{ github.event_name == 'push' && (
-              contains(toJSON(github.event.commits.*.modified), '.github/infra-request.json') ||
-              contains(toJSON(github.event.commits.*.added), '.github/infra-request.json')
-            ) }}
+          INFRA_REQUEST_CHANGED: ${{ steps.request.outputs.changed }}
         run: node scripts/infra/run.mjs
