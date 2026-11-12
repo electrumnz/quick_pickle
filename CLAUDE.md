@@ -191,6 +191,11 @@ go-live list shows when it last ran and what is stuck.
     for refund instead of reopening it. A payment that does not match is written down once
     (payment status `review`) and waits for a person; no clock closes it.
   - Cancelling an unpaid order closes its payment page at Stripe, through a listener.
+  - A refund on a Stripe-paid order is saved as `pending` and sent after the save, by a
+    listener, under our own refund id. The refund's row is the record of whether the money
+    went: before sending, Stripe's own list is checked for that id, because Stripe forgets a
+    request after a day and a retry can come later. Refused, it comes back off the order.
+    Any other order's refund is only written down, and the screen says which it will be.
   - **Stripe's payment page cannot be driven by an automated browser.** Its bot check
     swallows the press on Pay. Everything up to it and the way back can be; the paid path
     needs a person with a test card (4242 4242 4242 4242), then `status` in the infra run.

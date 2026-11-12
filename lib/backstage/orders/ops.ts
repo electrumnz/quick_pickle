@@ -38,6 +38,7 @@ import { conflict, OpError } from "../core/errors";
 import { defineOp } from "../core/op";
 import { joinCrewIn } from "../crew/ops";
 import { loadOrder } from "./load";
+import { paymentStatusAfter, refundsThroughStripe } from "./refunds";
 import { canMove, OPEN_STATUSES, STATUS_LABEL } from "./status";
 
 const STATUSES = [
@@ -704,9 +705,9 @@ export const updateDelivery = defineOp({
 
 export const recordRefund = defineOp({
   name: "orders.recordRefund",
-  title: "Record money given back on an order",
+  title: "Give money back on an order",
   description:
-    "Writes down a refund against an order, in cents, with the reason. This only records it: the money itself has to be sent back by hand (for a card payment, from the payment in Stripe). It cannot be more than what is left of what was paid.",
+    "Refunds an amount on an order, in cents, with the reason. For an order paid by card through Stripe the money is sent back to the card: the refund shows as on its way until Stripe confirms it, and is taken back off the order if Stripe refuses. For any other order this only writes the refund down and the money has to be sent back by hand. It cannot be more than what is left of what was paid.",
   access: "write",
   effect: "outward",
   input: z.object({
@@ -718,8 +719,11 @@ export const recordRefund = defineOp({
     reason: z.string().trim().min(3, "Say why, in a few words").max(280),
   }),
   explain: (input) =>
-    `This records a refund of ${formatNzd(input.amountCents)} on ${input.number}.`,
-  async run(ctx, input): Promise<{ refundedCents: number }> {
+    `This refunds ${formatNzd(input.amountCents)} on ${input.number}. If it was paid by card through Stripe, the money goes back to the card.`,
+  async run(
+    ctx,
+    input,
+  ): Promise<{ refundedCents: number; sent: "by-stripe" | "by-hand" }> {
     const order = await loadOrder(ctx.db, input.number, {
       forChange: true,
     });
@@ -733,6 +737,8 @@ export const recordRefund = defineOp({
         `The money that arrived for ${order.number} does not match the order. Sort that out in Stripe first.`,
       );
     }
+    // What is left counts refunds still on their way, so two in a row
+    // cannot add up to more than was paid.
     const left = order.totalCents - order.refundedCents;
     if (input.amountCents > left) {
       throw new OpError(
@@ -741,14 +747,17 @@ export const recordRefund = defineOp({
         { amountCents: `No more than ${formatNzd(left)}` },
       );
     }
+    const viaStripe = refundsThroughStripe(order);
     const refundedCents = order.refundedCents + input.amountCents;
+    const refundId = newId("rfd");
     await ctx.db.insert(refunds).values({
-      id: newId("rfd"),
+      id: refundId,
       orderId: order.id,
       amountCents: input.amountCents,
       reason: input.reason,
-      // With no processor connected the record is the whole of it.
-      status: "done",
+      // Through Stripe it is not done until Stripe says so. Otherwise the
+      // record is the whole of it.
+      status: viaStripe ? "pending" : "done",
       createdBy: ctx.actor.type === "system" ? null : ctx.actor.userId,
       createdAt: ctx.now,
     });
@@ -756,29 +765,35 @@ export const recordRefund = defineOp({
       .update(orders)
       .set({
         refundedCents,
-        paymentStatus: order.isTest
-          ? "test"
-          : refundedCents >= order.totalCents
-            ? "refunded"
-            : "part_refunded",
+        paymentStatus: paymentStatusAfter({ ...order, refundedCents }),
         updatedAt: ctx.now,
       })
       .where(eq(orders.id, order.id));
     const entity = { type: "order", id: order.id };
     await ctx.audit({
       entity,
-      summary: `Refunded ${formatNzd(input.amountCents)} on ${order.number}: ${input.reason}`,
-      data: { amountCents: input.amountCents, refundedCents },
+      summary: viaStripe
+        ? `Asked Stripe to send ${formatNzd(input.amountCents)} back for ${order.number}: ${input.reason}`
+        : `Refunded ${formatNzd(input.amountCents)} on ${order.number}: ${input.reason}`,
+      data: { amountCents: input.amountCents, refundedCents, refundId },
     });
-    await ctx.emit({
-      type: "order.refunded",
-      entity,
-      payload: {
-        number: order.number,
-        amountCents: input.amountCents,
-        test: order.isTest,
-      },
-    });
-    return { refundedCents };
+    await ctx.emit(
+      viaStripe
+        ? {
+            type: "order.refund_requested",
+            entity,
+            payload: { number: order.number, refundId },
+          }
+        : {
+            type: "order.refunded",
+            entity,
+            payload: {
+              number: order.number,
+              amountCents: input.amountCents,
+              test: order.isTest,
+            },
+          },
+    );
+    return { refundedCents, sent: viaStripe ? "by-stripe" : "by-hand" };
   },
 });

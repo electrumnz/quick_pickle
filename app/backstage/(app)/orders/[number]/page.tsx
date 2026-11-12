@@ -15,6 +15,7 @@ import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
 import { getOrder, type OrderDetail } from "@/lib/backstage/orders/ops";
+import { refundsThroughStripe } from "@/lib/backstage/orders/refunds";
 import { formatNzd, formatNzdExact } from "@/lib/shop/money";
 import { NZ_REGIONS } from "@/lib/shop/order";
 import { formatNzDateTime } from "@/lib/time";
@@ -240,6 +241,7 @@ export default async function OrderPage({
     order.paymentStatus !== "failed" &&
     order.paymentStatus !== "review" &&
     order.refundedCents < order.totalCents;
+  const byStripe = refundsThroughStripe(order);
   const name = `${order.firstName} ${order.lastName}`.trim();
 
   return (
@@ -604,7 +606,12 @@ export default async function OrderPage({
                     <span className="font-semibold">
                       {formatNzd(refund.amountCents)}
                     </span>{" "}
-                    given back: {refund.reason}
+                    {refund.status === "pending"
+                      ? "on its way back"
+                      : refund.status === "failed"
+                        ? "did not go back (see the history)"
+                        : "given back"}
+                    : {refund.reason}
                   </li>
                 ))}
               </ul>
@@ -612,7 +619,9 @@ export default async function OrderPage({
             {refundable ? (
               <details className="mt-3">
                 <summary className="label inline-flex min-h-11 cursor-pointer items-center text-[1.05rem]">
-                  <span className="cap-trim">Record a refund</span>
+                  <span className="cap-trim">
+                    {byStripe ? "Refund" : "Record a refund"}
+                  </span>
                 </summary>
                 <form
                   action={refundAction}
@@ -648,12 +657,12 @@ export default async function OrderPage({
                     pending="Recording"
                     className="bk-btn bk-btn-quiet w-full"
                   >
-                    Record the refund
+                    {byStripe ? "Send the refund" : "Record the refund"}
                   </SubmitButton>
                   <p className="bk-muted text-[0.9375rem] leading-snug">
-                    This only writes the refund down. The money itself has to be
-                    sent back by hand: for a card payment, from the payment in
-                    Stripe.
+                    {byStripe
+                      ? "This sends the money back to the customer's card through Stripe. Their bank can take a few days to show it. Nothing is emailed to them: let them know yourself."
+                      : "This only writes the refund down. The money itself has to be sent back by hand."}
                   </p>
                 </form>
               </details>
