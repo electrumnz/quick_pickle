@@ -32,7 +32,15 @@ export type ChargeRequest = {
     readonly qty: number;
     readonly unitCents: number;
   }[];
+  /** Delivery as charged, after anything a code took off it. */
   readonly shippingCents: number;
+  /**
+   * What a promo code takes off the goods, and what to call it on the
+   * payment page ("Code CREW10"). Lines less this, plus delivery, is the
+   * amount. Zero with no code.
+   */
+  readonly discountCents: number;
+  readonly discountLabel: string;
   /** Where the buyer lands after paying, and after backing out. */
   readonly successUrl: string;
   readonly cancelUrl: string;

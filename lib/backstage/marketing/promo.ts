@@ -18,6 +18,7 @@
 
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 
+import { CODES } from "@/content/site";
 import { promoCodes } from "@/db/schema";
 import type { DbOrTx } from "@/lib/db/types";
 import { assertCents, formatNzd } from "@/lib/shop/money";
@@ -77,11 +78,11 @@ export function promoLabel(promo: {
 }): string {
   switch (promo.kind) {
     case "percent":
-      return `${String(promo.value)}% off`;
+      return `${String(promo.value)}% ${CODES.off}`;
     case "amount":
-      return `${formatNzd(promo.value)} off`;
+      return `${formatNzd(promo.value)} ${CODES.off}`;
     case "delivery":
-      return "Free standard delivery";
+      return CODES.freeDelivery;
   }
 }
 
@@ -142,25 +143,25 @@ export function evaluatePromo(
   const subtotal = assertCents(order.subtotalCents, "subtotal");
   const delivery = assertCents(order.deliveryCents, "delivery");
   if (promo === null || promo === undefined) {
-    return no("We don't know that code.");
+    return no(CODES.unknown);
   }
 
   switch (promoState(promo, order.now)) {
     case "off":
-      return no("That code is not in use.");
+      return no(CODES.notInUse);
     case "finished":
-      return no("That code has finished.");
+      return no(CODES.finished);
     case "used-up":
-      return no("That code has been used up.");
+      return no(CODES.usedUp);
     case "not-started":
-      return no("That code has not started yet.");
+      return no(CODES.notStarted);
     case "live":
       break;
   }
-  if (subtotal === 0) return no("Put something in your jar first.");
+  if (subtotal === 0) return no(CODES.emptyJar);
   if (subtotal < promo.minSubtotalCents) {
     return no(
-      `That code is for orders of ${formatNzd(promo.minSubtotalCents)} or more, before delivery.`,
+      `${CODES.minimumLead} ${formatNzd(promo.minSubtotalCents)} ${CODES.minimumTail}`,
     );
   }
 
@@ -183,25 +184,19 @@ export function evaluatePromo(
         promo.value < 1 ||
         promo.value > 100
       ) {
-        return no(
-          "That code is not set up properly. Tell us and we will fix it.",
-        );
+        return no(CODES.broken);
       }
       return worth(percentOff(subtotal, promo.value), 0);
     }
     case "amount": {
       if (!Number.isInteger(promo.value) || promo.value < 1) {
-        return no(
-          "That code is not set up properly. Tell us and we will fix it.",
-        );
+        return no(CODES.broken);
       }
       return worth(Math.min(promo.value, subtotal), 0);
     }
     case "delivery": {
       if (delivery === 0) {
-        return no(
-          "Standard delivery is already free on this order, so that code has nothing to take off.",
-        );
+        return no(CODES.deliveryAlreadyFree);
       }
       return worth(0, delivery);
     }
@@ -256,6 +251,28 @@ export async function redeemPromo(
   throw conflict(
     promo.active ? "That code has been used up." : "That code is not in use.",
   );
+}
+
+/**
+ * Give a use back, for an order that took one and was then never paid for.
+ * One guarded statement, and never below nothing. Says whether it did.
+ */
+export async function releasePromo(
+  tx: DbOrTx,
+  code: string,
+  now: Date,
+): Promise<boolean> {
+  const rows = await tx
+    .update(promoCodes)
+    .set({ uses: sql`${promoCodes.uses} - 1`, updatedAt: now })
+    .where(
+      and(
+        eq(promoCodes.code, normalisePromoCode(code)),
+        sql`${promoCodes.uses} > 0`,
+      ),
+    )
+    .returning({ id: promoCodes.id });
+  return rows.length === 1;
 }
 
 /**

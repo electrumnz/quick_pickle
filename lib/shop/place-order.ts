@@ -21,6 +21,7 @@
  */
 
 import { STORE } from "@/content/offer";
+import { CODES } from "@/content/site";
 
 import { normaliseCart } from "./cart";
 import {
@@ -32,7 +33,8 @@ import {
 } from "./order";
 import type { PaymentRecord } from "./order";
 import type { ChargeRequest, PaymentProvider } from "./payments";
-import { quote } from "./pricing";
+import { quote, type Saving } from "./pricing";
+import type { CodeCheck } from "./store";
 
 /** The slice of the store an order needs. Easy to fake in a test. */
 export type OrderSink = {
@@ -47,7 +49,14 @@ export type OrderSink = {
     payment: { readonly provider: string; readonly reference: string },
   ): Promise<void>;
   closeUnpaid?(number: string, reason: string): Promise<void>;
+  checkCode?(
+    code: string,
+    order: { readonly subtotalCents: number; readonly deliveryCents: number },
+  ): Promise<CodeCheck>;
 };
+
+/** The least an order may come to once a code is off it. One dollar. */
+const LEAST_TOTAL_CENTS = 100;
 
 export type PlaceOrderResult =
   | {
@@ -90,14 +99,57 @@ export async function placeOrder(
 
   // Price it here, from the offer. Duplicate lines merge, quantities clamp.
   const cart = normaliseCart({ lines: input.lines });
-  const priced = quote(cart, { rural: input.rural });
-  if (priced.lines.length === 0) {
+  const before = quote(cart, { rural: input.rural });
+  if (before.lines.length === 0) {
     return {
       ok: false,
       reason: "invalid",
       errors: { lines: "Your jar is empty" },
     };
   }
+
+  // A code: the buyer sends the word, nothing else. What it is worth comes
+  // from the code's own terms, here, and is worked out a second time when
+  // the order is saved (in the same transaction that counts the use).
+  const noCode = (message: string): PlaceOrderResult => ({
+    ok: false,
+    reason: "invalid",
+    errors: { promoCode: message },
+  });
+  const typed = (input.promoCode ?? "").trim();
+  let code: Extract<CodeCheck, { ok: true }> | null = null;
+  if (typed !== "") {
+    if (deps.store.checkCode === undefined) return noCode(CODES.unavailable);
+    let check: CodeCheck;
+    try {
+      check = await deps.store.checkCode(typed, {
+        subtotalCents: before.subtotalCents,
+        deliveryCents: before.deliveryCents,
+      });
+    } catch {
+      return noCode(CODES.unavailable);
+    }
+    if (!check.ok) return noCode(check.reason);
+    code = check;
+  }
+  const saving: Saving =
+    code === null
+      ? { discountCents: 0, deliveryDiscountCents: 0 }
+      : {
+          discountCents: code.discountCents,
+          deliveryDiscountCents: code.deliveryDiscountCents,
+        };
+  const priced = quote(cart, { rural: input.rural }, saving);
+  if (code !== null && priced.totalCents < LEAST_TOTAL_CENTS) {
+    return noCode(CODES.wouldBeFree);
+  }
+  const promo =
+    code === null
+      ? null
+      : {
+          code: code.code,
+          deliveryDiscountCents: priced.deliveryDiscountCents,
+        };
 
   const number = (deps.orderNumber ?? newOrderNumber)();
   const now = (deps.now ?? (() => new Date()))();
@@ -114,6 +166,8 @@ export async function placeOrder(
       unitCents: line.unitCents,
     })),
     shippingCents: priced.shippingCents,
+    discountCents: priced.discountCents,
+    discountLabel: code === null ? "" : `${CODES.codeLine} ${code.code}`,
     successUrl: deps.returnUrls?.success ?? "",
     cancelUrl: deps.returnUrls?.cancel ?? "",
   };
@@ -147,15 +201,40 @@ export async function placeOrder(
       lineCents: line.lineCents,
     })),
     subtotalCents: priced.subtotalCents,
+    discountCents: priced.discountCents,
     shippingCents: priced.shippingCents,
     totalCents: priced.totalCents,
     currency: "NZD",
+    promo,
     payment,
     joinCrew: input.joinCrew,
   });
 
+  // Saving can refuse a code that was fine a moment ago (somebody else took
+  // its last use). Ask once more, so the buyer is told that and not just
+  // that something went wrong.
+  const refusedCode = async (): Promise<PlaceOrderResult | null> => {
+    if (code === null || deps.store.checkCode === undefined) return null;
+    try {
+      const again = await deps.store.checkCode(typed, {
+        subtotalCents: before.subtotalCents,
+        deliveryCents: before.deliveryCents,
+      });
+      if (!again.ok) return noCode(again.reason);
+      if (
+        again.discountCents !== code.discountCents ||
+        again.deliveryDiscountCents !== code.deliveryDiscountCents
+      ) {
+        return noCode(CODES.changed);
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  };
+
   if (deps.payments.savesFirst) {
-    return payElsewhere(deps, request, orderWith, now);
+    return payElsewhere(deps, request, orderWith, now, refusedCode);
   }
 
   try {
@@ -178,7 +257,7 @@ export async function placeOrder(
     }
     return { ok: true, order };
   } catch {
-    return { ok: false, reason: "failed" };
+    return (await refusedCode()) ?? { ok: false, reason: "failed" };
   }
 }
 
@@ -192,6 +271,7 @@ async function payElsewhere(
   request: ChargeRequest,
   orderWith: (payment: PaymentRecord) => Order,
   now: Date,
+  refusedCode: () => Promise<PlaceOrderResult | null>,
 ): Promise<PlaceOrderResult> {
   const { store, payments } = deps;
   // Only a store that can find the order again can finish this.
@@ -210,7 +290,7 @@ async function payElsewhere(
   try {
     await store.saveOrder(order);
   } catch {
-    return { ok: false, reason: "failed" };
+    return (await refusedCode()) ?? { ok: false, reason: "failed" };
   }
 
   try {

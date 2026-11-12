@@ -19,6 +19,7 @@ import { formatNzd } from "@/lib/shop/money";
 import { ORDER_NUMBER_PATTERN } from "@/lib/shop/order";
 
 import { defineOp } from "../core/op";
+import { releasePromo } from "../marketing/promo";
 
 import { loadOrder } from "./load";
 
@@ -251,10 +252,15 @@ export const paymentExpired = defineOp({
       const again = await loadOrder(ctx.db, input.number);
       return { status: again.status };
     }
+    // It took one of a code's uses when it was placed and nobody paid, so
+    // the use goes back.
+    const gaveBack =
+      order.promoCode !== null &&
+      (await releasePromo(ctx.db, order.promoCode, ctx.now));
     const entity = { type: "order", id: order.id };
     await ctx.audit({
       entity,
-      summary: `Closed ${order.number} unpaid: ${input.reason}`,
+      summary: `Closed ${order.number} unpaid: ${input.reason}${gaveBack ? `. Code ${order.promoCode ?? ""} got its use back.` : ""}`,
     });
     await ctx.emit({
       type: "order.payment_expired",

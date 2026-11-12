@@ -29,6 +29,8 @@ import {
   type OrderStatus,
   type PaymentStatus,
 } from "@/db/schema";
+import { SHIPPING } from "@/content/offer";
+import { CODES } from "@/content/site";
 import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
 import { formatNzd } from "@/lib/shop/money";
@@ -37,6 +39,12 @@ import { NZ_REGIONS, ORDER_NUMBER_PATTERN } from "@/lib/shop/order";
 import { conflict, OpError } from "../core/errors";
 import { defineOp } from "../core/op";
 import { joinCrewIn } from "../crew/ops";
+import {
+  evaluatePromo,
+  findPromo,
+  normalisePromoCode,
+  redeemPromoIn,
+} from "../marketing/promo";
 import { loadOrder } from "./load";
 import { paymentStatusAfter, refundsThroughStripe } from "./refunds";
 import { canMove, OPEN_STATUSES, STATUS_LABEL } from "./status";
@@ -92,9 +100,20 @@ const placedOrderSchema = z.object({
     .min(1)
     .max(12),
   subtotalCents: cents,
+  /** What a promo code took off the goods. */
+  discountCents: cents.default(0),
+  /** Delivery as charged, after anything a code took off it. */
   shippingCents: cents,
   totalCents: cents,
   currency: z.literal("NZD"),
+  /** The code used, and what it took off standard delivery. */
+  promo: z
+    .object({
+      code: z.string().trim().min(1).max(40),
+      deliveryDiscountCents: cents,
+    })
+    .nullable()
+    .default(null),
   payment: z.object({
     provider: z.string().min(1).max(40),
     status: z.enum(["test", "paid", "pending"]),
@@ -166,12 +185,44 @@ export const recordOrder = defineOp({
     );
     if (
       lineTotal !== input.subtotalCents ||
-      input.subtotalCents + input.shippingCents !== input.totalCents ||
+      input.discountCents > input.subtotalCents ||
+      input.subtotalCents - input.discountCents + input.shippingCents !==
+        input.totalCents ||
       input.lines.some((line) => line.unitCents * line.qty !== line.lineCents)
     ) {
       throw new OpError("invalid_input", "That order does not add up.", {
-        totalCents: "Lines, delivery and total disagree",
+        totalCents: "Lines, discount, delivery and total disagree",
       });
+    }
+    if (input.promo === null && input.discountCents !== 0) {
+      throw new OpError("invalid_input", "A discount needs a code.", {
+        discountCents: "There is a discount but no code",
+      });
+    }
+
+    // A code is worked out again here, from its own terms, inside the same
+    // transaction that counts its use. What the checkout sent is only ever
+    // compared with that; it is never what is charged on trust.
+    let promoId: string | null = null;
+    if (input.promo !== null) {
+      const standardDelivery =
+        input.subtotalCents >= SHIPPING.freeOverCents
+          ? 0
+          : SHIPPING.standardCents;
+      const promo = await findPromo(ctx.db, input.promo.code);
+      const worth = evaluatePromo(promo, {
+        subtotalCents: input.subtotalCents,
+        deliveryCents: standardDelivery,
+        now: ctx.now,
+      });
+      if (!worth.ok) throw conflict(worth.reason);
+      if (
+        worth.discountCents !== input.discountCents ||
+        worth.deliveryDiscountCents !== input.promo.deliveryDiscountCents
+      ) {
+        throw conflict(CODES.changed);
+      }
+      promoId = worth.promoId;
     }
 
     const customerId = await customerFor(
@@ -216,6 +267,9 @@ export const recordOrder = defineOp({
       rural: input.delivery.rural,
       deliveryNotes: input.delivery.notes,
       subtotalCents: input.subtotalCents,
+      discountCents: input.discountCents,
+      promoCode:
+        input.promo === null ? null : normalisePromoCode(input.promo.code),
       shippingCents: input.shippingCents,
       totalCents: input.totalCents,
       currency: input.currency,
@@ -249,10 +303,20 @@ export const recordOrder = defineOp({
       );
     }
 
+    if (promoId !== null && input.promo !== null) {
+      // Counted here, in one guarded statement, so two orders placed at the
+      // same moment cannot both take a code's last use. If it cannot be
+      // counted this throws, and the order is not recorded at all.
+      await redeemPromoIn(ctx, promoId, {
+        number: input.number,
+        savedCents: input.discountCents + input.promo.deliveryDiscountCents,
+      });
+    }
+
     const entity = { type: "order", id };
     await ctx.audit({
       entity,
-      summary: `New ${test ? "test " : ""}order ${input.number}: ${itemsSummary(input.lines)}, ${formatNzd(input.totalCents)}, for ${input.customer.firstName} ${input.customer.lastName} in ${input.delivery.city}`,
+      summary: `New ${test ? "test " : ""}order ${input.number}: ${itemsSummary(input.lines)}, ${formatNzd(input.totalCents)}${input.promo === null ? "" : ` with code ${normalisePromoCode(input.promo.code)}`}, for ${input.customer.firstName} ${input.customer.lastName} in ${input.delivery.city}`,
       data: {
         number: input.number,
         totalCents: input.totalCents,

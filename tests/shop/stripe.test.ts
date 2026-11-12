@@ -27,6 +27,8 @@ const request = (over: Partial<ChargeRequest> = {}): ChargeRequest => ({
   email: "sam@example.co.nz",
   lines: [{ name: "The Squad", qty: 1, unitCents: 8400 }],
   shippingCents: 450,
+  discountCents: 0,
+  discountLabel: "",
   successUrl: "https://shop.example/order/thanks",
   cancelUrl: "https://shop.example/checkout?payment=cancelled",
   ...over,
@@ -250,6 +252,85 @@ describe("talking to Stripe", () => {
       ).rejects.toMatchObject({ status });
       expect(calls).toHaveLength(1);
     }
+  });
+
+  it("carries a code's saving as a coupon for exactly that order", async () => {
+    const calls: { path: string; key: string; body: URLSearchParams }[] = [];
+    const impl = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(url).replace("https://api.stripe.com", "");
+      const headers = init?.headers as Record<string, string>;
+      calls.push({
+        path,
+        key: headers["Idempotency-Key"] ?? "",
+        body: new URLSearchParams(String(init?.body)),
+      });
+      return new Response(
+        JSON.stringify(
+          path === "/v1/coupons"
+            ? { id: "coup_1" }
+            : { id: "cs_test_9", url: "https://x" },
+        ),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    // $84 of packs, 10% off with a code, $4.50 rural delivery: $80.10.
+    await createCheckoutSession(
+      "sk_test_abc",
+      request({
+        amountCents: 8010,
+        discountCents: 840,
+        discountLabel: "Code CREW10",
+      }),
+      NOW,
+      impl,
+    );
+    expect(calls.map((call) => call.path)).toEqual([
+      "/v1/coupons",
+      "/v1/checkout/sessions",
+    ]);
+    const [coupon, session] = calls;
+    expect(coupon?.key).toBe("coupon-QP-7K2M9X");
+    expect(coupon?.body.get("amount_off")).toBe("840");
+    expect(coupon?.body.get("currency")).toBe("nzd");
+    expect(coupon?.body.get("duration")).toBe("once");
+    expect(coupon?.body.get("max_redemptions")).toBe("1");
+    expect(coupon?.body.get("name")).toBe("Code CREW10");
+    // The packs stay at their price; the coupon is what takes the money off.
+    expect(session?.body.get("line_items[0][price_data][unit_amount]")).toBe(
+      "8400",
+    );
+    expect(session?.body.get("discounts[0][coupon]")).toBe("coup_1");
+  });
+
+  it("asks for no coupon when there is no code", async () => {
+    const { calls, impl } = fakeFetch(200, {
+      id: "cs_test_1",
+      url: "https://x",
+    });
+    await createCheckoutSession("sk_test_abc", request(), NOW, impl);
+    expect(calls).toHaveLength(1);
+    expect(String(calls[0]?.init.body)).not.toContain("discounts");
+  });
+
+  it("makes no payment page if the discount cannot be made", async () => {
+    const paths: string[] = [];
+    const impl = (async (url: RequestInfo | URL) => {
+      paths.push(String(url).replace("https://api.stripe.com", ""));
+      return new Response(JSON.stringify({ error: { message: "No." } }), {
+        status: 400,
+      });
+    }) as typeof fetch;
+    await expect(
+      createCheckoutSession(
+        "sk_test_abc",
+        request({ amountCents: 8010, discountCents: 840, discountLabel: "X" }),
+        NOW,
+        impl,
+      ),
+    ).rejects.toMatchObject({ status: 400 });
+    // It stopped at the coupon. A page for the full price was never asked for.
+    expect(paths).toEqual(["/v1/coupons"]);
   });
 
   it("turns a refusal into an error that does not carry the key", async () => {

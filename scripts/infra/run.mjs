@@ -709,6 +709,8 @@ async function stripeCheck() {
     email: "check@example.co.nz",
     lines: [{ name: "The Squad", qty: 1, unitCents: 8400 }],
     shippingCents: 450,
+    discountCents: 0,
+    discountLabel: "",
     successUrl: "https://quickpickle.vercel.app/order/thanks",
     cancelUrl: "https://quickpickle.vercel.app/checkout?payment=cancelled",
   };

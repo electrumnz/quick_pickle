@@ -33,6 +33,19 @@ export type CrewSignup = {
   readonly joinedAt: string;
 };
 
+/** What a code is worth on an order, or a sentence saying why it is not. */
+export type CodeCheck =
+  | {
+      readonly ok: true;
+      /** The code as stored: "CREW10". */
+      readonly code: string;
+      /** "10% off", "$5 off". */
+      readonly label: string;
+      readonly discountCents: number;
+      readonly deliveryDiscountCents: number;
+    }
+  | { readonly ok: false; readonly reason: string };
+
 export type Store = {
   readonly name: string;
   /** False when a record would not survive the process. */
@@ -49,6 +62,15 @@ export type Store = {
     payment: { readonly provider: string; readonly reference: string },
   ): Promise<void>;
   closeUnpaid?(number: string, reason: string): Promise<void>;
+  /**
+   * What a promo code takes off an order. Only the database store has codes
+   * to look up. It counts nothing: the use is counted when the order is
+   * saved, in the same transaction.
+   */
+  checkCode?(
+    code: string,
+    order: { readonly subtotalCents: number; readonly deliveryCents: number },
+  ): Promise<CodeCheck>;
 };
 
 const DATA_DIR = join(process.cwd(), ".data");
@@ -132,6 +154,24 @@ function dbStore(env: Record<string, string | undefined>): Store {
         { number, reason },
         systemCaller("The shop", "storefront"),
       );
+    },
+    async checkCode(code, order) {
+      const { checkPromoCode } =
+        await import("@/lib/backstage/marketing/promo-codes");
+      const worth = await execute(
+        checkPromoCode,
+        { code, ...order },
+        systemCaller("The shop", "storefront"),
+      );
+      return worth.ok
+        ? {
+            ok: true,
+            code: worth.code,
+            label: worth.label,
+            discountCents: worth.discountCents,
+            deliveryDiscountCents: worth.deliveryDiscountCents,
+          }
+        : { ok: false, reason: worth.reason };
     },
   };
 }
