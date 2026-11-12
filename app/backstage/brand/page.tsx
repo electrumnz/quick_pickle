@@ -335,8 +335,8 @@ export default function BrandGuidePage() {
           </p>
           <p className="text-navy-muted mt-3 max-w-[44rem] text-[0.9375rem] leading-relaxed">
             The full rules and the law behind them are in{" "}
-            <code>legal/COPY-RULES.md</code>. <code>npm run audit:copy</code>{" "}
-            fails the build on any of these.
+            <code>legal/COPY-RULES.md</code>. Running{" "}
+            <code>npm run audit:copy</code> fails the build on any of these.
           </p>
         </Section>
 
