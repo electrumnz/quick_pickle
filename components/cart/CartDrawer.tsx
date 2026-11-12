@@ -188,7 +188,8 @@ export function CartDrawer() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className="varsity text-[1.35rem] leading-none">
+                            {/* Under Varsity's floor: the label face. */}
+                            <p className="label text-[1.35rem] leading-none">
                               {line.pack.name}
                             </p>
                             <p className="text-navy-muted text-small mt-1">

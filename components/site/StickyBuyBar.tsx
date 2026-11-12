@@ -89,7 +89,8 @@ export function StickyBuyBar() {
       <div className="safe-bottom">
         <div className="flex h-[76px] items-center justify-between gap-3 px-4">
           <a href="#shop" className="text-cream min-w-0">
-            <span className="varsity block truncate text-[1.3rem] leading-none">
+            {/* Under Varsity's floor (1.5rem), so it is set in the label face. */}
+            <span className="label block truncate text-[1.3rem] leading-none">
               {pack.name}
             </span>
             <span className="label text-cream mt-1.5 block text-[1.05rem] leading-none">

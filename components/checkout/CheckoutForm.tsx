@@ -423,7 +423,8 @@ export function CheckoutForm({
             className="flex items-baseline justify-between gap-4"
           >
             <span className="min-w-0">
-              <span className="varsity block text-[1.25rem] leading-tight">
+              {/* Under Varsity's floor: the label face. */}
+              <span className="label block text-[1.25rem] leading-tight">
                 {line.qty} × {line.pack.name}
               </span>
               <span className="text-navy-muted text-[0.875rem]">

@@ -410,9 +410,9 @@ export const TYPE = [
   {
     token: "varsity",
     family: "Varsity Senior",
-    role: "Section titles, pack names, the wordmark.",
+    role: "Section titles, pack names where they are shown big, the wordmark.",
     sample: "Pick your pack.",
-    rule: "ALL CAPS. Carries the punctuation Summer Varsity lacks.",
+    rule: "ALL CAPS. Carries the punctuation Summer Varsity lacks. Never under 24px: a smaller line is set in the label face.",
   },
   {
     token: "label",

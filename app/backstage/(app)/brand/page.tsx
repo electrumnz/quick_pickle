@@ -228,7 +228,7 @@ export default async function BrandGuidePage() {
               <ul className="mt-3 grid gap-3 sm:grid-cols-2">
                 {PILLARS.map((pillar) => (
                   <li key={pillar.name} className="card-flat p-4">
-                    <p className="varsity text-[1.4rem] leading-none">
+                    <p className="varsity text-[1.5rem] leading-none">
                       {pillar.name}
                     </p>
                     <p className="mt-2 text-[0.9688rem] leading-snug">
@@ -316,7 +316,7 @@ export default async function BrandGuidePage() {
                 {VOICE.official.map((line) => (
                   <li
                     key={line}
-                    className="varsity text-[1.3rem] leading-tight"
+                    className="varsity text-[1.5rem] leading-tight"
                   >
                     {line}
                   </li>
@@ -328,7 +328,7 @@ export default async function BrandGuidePage() {
               <ul className="mt-3 flex flex-col gap-3">
                 {VOICE.adapted.map((item) => (
                   <li key={item.line}>
-                    <p className="varsity text-[1.3rem] leading-tight">
+                    <p className="varsity text-[1.5rem] leading-tight">
                       {item.line}
                     </p>
                     <p className="text-navy-muted mt-1 text-[0.9375rem] leading-snug">
@@ -346,7 +346,7 @@ export default async function BrandGuidePage() {
                 {VOICE.ours.map((line) => (
                   <li
                     key={line}
-                    className="varsity text-[1.3rem] leading-tight"
+                    className="varsity text-[1.5rem] leading-tight"
                   >
                     {line}
                   </li>
@@ -588,7 +588,7 @@ export default async function BrandGuidePage() {
                   className={`border-navy h-24 border-b-[3px] ${SWATCH_CLASS[swatch.token] ?? ""}`}
                 />
                 <div className="p-3.5">
-                  <p className="varsity text-[1.25rem] leading-none">
+                  <p className="label text-[1.25rem] leading-none">
                     {swatch.name}
                   </p>
                   <p className="label text-navy-muted mt-1.5 text-[1rem]">
@@ -753,7 +753,7 @@ export default async function BrandGuidePage() {
                 <span className="cap-trim">I&apos;m in</span>
               </button>
               <div className="bg-cream text-navy border-navy-deep shadow-hard-pink rounded-[18px] border-[3px] p-4">
-                <p className="varsity text-[1.4rem] leading-none">
+                <p className="varsity text-[1.5rem] leading-none">
                   Just the juice
                 </p>
                 <p className="mt-2 text-[0.9375rem] leading-snug">
