@@ -240,6 +240,9 @@ export function policies(offer: Offer): readonly Policy[] {
         heading: "Who we share it with",
         body: [
           "Only the people who need it to get your order to you: our courier, our payment processor, and the services that run this website and send our email. We don't sell your details to anyone.",
+          // The back end can be run with an AI assistant connected to it
+          // (lib/backstage/connect). Change one and change the other.
+          "The tools we run the shop with can include an AI assistant that helps us look up an order or answer you. It sees what we see, a person here decides what is sent to you, and it is not used to advertise to you.",
         ],
       },
       {

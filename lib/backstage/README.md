@@ -18,6 +18,11 @@ pieces, and `orders` is the one to copy.
 Then one line each in: `db/schema/index.ts`, `components/backstage/nav.ts` (if it is a
 destination), `lib/backstage/demo.ts`, and `e2e/a11y.spec.ts` (every new page).
 
+And, for a new file of operations, one import in `lib/backstage/connect/catalogue.ts`: the
+list of every operation there is, which a connected Claude finds them through. A test fails
+until it is there. Then decide, for each new operation, whether it is the system's own work
+(see below).
+
 ## Operations
 
 ```ts
@@ -57,6 +62,13 @@ Rules that are easy to get wrong:
   columns nobody asked for (a password hash, say).
 - Inputs are zod. Trim strings, cap lengths, lower-case emails. Error messages are
   sentences: "Say why, in a few words".
+- **Decide whether a bot may be offered it.** Every operation is offered to a connected
+  Claude unless it is an owner's (`access: "admin"`) or named in `SYSTEM_ONLY` in
+  `lib/backstage/connect/catalogue.ts`. Put it in `SYSTEM_ONLY` if it is true because
+  something outside said so (a payment processor, a mail provider, the shop's own
+  checkout) or is plumbing a person never runs. If in doubt, hold it back. An operation
+  with an `effect` is never run for a bot: it waits for a person's yes, so write its
+  `explain` for the person who will read it cold.
 
 ## Screens
 

@@ -215,10 +215,12 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       things need you, how many orders are waiting and what yesterday came to, with a link
       and nobody's details. And the email the site promises a pre-order's customer with
       the ship date: Today says who has not had it, and one press sends it.
-- [ ] **An approval queue, and rules of your own.** A bot that wants to send or publish
-      something has to ask a person first; that queue comes with the Claude tooling below.
-      Rules somebody writes themselves ("when this happens, do that") are not built:
-      Today already gathers what needs a person, and nobody has asked for one yet.
+- [x] **Waiting for a yes.** A bot that wants to send, publish or delete something has to
+      ask a person first. What it asked for waits at `/backstage/approvals` and on Today,
+      says exactly what it would do, and is done only when somebody signed in presses yes.
+- [ ] **Rules of your own.** Rules somebody writes themselves ("when this happens, do
+      that") are not built: Today already gathers what needs a person, and nobody has asked
+      for one yet.
 - [x] **Plans.** The plan, the budget and what a pack costs to make and send, how-to
       sheets, a to-do list, the open questions for Ashleigh, and a light checklist of what a
       food business has to have in place.
@@ -261,8 +263,21 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 - [ ] **The same courier list on an order's own page.** Shipping one order by hand still
       means typing the courier's name and pasting its tracking link. The list the courier
       screen uses could fill the link in there too.
-- [ ] **Claude tooling (MCP).** Last, over the same operations: a small tool set, per-user
-      sign-in, every call in the activity log.
+- [x] **Claude, connected (MCP).** Settings, Claude: an owner switches it on, and a member
+      of staff connects their own Claude with one address. Three tools (find, look,
+      change) reach the whole back end. It can read and make ordinary changes; anything
+      that reaches a customer or cannot be undone waits for a yes in the back end. Every
+      call is in the activity log under the bot's own name.
+- [ ] **Connect Claude for real, once.** Nothing here could be tried against Claude
+      itself, only against the protocol's own client library. After the owner login is
+      made: Settings, Claude, switch it on, then in Claude add a custom connector with the
+      address shown. If Claude says it cannot register or cannot sign in, look at
+      `/.well-known/oauth-authorization-server` on the site first. If the consent screen
+      says the app "asked to be sent back somewhere it did not register", Claude's callback
+      address has moved: the two it may use are in `lib/backstage/connect/tokens.ts`.
+- [ ] **Say in the privacy page which tools read customers' details.** It now says the
+      shop may be run with an AI assistant. If Claude is never switched on, that line can
+      come out; if another tool is added, it goes in.
 
 ## Before it takes real money
 

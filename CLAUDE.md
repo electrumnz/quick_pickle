@@ -234,7 +234,8 @@ between two pages. Both are optional and both start switched off.
   screen. The label lives only in the back end. Nothing on a public page says "demo".
 - The old build's "one shared password, no email" rule was dropped on purpose: with several
   people and bots at work the activity log has to say who did what. Its "no MCP" decision is
-  also reversed: an MCP connection is planned, built last, over the same operations.
+  also reversed: a member of staff can connect their own Claude, over the same operations
+  (see "Claude, connected" below).
 
 - **One person runs this (Ash).** Anything she does not need every day ships switched off
   and out of the daily screens: nothing to look after unless someone starts it. A screen
@@ -465,6 +466,8 @@ go-live list shows when it last ran and what is stuck.
   - No address is kept. The key holds a keyed hash of the address (an IPv6 one by its /64),
     the question and the window, so it changes every ten minutes, and the clock throws rows
     away after two hours. The privacy page says so; change one and change the other.
+  - A fourth count, `knock`, is not the shop's: an app registering with the connection
+    for Claude, or handing it a code or a key. A real swap or renewal is given back.
   - It is on whenever a database is connected, so never in the browser tests, which all
     come from one address. It is never why the shop fails: no address, or no count, and
     the answer is yes. `QP_LIMITS=off` stops it (the infra workflow's `limits-off`, then
@@ -670,6 +673,66 @@ conversations, and is answered from there. `lib/backstage/mail/` is the area;
 - Nothing in the inbox is switched on by itself: with no secret set nothing arrives, and
   the piles a person does not need every day (Not delivered, Put away) only show while
   there is something in them.
+
+### Claude, connected
+
+A member of staff can connect their own Claude to the back end (Settings, Claude), over the
+Model Context Protocol. It was built last, and it sits on the same operations as every
+screen. `lib/backstage/connect/` is all of it.
+
+- **It ships shut.** Until an owner switches it on, every address it has answers 404: the
+  two discovery documents, registration, the token endpoint and `/api/mcp`. On invented
+  records it is shut whatever the switch says. A door that is off does not say it is a door.
+- **Three tools, not two hundred** (`server.ts`): `find` (what there is, and what each
+  takes), `look` (run operations that read) and `change` (run operations that change). The
+  model finds what it needs, so a couple of hundred operations cost it nothing until it
+  asks. `look` and `change` are two tools so the app can let a look run and show a change
+  first. Neither tool decides what is safe. The server does, by what the operation is
+  (`run.ts`). There is no sandbox running a model's own code: nothing here needed one, and
+  it would be a second way in to keep safe.
+- **What a bot is offered is one file's decision** (`catalogue.ts`). Never what only an
+  owner may do, and never the system's own work, listed by name in `SYSTEM_ONLY`: recording
+  an order or a payment, mail arriving, the clock's rounds, who can sign in, the
+  connection's own plumbing. Those are true because the shop, a payment processor or a
+  mail provider said so, and a bot saying so is not the same thing. A bot naming one is
+  told there is no such operation. A test reads the source for every `defineOp`, fails if
+  one is missing from the list, and pins how many are held back in each area. **Add an
+  operation and decide which it is.**
+- **Anything outward waits for a person, in the back end and not in the chat**
+  (`approvals.ts`, `approve.ts`). An operation with an effect is never run for a bot. What
+  it would do is written down, shown on Today and at `/backstage/approvals`, and done only
+  when a signed-in person presses yes: once, however many press, and as the bot that
+  asked. A request that could never run is refused on the spot and never put in front of
+  anybody. A yes typed into a chat is not a yes. Being approved does not make a bot a
+  person: what only a person may record (a restricted phrase, a label's words) is still
+  refused. A request lapses after a week.
+- **A connection is one person's, and never more than they are** (`oauth.ts`). It acts
+  under a bot account named for them ("Claude, for Ash"), so the activity log says who did
+  what. What it may do is the lesser of what was chosen on the consent screen and what the
+  person may do, never an owner's reach, and it is read again on every call: switch the
+  person off and their Claude is off. Somebody who can only look cannot connect one.
+- **The way in is OAuth, with nothing taken on trust.** An app registers itself and can
+  only ever be sent back to Claude's own callback or to the person's own computer
+  (`tokens.ts`), so a code can never go to somebody else's site whatever an app registers.
+  The yes is given on a page behind the sign-in, which checks the request to the letter
+  before it draws and again before it hands out a code. The code works once, for a minute,
+  with the app's own secret (PKCE). A key lasts an hour and renews by rotation; a replaced
+  renewal key turning up after two minutes means somebody else has a copy, and the
+  connection is cut off. Only hashes are kept. A key is good for this site's own address
+  and no other, so **moving the site to a new address ends every connection**: people
+  connect again.
+- **The protocol is the official SDK's** (`@modelcontextprotocol/server`), and stateless: a
+  fresh server for each call, one JSON answer, no sessions, nothing subscribed to. It runs
+  the same on any host. It speaks the July 2026 revision and answers 2025-era apps from
+  the same handler.
+- **Nobody could try this against Claude itself from here.** It is tested with the
+  protocol's own client library, which does what a real app does: in vitest against the
+  handlers (`tests/backstage/connect-http.test.ts`) and through the real consent screen in
+  the browser tests. The first connection from claude.ai is a person's to make, and
+  `TODO.md` says what to look at if it does not go through.
+- Connecting Claude means customers' details are read by Claude. The owner's switch and
+  the consent screen both say so, and the privacy page says the shop may be run with one.
+  Change one and change the others.
 
 ### Design rules that came from measuring
 

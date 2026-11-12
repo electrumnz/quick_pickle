@@ -337,6 +337,24 @@ async function supabaseStatus() {
     console.log(
       `  the shop: ${settings.open === false ? "NOT taking orders" : "taking orders"}; changed from the catalogue: ${changed.length === 0 ? "nothing" : changed.join(", ")}; facts confirmed: ${Object.keys(settings.confirmed ?? {}).join(", ") || "none"}`,
     );
+    // The connection for Claude: whether an owner has switched it on, how
+    // many are connected and how much is waiting for a person's yes. Counts
+    // only. Its tables arrive with the first deployment that has them.
+    try {
+      const door = await readOnlyQuery(
+        "select (select value->>'on' from public.settings where key = 'connect.claude') as open, (select count(*)::int from public.connections where revoked_at is null and refresh_expires_at > now()) as connected, (select count(*)::int from public.approvals where status = 'waiting') as waiting",
+      );
+      const claude = Array.isArray(door) ? door[0] : null;
+      if (claude) {
+        console.log(
+          `  Claude: ${claude.open === "true" ? "can be connected" : "switched off"}; connections working: ${String(claude.connected)}; waiting for a yes: ${String(claude.waiting)}`,
+        );
+      }
+    } catch {
+      console.log(
+        "  Claude: not there yet (its tables are not in this database)",
+      );
+    }
     // Counts only, by state. Never a name, an address or an order number.
     const byState = await readOnlyQuery(
       "select status, payment_status, is_test, count(*)::int as n from public.orders group by 1, 2, 3 order by 1, 2, 3",

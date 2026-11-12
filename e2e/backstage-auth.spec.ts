@@ -1,4 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
+import {
+  Client,
+  StreamableHTTPClientTransport,
+  type OAuthClientProvider,
+} from "@modelcontextprotocol/client";
 import { expect, test, type Page } from "@playwright/test";
 
 import { AUTH_URL, SETUP_CODE } from "./auth-server";
@@ -622,4 +627,259 @@ test("what the label says is typed with the label in hand, checked, and shown on
   await expect(page.getByTestId("fact-legal-entity")).toContainText(
     "Quick Pickle Limited, NZBN 9429040402543; registered for GST, number 49-091-850",
   );
+});
+
+/** Where the app in the next test asks to be sent back to: this computer. */
+const APP_CALLBACK = "http://localhost:53999/callback";
+
+/** What an app keeps between the steps of connecting. */
+class AppMemory implements OAuthClientProvider {
+  client: unknown;
+  kept: unknown;
+  verifier = "";
+  /** Where the app tried to send the person to say yes. */
+  sentTo: URL | null = null;
+
+  readonly redirectUrl = APP_CALLBACK;
+  readonly clientMetadata = {
+    client_name: "Claude Code",
+    redirect_uris: [APP_CALLBACK],
+    grant_types: ["authorization_code", "refresh_token"],
+    response_types: ["code"],
+    token_endpoint_auth_method: "none",
+  };
+  clientInformation() {
+    return this.client as never;
+  }
+  saveClientInformation(client: unknown) {
+    this.client = client;
+  }
+  tokens() {
+    return this.kept as never;
+  }
+  saveTokens(tokens: unknown) {
+    this.kept = tokens;
+  }
+  redirectToAuthorization(url: URL) {
+    this.sentTo = url;
+  }
+  saveCodeVerifier(verifier: string) {
+    this.verifier = verifier;
+  }
+  codeVerifier() {
+    return this.verifier;
+  }
+}
+
+/** What a tool handed back, read out of its one block of text. */
+function answered(result: { content?: unknown }): unknown {
+  const [first] = (result.content ?? []) as { text?: string }[];
+  return JSON.parse(first?.text ?? "null");
+}
+
+test("Claude is let in by a person's yes, asks before anything outward, and can be cut off", async ({
+  page,
+  browser,
+}) => {
+  const address = `${AUTH_URL}/api/mcp`;
+  const documents = `${AUTH_URL}/.well-known/oauth-authorization-server`;
+  await signIn(page, OWNER.email, OWNER.password);
+
+  // It ships switched off: there is nothing there to find.
+  expect((await page.request.get(documents)).status()).toBe(404);
+  expect((await page.request.post(address, { data: {} })).status()).toBe(404);
+
+  // An owner switches it on, and is given the address to hand to Claude.
+  await page.goto(`${AUTH_URL}/backstage/settings/claude`);
+  await press(page, /let claude be connected/i);
+  await expect(page.locator("main [role=status]").first()).toContainText(
+    /claude can be connected now/i,
+  );
+  await expect(page.getByLabel("The address to give Claude")).toHaveValue(
+    address,
+  );
+  expect((await page.request.get(documents)).status()).toBe(200);
+  expect((await page.request.post(address, { data: {} })).status()).toBe(401);
+
+  // An app starts connecting. It is the protocol's own client library, the
+  // thing an app like Claude Code is built on, talking to the real server.
+  const app = new AppMemory();
+  const reach = () =>
+    new StreamableHTTPClientTransport(new URL(address), { authProvider: app });
+  const first = reach();
+  await expect(
+    new Client({ name: "claude-code", version: "1.0.0" }).connect(first),
+  ).rejects.toThrow();
+  const consent = app.sentTo;
+  if (consent === null) throw new Error("The app sent nobody anywhere.");
+  expect(`${consent.origin}${consent.pathname}`).toBe(
+    `${AUTH_URL}/backstage/connect`,
+  );
+
+  // It sends the person to the consent screen, which says what is asking,
+  // where the answer goes, and what it will be able to do.
+  await page.route(`${APP_CALLBACK}**`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/plain",
+      body: "Back at the app.",
+    }),
+  );
+  // Somebody who is not signed in is asked to sign in first, and lands back
+  // on the same request, with nothing lost.
+  const stranger = await browser.newContext();
+  const visitor = await stranger.newPage();
+  await visitor.goto(consent.toString());
+  await expect(visitor).toHaveURL(/\/backstage\/sign-in\?next=/);
+  await visitor.getByLabel("Email").fill(OWNER.email);
+  await visitor.getByLabel("Password").fill(OWNER.password);
+  await press(visitor, /sign in/i);
+  await expect(visitor).toHaveURL(/\/backstage\/connect\?/);
+  await expect(visitor.locator("main")).toContainText(
+    'calls itself "Claude Code"',
+  );
+  // Saying no sends them back to the app with a plain refusal and no code.
+  await visitor.route(`${APP_CALLBACK}**`, (route) =>
+    route.fulfill({ status: 200, contentType: "text/plain", body: "No." }),
+  );
+  await Promise.all([
+    visitor.waitForURL((url) => url.toString().startsWith(APP_CALLBACK)),
+    visitor.getByRole("button", { name: /no, do not connect/i }).click(),
+  ]);
+  const refusedAt = new URL(visitor.url());
+  expect(refusedAt.searchParams.get("error")).toBe("access_denied");
+  expect(refusedAt.searchParams.get("code")).toBeNull();
+  expect(refusedAt.searchParams.get("state")).toBe(
+    consent.searchParams.get("state"),
+  );
+  await stranger.close();
+
+  // A request with anything out of place is refused on the page itself:
+  // nobody is sent on to an address that was not checked.
+  const tampered = new URL(consent.toString());
+  tampered.searchParams.set("redirect_uri", "https://evil.example/callback");
+  await page.goto(tampered.toString());
+  await expect(page.locator("main [role=alert]")).toContainText(
+    /somewhere it did not register/i,
+  );
+  await expect(page.getByRole("button", { name: "Connect" })).toHaveCount(0);
+
+  await page.goto(consent.toString());
+  await expect(
+    page.getByRole("heading", { name: "Connect Claude" }),
+  ).toBeVisible();
+  await expect(page.locator("main")).toContainText(
+    'calls itself "Claude Code"',
+  );
+  await expect(page.getByTestId("connect-back-to")).toContainText(
+    "an app on this computer",
+  );
+  await expect(page.locator("main")).toContainText(
+    "customers' names, addresses, emails and orders",
+  );
+  await page.getByLabel(/look and make changes/i).check();
+  await Promise.all([
+    page.waitForURL((url) => url.toString().startsWith(APP_CALLBACK)),
+    page.getByRole("button", { name: "Connect", exact: true }).click(),
+  ]);
+  const back = new URL(page.url());
+  expect(back.searchParams.get("iss")).toBe(AUTH_URL);
+  expect(back.searchParams.get("code")).toMatch(/^qpc_/);
+
+  // The app swaps its code for keys, and is handed three tools.
+  await first.finishAuth(back.searchParams);
+  const claude = new Client({ name: "claude-code", version: "1.0.0" });
+  await claude.connect(reach());
+  expect((await claude.listTools()).tools.map((tool) => tool.name)).toEqual([
+    "find",
+    "look",
+    "change",
+  ]);
+
+  // An ordinary change is made, under the bot's own name.
+  const task = "Ring the label printer";
+  await claude.callTool({
+    name: "change",
+    arguments: { calls: [{ op: "plans.addTask", input: { title: task } }] },
+  });
+  await page.goto(`${AUTH_URL}/backstage/settings/activity`);
+  await expect(page.locator("main")).toContainText(`Added a task: ${task}`);
+  await expect(page.locator("main")).toContainText(`Claude, for ${OWNER.name}`);
+
+  // Anything a customer would see is not done. It waits for a yes.
+  const asked = answered(
+    await claude.callTool({
+      name: "change",
+      arguments: {
+        calls: [{ op: "shop.change", input: { batchName: "Batch 002" } }],
+      },
+    }),
+  ) as {
+    outcomes: { waitingForAPerson: { approval: string; decideAt: string } }[];
+  };
+  const waiting = asked.outcomes[0]?.waitingForAPerson;
+  expect(waiting?.decideAt).toBe(
+    `${AUTH_URL}/backstage/approvals/${waiting?.approval ?? ""}`,
+  );
+  await page.goto(`${AUTH_URL}/backstage/settings/shop`);
+  await expect(page.getByLabel("What this batch is called")).toHaveValue(
+    "Batch 001",
+  );
+
+  // It is on Today, and its page says exactly what would happen.
+  await page.goto(`${AUTH_URL}/backstage`);
+  await expect(page.locator("main")).toContainText(
+    `Claude, for ${OWNER.name} is waiting for your yes on one thing`,
+  );
+  await page.goto(waiting?.decideAt ?? "");
+  await expect(page.getByTestId("approval-says")).toContainText(
+    "changes what every customer sees",
+  );
+  await expect(page.getByTestId("approval-input")).toContainText("Batch 002");
+  const audit = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(audit.violations).toEqual([]);
+
+  // A person, signed in, says yes. Then it is done, and the bot can see so.
+  await press(page, /yes, do it/i);
+  await expect(page.locator("main [role=status]").first()).toHaveText(/done/i);
+  // What came back is said as words, with the rest folded away.
+  await expect(page.getByTestId("approval-result")).toContainText(
+    'the batch\'s name to "Batch 002"',
+  );
+  const seen = answered(
+    await claude.callTool({
+      name: "look",
+      arguments: {
+        calls: [{ op: "approvals.get", input: { id: waiting?.approval } }],
+      },
+    }),
+  ) as { outcomes: { result: { status: string } }[] };
+  expect(seen.outcomes[0]?.result.status).toBe("done");
+  await page.goto(`${AUTH_URL}/backstage/settings/shop`);
+  await expect(page.getByLabel("What this batch is called")).toHaveValue(
+    "Batch 002",
+  );
+
+  // Cut off, it is shut out at once.
+  await page.goto(`${AUTH_URL}/backstage/settings/claude`);
+  await expect(page.getByTestId("connections")).toContainText(
+    "Claude Code, for you",
+  );
+  await press(page, /^cut off$/i);
+  await expect(page.locator("main [role=status]").first()).toContainText(
+    /cut off/i,
+  );
+  await expect(
+    claude.callTool({
+      name: "look",
+      arguments: { calls: [{ op: "shop.offer" }] },
+    }),
+  ).rejects.toThrow();
+
+  // And switched off again, there is nothing there once more.
+  await press(page, /stop claude connecting/i);
+  expect((await page.request.get(documents)).status()).toBe(404);
+  await claude.close().catch(() => undefined);
 });

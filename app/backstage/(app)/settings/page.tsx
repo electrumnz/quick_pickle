@@ -49,6 +49,13 @@ const SECTIONS = [
     ownerOnly: false,
   },
   {
+    href: "/backstage/settings/claude",
+    label: "Claude",
+    blurb:
+      "Connect your own Claude, so it can look things up and do the day-to-day. Off unless an owner switches it on.",
+    ownerOnly: false,
+  },
+  {
     href: "/backstage/settings/go-live",
     label: "Go-live list",
     blurb: "What still stands between this site and taking real money.",

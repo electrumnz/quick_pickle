@@ -544,6 +544,59 @@ const weeklyCheck: StarterDocument = {
 15. [ ] Write one line in the [business plan](${LINK.doc("business-plan")}) about what you learned this week.`,
 };
 
+const workWithClaude: StarterDocument = {
+  slug: "how-to-work-with-claude",
+  title: "How to connect Claude, and what it can do for you",
+  kind: "how-to",
+  summary:
+    "Connecting your own Claude to the back end, what it may do by itself, and how you say yes to the rest.",
+  sort: 85,
+  body: `**What this is:** how to let Claude help run the shop. Connected, it can look things up and do the day-to-day when you ask it in plain words. It is switched off until an owner switches it on.
+
+*Starter draft. The steps are how the screens work today. The blanks (____) are yours to fill in.*
+
+## Switch it on and connect yours
+
+1. [ ] An owner opens [Claude](${LINK.claude}), under Settings, and presses **Let Claude be connected**.
+2. [ ] In Claude, add a custom connector and give it the address that screen shows.
+3. [ ] Claude sends you to a page here to say yes. You have to be signed in. Choose what it may do: **Look**, or **Look and make changes**.
+4. [ ] Start with **Look** if you are not sure. You can connect again later and let it do more.
+
+## What it can do by itself
+
+- Read what you can read: orders, customers, stock, the inbox, the numbers, the plans.
+- If you let it make changes: add a note to an order, add or finish a task, write a draft, record a count of stock.
+- Everything it does is in the activity log under its own name, "Claude, for" and your name.
+
+## What it has to ask you for
+
+Anything that reaches a customer or cannot be undone: sending an email, a refund, a price, a page going live, a campaign, deleting something. Claude cannot do these. It can only ask.
+
+5. [ ] When it asks, it gives you a link. [Today](${LINK.today}) shows it too, and so does [Waiting for a yes](${LINK.approvals}).
+6. [ ] Open it and read it. It says what would happen in plain words, and shows exactly what would be sent.
+7. [ ] Press **Yes, do it** or **No**. Yes does it there and then. Nothing you type to Claude in the chat counts as a yes.
+8. [ ] If you leave it for a week it lapses, and nothing is done.
+
+## What it can never do
+
+- Anything only an owner may do: staff accounts, the go-live list, cutting off somebody else's Claude.
+- Say an order was paid for, or a refund went through. Those come from the payment processor.
+- Confirm what the printed label says. Only a person with the label in hand does that.
+- Write a claim about what the product does to a body. The copy rules stop it, the same as they stop anybody.
+
+## Cut it off
+
+9. [ ] On [Claude](${LINK.claude}), press **Cut off** beside the connection. It stops working at once.
+10. [ ] An owner can cut off anybody's, or press **Stop Claude connecting** to stop them all.
+11. [ ] When somebody leaves, switch off their staff account. Their Claude goes with it.
+
+## Things to know
+
+- Connected, Claude reads customers' names, addresses, emails and orders. What it reads goes to the company that makes Claude, under your own agreement with them. The privacy page says the shop may be run with an AI assistant.
+- Who is allowed to connect one: ____.
+- What we never ask it to do, even though it could: ____.`,
+};
+
 export const STARTER_HOW_TOS: readonly StarterDocument[] = [
   packAnOrder,
   runTheShop,
@@ -555,4 +608,5 @@ export const STARTER_HOW_TOS: readonly StarterDocument[] = [
   healthQuestion,
   monthEnd,
   weeklyCheck,
+  workWithClaude,
 ];

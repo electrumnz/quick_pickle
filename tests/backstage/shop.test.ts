@@ -325,6 +325,53 @@ describe("the shop, run from the back end", () => {
       expect(await stored()).toBeUndefined();
     });
 
+    it("says exactly what is asked, in dollars, to whoever has to say yes", async () => {
+      const unasked: Caller = { ...staff, confirmed: false };
+      const said = async (
+        input: Parameters<typeof execute<typeof changeShop.input, unknown>>[1],
+      ) => {
+        try {
+          await execute(changeShop, input, unasked);
+        } catch (error) {
+          return error instanceof Error ? error.message : "";
+        }
+        return "It was not refused.";
+      };
+      // Money is said in dollars: 3000 on its own could be read as $3,000.
+      expect(
+        await said({
+          prices: { "QP-SHOT-06": 3000, "QP-SHOT-24": 9050 },
+          shipping: {
+            standardCents: 0,
+            ruralSurchargeCents: 500,
+            freeOverCents: null,
+          },
+        }),
+      ).toBe(
+        "This changes what every customer sees and is charged from now on: The Trial to $30; The Squad to $90.50; standard delivery to free; the rural extra to $5; no more free delivery.",
+      );
+      expect(
+        await said({
+          open: false,
+          launchMode: "live",
+          batchName: "Batch 002",
+          preorderShipsFrom: "2026-12-01",
+          contactEmail: null,
+          label: { ingredients: " Water,  salt ", storage: "" },
+          company: { legalName: "Quick Pickle Limited" },
+        }),
+      ).toBe(
+        'This changes what every customer sees and is charged from now on: the ship date to 2026-12-01; the shop to live; the batch\'s name to "Batch 002"; not taking orders; the contact address taken off; the ingredients list to "Water, salt"; the storage line taken off; the legal name to "Quick Pickle Limited".',
+      );
+      // A figure that makes no sense is said as it was sent, not dressed up.
+      expect(await said({ prices: { "QP-SHOT-06": -5 } })).toContain(
+        "The Trial to -5",
+      );
+      expect(await said({})).toBe(
+        "This changes what every customer sees and is charged from now on.",
+      );
+    });
+
     it("change anything for a bot that has not been told yes", async () => {
       const bot: Caller = {
         actor: { type: "system", name: "A bot" },
@@ -333,7 +380,7 @@ describe("the shop, run from the back end", () => {
       await expect(
         execute(changeShop, { prices: { "QP-SHOT-12": 5000 } }, bot),
       ).rejects.toThrow(
-        "This changes what every customer sees and is charged from now on.",
+        "This changes what every customer sees and is charged from now on: The Starter to $50.",
       );
       expect(await stored()).toBeUndefined();
     });

@@ -20,6 +20,10 @@
  *          checks, or that was told something about a code. A form handed
  *          back to have a field put right counts for nothing.
  *   crew   a sign-up to the Pickle Crew.
+ *   knock  an app registering with, or handing a code or a key to, the
+ *          back end's connection for Claude. Nothing a customer does.
+ *   calls  a connected Claude calling the back end's tools, counted for
+ *          each connection and not by address.
  *
  * This file imports nothing, so anything may read the numbers.
  */
@@ -28,11 +32,18 @@ export const LIMITS = {
   code: { most: 20, minutes: 10 },
   order: { most: 30, minutes: 10 },
   crew: { most: 20, minutes: 10 },
+  // Not the shop's: an app knocking at the back end's connection for
+  // Claude (registering, or handing in a code or a key). No customer does
+  // this, and real apps do it a handful of times.
+  knock: { most: 40, minutes: 10 },
+  // Nor this: how often one connection may call the back end's tools. A
+  // person talking to Claude makes a few a minute. A loop makes thousands.
+  calls: { most: 600, minutes: 10 },
 } as const;
 
 export type Limited = keyof typeof LIMITS;
 
-export const LIMITED = ["code", "order", "crew"] as const;
+export const LIMITED = ["code", "order", "crew", "knock", "calls"] as const;
 
 /** The start of the stretch of time a moment falls in. */
 export function windowStartOf(now: Date, minutes: number): Date {

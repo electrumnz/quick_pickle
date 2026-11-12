@@ -18,6 +18,7 @@ import { formatNzd } from "@/lib/shop/money";
 import { minutesSince } from "@/lib/time";
 
 import { lastTick } from "../clock/tick";
+import { approvalNeeds } from "../connect/approvals";
 import { listStuckEvents } from "../core/events";
 import { defineOp, type OpContext } from "../core/op";
 import { mailNeeds } from "../mail/needs";
@@ -182,6 +183,10 @@ export async function needsNow(ctx: OpContext): Promise<Need[]> {
   // People with a pre-order who were promised an email with the ship
   // date and have not had it.
   for (const item of await shipDateNeeds(db, now)) needs.push(item);
+
+  // What a bot is waiting on a person's yes for. Nothing has happened to
+  // any of it: each is something that sends, publishes or cannot be undone.
+  for (const item of await approvalNeeds(db, now)) needs.push(item);
 
   // Stock: at most a line each for orders that cannot be filled (urgent:
   // customers have paid and are waiting), shots past their date, stock
