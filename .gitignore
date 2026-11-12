@@ -48,3 +48,6 @@ tsconfig.scratch.json
 
 # Local order log written by the file store in development (lib/shop/store).
 .data/
+
+# private copies of the repository that helpers work in
+.claude/worktrees/

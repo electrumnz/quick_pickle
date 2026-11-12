@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Private build directories (see next.config.ts).
     ".scratch/**",
+    // Private copies of the repository that helpers work in.
+    ".claude/**",
     // Generated from the official vector art by scripts/build-vectors.py.
     "lib/brand/art/lucky-run.ts",
     "lib/brand/art/lucky-up.ts",

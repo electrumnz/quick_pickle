@@ -1,6 +1,7 @@
 # Build output and caches.
 .next/
 .scratch/
+.claude/
 out/
 build/
 coverage/
