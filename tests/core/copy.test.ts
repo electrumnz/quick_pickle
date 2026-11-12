@@ -147,6 +147,73 @@ describe("words that are about to leave", () => {
     }
   });
 
+  describe("the label's own ingredients list", () => {
+    // The Food Standards Code puts these words on an ingredients list
+    // itself: an additive goes by its class name, then its number.
+    const list = "Water, vinegar, salt, mineral salt (509), antioxidant (300)";
+
+    it("is refused like anything else unless it is handed in as the list", () => {
+      const kinds = checkOutgoing({ body: list }).map(
+        (problem) => problem.kind,
+      );
+      expect(kinds).toEqual(["banned", "banned"]);
+      expect(() => refuseUnsendable({ body: list })).toThrow(/cannot go out/);
+      // A tick clears nothing while it is ordinary words.
+      expect(() =>
+        refuseUnsendable({ body: list }, { checked: ["HC-11", "NCC-18"] }),
+      ).toThrow(/cannot go out/);
+    });
+
+    it("is for a person to check against the printed label when it is", () => {
+      const options = { labelList: ["ingredients"] };
+      const problems = checkOutgoing({ ingredients: list }, options);
+      expect(problems.map((problem) => [problem.rule, problem.kind])).toEqual([
+        ["HC-11", "restricted"],
+        ["NCC-18", "restricted"],
+      ]);
+      expect(problems[0]?.why).toContain("printed label");
+      // Unchecked, it does not go out.
+      expect(() => refuseUnsendable({ ingredients: list }, options)).toThrow(
+        /needs a person/,
+      );
+      // Checked, it does, and says what was cleared.
+      const { cleared } = refuseUnsendable(
+        { ingredients: list },
+        { ...options, checked: ["HC-11", "NCC-18"] },
+      );
+      expect(cleared.map((problem) => problem.found.toLowerCase())).toEqual([
+        "antioxidant",
+        "mineral",
+      ]);
+    });
+
+    it("reads only those exact words differently, and only in that part", () => {
+      const options = {
+        labelList: ["ingredients"],
+        checked: ["HC-11", "NCC-18", "NCC-13"],
+      };
+      // The same rule's other words are still refused outright.
+      for (const ingredients of [
+        "Water, salt, anti-inflammatory herbs",
+        "Water, salt, a source of minerals",
+        "Water, salt, electrolytes",
+        "Water, salt. Great for hydration",
+      ]) {
+        expect(
+          () => refuseUnsendable({ ingredients }, options),
+          ingredients,
+        ).toThrow(/cannot go out/);
+      }
+      // And the same words in another part are a claim again.
+      expect(() =>
+        refuseUnsendable(
+          { ingredients: "Water, salt", storage: "Keeps its vitamins chilled" },
+          options,
+        ),
+      ).toThrow(/cannot go out/);
+    });
+  });
+
   it("reports both kinds together, banned first", () => {
     const error = refusal(() =>
       refuseUnsendable({

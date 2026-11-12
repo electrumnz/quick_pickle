@@ -19,9 +19,14 @@ Updated 12 November 2026. Honest status, not a summary.
 - [ ] **Clean shots of the real bottle.** It is confirmed as a 100 ml food-grade plastic
       bottle with a white cap, and the page shows a drawing of it. One straight-on photo on
       plain card, once the real labels are printed, replaces the drawing.
-- [ ] **Ingredients and the nutrition panel**, exactly as printed on the label. Until then
-      the page says nothing about what is in it. Also: where it is made, and how it should
-      be stored. None of that is guessed.
+- [ ] **What the label says**: the ingredients list, the allergen line if it has one, and
+      the storage line, word for word. Until then the page says the list is on its way and
+      nothing about what is in it. Type them in Settings, The label and the company, with
+      the printed label in your hand, then confirm them on the go-live list. Where it is
+      made is not asked for and not stated anywhere. None of this is guessed.
+- [ ] **The nutrition panel is not on the site.** The label has to carry one; the site
+      shows the ingredients list only. Showing the panel too means building a small table
+      and a form for its figures. Say if you want it.
 - [ ] **The ship date for Batch 001**, if this launches as a pre-order. A pre-order with no
       date is not something to take money for. Set it in Settings, The shop, then confirm
       it on the go-live list.
@@ -36,8 +41,10 @@ Updated 12 November 2026. Honest status, not a summary.
       says so on the go-live list.
 - [ ] **A customer email address.** The policies and FAQ leave a gap where it goes. Set it
       in Settings, The shop.
-- [ ] **The legal entity, NZBN and GST status.** The terms of sale name no company yet, and
-      receipts cannot show GST until the registration is confirmed.
+- [ ] **The legal entity, NZBN and GST status.** The terms of sale name no company yet.
+      Put the legal name, the NZBN, the address and whether it is registered for GST in
+      Settings, The label and the company, then confirm them on the go-live list. With a
+      GST number in, a receipt says how much of the total is GST.
 - [ ] **Finish Stripe's own sign-up.** The account exists and the live site runs on its
       test keys, so nothing can be charged yet. Stripe still wants the business's details
       and a bank account before it will take real payments. After that: live keys.
@@ -113,10 +120,9 @@ Updated 12 November 2026. Honest status, not a summary.
       (US$20 a month), or move hosting to Cloudflare. Decide then.
 - [ ] **A domain.**
 - [ ] **Open the site to search at launch.** It happens on its own when the last open fact
-      is confirmed: an owner does that on the go-live list for prices, delivery, the ship
-      date, the contact address and the fine print, and the two that need words written
-      into the site first (the ingredients, the legal entity) come off `UNCONFIRMED` in
-      `content/offer.ts`. At the same time, set `categories:seo` in
+      is confirmed. An owner does that on the go-live list, for all seven: prices, delivery,
+      the ship date, the contact address, the fine print, what the label says and who the
+      company is. None of them needs a code change. At the same time, set `categories:seo` in
       `lighthouserc.json` back from `warn` to `error`: it is a warning today only because a
       site that says noindex on purpose cannot pass it.
 - [ ] **Ashleigh's nod on the two proposed Lucky poses in use**: celebrating (order placed)
@@ -223,11 +229,16 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       and anybody part-way through the checkout is shown the new total before they can pay.
       An owner confirms each open fact on the go-live list. A shut shop and a ship date
       that has gone by are on Today.
-- [ ] **The rest of the shop from the back end.** The line across the top, the video
-      slots (`content/media.ts`), the ingredients, the storage line and the legal entity
-      are still in the files. Words a customer reads need the copy rules and a draft
-      before they are published, the way a landing page has them, and a video needs
-      somewhere to be kept.
+- [x] **The label and the company from the back end.** Settings, The label and the
+      company: the ingredients list, the allergen line, the storage line, the legal name,
+      the NZBN, the address and the GST number, read back before they are saved. The
+      label's words meet the copy rules; a word the food rules put on labels themselves
+      waits for a person's tick. The two numbers are checked for a slipped digit. They
+      show under "What's in it?", in the terms of sale, on a receipt and on a purchase
+      order.
+- [ ] **Still in the files:** the line across the top of the shop and the video slots
+      (`content/media.ts`). The line needs a draft and the copy rules before it is
+      published, the way a landing page has them, and a video needs somewhere to be kept.
 - [x] **Numbers.** Sales, visits and how far they get (our own count, no cookies, nobody
       identified), where visits came from with the sales from each, phones against
       desktops, and how the crew list is moving.

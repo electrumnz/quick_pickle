@@ -52,10 +52,10 @@ recorded that they checked it; a bot cannot. Em dashes are refused there too.
 **Facts must be literally true.** Fair Trading Act s 9, 12A, 13. Nothing about the product
 is guessed: no ingredient, volume, origin, storage line or process word ("strained",
 "brewed") appears until Ashleigh confirms it. Unknown commercial facts carry a stand-in in
-`content/offer.ts` and are listed in `UNCONFIRMED` there. An owner says each one is right
-on the back end's go-live list, once its figure is (`shop.confirm`); a fact that needs words
-written into the site first is settled in the file. While any is still open the site tells
-crawlers to stay out and `npm run prelaunch` fails.
+`content/offer.ts` and are listed in `UNCONFIRMED` there. Every one of them is set in the
+back end, and an owner says each is right on its go-live list once its figure or its words
+are in (`shop.confirm`). While any is still open the site tells crawlers to stay out and
+`npm run prelaunch` fails.
 
 **No demo or preview banner on public pages.** Test mode is explained once, on the
 checkout, where a visitor would otherwise expect a card field. (A staff preview of a
@@ -266,7 +266,9 @@ go-live list shows when it last ran and what is stuck.
   fact starts, and with no database it is the whole story. The back end lays a short, closed
   list of changes over it with no deploy (Settings, The shop): a pack's price, the delivery
   rates, the ship date, pre-order or live, the batch's name, the contact address, and whether
-  orders are being taken. It can never add a pack, a size or a currency.
+  orders are being taken; and on a screen of their own (Settings, The label and the
+  company) what the label says and who the company is. It can never add a pack, a size or
+  a currency.
   `lib/shop/offer.ts` is the type and the browser-safe part; `lib/shop/offer-changes.ts` is
   what may change and how it is laid over the file (zod, server only);
   `lib/backstage/shop/ops.ts` is the operations. Only what differs from the file is stored
@@ -307,6 +309,23 @@ go-live list shows when it last ran and what is stuck.
     and where a rural address still pays an extra the sentence says "standard delivery
     is free", so "free" never stands without its one condition. Add a sentence that
     reads the offer and write it for all of these: `tests/shop/offer-words.test.ts`.
+  - **What the label says is never ours to write** (`label` on the offer: the ingredients
+    list, the allergen line, the storage line). A person types it with the printed label
+    in hand, it is read back before it is saved, and the site shows it as typed under
+    "What's in it?". It meets the copy rules as it is saved. On the ingredients list
+    only, the words the Food Standards Code itself puts there (an additive's class name,
+    an added vitamin or mineral) are held for a person's recorded check, where anywhere
+    else they are refused (`ON_A_LABEL` in `lib/backstage/core/copy.ts`). A bot's tick is
+    not taken, and the screen's tick only counts for the words it was shown beside. With
+    no allergen line the site says nothing about allergens, and never that there are
+    none. Nothing drafts, tidies or guesses these.
+  - **Who the company is** (`company`: legal name, NZBN, address, GST number) is a fact
+    about us and not words of ours, so it is not put through the copy rules, the way a
+    customer's own address is not: a registered name is whatever it is. The two numbers
+    are checked by their own check digits (`lib/shop/company-numbers.ts`). A receipt
+    names the legal seller once it is set, and says how much of the total is GST only
+    when the business is set as registered and has its number in. A GST number on a
+    business set as not registered is refused: one of the two was typed wrong.
   - **Shut** (`open: false`, for a batch that has sold out or a week away): the buy button
     cannot be pressed and says so, the sticky bar goes, the hero's button leads to the
     Pickle Crew, the jar has no way through to the checkout, and the checkout takes

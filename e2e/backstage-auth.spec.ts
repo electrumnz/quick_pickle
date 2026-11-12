@@ -482,9 +482,9 @@ test("an owner says a fact is right on the go-live list, and can take it back", 
   );
   await expect(packs).toContainText(`Confirmed by ${OWNER.name}`);
 
-  // A fact that needs words on the site first cannot be settled here.
+  // A fact whose words are not in yet cannot be settled, and says so.
   const ingredients = page.getByTestId("fact-ingredients");
-  await expect(ingredients).toContainText(/written into the site first/i);
+  await expect(ingredients).toContainText(/put the ingredients list in first/i);
   await expect(ingredients.getByRole("button")).toHaveCount(0);
   // And one that needs its figure first says so.
   await expect(page.getByTestId("fact-ship-date")).toContainText(
@@ -507,4 +507,119 @@ test("an owner says a fact is right on the go-live list, and can take it back", 
       .click(),
   ]);
   await expect(page.getByTestId("fact-packs")).toContainText("Ask:");
+});
+
+test("what the label says is typed with the label in hand, checked, and shown on the shop", async ({
+  page,
+}) => {
+  await signIn(page, OWNER.email, OWNER.password);
+  await page.goto(`${AUTH_URL}/backstage/settings/label`);
+  const list = page.getByLabel("The ingredients list");
+
+  // A claim is refused in the rules' own words, with nothing saved.
+  await list.fill("Water, salt, electrolytes");
+  await press(page, /see what changes/i);
+  await expect(page.locator("main [role=alert]")).toContainText(
+    /cannot go out/i,
+  );
+  await expect(page.getByTestId("label-tick")).toHaveCount(0);
+
+  // A word the Food Standards Code puts on a label itself waits for a
+  // person to say the printed label has it.
+  await list.fill("Water, vinegar, salt, mineral salt (509)");
+  await page.getByLabel("The storage line").fill("Refrigerate after opening");
+  await press(page, /see what changes/i);
+  await expect(page.locator("main [role=alert]")).toContainText(
+    /check this against the printed label/i,
+  );
+  await page.getByTestId("label-tick").getByRole("checkbox").check();
+  await press(page, /see what changes/i);
+  await expect(page.getByTestId("label-checked")).toContainText(
+    'The ingredients list to "Water, vinegar, salt, mineral salt (509)"',
+  );
+
+  // The tick is for those words. Change one and it is asked for again.
+  await list.fill("Water, vinegar, salt, mineral salts (509, 508)");
+  await press(page, /change the site/i);
+  await expect(page.locator("main [role=alert]")).toContainText(
+    /check this against the printed label/i,
+  );
+  await expect(
+    page.getByTestId("label-tick").getByRole("checkbox"),
+  ).not.toBeChecked();
+
+  // Back to what the label says. The tick was for other words, so it is
+  // asked for once more, for these.
+  await list.fill("Water, vinegar, salt, mineral salt (509)");
+  await press(page, /see what changes/i);
+  await expect(
+    page.getByTestId("label-tick").getByRole("checkbox"),
+  ).not.toBeChecked();
+  await page.getByTestId("label-tick").getByRole("checkbox").check();
+  await press(page, /see what changes/i);
+  await expect(page.getByTestId("label-checked")).toBeVisible();
+  await press(page, /change the site/i);
+  await expect(page.getByTestId("label-done")).toContainText(
+    'The storage line to "Refrigerate after opening"',
+  );
+
+  // The shop says exactly that, under its own question, and adds nothing.
+  await expect(async () => {
+    await page.goto(`${AUTH_URL}/`);
+    await expect(page.locator("#faq")).toContainText(
+      "Water, vinegar, salt, mineral salt (509).",
+      { timeout: 2000 },
+    );
+  }).toPass({ timeout: 20_000 });
+  await expect(page.locator("#faq")).toContainText(
+    "Refrigerate after opening.",
+  );
+
+  // Who is behind the shop. A slipped digit is caught before it is saved.
+  await page.goto(`${AUTH_URL}/backstage/settings/label`);
+  await expect(list).toHaveValue("Water, vinegar, salt, mineral salt (509)");
+  await page.getByLabel("The legal name").fill("Quick Pickle Limited");
+  await page.getByLabel("NZBN").fill("9429040402544");
+  await press(page, /see what changes/i);
+  await expect(page.locator("main [role=alert]")).toContainText(
+    /not a New Zealand Business Number/i,
+  );
+  await page.getByLabel("NZBN").fill("94 2904 0402 543");
+  await page.getByLabel("Registered for GST").selectOption("yes");
+  await page.getByLabel("GST number").fill("49-091-850");
+  await press(page, /see what changes/i);
+  await expect(page.getByTestId("label-checked")).toContainText(
+    "The GST number to 49-091-850",
+  );
+  await press(page, /change the site/i);
+  await expect(page.getByTestId("label-done")).toContainText(
+    "The NZBN to 9429040402543",
+  );
+
+  // The terms of sale name the seller, and say prices include GST.
+  await expect(async () => {
+    await page.goto(`${AUTH_URL}/terms`);
+    await expect(page.locator("main")).toContainText(
+      "Quick Pickle is sold by Quick Pickle Limited (NZBN 9429040402543).",
+      { timeout: 2000 },
+    );
+  }).toPass({ timeout: 20_000 });
+  await expect(page.locator("main")).toContainText(
+    "Our GST number is 49-091-850.",
+  );
+  await expect(page.locator("main")).toContainText("and include GST");
+
+  // Putting the words in did not confirm them: an owner still says each is
+  // right, and is shown exactly what they are saying is right.
+  await page.goto(`${AUTH_URL}/backstage/settings/go-live`);
+  const label = page.getByTestId("fact-ingredients");
+  await expect(label).toContainText(
+    "Ingredients: Water, vinegar, salt, mineral salt (509)",
+  );
+  await expect(
+    label.getByRole("button", { name: /this is right/i }),
+  ).toBeVisible();
+  await expect(page.getByTestId("fact-legal-entity")).toContainText(
+    "Quick Pickle Limited, NZBN 9429040402543; registered for GST, number 49-091-850",
+  );
 });

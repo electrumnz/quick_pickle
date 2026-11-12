@@ -223,6 +223,17 @@ going to dress it up" and "try one and see": both leave the reader to fill in an
 5. **Hashtags count.**
 6. **Savings are computed, never typed.** "Save $12" comes from `lib/shop/catalogue.ts`.
 7. **A pre-order states when it ships**, and can be cancelled for a full refund until it does.
+8. **The label's own words are not advertising, and they are never ours to write.** The
+   ingredients list, the allergen line and the storage line are typed in the back end by a
+   person with the printed label in hand, and shown as typed. They still meet these rules
+   before they are saved. One thing is read differently, on the ingredients list and
+   nowhere else: the words the Food Standards Code itself puts there (an additive's class
+   name, as in "antioxidant (300)" or "mineral salt (509)", and an added vitamin or mineral
+   by its name) are held until a person confirms they are exactly what the printed label
+   says, where anywhere else they are refused outright. A bot cannot confirm them. Every
+   other banned word stays banned on the list too: "electrolytes" is not an ingredient.
+   With no allergen line the site says nothing about allergens either way, and never that
+   there are none.
 
 ---
 
@@ -253,7 +264,9 @@ ignore the scanner. If one does, fix the rule, with a test.
    wrong line.
 3. Never restore a concept-deck line because it "is the brand voice". The voice survives
    without the claim; that is the whole job.
-4. Never invent a product fact, a review, a statistic or a supplier.
+4. Never invent a product fact, a review, a statistic or a supplier. Never draft, guess or
+   tidy an ingredients list, an allergen line or a storage line: those come off the printed
+   label, from a person.
 5. Run the scanner. Do not add an ignore marker to get a line through; rewrite the line.
 
 ---

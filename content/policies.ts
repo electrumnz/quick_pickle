@@ -5,16 +5,19 @@
  * only what is true today. Where the business has not settled a fact (the
  * legal entity, the ship date, the contact address) the page says it is still
  * to come instead of inventing it; those gaps are listed in
- * content/offer.ts UNCONFIRMED and block `npm run prelaunch`.
+ * content/offer.ts UNCONFIRMED and block `npm run prelaunch`. Each is set in
+ * the back end, and the page follows.
  *
  * Nothing here limits a customer's rights under the Consumer Guarantees Act
  * 1993 or the Fair Trading Act 1986, and nothing here may be edited to try.
  */
 
+import { formatGstNumber } from "@/lib/shop/company-numbers";
 import type { Offer } from "@/lib/shop/offer";
 
 import { deliveryTerms } from "./delivery";
-import { shipDateText } from "./faq";
+import { shipDateText, withStop } from "./faq";
+import { STORE } from "./offer";
 
 export type PolicySection = {
   readonly heading: string;
@@ -37,9 +40,33 @@ export const POLICY_SLUGS = [
 ] as const;
 
 /**
- * The fine print for an offer. Prices, rates, the ship date and the contact
- * address are read from the offer it is handed, so the pages move when the
- * back end moves them.
+ * Who is selling. Written for every way it can be set: nothing yet, a name
+ * alone (a sole trader has no NZBN to give), and a name with a number, an
+ * address or both. The GST number is said only when the business is set as
+ * registered and has one.
+ */
+export function whoYouBuyFrom({
+  company,
+  gstRegistered,
+}: Pick<Offer, "company" | "gstRegistered">): readonly string[] {
+  if (company.legalName === null) {
+    return [
+      `${STORE.name} is a New Zealand business. The legal name, NZBN and address of the company behind the store will be listed here before the store opens for real orders.`,
+    ];
+  }
+  const who = `${STORE.name} is sold by ${company.legalName}${company.nzbn === null ? "" : ` (NZBN ${company.nzbn})`}${company.address === null ? "" : `, ${company.address}`}`;
+  return [
+    withStop(who),
+    ...(gstRegistered === true && company.gstNumber !== null
+      ? [`Our GST number is ${formatGstNumber(company.gstNumber)}.`]
+      : []),
+  ];
+}
+
+/**
+ * The fine print for an offer. Prices, rates, the ship date, the contact
+ * address and who the company is are read from the offer it is handed, so
+ * the pages move when the back end moves them.
  */
 export function policies(offer: Offer): readonly Policy[] {
   const contact =
@@ -144,14 +171,14 @@ export function policies(offer: Offer): readonly Policy[] {
     sections: [
       {
         heading: "Who you're buying from",
-        body: [
-          "Quick Pickle is a New Zealand business. The legal name, NZBN and address of the company behind the store will be listed here before the store opens for real orders.",
-        ],
+        body: whoYouBuyFrom(offer),
       },
       {
         heading: "Prices and payment",
         body: [
-          "Prices are in New Zealand dollars. The price you see at checkout, including delivery, is the price you pay. Payment is taken when you place your order, including for pre-orders.",
+          // Said only when the business is set as registered: until then
+          // nobody knows whether there is GST in a price.
+          `Prices are in New Zealand dollars${offer.gstRegistered === true ? " and include GST" : ""}. The price you see at checkout, including delivery, is the price you pay. Payment is taken when you place your order, including for pre-orders.`,
         ],
       },
       {

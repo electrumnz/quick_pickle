@@ -20,6 +20,7 @@ import {
   mailSuppressions,
   orders,
   refunds,
+  settings,
   users,
 } from "@/db/schema";
 import { systemCaller, type Caller } from "@/lib/backstage/core/actor";
@@ -59,6 +60,7 @@ import { disputeSeen } from "@/lib/backstage/orders/disputes";
 import { refundsSeen } from "@/lib/backstage/orders/outside-refunds";
 import { markPaid, paymentExpired } from "@/lib/backstage/orders/payments";
 import { refundSettled } from "@/lib/backstage/orders/refunds";
+import { changeShop, SHOP_OFFER_KEY } from "@/lib/backstage/shop/ops";
 import {
   closeDb,
   openEmbedded,
@@ -580,6 +582,98 @@ describe("an order's emails", () => {
           .from(mailMessages)
           .where(eq(mailMessages.id, orderEmailId(order.id, "receipt"))),
       ).toEqual([]);
+    });
+
+    describe("with the company's details in", () => {
+      const forgetTheShop = () =>
+        handle.db.delete(settings).where(eq(settings.key, SHOP_OFFER_KEY));
+      beforeEach(forgetTheShop);
+      afterAll(forgetTheShop);
+
+      it("names the legal seller, and says how much of the total is GST", async () => {
+        await execute(
+          changeShop,
+          {
+            company: {
+              legalName: "Quick Pickle Limited",
+              nzbn: "9429040402543",
+              gstNumber: "49-091-850",
+            },
+            gstRegistered: true,
+          },
+          staff,
+        );
+        const email = await written((await place()).number, "receipt");
+        // 3/23 of the $55.00 that was paid, delivery and all.
+        expect(email.textBody).toContain(
+          [
+            "Subtotal: $48.00",
+            "Delivery: $7.00",
+            "Total paid: $55.00",
+            "Includes GST of: $7.17",
+            "",
+            "Sold by: Quick Pickle Limited",
+            "GST number: 49-091-850",
+            "",
+            "Going to",
+          ].join("\n"),
+        );
+      });
+
+      it("names the seller alone when the business is not registered", async () => {
+        await execute(
+          changeShop,
+          {
+            company: { legalName: "Ashleigh Lennard" },
+            gstRegistered: false,
+          },
+          staff,
+        );
+        const email = await written((await place()).number, "receipt");
+        expect(email.textBody).toContain(
+          "Total paid: $55.00\n\nSold by: Ashleigh Lennard\n\nGoing to",
+        );
+        expect(email.textBody).not.toMatch(/GST/);
+      });
+
+      it("says nothing about GST while there is no number to say it under", async () => {
+        await execute(changeShop, { gstRegistered: true }, staff);
+        const email = await written((await place()).number, "receipt");
+        expect(email.textBody).toContain("Total paid: $55.00\n\nGoing to");
+        expect(email.textBody).not.toMatch(/GST|Sold by/);
+      });
+
+      it("goes whatever the seller is called: a name is a fact, not a claim", async () => {
+        // "Healthy" is a word of ours the copy rules refuse. A registered
+        // name is not a word of ours.
+        await execute(
+          changeShop,
+          { company: { legalName: "Healthy Pickle Company Limited" } },
+          staff,
+        );
+        const email = await written((await place()).number, "receipt");
+        expect(email.status).toBe("queued");
+        expect(email.textBody).toContain(
+          "Sold by: Healthy Pickle Company Limited",
+        );
+      });
+
+      it("leaves both off a test payment's receipt: nothing was sold", async () => {
+        await execute(
+          changeShop,
+          {
+            company: {
+              legalName: "Quick Pickle Limited",
+              gstNumber: "49091850",
+            },
+            gstRegistered: true,
+          },
+          staff,
+        );
+        const order = await place({ pay: "stripe-test" });
+        const email = await written(order.number, "receipt");
+        expect(email.textBody).not.toMatch(/GST|Sold by/);
+      });
     });
 
     it("says a live order ships as ordered, and only says what is true of a pre-order", async () => {

@@ -881,6 +881,7 @@ describe("the starter content, as written", () => {
       "/backstage/brand",
       "/backstage/settings/go-live",
       "/backstage/settings/shop",
+      "/backstage/settings/label",
     ]);
     for (const doc of STARTER_DOCUMENTS) {
       expect(doc.body.startsWith("**What this is:** "), doc.slug).toBe(true);

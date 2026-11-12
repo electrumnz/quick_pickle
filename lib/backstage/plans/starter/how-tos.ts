@@ -117,7 +117,21 @@ Nobody is charged a price they were not shown. If a customer is part-way through
 
 ## Saying a figure is right
 
-Changing a figure does not confirm it. While any fact about the shop is still a stand-in, the site stays out of search engines. When the prices, the delivery rates, the ship date and the contact address are the real ones, an owner says so on the [go-live list](${LINK.goLive}), one at a time. Their name goes beside each.`,
+Changing a figure does not confirm it. While any fact about the shop is still a stand-in, the site stays out of search engines. When the prices, the delivery rates, the ship date and the contact address are the real ones, an owner says so on the [go-live list](${LINK.goLive}), one at a time. Their name goes beside each.
+
+## What is on the label, and who the company is
+
+These are on their own screen: [The label and the company](${LINK.label}), under Settings. It works the same way, with the same two presses.
+
+15. [ ] Have the printed label in your hand. Nothing about what is in the bottle is typed from memory.
+16. [ ] Type the ingredients list word for word, then the allergen line and the storage line if the label has them. Leave a box empty and the site says nothing for it. With no allergen line the site says nothing about allergens either way.
+17. [ ] Press **See what changes** and read it back against the label, letter by letter.
+18. [ ] If the screen asks you to check a word against the printed label, it is one the food rules put on labels themselves (the name for a kind of additive, say) and that would read as a claim anywhere else. Look at the label. If it says exactly that, tick the box and check again. Only a person can tick it, and your name goes beside it.
+19. [ ] Press **Change the site**. The list shows on the shop under "What's in it?" within a minute.
+20. [ ] For the company: the legal name (the company's registered name, or your own if you trade as yourself), the NZBN if there is one, the address, and whether it is registered for GST. With a GST number in, a receipt says how much of the total is GST. The two numbers are checked as you save them, so a slipped digit is caught.
+21. [ ] When both are right, an owner says so on the [go-live list](${LINK.goLive}).
+
+If the label changes (a new recipe, a new supplier), change it here the same day. Who checks the site against each new label: ____.`,
 };
 
 const productionDay: StarterDocument = {

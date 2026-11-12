@@ -24,12 +24,12 @@
  * Test mode is explained once, on the checkout, where a visitor would
  * otherwise expect a card field.
  *
- * To confirm a fact: prices, delivery rates, the ship date and the contact
- * address are set and confirmed in the back end (Settings, The shop, and
- * the go-live list), with no deploy: lib/shop/offer.ts lays those changes
- * over this file. A fact that needs words written into the site first (the
- * ingredients, the legal entity) is put in here, and its line deleted from
- * UNCONFIRMED. When nothing is left open the gate opens.
+ * To confirm a fact: every one of them is set and confirmed in the back
+ * end, with no deploy. Prices, delivery rates, the ship date and the
+ * contact address are in Settings, The shop; what the label says and who
+ * the company is are in Settings, The label and the company; an owner says
+ * each is right on the go-live list. lib/shop/offer.ts lays those changes
+ * over this file. When nothing is left open the gate opens.
  *
  * Money is integer cents, always. Never a float in a price path.
  */
@@ -80,12 +80,36 @@ export const PRODUCT = {
    */
   shotVolumeMl: 100 as number | null,
   /**
-   * The ingredients list exactly as it will be printed on the label, or null.
+   * The ingredients list, word for word as the label prints it, or null.
    * Never guessed: an ingredient named here is a statement of composition.
+   * An owner types it in the back end with the printed label in hand
+   * (Settings, The label and the company); anything put here is only where
+   * that starts.
    */
-  ingredients: null as readonly string[] | null,
+  ingredients: null as string | null,
+  /**
+   * The label's allergen line ("Contains: ..."), or null. Null says nothing
+   * either way: the site never states that there are no allergens.
+   */
+  contains: null as string | null,
   /** Storage line from the label ("Refrigerate after opening"), or null. */
   storage: null as string | null,
+} as const;
+
+/**
+ * Who is behind the shop. Every one null until it is known: the terms of
+ * sale say nothing they cannot stand behind. Set in the back end (Settings,
+ * The label and the company).
+ */
+export const COMPANY = {
+  /** The legal name of whoever sells it, as it is registered. */
+  legalName: null as string | null,
+  /** New Zealand Business Number: 13 digits. */
+  nzbn: null as string | null,
+  /** Where the business is, on one line. */
+  address: null as string | null,
+  /** GST number (the IRD number), digits only, once it is registered. */
+  gstNumber: null as string | null,
 } as const;
 
 /** Smallest first. The page and the jar both rely on that order. */
@@ -148,8 +172,7 @@ export const UNCONFIRMED: readonly Unconfirmed[] = [
   },
   {
     key: "ingredients",
-    // copy-audit-approved: R-17 (refers to the mandatory nutrition information panel, not a benefit)
-    what: "The ingredients list and nutrition panel, as printed on the label",
+    what: "What the label says: the ingredients list, the allergen line if it has one, and the storage line",
     ask: "Ashleigh",
   },
   {
@@ -175,7 +198,7 @@ export const UNCONFIRMED: readonly Unconfirmed[] = [
   },
   {
     key: "legal-entity",
-    what: "The legal entity, NZBN and GST status behind the store",
+    what: "Who is behind the store: the legal name, the NZBN, the address, and whether it is registered for GST",
     ask: "whoever runs the business side",
   },
 ];

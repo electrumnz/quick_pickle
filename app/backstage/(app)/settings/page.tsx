@@ -15,6 +15,13 @@ const SECTIONS = [
     ownerOnly: false,
   },
   {
+    href: "/backstage/settings/label",
+    label: "The label and the company",
+    blurb:
+      "What is printed on the label, and the legal name, NZBN and GST number behind the shop.",
+    ownerOnly: false,
+  },
+  {
     href: "/backstage/settings/staff",
     label: "Staff",
     blurb:

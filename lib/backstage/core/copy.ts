@@ -14,6 +14,9 @@
  *                has its terms). A bot cannot record that.
  *   style        the house rules for anything a customer reads. For now,
  *                one: no em dashes.
+ *
+ * One narrow thing is read differently: the label's own ingredients list
+ * (see `ON_A_LABEL`).
  */
 
 import { scanText } from "@/legal/scripts/rules.mjs";
@@ -33,10 +36,41 @@ export type OutgoingProblem = {
 
 const EM_DASH = /—/;
 
+/**
+ * Words the Food Standards Code itself puts on an ingredients list: the
+ * class name of an additive ("antioxidant (300)", "mineral salt (509)"),
+ * and a vitamin or mineral that has been added, by its name. On the label's
+ * own list they say what is in the bottle, and the law says they must be
+ * there. Anywhere else they read as a claim, and the rules refuse them.
+ *
+ * So in a part handed in as the label's ingredients list, and nowhere
+ * else, these exact words are for a person to confirm against the printed
+ * label where they would otherwise be refused outright. Nothing else about
+ * the list is read differently: "antioxidant" may be confirmed there, and
+ * "anti-inflammatory" under the same rule may not.
+ */
+const ON_A_LABEL: Readonly<Record<string, RegExp>> = {
+  "HC-11": /^antioxidants?$/i,
+  "NCC-18": /^(?:vitamins?|minerals?|folic\s+acid)$/i,
+};
+
+const ON_A_LABEL_WHY =
+  "On the ingredients list this can be the label's own word. A person has to confirm it is exactly what the printed label says.";
+
+export type CheckOptions = {
+  /**
+   * The names of the parts that are the label's own ingredients list,
+   * word for word. See `ON_A_LABEL`.
+   */
+  readonly labelList?: readonly string[];
+};
+
 /** Every problem in a message, part by part. Finds; does not judge. */
 export function checkOutgoing(
   parts: Readonly<Record<string, string>>,
+  options: CheckOptions = {},
 ): OutgoingProblem[] {
+  const labelList = new Set(options.labelList ?? []);
   const problems: OutgoingProblem[] = [];
   for (const [part, text] of Object.entries(parts)) {
     const seen = new Set<string>();
@@ -45,12 +79,16 @@ export function checkOutgoing(
       const key = `${finding.id}:${finding.match.toLowerCase()}`;
       if (seen.has(key)) continue;
       seen.add(key);
+      const labelWord =
+        labelList.has(part) &&
+        finding.severity === "banned" &&
+        (ON_A_LABEL[finding.id]?.test(finding.match.trim()) ?? false);
       problems.push({
         rule: finding.id,
-        kind: finding.severity,
+        kind: labelWord ? "restricted" : finding.severity,
         part,
         found: finding.match,
-        why: finding.why,
+        why: labelWord ? ON_A_LABEL_WHY : finding.why,
       });
     }
     if (EM_DASH.test(text)) {
@@ -80,10 +118,10 @@ function describe(problem: OutgoingProblem): string {
  */
 export function refuseUnsendable(
   parts: Readonly<Record<string, string>>,
-  options: { readonly checked?: readonly string[] } = {},
+  options: { readonly checked?: readonly string[] } & CheckOptions = {},
 ): { readonly cleared: readonly OutgoingProblem[] } {
   const checked = new Set(options.checked ?? []);
-  const problems = checkOutgoing(parts);
+  const problems = checkOutgoing(parts, options);
   const cleared = problems.filter(
     (problem) => problem.kind === "restricted" && checked.has(problem.rule),
   );

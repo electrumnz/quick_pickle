@@ -417,16 +417,24 @@ describe("the shop, run from the back end", () => {
       ).toBeNull();
     });
 
-    it("cannot settle a fact whose words are not on the site yet", async () => {
+    it("cannot settle a fact whose words are not in yet, or one there is not", async () => {
+      // What the label says and who the company is are typed in the back
+      // end first (tests/backstage/shop-label.test.ts).
+      expect(canConfirm("ingredients", FILE_OFFER)).toBe(
+        "Put the ingredients list in first.",
+      );
+      expect(canConfirm("legal-entity", FILE_OFFER)).toBe(
+        "Put the legal name in first.",
+      );
       for (const key of ["ingredients", "legal-entity"]) {
-        expect(canConfirm(key, FILE_OFFER)).toBe(
-          "This one needs the words themselves written into the site first.",
-        );
         await expect(execute(confirmFact, { key }, owner)).rejects.toThrow();
       }
       await expect(
         execute(confirmFact, { key: "the-moon" }, owner),
       ).rejects.toThrow("There is no such open fact.");
+      expect(canConfirm("the-moon", FILE_OFFER)).toBe(
+        "This one cannot be settled from here.",
+      );
     });
 
     it("can be taken back, and says nothing twice", async () => {

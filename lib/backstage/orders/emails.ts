@@ -69,7 +69,8 @@ import {
   type Line,
   type Row,
 } from "@/lib/mail/compose";
-import { formatNzdExact } from "@/lib/shop/money";
+import { formatGstNumber } from "@/lib/shop/company-numbers";
+import { formatNzdExact, gstIncludedIn } from "@/lib/shop/money";
 import type { Offer } from "@/lib/shop/offer";
 import { ORDER_NUMBER_PATTERN } from "@/lib/shop/order";
 import { formatNzDate } from "@/lib/time";
@@ -260,10 +261,41 @@ const greeting = (order: OrderRow): Block => ({
 });
 
 /**
- * What an email reads off the offer: the batch's name, the ship date and the
- * address customers write to. All three can be changed from the back end.
+ * What an email reads off the offer: the batch's name, the ship date, the
+ * address customers write to, and who the legal seller is. All of them can
+ * be changed from the back end.
  */
-type Shop = Pick<Offer, "batchName" | "preorderShipsFrom" | "contactEmail">;
+type Shop = Pick<
+  Offer,
+  | "batchName"
+  | "preorderShipsFrom"
+  | "contactEmail"
+  | "gstRegistered"
+  | "company"
+>;
+
+/**
+ * Who sold it, for a receipt: the legal seller's name once it is set, and
+ * its GST number when the business is set as registered and has one. With
+ * neither, no block at all. These are facts about us, set in the back end,
+ * so they go in as data and not as words of ours.
+ */
+function seller(shop: Shop): Block[] {
+  const rows: Row[] = [];
+  if (shop.company.legalName !== null) {
+    rows.push({ label: [W.soldBy], value: [data(shop.company.legalName)] });
+  }
+  const gst = gstNumberOf(shop);
+  if (gst !== null) {
+    rows.push({ label: [W.gstNumber], value: [data(formatGstNumber(gst))] });
+  }
+  return rows.length === 0 ? [] : [{ kind: "rows", rows }];
+}
+
+/** The GST number, only for a business that is set as registered. */
+function gstNumberOf(shop: Shop): string | null {
+  return shop.gstRegistered === true ? shop.company.gstNumber : null;
+}
 
 function closing(shop: Shop): Block[] {
   const reach: Line[] = [[W.reply]];
@@ -346,6 +378,14 @@ function receiptDoc(
       strong: true,
     },
   );
+  // How much of that is GST, said only where there is a GST number to say
+  // it under. Delivery is part of the sale, so it is 3/23 of the lot.
+  if (!test && gstNumberOf(shop) !== null && order.totalCents > 0) {
+    totals.push({
+      label: [W.gstIncluded],
+      value: [data(formatNzdExact(gstIncludedIn(order.totalCents)))],
+    });
+  }
 
   const shipDate = shipDateText(shop);
   // The batch's name is typed in the back end. It was read by the copy rules
@@ -408,6 +448,7 @@ function receiptDoc(
         })),
       },
       { kind: "rows", rows: totals },
+      ...(test ? [] : seller(shop)),
       goingTo(order),
       ...after,
       ...closing(shop),

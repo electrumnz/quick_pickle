@@ -39,8 +39,9 @@ const FINE_PRINT = [
  * `npm run prelaunch` checks the same things from the command line.
  *
  * The facts about the offer are confirmed here, by an owner, once the
- * figures are right (they are set in Settings, The shop). Confirming the
- * last one opens the site to search engines.
+ * figures and words are right (they are set in Settings: The shop, and The
+ * label and the company). Confirming the last one opens the site to search
+ * engines.
  */
 export default async function GoLivePage({
   searchParams,
@@ -208,6 +209,13 @@ export default async function GoLivePage({
               className="underline decoration-2 underline-offset-4"
             >
               The shop
+            </Link>
+            , and what the label says and who the company is in{" "}
+            <Link
+              href="/backstage/settings/label"
+              className="underline decoration-2 underline-offset-4"
+            >
+              The label and the company
             </Link>
             , then say here that each is right.{" "}
             {isOwner

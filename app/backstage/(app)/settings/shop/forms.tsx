@@ -4,7 +4,8 @@ import { useActionState } from "react";
 
 import { SubmitButton } from "@/components/backstage/SubmitButton";
 
-import { shopAction, type ShopFormState } from "./actions";
+import { shopAction } from "./actions";
+import type { ShopFormState } from "./flow";
 
 /**
  * The shop's settings: one form, two presses. "See what changes" saves
@@ -134,6 +135,7 @@ export function ShopForm({
     note: null,
     checkedFor: null,
     version: null,
+    tickFor: null,
   };
   const [state, action] = useActionState(shopAction, empty);
   const text = (name: string) => state.values[name] ?? "";
@@ -318,30 +320,6 @@ export function ShopForm({
           {state.fields.contactEmail ? (
             <p className="field-error">{state.fields.contactEmail}</p>
           ) : null}
-        </div>
-        <div>
-          <label htmlFor="gst" className="field-label">
-            Registered for GST
-          </label>
-          <select
-            id="gst"
-            name="gst"
-            key={`gst-${text("gst")}`}
-            defaultValue={text("gst")}
-            aria-describedby="gst-hint"
-            className="field"
-          >
-            <option value="unknown">Not known yet</option>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-          <p
-            id="gst-hint"
-            className="bk-muted mt-1 text-[0.9375rem] leading-snug"
-          >
-            Only the budget uses this, to work out what is kept from a sale. It
-            changes nothing a customer sees.
-          </p>
         </div>
       </div>
 

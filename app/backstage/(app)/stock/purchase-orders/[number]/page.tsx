@@ -11,6 +11,7 @@ import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
 import { shopOffer } from "@/lib/backstage/shop/ops";
+import { formatGstNumber } from "@/lib/shop/company-numbers";
 import { formatDateKey } from "@/lib/backstage/stock/dates";
 import {
   getPurchaseOrder,
@@ -267,7 +268,16 @@ export default async function PurchaseOrderPage({
     execute(shopOffer, {}, caller),
   ]);
   // The address the business is written to, as the shop's settings have it.
-  const { contactEmail } = shop.offer;
+  const { contactEmail, company } = shop.offer;
+  // The GST number is only ours to print while we are set as registered.
+  const gstNumber =
+    shop.offer.gstRegistered === true ? company.gstNumber : null;
+  // What a supplier needs that is not on file, each a line to write on.
+  const toWriteIn = [
+    ...(company.legalName === null ? ["Business name"] : []),
+    ...(company.address === null ? ["Address"] : []),
+    ...(gstNumber === null ? ["GST number, if registered"] : []),
+  ];
   // What this supplier sells first, then everything else.
   const choices = [
     ...materials.filter((material) => material.supplierId === order.supplierId),
@@ -350,32 +360,59 @@ export default async function PurchaseOrderPage({
               <span className="cap-trim">From</span>
             </h2>
             <p className="mt-2 leading-snug">
-              <span className="font-semibold">{STORE.name}</span>
+              <span className="font-semibold">
+                {company.legalName ?? STORE.name}
+              </span>
+              {company.legalName === null ||
+              company.legalName === STORE.name ? null : (
+                <span className="block">Trading as {STORE.name}</span>
+              )}
+              {company.address === null ? null : (
+                <span className="block">{company.address}</span>
+              )}
+              {company.nzbn === null ? null : (
+                <span className="block">NZBN {company.nzbn}</span>
+              )}
+              {gstNumber === null ? null : (
+                <span className="block">
+                  GST number {formatGstNumber(gstNumber)}
+                </span>
+              )}
               {contactEmail ? (
                 <span className="block [overflow-wrap:anywhere]">
                   {contactEmail}
                 </span>
               ) : null}
             </p>
-            {/* Our legal name, address and GST details are not on file yet
-                (see the go-live list). On screen that is said plainly; on
-                paper there is room to write them in. */}
-            <p className="bk-muted mt-1 text-[0.9375rem] leading-snug print:hidden">
-              Our business name, address and GST details are not on file yet.
-              Write them on the printed order before it goes to a supplier.
-            </p>
-            <div className="mt-3 hidden print:block">
-              {["Business name", "Address", "GST number, if registered"].map(
-                (label) => (
-                  <p
-                    key={label}
-                    className="border-navy mb-3 border-b pb-5 text-[0.875rem]"
+            {/* Whatever of our legal name, address and GST number is not on
+                file (Settings, The label and the company). On screen that is
+                said plainly; on paper there is room to write it in. */}
+            {toWriteIn.length === 0 ? null : (
+              <>
+                <p className="bk-muted mt-1 text-[0.9375rem] leading-snug print:hidden">
+                  Not on file yet: {toWriteIn.join(", ").toLowerCase()}. Put
+                  them in under{" "}
+                  <Link
+                    href="/backstage/settings/label"
+                    className="underline decoration-2 underline-offset-4"
                   >
-                    {label}
-                  </p>
-                ),
-              )}
-            </div>
+                    Settings, The label and the company
+                  </Link>
+                  , or write them on the printed order before it goes to a
+                  supplier.
+                </p>
+                <div className="mt-3 hidden print:block">
+                  {toWriteIn.map((label) => (
+                    <p
+                      key={label}
+                      className="border-navy mb-3 border-b pb-5 text-[0.875rem]"
+                    >
+                      {label}
+                    </p>
+                  ))}
+                </div>
+              </>
+            )}
           </section>
         </div>
 
