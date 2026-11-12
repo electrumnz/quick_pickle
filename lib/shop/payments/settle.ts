@@ -37,21 +37,54 @@ export type Settled =
   /** No such order, or it cannot be checked right now. */
   | "unknown";
 
-export async function settleOnReturn(number: string): Promise<Settled> {
+export type Settlement = {
+  readonly state: Settled;
+  /**
+   * Set while the payment page is still open and nothing has been paid: its
+   * address, so the buyer can go back and finish. It comes from Stripe's own
+   * answer, never from the browser.
+   */
+  readonly payAt?: string;
+};
+
+/** Only ever link a buyer to a payment page that is really Stripe's. */
+function stripePage(url: string | null): string | undefined {
+  if (url === null) return undefined;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname;
+    const stripes = host === "stripe.com" || host.endsWith(".stripe.com");
+    return parsed.protocol === "https:" && stripes ? url : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function settleOnReturn(
+  number: string,
+  options: {
+    readonly env?: Record<string, string | undefined>;
+    readonly fetchImpl?: typeof fetch;
+  } = {},
+): Promise<Settlement> {
   const shop = systemCaller("The shop", "storefront");
   try {
     const state = await execute(paymentState, { number }, shop);
     if (state.status === "cancelled") {
-      return state.paymentStatus === "paid" ? "review" : "closed";
+      return { state: state.paymentStatus === "paid" ? "review" : "closed" };
     }
-    if (state.status !== "pending") return "paid";
+    if (state.status !== "pending") return { state: "paid" };
     if (state.provider !== "stripe" || state.reference === null) {
-      return "awaiting";
+      return { state: "awaiting" };
     }
 
-    const key = stripeSecretKey();
-    const session = await retrieveCheckoutSession(key, state.reference);
-    if (session.client_reference_id !== number) return "awaiting";
+    const key = stripeSecretKey(options.env);
+    const session = await retrieveCheckoutSession(
+      key,
+      state.reference,
+      options.fetchImpl,
+    );
+    if (session.client_reference_id !== number) return { state: "awaiting" };
 
     if (session.payment_status === "paid") {
       const result = await execute(
@@ -66,7 +99,7 @@ export async function settleOnReturn(number: string): Promise<Settled> {
         },
         shop,
       );
-      return result.outcome === "paid" ? "paid" : "review";
+      return { state: result.outcome === "paid" ? "paid" : "review" };
     }
     if (session.status === "expired") {
       await execute(
@@ -74,9 +107,13 @@ export async function settleOnReturn(number: string): Promise<Settled> {
         { number, reason: "The payment page ran out before it was paid" },
         shop,
       );
-      return "closed";
+      return { state: "closed" };
     }
-    return "awaiting";
+    // "complete" but unpaid is a payment still on its way (a bank transfer,
+    // say). "open" is a buyer who has not paid: show them the way back.
+    return session.status === "open"
+      ? { state: "awaiting", payAt: stripePage(session.url) }
+      : { state: "awaiting" };
   } catch (error) {
     if (!(error instanceof OpError && error.code === "not_found")) {
       console.error(
@@ -86,6 +123,6 @@ export async function settleOnReturn(number: string): Promise<Settled> {
         }),
       );
     }
-    return "unknown";
+    return { state: "unknown" };
   }
 }

@@ -11,13 +11,19 @@
 
 import "server-only";
 
+import { on } from "./core/events";
+import { closePaymentPage } from "./orders/listeners";
+
 let registered = false;
 
 /** Register every listener. Safe to call more than once. */
 export function registerHandlers(): void {
   if (registered) return;
   registered = true;
-  // Listeners are added here as their areas land:
+
+  on("order.cancelled", "close the payment page", closePaymentPage());
+
+  // More are added here as their areas land:
   //   on("mail.queued", "send the email", ...)
   //   on("order.paid", "send the receipt", ...)
 }

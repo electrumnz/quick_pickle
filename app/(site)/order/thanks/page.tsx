@@ -110,7 +110,45 @@ export default async function ThanksPage() {
 
   // The buyer was sent away to pay. Find out how that went before saying
   // anything: nothing is celebrated on the strength of a cookie.
-  const settled = receipt.pending ? await settleOnReturn(receipt.number) : null;
+  const settlement = receipt.pending
+    ? await settleOnReturn(receipt.number)
+    : null;
+  const settled = settlement?.state ?? null;
+  const payAt = settlement?.payAt;
+
+  // Back on the site with the payment page still open and nothing paid: say
+  // so, and show the way back to it. (Pressing "back" on Stripe's page goes
+  // to the checkout instead; this is for a buyer who came here by hand.)
+  if (settled === "awaiting" && payAt !== undefined) {
+    return (
+      <>
+        <CheckAgain />
+        <SiteHeader minimal />
+        <main id="main" className="bg-cream px-gutter flex-1 py-16">
+          <div className="mx-auto flex max-w-[28rem] flex-col items-center text-center">
+            <Art name="lucky-flying" alt="" sizes="200px" className="w-44" />
+            <h1 className="varsity mt-6 text-[2.25rem] leading-none">
+              {THANKS.unpaidTitle.join(" ")}
+            </h1>
+            <p className="text-navy-muted mt-3" role="status">
+              {THANKS.unpaidBody}
+            </p>
+            <p className="label mt-5 text-[1.1rem]">
+              {THANKS.numberLabel}{" "}
+              <span data-testid="order-number">{receipt.number}</span>
+            </p>
+            <a href={payAt} className="btn mt-7" data-testid="finish-paying">
+              <span className="cap-trim">{THANKS.unpaidCta}</span>
+            </a>
+            <Link href="/checkout" className="link mt-4">
+              {THANKS.unpaidChange}
+            </Link>
+          </div>
+        </main>
+        <SiteFooter />
+      </>
+    );
+  }
 
   if (settled === "awaiting" || settled === "unknown") {
     return (

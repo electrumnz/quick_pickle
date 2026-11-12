@@ -174,9 +174,23 @@ Tests leave the dispatcher off and call `processEvents` themselves.
     (`app/api/stripe/webhook`) marks it paid; the page the buyer returns to asks Stripe as
     well, through the same operation, so whichever arrives first does the work. A test key
     means Stripe's test mode and the checkout says that instead.
+  - The page is asked for in New Zealand dollars only (Stripe's own-currency offer is off,
+    so the figure on its page is the figure on our button) and in the shop's colours. Both
+    are niceties: if Stripe refuses the request with them on, it is asked again without.
   - Money arriving is never taken on trust: `orders.markPaid` checks amount and currency
     against the order, is safe to call twice, and flags a payment for a cancelled order
-    for refund instead of reopening it.
+    for refund instead of reopening it. A payment that does not match is written down once
+    (payment status `review`) and waits for a person; no clock closes it.
+  - Cancelling an unpaid order closes its payment page at Stripe, through a listener.
+  - **Stripe's payment page cannot be driven by an automated browser.** Its bot check
+    swallows the press on Pay. Everything up to it and the way back can be; the paid path
+    needs a person with a test card (4242 4242 4242 4242), then `status` in the infra run.
+- **Every operation that changes an order loads it with `forChange`** (`orders/load.ts`), a
+  row lock held to the end of the transaction, so a person and a webhook changing one order
+  take turns. Reading a figure and writing it back without that lock is how two refunds
+  pass one cap.
+- An operation that finds its work already done says `ctx.nothingChanged()`. Without it the
+  activity log gets a line for a repeat that did nothing.
 - `lib/shop/store` is where the shop hands an order over. The default is `db`: the back
   end's own `orders.record` operation, so an order is on the Orders screen as it is placed.
 - The "order's in" page reads a short-lived httpOnly receipt cookie. It is display only.
@@ -277,7 +291,11 @@ nothing) and does more only when that push changed `.github/infra-request.json`:
 ```
 
 So a change to production's settings is a commit, checked and merged like any other. Read
-the result in the run's log. It prints names and states, never a value; it is pinned to
+the result in the run's log. `status` is also how production's data is looked at: orders by
+state, the event queue, and whether Stripe's news is being delivered (counts only, never a
+name or an order number). It can be run by hand on `main` at any time. Change what is sent
+to Stripe and `stripe-check` belongs in the same merge: it runs the app's own functions
+against Stripe's test mode. It prints names and states, never a value; it is pinned to
 Quick Pickle's own Vercel project (by id) and Supabase project, and refuses to run against
 Keece's. GitHub does not tell a workflow which files a push changed, so the workflow works
 that out with git.

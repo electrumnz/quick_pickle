@@ -125,9 +125,16 @@ for (const [name, file] of Object.entries(STICKERS)) {
 }
 
 // Icons and the social card are used exactly as the pack made them.
+//
+// The set in the repository is the pack's revision of 12 November 2026
+// ("02 Logos/favicon" in the shared Drive): the tab icon is the sticker on
+// navy at 16, 32 and 48 px, and the app icons are opaque, because iOS paints
+// black behind a see-through one. An older copy of the pack has neither, so
+// running this against one puts the old icons back. The tab PNG is the 48 px
+// frame: a 512 px one is a quarter of a megabyte for a 16 px picture.
 const FAV = join(SRC, "05-logo/favicon");
 await copyFile(join(FAV, "favicon.ico"), join(APP, "favicon.ico"));
-await copyFile(join(FAV, "app-icon-512.png"), join(APP, "icon.png"));
+await copyFile(join(FAV, "favicon-48.png"), join(APP, "icon.png"));
 await copyFile(join(FAV, "app-icon-180.png"), join(APP, "apple-icon.png"));
 await copyFile(join(FAV, "app-icon-192.png"), join(OUT, "app-icon-192.png"));
 await copyFile(join(FAV, "app-icon-512.png"), join(OUT, "app-icon-512.png"));

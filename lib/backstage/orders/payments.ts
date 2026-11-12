@@ -15,12 +15,12 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { orders, type OrderStatus, type PaymentStatus } from "@/db/schema";
-import type { DbOrTx } from "@/lib/db/types";
 import { formatNzd } from "@/lib/shop/money";
 import { ORDER_NUMBER_PATTERN } from "@/lib/shop/order";
 
-import { notFound } from "../core/errors";
 import { defineOp } from "../core/op";
+
+import { loadOrder } from "./load";
 
 const orderNumber = z
   .string()
@@ -29,18 +29,6 @@ const orderNumber = z
   .regex(ORDER_NUMBER_PATTERN, "Order numbers look like QP-7K2M9X");
 
 const reference = z.string().trim().min(1).max(200);
-
-async function loadOrder(
-  db: DbOrTx,
-  number: string,
-): Promise<typeof orders.$inferSelect> {
-  const [order] = await db
-    .select()
-    .from(orders)
-    .where(eq(orders.number, number));
-  if (order === undefined) throw notFound(`Order ${number}`);
-  return order;
-}
 
 export const attachPayment = defineOp({
   name: "orders.attachPayment",
@@ -54,10 +42,14 @@ export const attachPayment = defineOp({
     reference,
   }),
   async run(ctx, input): Promise<{ attached: boolean }> {
-    const order = await loadOrder(ctx.db, input.number);
-    if (order.paymentReference === input.reference) return { attached: true };
+    const order = await loadOrder(ctx.db, input.number, { forChange: true });
+    if (order.paymentReference === input.reference) {
+      ctx.nothingChanged();
+      return { attached: true };
+    }
     if (order.status !== "pending") {
       // Paid or cancelled in the meantime. Leave it be.
+      ctx.nothingChanged();
       return { attached: false };
     }
     await ctx.db
@@ -105,11 +97,12 @@ export const markPaid = defineOp({
     test: z.boolean().default(false),
   }),
   async run(ctx, input): Promise<MarkPaidResult> {
-    const order = await loadOrder(ctx.db, input.number);
+    const order = await loadOrder(ctx.db, input.number, { forChange: true });
     const entity = { type: "order", id: order.id };
 
     if (order.paymentStatus === "paid" || order.paymentStatus === "test") {
       if (order.status !== "pending") {
+        ctx.nothingChanged();
         return {
           outcome: order.status === "cancelled" ? "cancelled" : "paid",
           alreadyPaid: true,
@@ -121,6 +114,24 @@ export const markPaid = defineOp({
       input.amountCents !== order.totalCents ||
       input.currency !== order.currency.toLowerCase()
     ) {
+      // Written down once. The buyer's page asks again every few seconds and
+      // a webhook can repeat; neither should raise the alarm a second time.
+      if (
+        order.paymentStatus === "review" &&
+        order.paymentReference === input.reference
+      ) {
+        ctx.nothingChanged();
+        return { outcome: "mismatch", alreadyPaid: false };
+      }
+      await ctx.db
+        .update(orders)
+        .set({
+          paymentStatus: "review",
+          paymentProvider: input.provider,
+          paymentReference: input.reference,
+          updatedAt: ctx.now,
+        })
+        .where(eq(orders.id, order.id));
       await ctx.audit({
         entity,
         summary: `A payment of ${formatNzd(input.amountCents)} ${input.currency.toUpperCase()} arrived for ${order.number}, which totals ${formatNzd(order.totalCents)} ${order.currency}. Not marked as paid: it needs a person.`,
@@ -187,7 +198,10 @@ export const markPaid = defineOp({
       })
       .where(and(eq(orders.id, order.id), eq(orders.status, "pending")))
       .returning({ id: orders.id });
-    if (moved.length === 0) return { outcome: "paid", alreadyPaid: true };
+    if (moved.length === 0) {
+      ctx.nothingChanged();
+      return { outcome: "paid", alreadyPaid: true };
+    }
 
     await ctx.audit({
       entity,
@@ -214,8 +228,13 @@ export const paymentExpired = defineOp({
     reason: z.string().trim().min(3).max(280),
   }),
   async run(ctx, input): Promise<{ status: OrderStatus }> {
-    const order = await loadOrder(ctx.db, input.number);
-    if (order.status !== "pending") return { status: order.status };
+    const order = await loadOrder(ctx.db, input.number, { forChange: true });
+    // Paid, or already closed. And never an order whose money is in but in
+    // question: that one is waiting for a person, not for a clock.
+    if (order.status !== "pending" || order.paymentStatus === "review") {
+      ctx.nothingChanged();
+      return { status: order.status };
+    }
     const moved = await ctx.db
       .update(orders)
       .set({
@@ -228,6 +247,7 @@ export const paymentExpired = defineOp({
       .where(and(eq(orders.id, order.id), eq(orders.status, "pending")))
       .returning({ id: orders.id });
     if (moved.length === 0) {
+      ctx.nothingChanged();
       const again = await loadOrder(ctx.db, input.number);
       return { status: again.status };
     }

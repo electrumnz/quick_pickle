@@ -56,9 +56,18 @@ export const customers = pgTable(
 export type OrderStatus =
   "pending" | "paid" | "packed" | "shipped" | "delivered" | "cancelled";
 
-/** `test` means no money moved. */
+/**
+ * `test` means no money moved. `review` means money arrived that does not
+ * match the order (the wrong amount or currency): a person has to look.
+ */
 export type PaymentStatus =
-  "test" | "unpaid" | "paid" | "part_refunded" | "refunded" | "failed";
+  | "test"
+  | "unpaid"
+  | "paid"
+  | "part_refunded"
+  | "refunded"
+  | "failed"
+  | "review";
 
 export const orders = pgTable(
   "orders",

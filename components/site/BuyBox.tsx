@@ -55,10 +55,24 @@ type Props = {
 
 export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
   const lucky = luckyOnPage ? "page" : "file";
-  const { add, open, selectedSku, select } = useCart();
+  const { add, open, selectedSku, select, ready } = useCart();
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const packs = useRef<HTMLFieldSetElement>(null);
+
+  // A pack picked before the page came alive: the browser ticked the radio
+  // and the card showed it, but nothing was listening yet. Take the pick the
+  // buyer can see, so the button never offers one pack while another looks
+  // chosen.
+  useEffect(() => {
+    const picked = packs.current?.querySelector<HTMLInputElement>(
+      'input[name="pack"]:checked',
+    )?.value;
+    if (picked !== undefined && packBySku(picked) !== undefined) {
+      select(picked);
+    }
+  }, [select]);
 
   useEffect(() => {
     const pending = timers.current;
@@ -132,11 +146,17 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
       </div>
 
       <div>
-        <fieldset>
+        <fieldset ref={packs}>
           <legend className="label text-[1.25rem]">{BUY.packLegend}</legend>
           <div className="mt-3 flex flex-col gap-3.5">
             {PACKS.map((option) => {
               const selected = option.sku === pack.sku;
+              // Which card looks chosen is the radio's own doing (the
+              // has-checked styles), so it is right on the first paint and
+              // follows a tap before any script has run. Once the page is
+              // alive the same look is also set from here, for the few
+              // browsers that cannot style a card by what is inside it.
+              const lit = ready && selected;
               const saving = savingCents(option);
               const tag =
                 option.sku === pick.sku
@@ -147,10 +167,10 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
               return (
                 <label
                   key={option.sku}
-                  className={`relative block cursor-pointer rounded-[18px] border-[3px] p-4 transition-transform duration-100 active:scale-[0.985] ${
+                  className={`group has-checked:border-navy has-checked:bg-paper has-checked:shadow-hard relative block cursor-pointer rounded-[18px] border-[3px] p-4 transition-transform duration-100 active:scale-[0.985] ${
                     tag ? "pt-5" : ""
                   } ${
-                    selected
+                    lit
                       ? "border-navy bg-paper shadow-hard"
                       : "border-navy-line bg-paper/60"
                   }`}
@@ -186,13 +206,13 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
                   <span className="flex items-center gap-3.5">
                     <span
                       aria-hidden="true"
-                      className={`border-navy grid size-6 shrink-0 place-items-center rounded-full border-[3px] ${
-                        selected ? "bg-navy" : "bg-paper"
+                      className={`border-navy group-has-checked:bg-navy grid size-6 shrink-0 place-items-center rounded-full border-[3px] ${
+                        lit ? "bg-navy" : "bg-paper"
                       }`}
                     >
                       <span
-                        className={`bg-olive size-2.5 rounded-full transition-transform duration-150 ${
-                          selected ? "scale-100" : "scale-0"
+                        className={`bg-olive size-2.5 rounded-full transition-transform duration-150 group-has-checked:scale-100 ${
+                          lit ? "scale-100" : "scale-0"
                         }`}
                       />
                     </span>
