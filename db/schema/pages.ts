@@ -13,8 +13,11 @@
  * public sees; publishing does.
  */
 
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  index,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -60,4 +63,69 @@ export const pages = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [uniqueIndex("pages_slug_key").on(t.slug)],
+).enableRLS();
+
+/**
+ * Who sees which page: "people who came through Kai's link see Kai's page".
+ *
+ * Read in order, and the first that matches wins. Everybody a rule does not
+ * pick out sees the standard page (or is in a test, if one is running).
+ * What each kind looks at is in lib/shop/routing.ts.
+ */
+export const pageRules = pgTable(
+  "page_rules",
+  {
+    id: text().primaryKey(),
+    /** Its place in the order. Lower is asked first. */
+    position: integer().notNull(),
+    whenKind: text()
+      .$type<"link" | "source" | "site" | "code" | "buyer">()
+      .notNull(),
+    /** The link's slug, the advert's label or the website. Empty otherwise. */
+    whenValue: text().notNull().default(""),
+    pageId: text()
+      .notNull()
+      .references(() => pages.id, { onDelete: "cascade" }),
+    active: boolean().notNull().default(true),
+    createdBy: text().references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("page_rules_order_idx").on(t.position)],
+).enableRLS();
+
+/**
+ * A test between two pages: visitors no rule picks out are split evenly
+ * between them, each kept on the one they landed on, and the numbers say
+ * which sells more.
+ *
+ * It is set up switched off and stays off until somebody starts it. Only
+ * one can be running at a time: two at once would each muddy the other.
+ */
+export const pageTests = pgTable(
+  "page_tests",
+  {
+    id: text().primaryKey(),
+    name: text().notNull(),
+    /** What the challenger is up against. Null: the standard page. */
+    aPageId: text().references(() => pages.id, { onDelete: "set null" }),
+    /** The challenger. */
+    bPageId: text()
+      .notNull()
+      .references(() => pages.id, { onDelete: "cascade" }),
+    status: text()
+      .$type<"off" | "running" | "ended">()
+      .notNull()
+      .default("off"),
+    startedAt: instant("started_at"),
+    endedAt: instant("ended_at"),
+    createdBy: text().references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("page_tests_one_running")
+      .on(t.status)
+      .where(sql`${t.status} = 'running'`),
+  ],
 ).enableRLS();

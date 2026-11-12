@@ -3,6 +3,10 @@
  * live, with a short link to it and an order that came through it, and one
  * still being written. Both go in through the area's own operations, so the
  * live one passed the same copy check a real page has to.
+ *
+ * There is also one rule and one test, to show what they look like. Both
+ * are switched OFF, as everything of the kind is until a person starts it:
+ * the demo's front page is the standard page for everybody.
  */
 
 import type { Db } from "@/lib/db/types";
@@ -12,6 +16,7 @@ import { execute } from "../core/op";
 import { createLink, resolveLink } from "../marketing/links";
 import { placeDemoOrders } from "../orders/demo";
 import { createPage, publishPage } from "./ops";
+import { addPageRule, setPageRuleActive, setUpPageTest } from "./routing-ops";
 
 const HOUR = 60 * 60_000;
 
@@ -69,6 +74,29 @@ export async function seedPagesDemo(db: Db, now: Date): Promise<void> {
     },
     demo,
     at(-30),
+  );
+
+  // A rule and a test, set up and switched off.
+  const rule = await execute(
+    addPageRule,
+    { when: "link", value: "rovers", pageId: clubs.id },
+    demo,
+    at(-20),
+  );
+  await execute(
+    setPageRuleActive,
+    { id: rule.id, active: false },
+    demo,
+    at(-19),
+  );
+  await execute(
+    setUpPageTest,
+    {
+      name: "Standard page against the clubs page (sample)",
+      bPageId: clubs.id,
+    },
+    demo,
+    at(-18),
   );
 
   // One order that came through the clubs page, so its numbers have a sale.

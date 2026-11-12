@@ -9,6 +9,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 type Sent = { readonly url: string; readonly body: Record<string, unknown> };
 
 async function inABrowser(options: {
+  /** What document.cookie reads as. */
+  readonly cookie?: string;
   readonly gpc?: boolean;
   readonly doNotTrack?: string;
   readonly phone?: boolean;
@@ -33,6 +35,7 @@ async function inABrowser(options: {
     matchMedia: () => ({ matches: options.phone ?? true }),
   });
   vi.stubGlobal("document", {
+    cookie: options.cookie ?? "",
     querySelector: () =>
       options.page === undefined ? null : { dataset: { page: options.page } },
   });
@@ -80,6 +83,7 @@ describe("the visit counter, in the browser", () => {
       source: { via: "rovers", ref: "example.co.nz" },
       referrer: "example.co.nz",
       device: "phone",
+      test: null,
     });
   });
 
@@ -132,6 +136,33 @@ describe("the visit counter, in the browser", () => {
       device: "desk",
       visit: viewed?.body.visit,
     });
+  });
+
+  it("says which side of a test the visitor is on, from the one cookie a test sets", async () => {
+    const arm = "pts_abcdefghijklmnopqrst.b";
+    const browser = await inABrowser({
+      page: "bold",
+      cookie: `other=1; qp_page=${encodeURIComponent(`bold~t.${arm}`)}; more=2`,
+    });
+    browser.seen("view", {});
+    const [only] = await browser.sent();
+    expect(only?.body.test).toBe(arm);
+    expect(browser.visitDetails({}).test).toBe(arm);
+  });
+
+  it("says nothing about a test when the visitor is not in one", async () => {
+    for (const cookie of [
+      "",
+      "qp_page=clubs~r.prl_abcdefghijklmnopqrst",
+      "qp_page=nonsense",
+      "qp_pagex=bold~t.pts_abcdefghijklmnopqrst.b",
+    ]) {
+      const browser = await inABrowser({ cookie });
+      browser.seen("view", {});
+      const [only] = await browser.sent();
+      expect(only?.body.test, cookie).toBeNull();
+      expect(browser.visitDetails({}), cookie).not.toHaveProperty("test");
+    }
   });
 
   it("falls back to an ordinary request where there is no beacon", async () => {

@@ -39,6 +39,8 @@ import { tidySource } from "../marketing/credit";
 export const VISIT_PATTERN = /^[a-z0-9]{16,32}$/;
 /** A page's short name: "home", or a landing page's slug. */
 export const PAGE_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,38})[a-z0-9]$/;
+/** A test and one of its two sides: "pts_….a" or "pts_….b". */
+export const TEST_PATTERN = /^pts_[a-z0-9]{6,40}\.[ab]$/;
 const HOST_PATTERN = /^(?=.{1,100}$)[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
 
 export const SEEN_KINDS = ["view", "add", "checkout", "order"] as const;
@@ -61,6 +63,8 @@ const seenInput = z.object({
   /** The website the visit came from, host only. */
   referrer: z.string().max(200).nullable().default(null),
   device: z.enum(["phone", "desk"]).nullable().default(null),
+  /** The test this visit is part of and its side: "<test id>.a". */
+  test: z.string().max(60).nullable().default(null),
 });
 
 export type SeenInput = z.input<typeof seenInput>;
@@ -89,6 +93,8 @@ export function seenRow(
     ),
     referrer: HOST_PATTERN.test(referrer) ? referrer : (source.ref ?? null),
     device: input.device,
+    test:
+      input.test !== null && TEST_PATTERN.test(input.test) ? input.test : null,
   };
 }
 

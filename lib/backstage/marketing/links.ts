@@ -34,6 +34,7 @@ import { links, partners, promoCodes } from "@/db/schema";
 import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
 import { CODE_PARAM } from "@/lib/shop/code";
+import { fromAPersonsBrowser } from "@/lib/shop/person";
 
 import { can } from "../core/actor";
 import { notFound, OpError } from "../core/errors";
@@ -114,19 +115,9 @@ function refuseOutsideTarget(ctx: OpContext, target: string): void {
 
 /* ---- what counts as a click --------------------------------------------- */
 
-/**
- * Machines that say what they are: search engines, link previews, uptime
- * checks, scripts. Read from the request to decide whether to count, and
- * never stored. It is a short list on purpose. Missing a machine adds a
- * click or two; mistaking a person for one would hide a real visit. (The
- * one exception written in: "bot" at the end of a word is a machine, except
- * in the name of a make of phone.)
- */
-const MACHINE =
-  /(?<!cu)bot\b|crawler|spider|slurp|facebookexternalhit|whatsapp\/|preview|embedly|iframely|feedfetcher|mediapartners|googleother|headless|lighthouse|pingdom|uptime|monitor|scrapy|curl\/|wget\/|python-|go-http-client|okhttp|java\/|http\.rb|libwww|node-fetch|undici|axios\/|postman/i;
-
-/** Headers a browser sends when it fetches a page before anyone asked for it. */
-const AHEAD_OF_TIME = ["purpose", "sec-purpose", "x-purpose", "x-moz"];
+// The test for "a person's own browser" lives in lib/shop/person, which
+// imports nothing, so the visit counter and the page rules share it.
+export { fromAPersonsBrowser };
 
 /**
  * True when a request for a short link is a person following it, as far as
@@ -138,22 +129,6 @@ export function isCountedVisit(request: {
 }): boolean {
   if (request.method.toUpperCase() !== "GET") return false;
   return fromAPersonsBrowser(request.headers);
-}
-
-/**
- * True when a request's headers look like a person's own browser, whatever
- * the method: it says what it is, it is not a machine that says so, and it
- * is not fetching a page ahead of time. The shop's visit counter uses the
- * same test as a short link's click count.
- */
-export function fromAPersonsBrowser(headers: {
-  get(name: string): string | null;
-}): boolean {
-  const agent = (headers.get("user-agent") ?? "").trim();
-  if (agent === "" || MACHINE.test(agent)) return false;
-  return !AHEAD_OF_TIME.some((name) =>
-    /prefetch|prerender|preview/i.test(headers.get(name) ?? ""),
-  );
 }
 
 const PLACEHOLDER_ORIGIN = "https://site.invalid";

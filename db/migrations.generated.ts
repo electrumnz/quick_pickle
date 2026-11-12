@@ -273,5 +273,23 @@ export const MIGRATIONS: readonly Migration[] = [
       "ALTER TABLE \"pages\" ADD CONSTRAINT \"pages_created_by_users_id_fk\" FOREIGN KEY (\"created_by\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE set null ON UPDATE no action;",
       "CREATE UNIQUE INDEX \"pages_slug_key\" ON \"pages\" USING btree (\"slug\");"
     ]
+  },
+  {
+    "tag": "0007_page_routing",
+    "hash": "b0b706cc497f3bc7",
+    "statements": [
+      "CREATE TABLE \"page_rules\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"position\" integer NOT NULL,\n\t\"when_kind\" text NOT NULL,\n\t\"when_value\" text DEFAULT '' NOT NULL,\n\t\"page_id\" text NOT NULL,\n\t\"active\" boolean DEFAULT true NOT NULL,\n\t\"created_by\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"page_rules\" ENABLE ROW LEVEL SECURITY;",
+      "CREATE TABLE \"page_tests\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"name\" text NOT NULL,\n\t\"a_page_id\" text,\n\t\"b_page_id\" text NOT NULL,\n\t\"status\" text DEFAULT 'off' NOT NULL,\n\t\"started_at\" timestamp with time zone,\n\t\"ended_at\" timestamp with time zone,\n\t\"created_by\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"page_tests\" ENABLE ROW LEVEL SECURITY;",
+      "ALTER TABLE \"page_events\" ADD COLUMN \"test\" text;",
+      "ALTER TABLE \"page_rules\" ADD CONSTRAINT \"page_rules_page_id_pages_id_fk\" FOREIGN KEY (\"page_id\") REFERENCES \"public\".\"pages\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"page_rules\" ADD CONSTRAINT \"page_rules_created_by_users_id_fk\" FOREIGN KEY (\"created_by\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "ALTER TABLE \"page_tests\" ADD CONSTRAINT \"page_tests_a_page_id_pages_id_fk\" FOREIGN KEY (\"a_page_id\") REFERENCES \"public\".\"pages\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "ALTER TABLE \"page_tests\" ADD CONSTRAINT \"page_tests_b_page_id_pages_id_fk\" FOREIGN KEY (\"b_page_id\") REFERENCES \"public\".\"pages\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"page_tests\" ADD CONSTRAINT \"page_tests_created_by_users_id_fk\" FOREIGN KEY (\"created_by\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "CREATE INDEX \"page_rules_order_idx\" ON \"page_rules\" USING btree (\"position\");",
+      "CREATE UNIQUE INDEX \"page_tests_one_running\" ON \"page_tests\" USING btree (\"status\") WHERE \"page_tests\".\"status\" = 'running';"
+    ]
   }
 ];

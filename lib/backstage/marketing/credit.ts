@@ -31,6 +31,7 @@ import { SLUG_PATTERN, UTM_KEYS } from "./links";
  *   page        which page was shown: "home", or a landing page's name
  *   visit       the visit's own random id, to tie an order to its steps
  *   device      phone or desk
+ *   test        the test between two pages it was part of, and which side
  *
  * None of it says who anybody is.
  */
@@ -41,6 +42,7 @@ export const SOURCE_KEYS = [
   "page",
   "visit",
   "device",
+  "test",
 ] as const;
 
 /** A utm label: short, lower case, no spaces. The same shape a link saves. */
@@ -57,6 +59,7 @@ const SHAPE: Readonly<Record<(typeof SOURCE_KEYS)[number], RegExp>> = {
   page: SLUG_PATTERN,
   visit: VISIT,
   device: /^(?:phone|desk)$/,
+  test: /^pts_[a-z0-9]{6,40}\.[ab]$/,
 };
 
 /**

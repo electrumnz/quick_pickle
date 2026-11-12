@@ -79,6 +79,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           step.device === "phone" || step.device === "desk"
             ? step.device
             : null,
+        test: typeof step.test === "string" ? step.test : null,
       },
       SHOP,
     );

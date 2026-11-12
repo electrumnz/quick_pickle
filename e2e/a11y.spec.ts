@@ -36,6 +36,8 @@ const PAGES = [
   "/backstage/marketing/social/new",
   "/backstage/marketing/links",
   "/backstage/marketing/pages",
+  "/backstage/marketing/pages/who",
+  "/backstage/marketing/pages/who?asked=1&via=clubs",
   "/backstage/marketing/reviews",
   "/backstage/marketing/partners",
   "/backstage/numbers",

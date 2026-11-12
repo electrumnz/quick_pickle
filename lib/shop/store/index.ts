@@ -86,6 +86,12 @@ export type Store = {
    * that the code is in. Anything else is a plain no.
    */
   describeCode?(code: string): Promise<CodePeek>;
+  /**
+   * True when a rule for who sees which page asks whether a visitor has
+   * bought before. Only then does the checkout leave a cookie saying so:
+   * with no such rule, nothing is remembered about having ordered.
+   */
+  remembersBuyers?(): Promise<boolean>;
 };
 
 const DATA_DIR = join(process.cwd(), ".data");
@@ -187,6 +193,16 @@ function dbStore(env: Record<string, string | undefined>): Store {
             deliveryDiscountCents: worth.deliveryDiscountCents,
           }
         : { ok: false, reason: worth.reason };
+    },
+    async remembersBuyers() {
+      const { pagesRouting } =
+        await import("@/lib/backstage/pages/routing-ops");
+      const routing = await execute(
+        pagesRouting,
+        {},
+        systemCaller("The shop", "storefront"),
+      );
+      return routing.asksBuyer;
     },
     async describeCode(code) {
       const { peekPromoCode } =

@@ -19,6 +19,7 @@ import { getPage, type PageRow } from "@/lib/backstage/pages/ops";
  *
  *   /preview/<id>            the draft
  *   /preview/<id>?show=live  the published words, when there are any
+ *   /preview/home            the standard page, to compare against
  *
  * Never cached, never indexed, and a visit here is not counted in the
  * numbers: it would be staff looking at their own work.
@@ -41,6 +42,21 @@ export default async function PreviewPage({
   await requireStaff();
   const { id } = await params;
   const { show } = await searchParams;
+
+  // The standard page, for comparing a landing page against.
+  if (id === "home") {
+    return (
+      <>
+        <PreviewRibbon
+          showing="live"
+          name="The standard page"
+          editHref="/backstage/marketing/pages"
+          otherHref={null}
+        />
+        <ShopPage preview />
+      </>
+    );
+  }
 
   let page: PageRow;
   try {

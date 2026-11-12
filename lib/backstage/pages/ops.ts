@@ -21,6 +21,7 @@ import { z } from "zod";
 import { pages, type PageWords } from "@/db/schema";
 import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
+import { HOME } from "@/lib/shop/routing";
 
 import { refuseUnsendable } from "../core/copy";
 import { conflict, notFound, OpError } from "../core/errors";
@@ -97,6 +98,12 @@ const slugField = z
   .refine(
     (slug) => SLUG_PATTERN.test(slug),
     "An address is 2 to 40 lower-case letters, numbers or hyphens",
+  )
+  // The standard page goes by this name in the numbers and in who sees
+  // which page. A landing page called the same would be counted as it.
+  .refine(
+    (slug) => slug !== HOME,
+    `"${HOME}" is the standard page's own name. Pick another`,
   );
 
 const partsOf = (words: PageWords) => ({

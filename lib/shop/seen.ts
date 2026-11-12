@@ -21,6 +21,8 @@
  * page works exactly the same if the counter is not there.
  */
 
+import { PAGE_COOKIE, testArmOf } from "./routing";
+
 const ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 
 function makeId(): string {
@@ -66,6 +68,24 @@ function isPreview(): boolean {
   }
 }
 
+/**
+ * The test this visitor is part of and which side they are on, read from
+ * the one cookie a rule or a test sets (lib/shop/routing.ts). Null almost
+ * always: there is no such cookie unless a test is running.
+ */
+function testArm(): string | null {
+  try {
+    const found = document.cookie
+      .split("; ")
+      .find((each) => each.startsWith(`${PAGE_COOKIE}=`));
+    return found === undefined
+      ? null
+      : testArmOf(decodeURIComponent(found.slice(PAGE_COOKIE.length + 1)));
+  } catch {
+    return null;
+  }
+}
+
 function device(): "phone" | "desk" {
   try {
     return window.matchMedia("(max-width: 767px)").matches ? "phone" : "desk";
@@ -92,6 +112,7 @@ export function seen(
       source,
       referrer: source.ref ?? null,
       device: device(),
+      test: testArm(),
     });
     const sent =
       typeof navigator.sendBeacon === "function" &&
@@ -126,5 +147,7 @@ export function visitDetails(
     device: device(),
   };
   if (VISIT !== "" && !askedNotToBeTracked()) details.visit = VISIT;
+  const test = testArm();
+  if (test !== null) details.test = test;
   return details;
 }

@@ -25,6 +25,11 @@ export const pageEvents = pgTable(
      * so the path alone does not say.
      */
     page: text().notNull().default("home"),
+    /**
+     * The test this visit was part of and which side it saw: "<test id>.a"
+     * or "<test id>.b". Null almost always: no test was running.
+     */
+    test: text(),
     /** Random, per visit, never stored on the visitor's device. */
     visit: text().notNull(),
     /** utm_source and friends, when the link carried them. */
