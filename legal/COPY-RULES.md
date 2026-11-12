@@ -147,7 +147,9 @@ patterns are in the scanner: `node legal/scripts/audit-copy.mjs --list`.
 On **C**: this is a sport-adjacent brand, and that is allowed. What is banned is the
 language of the product acting on the body. **Game day, the whistle, the sideline, the kit
 bag, half-time, the team** are occasions and are fine. **Athlete, workout, gym, recovery,
-muscle** point at the body and are not.
+muscle** point at the body and are not. The word "recovery" is refused by itself
+(EL-07), not only in a phrase like "aids recovery": "your recovery ritual" says the same
+thing with fewer words.
 
 ### Restricted: allowed once a stated condition is checked and recorded
 

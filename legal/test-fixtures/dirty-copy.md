@@ -11,6 +11,7 @@ all day. It's good for you, low in sugar and totally sugar-free.
 ## Benefits (bad)
 
 - Aids recovery after a workout and stops muscle cramp
+- Your recovery ritual, in a tiny bottle
 - Boosts your immune system and supports gut health
 - Live cultures and probiotics for digestion
 - A natural hangover cure — studies show it works
