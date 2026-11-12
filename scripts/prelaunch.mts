@@ -8,8 +8,9 @@
  * build and taking real money from real people:
  *
  *   - a commercial fact that is still a stand-in (content/offer.ts UNCONFIRMED)
- *   - payments in test mode
+ *   - payments in test mode, or a processor on its own test key
  *   - orders with nowhere durable to be written
+ *   - no clock, so nothing is retried and nothing unpaid is closed
  *
  * It reads the same modules the site does, so it cannot disagree with it.
  */
@@ -36,6 +37,19 @@ const checks: Check[] = [
     ok: paymentProvider !== "test" && paymentProvider !== "",
     label: "Payments are in test mode",
     fix: "Connect a payment processor in lib/shop/payments and set PAYMENT_PROVIDER.",
+  },
+  {
+    // A processor in its own test mode takes no real money either.
+    ok:
+      paymentProvider !== "stripe" ||
+      (env.STRIPE_SECRET_KEY ?? "").trim().startsWith("sk_live_"),
+    label: "Stripe is on a test key",
+    fix: "Finish Stripe's account set-up, then give production its live key (the infra workflow's connect-stripe).",
+  },
+  {
+    ok: (env.CRON_SECRET ?? "").trim().length >= 16,
+    label: "The clock is not set up",
+    fix: "Run connect-clock in the infra workflow, so failed steps are tried again and unpaid orders are closed.",
   },
   {
     ok: orderStore !== "" && orderStore !== "log" && orderStore !== "file",

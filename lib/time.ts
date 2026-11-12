@@ -147,6 +147,11 @@ export function formatNzDateTime(instant: Date): string {
   return `${formatNzDate(instant)}, ${formatNzTime(instant)}`;
 }
 
+/** Whole minutes from `instant` to now. Negative if it is still to come. */
+export function minutesSince(instant: Date, now: Date = new Date()): number {
+  return Math.floor((now.getTime() - instant.getTime()) / 60_000);
+}
+
 /**
  * How a person would say it: "just now", "5 min ago", "today, 9:05 pm",
  * "yesterday, 4:30 pm", "Tue 10 Nov", then the full date for older things.

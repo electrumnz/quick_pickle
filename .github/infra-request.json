@@ -1,6 +1,6 @@
 {
-  "actions": ["stripe-check", "status"],
+  "actions": ["connect-clock", "redeploy", "status"],
   "confirm": "yes",
-  "asked": "2026-11-12T10:55Z",
-  "why": "Prove the payment page's new settings (NZ dollars only, the shop's colours) against Stripe's test mode, and show orders by state and whether Stripe's news is being delivered."
+  "asked": "2026-11-12T11:08Z",
+  "why": "Give the back end a clock: the database rings /api/tick every five minutes, so failed steps are tried again and orders nobody paid for are closed."
 }
