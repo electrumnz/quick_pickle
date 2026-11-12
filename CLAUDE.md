@@ -16,8 +16,9 @@ the four fonts. "Brand Guide v2" (Grok's write-up of her files) is a starting po
 rulebook. The version this build actually follows is the living guide at `/backstage/brand`,
 rendered from the same tokens and components as the site.
 
-Everything a customer sees says Quick Pickle. "Pickled Jews" (the repository name) is the
-umbrella the project sits under. Whether it ever shows on the pack or the site, and in what
+Everything a customer sees says Quick Pickle. "Pickled Jews" (what the repository was called
+until Sam renamed it `quick_pickle` on 12 November 2026) is the umbrella the project sits
+under. Whether it ever shows on the pack or the site, and in what
 words, is Ashleigh's call and is not made yet, so until then it appears nowhere a customer
 can see.
 
@@ -152,12 +153,30 @@ A link from the back end to the shop is `ShopLink` (a plain anchor, full page lo
   people and bots at work the activity log has to say who did what. Its "no MCP" decision is
   also reversed: an MCP connection is planned, built last, over the same operations.
 
+### What happens after a change
+
+An operation writes events in its own transaction and does nothing outward. Once it has
+committed, `lib/backstage/core/events.ts` hands each event to its listeners (`after()` in a
+request), at least once: a listener that throws is retried with a growing wait and given up
+on after eight tries, where a person can send it round again. So **every listener must be
+safe to run twice**. `lib/backstage/handlers.ts` is the one list of who hears about what.
+Tests leave the dispatcher off and call `processEvents` themselves.
+
 ### Commerce
 
 - `content/offer.ts` is the catalogue. Money is integer cents; never a float in a price path.
-- `lib/shop/payments` is where a processor plugs in. Today `PAYMENT_PROVIDER` is `test`:
-  the checkout records the order, charges nobody, and says so on every screen. An unknown
-  provider name throws rather than falling back to test mode.
+- `lib/shop/payments` is where a processor plugs in, named by `PAYMENT_PROVIDER`. An
+  unknown name throws rather than falling back to test mode.
+  - `test` (the default): the checkout records the order, charges nobody, and says so.
+  - `stripe`: Stripe's hosted payment page, with no SDK. The order is **saved first** as
+    awaiting payment, a payment page is made for exactly its total (the order number is the
+    idempotency key), and the buyer is sent there. Stripe's signed webhook
+    (`app/api/stripe/webhook`) marks it paid; the page the buyer returns to asks Stripe as
+    well, through the same operation, so whichever arrives first does the work. A test key
+    means Stripe's test mode and the checkout says that instead.
+  - Money arriving is never taken on trust: `orders.markPaid` checks amount and currency
+    against the order, is safe to call twice, and flags a payment for a cancelled order
+    for refund instead of reopening it.
 - `lib/shop/store` is where the shop hands an order over. The default is `db`: the back
   end's own `orders.record` operation, so an order is on the Orders screen as it is placed.
 - The "order's in" page reads a short-lived httpOnly receipt cookie. It is display only.
@@ -242,6 +261,30 @@ both apart from Keece. Production needs `DATABASE_URL` or `POSTGRES_URL` (Produc
 environment only) and `BACKSTAGE_SETUP_CODE`. Vercel's free plan does not allow a business
 that takes money, so launch means either Vercel Pro or moving hosting to Cloudflare: keep
 the app free of Vercel-only services in its core paths so that move stays cheap.
+
+### The repository's own hands
+
+Nobody holds dashboard access for the code's sake. `.github/workflows/infra.yml` runs
+`scripts/infra/run.mjs` with four repository secrets and can read and set up Vercel,
+Supabase and Stripe. It runs on every push to `main` (it reads the state and changes
+nothing) and does more only when that push changed `.github/infra-request.json`:
+
+```json
+{
+  "actions": ["status", "stripe-check", "connect-stripe", "redeploy"],
+  "confirm": "yes"
+}
+```
+
+So a change to production's settings is a commit, checked and merged like any other. Read
+the result in the run's log. It prints names and states, never a value; it is pinned to
+Quick Pickle's own Vercel project (by id) and Supabase project, and refuses to run against
+Keece's. GitHub does not tell a workflow which files a push changed, so the workflow works
+that out with git.
+
+Production today: the app has its own database login (`qp_app`, made by `connect-database`,
+through the pooler in transaction mode) as `DATABASE_URL`, so it owns its tables;
+`BACKSTAGE_SETUP_CODE` was made by `ensure-setup-code` and can be read in Vercel's settings.
 
 The site is not launched. See `TODO.md` for what stands between this and taking money.
 

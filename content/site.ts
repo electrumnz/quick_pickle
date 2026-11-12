@@ -297,6 +297,11 @@ export const CHECKOUT = {
   testTitle: "Test mode",
   testBody:
     "Payments aren't switched on yet. No money is taken and nothing will be sent. Use it to try the checkout out.",
+  sandboxTitle: "Stripe test mode",
+  sandboxBody:
+    "Placing the order takes you to Stripe's payment page in its test mode. Use one of Stripe's test cards there. No real money is taken and nothing will be sent.",
+  cancelledTitle: "Payment wasn't finished.",
+  cancelledBody: "Nothing was charged. Your jar is just as you left it.",
   sections: {
     contact: "Who's it for",
     delivery: "Where's it going",
@@ -326,14 +331,17 @@ export const CHECKOUT = {
   country: "New Zealand only for now.",
   paymentTest:
     "Card and wallet payments go here once a payment processor is connected. For now, placing the order just records it as a test.",
-  paymentLive: "Your payment is taken securely when you place the order.",
+  paymentSandbox:
+    "You'll pay on Stripe's payment page, which is in test mode. Nothing real is charged.",
+  paymentLive:
+    "You'll pay on Stripe's secure payment page. Your card details never touch our site.",
   subtotal: "Subtotal",
   delivery: "Delivery",
   rural: "Rural delivery",
   free: "Free",
   total: "Total",
   totalNote: "NZD",
-  place: "Place order",
+  place: "Continue to payment",
   placeTest: "Place test order",
   placing: "Placing your order",
   agree: "By placing this order you agree to our",
@@ -366,6 +374,18 @@ export const THANKS = {
   deliverTo: "Going to",
   home: "Back to the start",
   alt: "Lucky jumping for joy with a pickle.",
+  sandboxNote:
+    "This was a Stripe test payment. No real money was taken and nothing will be sent.",
+  awaitingTitle: ["Nearly", "there."],
+  awaitingBody:
+    "We're waiting to hear back from the payment page. It usually takes a few seconds.",
+  awaitingAgain: "Check again",
+  closedTitle: ["Not", "paid."],
+  closedBody:
+    "That order wasn't paid, so it has been closed. Nothing was charged, and your jar is just as you left it.",
+  closedCta: "Back to checkout",
+  reviewNote:
+    "Your payment came through, but there's something on this order we need to check by hand. We'll email you about it shortly.",
   noneTitle: "No order to show.",
   noneBody:
     "There's no recent order on this device. If you just placed one, check your email for the receipt.",

@@ -218,8 +218,40 @@ export async function execute<I extends z.ZodType, O>(
     return value;
   });
 
-  if (emitted.length > 0 && commitHook !== null) commitHook(emitted);
+  if (emitted.length > 0) {
+    await ensureDispatcher();
+    if (commitHook !== null) commitHook(emitted);
+  }
   return result;
+}
+
+let dispatcherAsked = false;
+
+/**
+ * Bring the event dispatcher up the first time there is something for it.
+ *
+ * It is loaded on demand because it sits above this file: the dispatcher
+ * knows the listeners, the listeners call operations, and operations are
+ * defined with this file. Tests leave it off and call `processEvents`
+ * themselves, so nothing happens behind a test's back.
+ */
+async function ensureDispatcher(): Promise<void> {
+  if (dispatcherAsked || commitHook !== null) return;
+  dispatcherAsked = true;
+  if (process.env.NODE_ENV === "test") return;
+  try {
+    const { boot } = await import("@/lib/backstage/boot");
+    boot();
+  } catch (error) {
+    // The change is already saved and its events are in the table. A tick
+    // will pick them up; failing the request now would only hide that.
+    console.error(
+      JSON.stringify({
+        event: "events.boot_failed",
+        message: error instanceof Error ? error.message : "unknown",
+      }),
+    );
+  }
 }
 
 /** Everything a caller needs to know to use an operation, without the code. */

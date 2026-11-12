@@ -64,10 +64,14 @@ const form = (over: Record<string, unknown> = {}) => ({
 const provider = (status: "test" | "paid"): PaymentProvider => ({
   name: status === "test" ? "test" : "fake",
   isTest: status === "test",
-  charge: async (request) => ({
-    provider: status === "test" ? "test" : "fake",
-    status,
-    reference: `REF-${request.orderNumber}`,
+  savesFirst: false,
+  begin: async (request) => ({
+    kind: "done",
+    payment: {
+      provider: status === "test" ? "test" : "fake",
+      status,
+      reference: `REF-${request.orderNumber}`,
+    },
   }),
 });
 

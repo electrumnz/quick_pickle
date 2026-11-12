@@ -41,12 +41,16 @@ function harness() {
   const payments: PaymentProvider = {
     name: "spy",
     isTest: true,
-    async charge(request) {
+    savesFirst: false,
+    async begin(request) {
       charges.push(request);
       return {
-        provider: "spy",
-        status: "test",
-        reference: `SPY-${request.orderNumber}`,
+        kind: "done",
+        payment: {
+          provider: "spy",
+          status: "test",
+          reference: `SPY-${request.orderNumber}`,
+        },
       };
     },
   };
@@ -173,7 +177,8 @@ describe("placing an order", () => {
       payments: {
         name: "broken",
         isTest: true,
-        async charge() {
+        savesFirst: false,
+        async begin() {
           throw new Error("declined");
         },
       },

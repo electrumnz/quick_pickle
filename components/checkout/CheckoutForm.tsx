@@ -121,7 +121,15 @@ function SectionTitle({
   );
 }
 
-export function CheckoutForm({ testMode }: { readonly testMode: boolean }) {
+export function CheckoutForm({
+  mode,
+  cancelled = false,
+}: {
+  /** What paying means right now (lib/shop/payments: checkoutMode). */
+  readonly mode: "practice" | "sandbox" | "live";
+  /** The buyer came back from the payment page without paying. */
+  readonly cancelled?: boolean;
+}) {
   const { cart, ready } = useCart();
   const [state, action, pending] = useActionState(submitCheckout, INITIAL);
   const [rural, setRural] = useState(false);
@@ -164,7 +172,7 @@ export function CheckoutForm({ testMode }: { readonly testMode: boolean }) {
   const priced = quote(cart, { rural });
   const errors: FieldErrors = state.errors;
   const values = state.values;
-  const placeLabel = testMode ? CHECKOUT.placeTest : CHECKOUT.place;
+  const placeLabel = mode === "practice" ? CHECKOUT.placeTest : CHECKOUT.place;
 
   const summary = (
     <div>
@@ -232,14 +240,28 @@ export function CheckoutForm({ testMode }: { readonly testMode: boolean }) {
           {CHECKOUT.title}
         </h1>
 
-        {testMode ? (
+        {cancelled && state.status === "idle" ? (
+          <div
+            role="status"
+            className="border-navy bg-paper mt-5 rounded-[14px] border-2 p-4"
+          >
+            <p className="label text-[1.15rem]">{CHECKOUT.cancelledTitle}</p>
+            <p className="mt-1 text-[0.9375rem] leading-snug">
+              {CHECKOUT.cancelledBody}
+            </p>
+          </div>
+        ) : null}
+
+        {mode !== "live" ? (
           <div
             role="note"
             className="border-navy bg-olive-wash mt-5 rounded-[14px] border-2 border-dashed p-4"
           >
-            <p className="label text-[1.15rem]">{CHECKOUT.testTitle}</p>
+            <p className="label text-[1.15rem]">
+              {mode === "practice" ? CHECKOUT.testTitle : CHECKOUT.sandboxTitle}
+            </p>
             <p className="mt-1 text-[0.9375rem] leading-snug">
-              {CHECKOUT.testBody}
+              {mode === "practice" ? CHECKOUT.testBody : CHECKOUT.sandboxBody}
             </p>
           </div>
         ) : null}
@@ -480,7 +502,11 @@ export function CheckoutForm({ testMode }: { readonly testMode: boolean }) {
             <div className="card-flat bg-paper flex items-start gap-3 p-4">
               <LockIcon className="mt-0.5 size-7 shrink-0" />
               <p className="text-[0.9375rem] leading-snug">
-                {testMode ? CHECKOUT.paymentTest : CHECKOUT.paymentLive}
+                {mode === "practice"
+                  ? CHECKOUT.paymentTest
+                  : mode === "sandbox"
+                    ? CHECKOUT.paymentSandbox
+                    : CHECKOUT.paymentLive}
               </p>
             </div>
 
