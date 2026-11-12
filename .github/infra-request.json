@@ -1,6 +1,6 @@
 {
-  "actions": ["status", "stripe-check", "connect-stripe", "redeploy", "status"],
+  "actions": ["stripe-check", "status"],
   "confirm": "yes",
-  "asked": "2026-11-12T10:20Z",
-  "why": "Prove the app's Stripe code against Stripe's test mode, and only if that passes switch production's checkout from practice to Stripe (test keys: its real payment page, no real money)."
+  "asked": "2026-11-12T10:55Z",
+  "why": "Prove the payment page's new settings (NZ dollars only, the shop's colours) against Stripe's test mode, and show orders by state and whether Stripe's news is being delivered."
 }

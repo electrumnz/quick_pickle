@@ -310,6 +310,23 @@ async function supabaseStatus() {
         `  staff logins ${String(first.users)}, orders ${String(first.orders)}, customers ${String(first.customers)}`,
       );
     }
+    // Counts only, by state. Never a name, an address or an order number.
+    const byState = await readOnlyQuery(
+      "select status, payment_status, is_test, count(*)::int as n from public.orders group by 1, 2, 3 order by 1, 2, 3",
+    );
+    for (const row of Array.isArray(byState) ? byState : []) {
+      console.log(
+        `    orders ${String(row.status)} / ${String(row.payment_status)}${row.is_test ? " (test)" : ""}: ${String(row.n)}`,
+      );
+    }
+    const queue = await readOnlyQuery(
+      "select type, count(*)::int as n, count(*) filter (where handled_at is null)::int as waiting, coalesce(max(attempts), 0)::int as most_tries from public.events group by 1 order by 1",
+    );
+    for (const row of Array.isArray(queue) ? queue : []) {
+      console.log(
+        `    events ${String(row.type)}: ${String(row.n)}${row.waiting > 0 ? `, ${String(row.waiting)} waiting (most tries ${String(row.most_tries)})` : ""}`,
+      );
+    }
   } else {
     console.log(
       "  the app has not connected yet (no qp_migrations table). It makes its own tables the first time it does.",
@@ -355,6 +372,30 @@ async function stripeStatus() {
   console.log(
     `  publishable key: ${publishable === "" ? "missing" : publishable.startsWith("pk_test_") ? "test" : publishable.startsWith("pk_live_") ? "LIVE" : "unrecognised"}`,
   );
+
+  // Is Stripe's news getting through? An event still "to deliver" long after
+  // it happened means the site is not answering Stripe properly.
+  const recent = await call(
+    STRIPE,
+    `/v1/events?limit=100&created[gte]=${String(Math.floor(Date.now() / 1000) - 24 * 3600)}`,
+    { token: key },
+  );
+  const tally = new Map();
+  for (const event of Array.isArray(recent?.data) ? recent.data : []) {
+    if (!STRIPE_EVENTS.includes(event.type)) continue;
+    const row = tally.get(event.type) ?? { n: 0, undelivered: 0 };
+    row.n += 1;
+    if ((event.pending_webhooks ?? 0) > 0) row.undelivered += 1;
+    tally.set(event.type, row);
+  }
+  if (tally.size === 0) {
+    console.log("  payment news in the last day: none");
+  }
+  for (const [type, row] of tally) {
+    console.log(
+      `  last day, ${type}: ${String(row.n)}${row.undelivered > 0 ? `, ${String(row.undelivered)} NOT delivered yet` : ", all delivered"}`,
+    );
+  }
 }
 
 // --- Actions ---------------------------------------------------------------
@@ -641,8 +682,19 @@ async function stripeCheck() {
   if (!key.startsWith("sk_test_")) {
     fail("The Stripe check only ever runs with a test key.");
   }
-  const { createCheckoutSession, retrieveCheckoutSession } =
+  const { createCheckoutSession, retrieveCheckoutSession, paymentPageLook } =
     await import("../../lib/shop/payments/stripe.ts");
+  const { hexOf } = await import("../../lib/brand/colours.ts");
+  // The same look the shop asks for, so Stripe gets to refuse it here first.
+  const look = paymentPageLook(hexOf, "Quick Pickle");
+  const keysUsed = [];
+  const watched = (url, init) => {
+    const used = init?.headers?.["Idempotency-Key"];
+    if (typeof used === "string") keysUsed.push(used);
+    return fetch(url, init);
+  };
+  // One clock reading: the page's closing time is part of what is asked for.
+  const now = new Date();
   const number = "QP-TESTZZ";
   const request = {
     // A new page each run: the order number is the idempotency key.
@@ -659,7 +711,15 @@ async function stripeCheck() {
     successUrl: "https://quickpickle.vercel.app/order/thanks",
     cancelUrl: "https://quickpickle.vercel.app/checkout?payment=cancelled",
   };
-  const session = await createCheckoutSession(key, request, new Date());
+  const session = await createCheckoutSession(key, request, now, watched, look);
+  // The app asks again without a setting Stripe refuses, and the key it
+  // used last says which ones it had to leave out.
+  const leftOut = (keysUsed.at(-1) ?? "").split("-no-")[1] ?? "";
+  console.log(
+    leftOut === ""
+      ? "  ok   NZ dollars only, in the shop's colours"
+      : `  NOTE Stripe would not take: ${leftOut}. The page works without it.`,
+  );
   const checks = [
     [
       "has an id",
@@ -683,7 +743,7 @@ async function stripeCheck() {
   for (const [label, ok] of checks)
     console.log(`  ${ok ? "ok  " : "FAIL"} ${label}`);
 
-  const again = await createCheckoutSession(key, request, new Date());
+  const again = await createCheckoutSession(key, request, now, watched, look);
   console.log(
     `  ${again.id === session.id ? "ok  " : "FAIL"} asking twice gives the same page`,
   );
