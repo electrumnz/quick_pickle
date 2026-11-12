@@ -25,6 +25,7 @@ import {
   listCampaigns,
   type CampaignRow,
 } from "./campaigns";
+import { collabBoard, type CollabRow } from "./collabs";
 import { weekBounds, weekStartKey } from "./dates";
 import { listLinks, type LinkRow } from "./links";
 import { listPartners, type PartnerRow } from "./partners";
@@ -44,34 +45,44 @@ export type MarketingOverview = {
   readonly partnersDue: readonly PartnerRow[];
   /** Switched on, most followed first. */
   readonly topLinks: readonly LinkRow[];
+  /** Partners with a code, a link or a cost, biggest sales first. */
+  readonly collabs: readonly CollabRow[];
 };
 
 export const marketingOverview = defineOp({
   name: "marketing.overview",
   title: "Marketing at a glance",
   description:
-    "The front page of the marketing area in one read: campaigns still in progress, posts due by the end of this week (New Zealand time), reviews waiting to be read, partners whose next step is due, and the short links followed most.",
+    "The front page of the marketing area in one read: campaigns still in progress, posts due by the end of this week (New Zealand time), reviews waiting to be read, partners whose next step is due, the short links followed most, and the collabs that have brought in the most (with what each has cost and the sales back for each dollar).",
   access: "read",
   input: z.object({}),
   async run(ctx): Promise<MarketingOverview> {
     const thisWeek = weekBounds(weekStartKey(nzDateKey(ctx.now)));
-    const [inProgress, postsDue, waiting, partnersDue, topLinks, pending] =
-      await Promise.all([
-        listCampaigns.run(ctx, { status: "open", limit: 6 }),
-        listSocialPosts.run(ctx, {
-          status: "open",
-          unplanned: false,
-          before: thisWeek.to,
-          limit: 12,
-        }),
-        listReviews.run(ctx, { status: "pending", limit: 5 }),
-        listPartners.run(ctx, { status: "all", due: true, limit: 6 }),
-        listLinks.run(ctx, { active: "on", sort: "clicks", limit: 5 }),
-        ctx.db
-          .select({ n: count() })
-          .from(reviews)
-          .where(eq(reviews.status, "pending")),
-      ]);
+    const [
+      inProgress,
+      postsDue,
+      waiting,
+      partnersDue,
+      topLinks,
+      pending,
+      collabs,
+    ] = await Promise.all([
+      listCampaigns.run(ctx, { status: "open", limit: 6 }),
+      listSocialPosts.run(ctx, {
+        status: "open",
+        unplanned: false,
+        before: thisWeek.to,
+        limit: 12,
+      }),
+      listReviews.run(ctx, { status: "pending", limit: 5 }),
+      listPartners.run(ctx, { status: "all", due: true, limit: 6 }),
+      listLinks.run(ctx, { active: "on", sort: "clicks", limit: 5 }),
+      ctx.db
+        .select({ n: count() })
+        .from(reviews)
+        .where(eq(reviews.status, "pending")),
+      collabBoard.run(ctx, { limit: 5 }),
+    ]);
     return {
       campaigns: inProgress,
       // A post with no day is on the ideas pile, not due.
@@ -80,6 +91,7 @@ export const marketingOverview = defineOp({
       reviews: waiting,
       partnersDue,
       topLinks,
+      collabs,
     };
   },
 });

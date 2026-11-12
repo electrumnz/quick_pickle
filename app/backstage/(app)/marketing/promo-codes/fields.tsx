@@ -8,7 +8,7 @@ import {
 import { formatNzd } from "@/lib/shop/money";
 import { formatNzDate } from "@/lib/time";
 
-import { SelectField, TextField } from "../parts";
+import { CheckField, SelectField, TextField } from "../parts";
 
 /** The small print of a code, in one line. */
 export function promoSmallPrint(promo: PromoRow): string {
@@ -23,6 +23,7 @@ export function promoSmallPrint(promo: PromoRow): string {
       `to the end of ${formatNzDate(new Date(promo.endsAt.getTime() - 1))}`,
     );
   }
+  if (promo.oncePerCustomer) parts.push("once each");
   parts.push(
     promo.maxUses === null
       ? `used ${String(promo.uses)} ${promo.uses === 1 ? "time" : "times"}`
@@ -44,13 +45,33 @@ function dollars(cents: number): string {
 export function PromoFields({
   values,
   kindLocked = false,
+  partners,
+  forPartnerId,
 }: {
   readonly values?: PromoRow;
   /** Once a code has been used, what kind of code it is cannot change. */
   readonly kindLocked?: boolean;
+  /** The clubs, creators and events a code can be made for. */
+  readonly partners: readonly { readonly id: string; readonly name: string }[];
+  /** For a new code started from a partner's page: already picked. */
+  readonly forPartnerId?: string;
 }) {
   return (
     <>
+      <SelectField
+        id="promo-partner"
+        name="partnerId"
+        label="Whose code is it?"
+        defaultValue={values?.partnerId ?? forPartnerId ?? ""}
+        options={[
+          { value: "", label: "Ours" },
+          ...partners.map((partner) => ({
+            value: partner.id,
+            label: partner.name,
+          })),
+        ]}
+        hint="Pick a club, a creator or an event and every order placed with this code is counted as theirs, with whatever cut they are on. Add them under Partners first."
+      />
       {kindLocked && values ? (
         <input type="hidden" name="kind" value={values.kind} />
       ) : (
@@ -141,6 +162,13 @@ export function PromoFields({
           values?.maxUses == null ? undefined : String(values.maxUses)
         }
         hint="Across everybody. Leave empty for no limit."
+      />
+      <CheckField
+        id="promo-once"
+        name="oncePerCustomer"
+        label="Once for each customer"
+        defaultChecked={values?.oncePerCustomer ?? false}
+        hint="Each email address can use it on one order. Good for a first-order or welcome code."
       />
       <TextField
         id="promo-note"

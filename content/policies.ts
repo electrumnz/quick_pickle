@@ -203,6 +203,13 @@ const privacy: Policy = {
       ],
     },
     {
+      heading: "How you found us",
+      body: [
+        "We count how many times each of our own short links is followed. We keep the count and nothing about who followed it.",
+        "If you arrive through one of those links, from a club, a creator, a flyer or a QR code, your own browser remembers which link it was, and any promo code that came with it, for up to 30 days. If you place an order, that goes with it, so we can see which links are working and give credit to whoever sent you. It says which link, not who you are, and we don't use it to follow you around the web.",
+      ],
+    },
+    {
       heading: "Your rights",
       body: [
         `Under the Privacy Act 2020 you can ask to see the information we hold about you and ask us to correct it. Write to ${contact}. If you're not happy with how we respond, you can contact the Office of the Privacy Commissioner.`,

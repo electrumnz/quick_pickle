@@ -65,6 +65,59 @@ for (const path of PAGES) {
   });
 }
 
+/**
+ * Pages whose address has a random id in it, reached the way a person would:
+ * from the list. The demo's club has a code, a link, a cost and three orders,
+ * so its page has every part of a collab on it.
+ */
+for (const [name, list, link] of [
+  [
+    "a partner with a collab",
+    "/backstage/marketing/partners",
+    "Sample Rovers FC",
+  ],
+  [
+    "a promo code that is a partner's",
+    "/backstage/marketing/promo-codes",
+    "ROVERS10",
+  ],
+] as const) {
+  test(`axe: ${name}`, async ({ page }) => {
+    await page.goto(list);
+    await page
+      .getByRole("link", { name: new RegExp(link) })
+      .first()
+      .click();
+    await expect(
+      page.getByRole("heading", { level: 1, name: link }),
+    ).toBeVisible();
+    await page.waitForTimeout(400);
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(
+      results.violations.map(
+        (v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`,
+      ),
+    ).toEqual([]);
+  });
+}
+
+test("axe: the page with a carried code on it", async ({ page }) => {
+  await page.goto("/?via=rovers&code=ROVERS10");
+  await page.locator("#shop").scrollIntoViewIfNeeded();
+  await expect(page.getByTestId("carried-code").first()).toBeVisible();
+  await page.waitForTimeout(900);
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(
+    results.violations.map(
+      (v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`,
+    ),
+  ).toEqual([]);
+});
+
 test("axe: the jar, open with a pack in it", async ({ page }) => {
   await page.goto("/");
   await page.locator("#shop").scrollIntoViewIfNeeded();

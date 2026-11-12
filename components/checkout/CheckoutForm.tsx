@@ -46,6 +46,21 @@ import {
 
 const INITIAL: CheckoutState = { status: "idle", errors: {}, values: {} };
 
+/**
+ * Refusals that will still be true tomorrow. A code that came with a link
+ * and gets one of these is forgotten, so the buyer is not told again every
+ * time they open the checkout. Anything else (a minimum spend, a code that
+ * has not started) may come right, so the code is kept and tried next time.
+ */
+const GONE: readonly string[] = [
+  CODES.unknown,
+  CODES.notInUse,
+  CODES.finished,
+  CODES.usedUp,
+  CODES.broken,
+  CODES.alreadyUsed,
+];
+
 type FieldProps = {
   readonly name: string;
   readonly label: string;
@@ -141,7 +156,7 @@ export function CheckoutForm({
   /** The buyer came back from the payment page without paying. */
   readonly cancelled?: boolean;
 }) {
-  const { cart, ready } = useCart();
+  const { cart, ready, carriedCode, forgetCarriedCode, source } = useCart();
   const [state, action, pending] = useActionState(submitCheckout, INITIAL);
   const [rural, setRural] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -157,6 +172,56 @@ export function CheckoutForm({
   } | null>(null);
   const [checking, startCheck] = useTransition();
   const codeRef = useRef<HTMLInputElement>(null);
+
+  // A code that came with the link the buyer followed sits in the box until
+  // they touch it, and is tried for them once. If it cannot be used they
+  // are told why, quietly, and the box is emptied: nobody should be held up
+  // at the checkout by a code they never typed.
+  const [touched, setTouched] = useState(false);
+  const touchedRef = useRef(false);
+  const autoTried = useRef<string | null>(null);
+  const [carriedNo, setCarriedNo] = useState<{
+    readonly code: string;
+    readonly reason: string;
+  } | null>(null);
+  const jar = JSON.stringify(cart.lines);
+  const shown = touched ? typedCode : (carriedCode ?? "");
+
+  // The server can refuse a code with the order itself (somebody took its
+  // last use, or this customer has had it before). What was applied a
+  // moment ago no longer stands, so it is dropped as the reply arrives.
+  const [answeredFor, setAnsweredFor] = useState(state);
+  if (answeredFor !== state) {
+    setAnsweredFor(state);
+    if (state.errors.promoCode !== undefined) setCode(null);
+  }
+
+  useEffect(() => {
+    if (!ready || touched || carriedCode === null) return;
+    if (cart.lines.length === 0 || autoTried.current === carriedCode) return;
+    autoTried.current = carriedCode;
+    startCheck(async () => {
+      const answer = await checkCode(carriedCode, jar, rural);
+      if (touchedRef.current) return;
+      if (answer.ok) {
+        setCode({ answer, typed: carriedCode, jar });
+        return;
+      }
+      touchedRef.current = true;
+      setTouched(true);
+      setTypedCode("");
+      setCarriedNo({ code: carriedCode, reason: answer.reason });
+      if (GONE.includes(answer.reason)) forgetCarriedCode();
+    });
+  }, [
+    ready,
+    touched,
+    carriedCode,
+    cart.lines.length,
+    jar,
+    rural,
+    forgetCarriedCode,
+  ]);
 
   // After a failed submit, take the buyer to the first thing that needs them.
   useEffect(() => {
@@ -192,7 +257,6 @@ export function CheckoutForm({
     );
   }
 
-  const jar = JSON.stringify(cart.lines);
   const asStored = (text: string) => text.replace(/\s+/g, "").toUpperCase();
   // An answer only counts for the jar it was given for. If the jar has
   // changed since (another tab), it is asked for again.
@@ -200,7 +264,7 @@ export function CheckoutForm({
   const applied =
     answered !== null &&
     answered.answer.ok &&
-    asStored(answered.typed) === asStored(typedCode)
+    asStored(answered.typed) === asStored(shown)
       ? answered.answer
       : null;
   const priced = quote(
@@ -224,27 +288,38 @@ export function CheckoutForm({
   const codeProblem =
     answered !== null &&
     !answered.answer.ok &&
-    asStored(answered.typed) === asStored(typedCode)
+    asStored(answered.typed) === asStored(shown)
       ? answered.answer.reason
-      : code === null && typedCode === (values.promoCode ?? "")
+      : code === null && shown !== "" && shown === (values.promoCode ?? "")
         ? (errors.promoCode ?? null)
         : null;
-  const codeWaiting = typedCode.trim() !== "" && applied === null;
+  const codeWaiting = shown.trim() !== "" && applied === null;
 
+  const typeCode = (text: string) => {
+    touchedRef.current = true;
+    setTouched(true);
+    setTypedCode(text);
+    setCarriedNo(null);
+  };
   const applyCode = () => {
-    const typed = typedCode.trim();
+    const typed = shown.trim();
     if (typed === "") {
       setCode(null);
       return;
     }
+    // Some codes work once for each customer. If the email is filled in
+    // already the answer can say so now, not after the button is pressed.
+    const emailBox = formRef.current?.elements.namedItem("email");
+    const email = emailBox instanceof HTMLInputElement ? emailBox.value : "";
     startCheck(async () => {
-      const answer = await checkCode(typed, jar, rural);
+      const answer = await checkCode(typed, jar, rural, email);
       setCode({ answer, typed, jar });
     });
   };
   const removeCode = () => {
-    setTypedCode("");
+    typeCode("");
     setCode(null);
+    forgetCarriedCode();
   };
 
   const summary = (
@@ -384,12 +459,17 @@ export function CheckoutForm({
             codeRef.current?.focus();
           }}
         >
-          <input
-            type="hidden"
-            name="lines"
-            value={JSON.stringify(cart.lines)}
-            readOnly
-          />
+          <input type="hidden" name="lines" value={jar} readOnly />
+          {/* The link the visit came through, if there was one. A label
+              for the order: the server keeps only what it recognises. */}
+          {Object.keys(source).length > 0 ? (
+            <input
+              type="hidden"
+              name="source"
+              value={JSON.stringify(source)}
+              readOnly
+            />
+          ) : null}
           {/* Honeypot. People never see it; scripts fill it in. */}
           <div aria-hidden="true" className="hidden">
             <label>
@@ -614,8 +694,8 @@ export function CheckoutForm({
                   ref={codeRef}
                   id="co-promoCode"
                   name="promoCode"
-                  value={typedCode}
-                  onChange={(event) => setTypedCode(event.target.value)}
+                  value={shown}
+                  onChange={(event) => typeCode(event.target.value)}
                   onKeyDown={(event) => {
                     // Enter here means "apply", not "place the order".
                     if (event.key !== "Enter") return;
@@ -652,7 +732,14 @@ export function CheckoutForm({
               </div>
               {codeProblem !== null ? (
                 <p id="co-promoCode-error" className="field-error" role="alert">
-                  {codeProblem}
+                  {codeProblem}{" "}
+                  <button
+                    type="button"
+                    onClick={removeCode}
+                    className="link inline-flex min-h-11 items-center font-normal"
+                  >
+                    {CODES.remove}
+                  </button>
                 </p>
               ) : applied !== null ? (
                 <p
@@ -671,6 +758,15 @@ export function CheckoutForm({
                   >
                     {CODES.remove}
                   </button>
+                </p>
+              ) : carriedNo !== null && shown === "" ? (
+                <p
+                  role="status"
+                  data-testid="carried-code-refused"
+                  className="text-navy-muted mt-1.5 text-[0.9375rem] leading-snug"
+                >
+                  {CODES.carriedLead} {carriedNo.code} {CODES.carriedNo}{" "}
+                  {carriedNo.reason}
                 </p>
               ) : null}
             </div>

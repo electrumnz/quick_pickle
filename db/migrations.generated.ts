@@ -228,5 +228,31 @@ export const MIGRATIONS: readonly Migration[] = [
     "statements": [
       "ALTER TABLE \"events\" ADD COLUMN \"not_before\" timestamp with time zone;"
     ]
+  },
+  {
+    "tag": "0004_collabs",
+    "hash": "5b1f50224e7c26a2",
+    "statements": [
+      "CREATE TABLE \"partner_costs\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"partner_id\" text NOT NULL,\n\t\"kind\" text NOT NULL,\n\t\"amount_cents\" integer NOT NULL,\n\t\"paid_on\" date NOT NULL,\n\t\"note\" text DEFAULT '' NOT NULL,\n\t\"created_by\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"partner_costs\" ENABLE ROW LEVEL SECURITY;",
+      "ALTER TABLE \"orders\" ADD COLUMN \"delivery_discount_cents\" integer DEFAULT 0 NOT NULL;",
+      "ALTER TABLE \"orders\" ADD COLUMN \"partner_id\" text;",
+      "ALTER TABLE \"orders\" ADD COLUMN \"commission_percent\" integer DEFAULT 0 NOT NULL;",
+      "ALTER TABLE \"links\" ADD COLUMN \"partner_id\" text;",
+      "ALTER TABLE \"links\" ADD COLUMN \"promo_code_id\" text;",
+      "ALTER TABLE \"partners\" ADD COLUMN \"commission_percent\" integer DEFAULT 0 NOT NULL;",
+      "ALTER TABLE \"promo_codes\" ADD COLUMN \"partner_id\" text;",
+      "ALTER TABLE \"promo_codes\" ADD COLUMN \"once_per_customer\" boolean DEFAULT false NOT NULL;",
+      "ALTER TABLE \"partner_costs\" ADD CONSTRAINT \"partner_costs_partner_id_partners_id_fk\" FOREIGN KEY (\"partner_id\") REFERENCES \"public\".\"partners\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"partner_costs\" ADD CONSTRAINT \"partner_costs_created_by_users_id_fk\" FOREIGN KEY (\"created_by\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "CREATE INDEX \"partner_costs_partner_idx\" ON \"partner_costs\" USING btree (\"partner_id\",\"paid_on\");",
+      "ALTER TABLE \"links\" ADD CONSTRAINT \"links_partner_id_partners_id_fk\" FOREIGN KEY (\"partner_id\") REFERENCES \"public\".\"partners\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "ALTER TABLE \"links\" ADD CONSTRAINT \"links_promo_code_id_promo_codes_id_fk\" FOREIGN KEY (\"promo_code_id\") REFERENCES \"public\".\"promo_codes\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "ALTER TABLE \"promo_codes\" ADD CONSTRAINT \"promo_codes_partner_id_partners_id_fk\" FOREIGN KEY (\"partner_id\") REFERENCES \"public\".\"partners\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "CREATE INDEX \"orders_promo_idx\" ON \"orders\" USING btree (\"promo_code\");",
+      "CREATE INDEX \"orders_partner_idx\" ON \"orders\" USING btree (\"partner_id\");",
+      "CREATE INDEX \"links_partner_idx\" ON \"links\" USING btree (\"partner_id\");",
+      "CREATE INDEX \"promo_codes_partner_idx\" ON \"promo_codes\" USING btree (\"partner_id\");"
+    ]
   }
 ];

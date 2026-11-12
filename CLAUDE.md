@@ -163,6 +163,11 @@ A link from the back end to the shop is `ShopLink` (a plain anchor, full page lo
   people and bots at work the activity log has to say who did what. Its "no MCP" decision is
   also reversed: an MCP connection is planned, built last, over the same operations.
 
+- **One person runs this (Ash).** Anything she does not need every day ships switched off
+  and out of the daily screens: nothing to look after unless someone starts it. A screen
+  that needs explaining says the answer in one sentence first and shows its working under
+  it. (Sam, 12 November 2026, on A/B tests: "it'll be too much for Ash to manage".)
+
 ### What happens after a change
 
 An operation writes events in its own transaction and does nothing outward. Once it has
@@ -223,6 +228,27 @@ go-live list shows when it last ran and what is stuck.
   gives its use back. On Stripe's page the saving is a one-off coupon for that order, and
   if the coupon cannot be made no page is made. One code an order; none may take an order
   below a dollar. Everything a customer is told about a code is in `CODES`, in `content/`.
+- **Who brought an order in is decided once, when it is placed, and kept on the order.**
+  A promo code or a short link can belong to a partner (a club, a creator, an event). The
+  order is credited to whoever owns the code that was used or, failing that, the link the
+  buyer came through (`lib/backstage/marketing/credit.ts`), and it keeps its own copy of
+  that partner and the cut they were on (`orders.partner_id`, `orders.commission_percent`).
+  Results are added up from those copies, so changing a deal or handing a code to somebody
+  else never rewrites the past. A partner is paid two ways, often both: a cut of each sale
+  (a percentage, set on the partner) and flat costs written down as they happen (a fee,
+  product given away). `collab-sums.ts` is the arithmetic and `collabs.ts` the results.
+- **Only real sales count, everywhere:** paid orders less refunds. Test orders and cancelled
+  ones are never sales. The Customers screen and every collab figure use the same rule.
+- **How a visitor arrived lives in their own browser, not in a cookie.** `/go/<slug>` adds
+  `via=<slug>` to a page on this site, and `code=<CODE>` if the link carries one. The page
+  keeps both in `localStorage` for thirty days (`lib/shop/arrival.ts`) and sends them only
+  with an order. The code is tried at the checkout so nobody types it; the link is a label
+  on the order. Both are claims from the address bar: the server works the code out from its
+  own terms and drops a link it does not know. `lib/shop/code.ts` imports nothing, on
+  purpose, so the browser can tell what could be a code without pulling the database in.
+  The privacy page says all of this; change one and change the other.
+- Every short link has a QR code (`lib/backstage/marketing/qr.ts`), which only ever holds
+  the link's own address on this site. Its tests scan the code back with a reader.
 - `lib/shop/store` is where the shop hands an order over. The default is `db`: the back
   end's own `orders.record` operation, so an order is on the Orders screen as it is placed.
 - The "order's in" page reads a short-lived httpOnly receipt cookie. It is display only.

@@ -69,6 +69,10 @@ function terms(form: FormData) {
           ? Number(maxUses)
           : Number.NaN,
     note: formText(form, "note"),
+    // The first choice in the list ("Ours") means nobody.
+    partnerId:
+      formText(form, "partnerId") === "" ? null : formText(form, "partnerId"),
+    oncePerCustomer: form.get("oncePerCustomer") === "on",
   };
 }
 

@@ -156,6 +156,8 @@ export const listPartners = defineOp({
 export type PartnerDetail = PartnerRow & {
   readonly email: string | null;
   readonly phone: string | null;
+  /** Their cut of each sale they bring in, a whole percentage. 0: none. */
+  readonly commissionPercent: number;
   /** Where the written yes is kept, or why there is none. */
   readonly permissionNote: string;
   readonly notes: string;
@@ -185,6 +187,7 @@ export const getPartner = defineOp({
       due: isDue(partner.nextStepOn, nzDateKey(ctx.now)),
       email: partner.email,
       phone: partner.phone,
+      commissionPercent: partner.commissionPercent,
       permissionNote: partner.permissionNote,
       notes: partner.notes,
       createdAt: partner.createdAt,
@@ -390,6 +393,44 @@ export const setPartnerPermission = defineOp({
       data: { onFile: input.onFile },
     });
     return { permissionOnFile: input.onFile };
+  },
+});
+
+export const setPartnerCut = defineOp({
+  name: "partners.setCut",
+  title: "Set a partner's cut of the sales they bring in",
+  description:
+    "Sets the cut a partner earns: a whole percentage (0 to 100, 0 for none) of what the buyer paid for the goods on each order they bring in, after any promo code's saving and not counting delivery. An order is theirs when it is placed with one of their promo codes or, failing that, by someone who came through one of their short links. Each order keeps the cut as it stood when it was placed, so a change here only applies to orders from now on. It moves no money: it is what the back end uses to work out what they are owed.",
+  access: "write",
+  input: z.object({
+    id: recordId,
+    commissionPercent: z
+      .number({ error: "The cut is a whole percentage, like 10" })
+      .int("The cut is a whole percentage, like 10")
+      .min(0, "The cut cannot be less than nothing")
+      .max(100, "The cut cannot be more than the whole sale"),
+  }),
+  async run(ctx, input): Promise<{ commissionPercent: number }> {
+    const partner = await loadPartner(ctx.db, input.id);
+    if (partner.commissionPercent === input.commissionPercent) {
+      ctx.nothingChanged();
+      return { commissionPercent: partner.commissionPercent };
+    }
+    await ctx.db
+      .update(partners)
+      .set({ commissionPercent: input.commissionPercent, updatedAt: ctx.now })
+      .where(eq(partners.id, partner.id));
+    const words = (percent: number) =>
+      percent === 0 ? "no cut" : `${String(percent)}% of each sale`;
+    await ctx.audit({
+      entity: entityOf(partner.id),
+      summary: `${partner.name} now get ${words(input.commissionPercent)} they bring in (was ${words(partner.commissionPercent)}). Orders already placed keep the cut they had.`,
+      data: {
+        from: partner.commissionPercent,
+        to: input.commissionPercent,
+      },
+    });
+    return { commissionPercent: input.commissionPercent };
   },
 });
 

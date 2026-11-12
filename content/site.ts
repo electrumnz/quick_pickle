@@ -396,6 +396,17 @@ export const CODES = {
   changed:
     "That code changed while you were checking out. Have another look at the total and try again.",
   unavailable: "We couldn't check that code just now. Try again in a moment.",
+  alreadyUsed:
+    "You've already used that code. It works once for each customer.",
+  /**
+   * For a visitor who followed a link that carries a code. Read as:
+   * "Code CREW10 is in: 10% off. You'll see it come off at the checkout."
+   */
+  carriedLead: "Code",
+  carriedIn: "is in:",
+  carriedTail: "You'll see it come off at the checkout.",
+  /** Read as: "Code CREW10 came with your link, but ..." then the reason. */
+  carriedNo: "came with your link, but it can't be used on this order.",
 } as const;
 
 export const THANKS = {

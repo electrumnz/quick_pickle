@@ -31,15 +31,19 @@ Updated 12 November 2026. Honest status, not a summary.
 - [ ] **A customer email address.** The policies and FAQ leave a gap where it goes.
 - [ ] **The legal entity, NZBN and GST status.** The terms of sale name no company yet, and
       receipts cannot show GST until the registration is confirmed.
-- [ ] **A Stripe account.** The processor is decided: Stripe (cards, Apple Pay and Google
-      Pay, no monthly fee). It needs an account in the business's name, then its test keys
-      first and its live keys at launch. It plugs in at `lib/shop/payments`.
-- [ ] **Finish moving to Quick Pickle's own accounts**, apart from Keece:
-      a free Supabase organisation (made 12 November) and a free Vercel account (in
-      progress). Connect the two with Vercel's Supabase integration, Production only, and
-      add `BACKSTAGE_SETUP_CODE`. Then open `/backstage/set-up` once to make the owner login.
-- [ ] **Two tokens, as GitHub repository secrets**, so the repository's own automation can
-      run the database and the hosting: `QP_SUPABASE_ACCESS_TOKEN` and `QP_VERCEL_TOKEN`.
+- [ ] **Finish Stripe's own sign-up.** The account exists and the live site runs on its
+      test keys, so nothing can be charged yet. Stripe still wants the business's details
+      and a bank account before it will take real payments. After that: live keys.
+- [ ] **One test purchase by a person.** On the live site, with Stripe's test card
+      (4242 4242 4242 4242, any future date, any three digits). Stripe's payment page will
+      not let a robot press Pay, so this is the one step of the paid path nobody has seen
+      work end to end.
+- [ ] **Make the owner login.** Quick Pickle has its own Supabase organisation and Vercel
+      account, apart from Keece, and production is connected. What is left is to open
+      `/backstage/set-up` once, with the set-up code from Vercel's settings
+      (`BACKSTAGE_SETUP_CODE`), and choose a password.
+- [ ] **Disconnect the old Vercel project** (`half-sour`, in the Keece account). It still
+      builds every push to this repository. Nothing here can touch it, on purpose.
 - [ ] **Email for the business's own domain.** Resend to start with (free tier, sending and
       receiving); Cloudflare for the domain's DNS, and for receiving if the free tier's daily
       cap ever bites. Both need the domain first.
@@ -63,8 +67,12 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 - [x] **Orders and customers.** The queue by stage, search, a page per order with its
       history, packing slips, refunds recorded, customer tags and notes, the Pickle Crew
       list with consent on file.
-- [ ] **Payments for real.** Stripe behind the existing seam: a pending order, a hosted
-      payment page for exactly that amount, a signed webhook to mark it paid.
+- [x] **Payments.** Stripe behind the seam: the order is saved first, a hosted payment
+      page is made for exactly that amount in New Zealand dollars, a signed webhook marks it
+      paid, refunds go back to the card, and a clock closes orders nobody paid for.
+      Production is on Stripe's test mode. Still to do by a person: one purchase on the live
+      site with Stripe's test card (4242 4242 4242 4242), because Stripe's page will not let
+      a robot press Pay. Then real keys, once Stripe's own sign-up is finished.
 - [ ] **Order emails.** Receipt, on the courier, cancelled. Plain, and free of anything
       promotional so they stay outside the marketing-email rules.
 - [ ] **Stock and batches.** Shots on hand, batches with best-before dates, which batch
@@ -72,18 +80,45 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 - [ ] **The inbox.** Mail for the business's domain lands in the back end, threaded by
       our own rules (reply headers, order numbers, the same person and subject), linked to
       customers and orders, answered from there.
-- [ ] **Marketing.** Campaigns to the crew with approval before sending, promo codes, a
-      social planner, tracked links, reviews with moderation.
+- [x] **Marketing.** Campaigns to the crew with approval before sending (they go out once
+      email is connected), a social planner, reviews read by a person before anyone sees
+      them, and partners with a written yes on file before they are named.
+- [x] **Codes, links and collabs.** Promo codes at the checkout (percent, dollars or free
+      delivery, with dates, a limit, and once for each customer). A code or a short link
+      can belong to a club, a creator or an event: their orders are counted as theirs, a
+      link can carry their code into the checkout so nobody types it, and every link has a
+      QR code to print. A partner's page says what they brought in, what they cost (a cut of
+      each sale, a flat fee, product given away) and the sales back for each dollar spent.
+- [ ] **Specials and a welcome code.** An offer that applies itself for a set time with no
+      code to type, shown on the page; and a code for someone the moment they join the
+      Pickle Crew.
+- [ ] **Pages.** Our own visit counting and the funnel, landing pages for a particular
+      advert or audience, words that change with how a visitor arrived, and A/B tests
+      between two pages. Each with its numbers in the back end and a preview before it goes
+      live. All of it off until somebody starts something: with nothing set up, everyone
+      sees the one page.
 - [ ] **Automations and routines.** Rules that react to events, schedules that run, a
       daily digest, and an approval queue for anything outward.
-- [ ] **Plans.** Business plan, marketing plan, budget and unit economics, how-to sheets,
-      the compliance register for a food business, the open questions for Ashleigh.
+- [x] **Plans.** The plan, the budget and what a pack costs to make and send, how-to
+      sheets, a to-do list, the open questions for Ashleigh, and a light checklist of what a
+      food business has to have in place.
 - [ ] **Run the shop from the back end.** Prices, ship date, launch mode, delivery rates
       and the announcement, without a deploy.
 - [ ] **Numbers.** Sales, the funnel (our own, no cookies), crew growth.
 - [ ] **Xero and couriers.**
 - [ ] **Claude tooling (MCP).** Last, over the same operations: a small tool set, per-user
       sign-in, every call in the activity log.
+
+## Before it takes real money
+
+- [ ] **Order emails.** The "order's in" page says a receipt is on its way. Until email is
+      connected, it is not.
+- [ ] **A limit on how often one address can ask the checkout things.** The order form and
+      the promo code check answer anybody, as often as they ask. That is enough to guess at
+      codes, or to ask, one email at a time, whether somebody has already used a once-only
+      code.
+- [ ] **Refunds made from Stripe's own dashboard**, and card disputes, written back onto
+      the order. Today a refund has to be started from the back end to be recorded.
 
 ## Would make it sell harder
 

@@ -5,12 +5,17 @@
  * A code is what a customer types, so once it exists it is never renamed and
  * never deleted: an old flyer or post may still carry it. To retire one,
  * switch it off.
+ *
+ * A code can belong to a partner (a club, a creator). An order placed with
+ * it is then credited to them. What that has brought in, against what the
+ * partnership has cost, is in collabs.ts.
  */
 
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { promoCodes } from "@/db/schema";
+import { CODES } from "@/content/site";
+import { partners, promoCodes } from "@/db/schema";
 import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
 import { formatNzd } from "@/lib/shop/money";
@@ -25,6 +30,7 @@ import {
   PROMO_CODE_PATTERN,
   promoLabel,
   promoState,
+  usedByCustomer,
   type Promo,
   type PromoEvaluation,
 } from "./promo";
@@ -68,6 +74,11 @@ export type PromoRow = {
   readonly uses: number;
   readonly active: boolean;
   readonly note: string;
+  /** Whose code it is: a club or creator. Null: the shop's own. */
+  readonly partnerId: string | null;
+  readonly partnerName: string | null;
+  /** One use for each customer, told apart by email. */
+  readonly oncePerCustomer: boolean;
   /** Where it stands right now. */
   readonly state: PromoState;
   /** "10% off", "$5 off", "Free standard delivery". */
@@ -76,7 +87,7 @@ export type PromoRow = {
   readonly updatedAt: Date;
 };
 
-function toRow(promo: Promo, now: Date): PromoRow {
+function toRow(promo: Promo, now: Date, partnerName: string | null): PromoRow {
   return {
     id: promo.id,
     code: promo.code,
@@ -89,6 +100,9 @@ function toRow(promo: Promo, now: Date): PromoRow {
     uses: promo.uses,
     active: promo.active,
     note: promo.note,
+    partnerId: promo.partnerId,
+    partnerName: promo.partnerId === null ? null : partnerName,
+    oncePerCustomer: promo.oncePerCustomer,
     state: promoState(promo, now),
     label: promoLabel(promo),
     createdAt: promo.createdAt,
@@ -103,6 +117,23 @@ async function loadPromo(db: DbOrTx, id: string): Promise<Promo> {
     .where(eq(promoCodes.id, id));
   if (promo === undefined) throw notFound("That code");
   return promo;
+}
+
+/** The name of the partner a code belongs to, or a refusal if there is none. */
+async function partnerNameOf(
+  db: DbOrTx,
+  partnerId: string | null,
+): Promise<string | null> {
+  if (partnerId === null) return null;
+  const [partner] = await db
+    .select({ name: partners.name })
+    .from(partners)
+    .where(eq(partners.id, partnerId));
+  if (partner === undefined) {
+    const message = "That partner is not on the list. Pick another.";
+    throw new OpError("invalid_input", message, { partnerId: message });
+  }
+  return partner.name;
 }
 
 type Terms = {
@@ -141,6 +172,8 @@ function termsInWords(promo: {
   readonly startsAt: Date | null;
   readonly endsAt: Date | null;
   readonly maxUses: number | null;
+  readonly oncePerCustomer?: boolean;
+  readonly partnerName?: string | null;
 }): string {
   const parts = [promoLabel(promo).toLowerCase()];
   if (promo.minSubtotalCents > 0) {
@@ -155,6 +188,10 @@ function termsInWords(promo: {
   if (promo.maxUses !== null) {
     parts.push(`${String(promo.maxUses)} uses at most`);
   }
+  if (promo.oncePerCustomer === true) parts.push("once for each customer");
+  if (promo.partnerName !== undefined && promo.partnerName !== null) {
+    parts.push(`for ${promo.partnerName}`);
+  }
   return parts.join(", ");
 }
 
@@ -162,18 +199,25 @@ export const listPromoCodes = defineOp({
   name: "promoCodes.list",
   title: "List promo codes",
   description:
-    "Every promo code, newest first, with what it gives, how often it has been used and where it stands right now: live, not started, finished, used up, or switched off.",
+    "Every promo code, newest first, with what it gives, how often it has been used and where it stands right now: live, not started, finished, used up, or switched off. A code that belongs to a partner (a club or creator) says whose it is. `partnerId` narrows to one partner's codes.",
   access: "read",
   input: z.object({
+    partnerId: recordId.optional(),
     limit: z.number().int().min(1).max(200).default(100),
   }),
   async run(ctx, input): Promise<PromoRow[]> {
     const rows = await ctx.db
-      .select()
+      .select({ promo: promoCodes, partnerName: partners.name })
       .from(promoCodes)
+      .leftJoin(partners, eq(partners.id, promoCodes.partnerId))
+      .where(
+        input.partnerId === undefined
+          ? undefined
+          : eq(promoCodes.partnerId, input.partnerId),
+      )
       .orderBy(desc(promoCodes.createdAt), desc(promoCodes.id))
       .limit(input.limit);
-    return rows.map((row) => toRow(row, ctx.now));
+    return rows.map((row) => toRow(row.promo, ctx.now, row.partnerName));
   },
 });
 
@@ -189,15 +233,17 @@ export const getPromoCode = defineOp({
       message: "Give the id or the code",
     }),
   async run(ctx, input): Promise<PromoRow> {
-    if (input.id !== undefined) {
-      return toRow(await loadPromo(ctx.db, input.id), ctx.now);
-    }
-    const [promo] = await ctx.db
-      .select()
+    const [found] = await ctx.db
+      .select({ promo: promoCodes, partnerName: partners.name })
       .from(promoCodes)
-      .where(eq(promoCodes.code, normalisePromoCode(input.code ?? "")));
-    if (promo === undefined) throw notFound("That code");
-    return toRow(promo, ctx.now);
+      .leftJoin(partners, eq(partners.id, promoCodes.partnerId))
+      .where(
+        input.id !== undefined
+          ? eq(promoCodes.id, input.id)
+          : eq(promoCodes.code, normalisePromoCode(input.code ?? "")),
+      );
+    if (found === undefined) throw notFound("That code");
+    return toRow(found.promo, ctx.now, found.partnerName);
   },
 });
 
@@ -205,7 +251,7 @@ export const createPromoCode = defineOp({
   name: "promoCodes.create",
   title: "Make a promo code",
   description:
-    "Makes a code a customer can type at the checkout. `kind` is percent (`value` is a whole percentage, 1 to 100, worked out on the goods and rounded to the cent in the customer's favour), amount (`value` is cents off) or delivery (free standard delivery; a rural extra still applies). One code per order: codes do not stack. Optional terms: a smallest order (`minSubtotalCents`), the instant it starts and the instant it stops working, and the most times it can be used. The code is stored in capitals with no spaces, and a code that already exists is refused. It is live at the checkout as soon as it is made unless `active` is false. No code may take an order below a dollar.",
+    "Makes a code a customer can type at the checkout. `kind` is percent (`value` is a whole percentage, 1 to 100, worked out on the goods and rounded to the cent in the customer's favour), amount (`value` is cents off) or delivery (free standard delivery; a rural extra still applies). One code per order: codes do not stack. Optional terms: a smallest order (`minSubtotalCents`), the instant it starts and the instant it stops working, the most times it can be used, and `oncePerCustomer` (one use for each email address). A code can belong to a partner (`partnerId`: a club or creator): orders placed with it are then credited to them, with whatever cut that partner is on. The code is stored in capitals with no spaces, and a code that already exists is refused. It is live at the checkout as soon as it is made unless `active` is false. No code may take an order below a dollar.",
   access: "write",
   input: z.object({
     code: codeField,
@@ -217,9 +263,12 @@ export const createPromoCode = defineOp({
     maxUses: maxUsesField.default(null),
     note: noteField.default(""),
     active: z.boolean().default(true),
+    partnerId: recordId.nullable().default(null),
+    oncePerCustomer: z.boolean().default(false),
   }),
   async run(ctx, input): Promise<{ id: string; code: string }> {
     const terms = checkTerms(input);
+    const partnerName = await partnerNameOf(ctx.db, input.partnerId);
     const id = newId("pro");
     // The unique index decides, so two people cannot both make CREW10.
     const made = await ctx.db
@@ -235,6 +284,8 @@ export const createPromoCode = defineOp({
         maxUses: input.maxUses,
         active: input.active,
         note: input.note,
+        partnerId: input.partnerId,
+        oncePerCustomer: input.oncePerCustomer,
         createdAt: ctx.now,
         updatedAt: ctx.now,
       })
@@ -249,8 +300,13 @@ export const createPromoCode = defineOp({
     }
     await ctx.audit({
       entity: { type: "promo", id },
-      summary: `Made the promo code ${input.code}: ${termsInWords({ ...input, ...terms })}${input.active ? "" : " (switched off)"}`,
-      data: { code: input.code, kind: terms.kind, value: terms.value },
+      summary: `Made the promo code ${input.code}: ${termsInWords({ ...input, ...terms, partnerName })}${input.active ? "" : " (switched off)"}`,
+      data: {
+        code: input.code,
+        kind: terms.kind,
+        value: terms.value,
+        partnerId: input.partnerId,
+      },
     });
     return { id, code: input.code };
   },
@@ -260,7 +316,7 @@ export const updatePromoCode = defineOp({
   name: "promoCodes.update",
   title: "Change a promo code's terms",
   description:
-    "Changes what a code gives, its smallest order, its dates, its limit or its note. Leave a field out to keep it. The code itself cannot be renamed: switch it off and make a new one. Once a code has been used, what kind of code it is can no longer change. Pass null for a date or the limit to remove it.",
+    "Changes what a code gives, its smallest order, its dates, its limit or its note. Leave a field out to keep it. The code itself cannot be renamed: switch it off and make a new one. Once a code has been used, what kind of code it is can no longer change. Pass null for a date or the limit to remove it. `partnerId` says whose code it is (null: the shop's own) and `oncePerCustomer` whether each customer may use it once. An order keeps who it was credited to when it was placed, so handing a code to somebody else only affects orders from now on.",
   access: "write",
   input: z.object({
     id: recordId,
@@ -271,6 +327,8 @@ export const updatePromoCode = defineOp({
     endsAt: whenField.optional(),
     maxUses: maxUsesField.optional(),
     note: noteField.optional(),
+    partnerId: recordId.nullable().optional(),
+    oncePerCustomer: z.boolean().optional(),
   }),
   async run(ctx, input): Promise<{ id: string }> {
     const promo = await loadPromo(ctx.db, input.id);
@@ -293,7 +351,11 @@ export const updatePromoCode = defineOp({
       minSubtotalCents: input.minSubtotalCents ?? promo.minSubtotalCents,
       maxUses: input.maxUses === undefined ? promo.maxUses : input.maxUses,
       note: input.note ?? promo.note,
+      partnerId:
+        input.partnerId === undefined ? promo.partnerId : input.partnerId,
+      oncePerCustomer: input.oncePerCustomer ?? promo.oncePerCustomer,
     };
+    const partnerName = await partnerNameOf(ctx.db, next.partnerId);
     // A change of kind is guarded in the statement itself, so an order that
     // uses the code at this very moment cannot slip in underneath it.
     const changed = await ctx.db
@@ -308,13 +370,15 @@ export const updatePromoCode = defineOp({
     if (changed.length === 0) throw conflict(usedAlready);
     await ctx.audit({
       entity: { type: "promo", id: promo.id },
-      summary: `Changed the promo code ${promo.code}: ${termsInWords(next)}`,
+      summary: `Changed the promo code ${promo.code}: ${termsInWords({ ...next, partnerName })}`,
       data: {
         before: {
           kind: promo.kind,
           value: promo.value,
           minSubtotalCents: promo.minSubtotalCents,
           maxUses: promo.maxUses,
+          partnerId: promo.partnerId,
+          oncePerCustomer: promo.oncePerCustomer,
         },
       },
     });
@@ -348,19 +412,55 @@ export const checkPromoCode = defineOp({
   name: "promoCodes.check",
   title: "What a code is worth on an order",
   description:
-    "Given what a customer typed and an order's goods and standard delivery (both in cents, before the code), says what the code takes off or, in a sentence the customer can be shown, why it cannot be used. It counts nothing: a use is counted when the order is recorded. Called by the checkout.",
+    "Given what a customer typed and an order's goods and standard delivery (both in cents, before the code), says what the code takes off or, in a sentence the customer can be shown, why it cannot be used. Pass the customer's `email` when it is known: a code that works once for each customer is refused for one who has already used it. It counts nothing: a use is counted when the order is recorded. Called by the checkout.",
   access: "read",
   input: z.object({
     code: z.string().max(60),
     subtotalCents: z.number().int().min(0).max(100_000_000),
     /** Standard delivery on the order before the code. Not a rural extra. */
     deliveryCents: z.number().int().min(0).max(100_000_000),
+    email: z.string().max(254).optional(),
   }),
   async run(ctx, input): Promise<PromoEvaluation> {
-    return evaluatePromo(await findPromo(ctx.db, input.code), {
+    const promo = await findPromo(ctx.db, input.code);
+    const worth = evaluatePromo(promo, {
       subtotalCents: input.subtotalCents,
       deliveryCents: input.deliveryCents,
       now: ctx.now,
     });
+    if (
+      worth.ok &&
+      promo?.oncePerCustomer === true &&
+      input.email !== undefined &&
+      (await usedByCustomer(ctx.db, promo.code, input.email))
+    ) {
+      return { ok: false, reason: CODES.alreadyUsed };
+    }
+    return worth;
+  },
+});
+
+export type PromoPeek =
+  | {
+      readonly ok: true;
+      readonly code: string;
+      /** "10% off", "$5 off", "Free standard delivery". */
+      readonly label: string;
+    }
+  | { readonly ok: false };
+
+export const peekPromoCode = defineOp({
+  name: "promoCodes.peek",
+  title: "What a code gives, if it is live",
+  description:
+    "For the shop, when a visitor arrives by a link that carries a code: says what the code gives in a few words (10% off), but only if a customer could use it right now. Anything else (no such code, switched off, finished, used up, not started) is a plain no with no reason, so nothing is promised that the checkout would then refuse. It counts nothing.",
+  access: "read",
+  input: z.object({ code: z.string().max(60) }),
+  async run(ctx, input): Promise<PromoPeek> {
+    const promo = await findPromo(ctx.db, input.code);
+    if (promo === null || promoState(promo, ctx.now) !== "live") {
+      return { ok: false };
+    }
+    return { ok: true, code: promo.code, label: promoLabel(promo) };
   },
 });

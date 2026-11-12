@@ -101,11 +101,24 @@ export const orders = pgTable(
 
     subtotalCents: integer().notNull(),
     shippingCents: integer().notNull(),
+    /** What a promo code took off the goods. */
     discountCents: integer().notNull().default(0),
+    /** What a promo code took off delivery. `shippingCents` is after it. */
+    deliveryDiscountCents: integer().notNull().default(0),
     totalCents: integer().notNull(),
     refundedCents: integer().notNull().default(0),
     currency: text().notNull().default("NZD"),
     promoCode: text(),
+    /**
+     * Who brought the order in: the partner whose code was used or, failing
+     * that, whose link the buyer came through. With it, the cut that partner
+     * was on at that moment. Both are copied when the order is placed and a
+     * partner's results are added up from them, so changing a deal or moving
+     * a code later never rewrites the past.
+     * (A partner's id, with no foreign key: this file cannot see that table.)
+     */
+    partnerId: text(),
+    commissionPercent: integer().notNull().default(0),
 
     paymentProvider: text().notNull(),
     paymentStatus: text().$type<PaymentStatus>().notNull(),
@@ -136,6 +149,8 @@ export const orders = pgTable(
     index("orders_customer_idx").on(t.customerId, t.placedAt),
     index("orders_email_idx").on(t.email),
     index("orders_payment_ref_idx").on(t.paymentReference),
+    index("orders_promo_idx").on(t.promoCode),
+    index("orders_partner_idx").on(t.partnerId),
   ],
 ).enableRLS();
 

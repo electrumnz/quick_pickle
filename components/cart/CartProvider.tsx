@@ -11,6 +11,13 @@ import {
 } from "react";
 
 import {
+  ARRIVAL_KEY,
+  arrivalFrom,
+  isFreshArrival,
+  packArrival,
+  unpackArrival,
+} from "@/lib/shop/arrival";
+import {
   addToCart,
   EMPTY_CART,
   normaliseCart,
@@ -42,33 +49,70 @@ const STORAGE_KEY = "qp-jar-v1";
 type Listener = () => void;
 const listeners = new Set<Listener>();
 
-/** Last value written, for browsers where localStorage is unavailable. */
-let memory = "";
+/** Last values written, for browsers where localStorage is unavailable. */
+const memory = new Map<string, string>();
 
-function readRaw(): string {
+function readKey(key: string): string {
   try {
-    return window.localStorage.getItem(STORAGE_KEY) ?? "";
+    return window.localStorage.getItem(key) ?? "";
   } catch {
-    return memory;
+    return memory.get(key) ?? "";
   }
 }
 
-function writeRaw(raw: string): void {
-  memory = raw;
+function writeKey(key: string, raw: string): void {
+  memory.set(key, raw);
   try {
-    window.localStorage.setItem(STORAGE_KEY, raw);
+    // An emptied jar is stored as an empty string, not removed: another tab
+    // is told about a change of value, and reads "" as an empty jar.
+    window.localStorage.setItem(key, raw);
   } catch {
-    // Private browsing or a full disk: the jar still works for this visit.
+    // Private browsing or a full disk: it still works for this visit.
   }
   for (const listener of listeners) listener();
 }
 
+const readRaw = () => readKey(STORAGE_KEY);
+const writeRaw = (raw: string) => writeKey(STORAGE_KEY, raw);
+const readArrival = () => readKey(ARRIVAL_KEY);
+
+/**
+ * How this visitor arrived: the link they followed and any code it carried
+ * (lib/shop/arrival). Read from the address once, when the page first comes
+ * alive, and kept in the browser beside the jar. An arrival that has gone
+ * stale is thrown away at the same moment, so nothing here ever needs to
+ * look at the clock while the page is drawing.
+ */
+let arrivalNoted = false;
+function noteArrival(): void {
+  if (arrivalNoted) return;
+  arrivalNoted = true;
+  const now = Date.now();
+  let before = unpackArrival(readArrival());
+  if (before !== null && !isFreshArrival(before, now)) before = null;
+  const next = arrivalFrom(window.location.search, before, now) ?? before;
+  const raw = next === null ? "" : packArrival(next);
+  if (raw !== readArrival()) writeKey(ARRIVAL_KEY, raw);
+}
+
+// Noted as soon as this file loads in a browser, not when the page finishes
+// coming alive: somebody who taps through to the checkout straight away has
+// still arrived by the link they followed.
+if (typeof window !== "undefined") noteArrival();
+
 function subscribe(listener: Listener): () => void {
   listeners.add(listener);
   const onStorage = (event: StorageEvent) => {
-    if (event.key === null || event.key === STORAGE_KEY) listener();
+    if (
+      event.key === null ||
+      event.key === STORAGE_KEY ||
+      event.key === ARRIVAL_KEY
+    ) {
+      listener();
+    }
   };
   window.addEventListener("storage", onStorage);
+  noteArrival();
   return () => {
     listeners.delete(listener);
     window.removeEventListener("storage", onStorage);
@@ -122,14 +166,24 @@ type CartContextValue = {
   /** The pack the buy box has selected; the sticky bar offers the same one. */
   readonly selectedSku: string;
   readonly select: (sku: string) => void;
+  /** A promo code the visitor's link carried, waiting for the checkout. */
+  readonly carriedCode: string | null;
+  /** Stop offering the carried code: it was taken off, or cannot be used. */
+  readonly forgetCarriedCode: () => void;
+  /** The link and labels the visit came with, to go on the order. */
+  readonly source: Readonly<Record<string, string>>;
 };
+
+const NO_SOURCE: Readonly<Record<string, string>> = {};
 
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { readonly children: ReactNode }) {
   const raw = useSyncExternalStore(subscribe, readRaw, () => "");
+  const arrivalRaw = useSyncExternalStore(subscribe, readArrival, () => "");
   const ready = useHydrated();
   const cart = useMemo(() => parse(raw), [raw]);
+  const arrival = useMemo(() => unpackArrival(arrivalRaw), [arrivalRaw]);
 
   const [isOpen, setOpen] = useState(false);
   const [pulse, setPulse] = useState(0);
@@ -157,6 +211,12 @@ export function CartProvider({ children }: { readonly children: ReactNode }) {
     writeRaw("");
   }, []);
 
+  const forgetCarriedCode = useCallback(() => {
+    const now = unpackArrival(readArrival());
+    if (now === null || now.code === null) return;
+    writeKey(ARRIVAL_KEY, packArrival({ ...now, code: null }));
+  }, []);
+
   const open = useCallback(() => setOpen(true), []);
   const close = useCallback(() => setOpen(false), []);
 
@@ -177,6 +237,9 @@ export function CartProvider({ children }: { readonly children: ReactNode }) {
       pulse,
       selectedSku,
       select,
+      carriedCode: arrival?.code ?? null,
+      forgetCarriedCode,
+      source: arrival?.source ?? NO_SOURCE,
     }),
     [
       cart,
@@ -191,6 +254,8 @@ export function CartProvider({ children }: { readonly children: ReactNode }) {
       close,
       pulse,
       selectedSku,
+      arrival,
+      forgetCarriedCode,
     ],
   );
 

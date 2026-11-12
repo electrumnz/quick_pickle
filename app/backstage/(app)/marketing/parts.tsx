@@ -9,6 +9,7 @@ import {
   type Block,
   type Inline,
 } from "@/lib/backstage/marketing/markdown";
+import { qrMatrix, qrPath } from "@/lib/backstage/marketing/qr";
 import {
   CAMPAIGN_LABEL,
   PARTNER_STATUS_LABEL,
@@ -444,6 +445,66 @@ export function SelectField({
       </select>
       {hint ? <Hint id={`${id}-hint`}>{hint}</Hint> : null}
     </div>
+  );
+}
+
+/** A tick box with its label beside it and, if needed, a line under it. */
+export function CheckField({
+  id,
+  name,
+  label,
+  hint,
+  defaultChecked,
+}: {
+  readonly id: string;
+  readonly name: string;
+  readonly label: string;
+  readonly hint?: ReactNode;
+  readonly defaultChecked?: boolean;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="flex cursor-pointer items-start gap-3">
+        <input
+          id={id}
+          type="checkbox"
+          name={name}
+          defaultChecked={defaultChecked}
+          aria-describedby={hint ? `${id}-hint` : undefined}
+          className="accent-navy mt-0.5 size-6 shrink-0"
+        />
+        <span className="font-semibold leading-snug">{label}</span>
+      </label>
+      {hint ? <Hint id={`${id}-hint`}>{hint}</Hint> : null}
+    </div>
+  );
+}
+
+/**
+ * A QR code, drawn on the page from its squares: one path, navy on white.
+ * The same squares as the file the download gives.
+ */
+export function QrPreview({
+  text,
+  label,
+  className = "",
+}: {
+  readonly text: string;
+  /** What it is, for someone who cannot see it. */
+  readonly label: string;
+  readonly className?: string;
+}) {
+  const { d, side } = qrPath(qrMatrix(text));
+  return (
+    <svg
+      role="img"
+      aria-label={label}
+      viewBox={`0 0 ${String(side)} ${String(side)}`}
+      shapeRendering="crispEdges"
+      className={`border-navy-line rounded-lg border-2 bg-white ${className}`}
+    >
+      <path d={d} className="fill-navy" />
+    </svg>
   );
 }
 

@@ -112,6 +112,7 @@ import {
   marketingNeedsYou,
   marketingOverview,
 } from "@/lib/backstage/marketing/overview";
+import { collabBoard, partnerResults } from "@/lib/backstage/marketing/collabs";
 import {
   addPartner,
   getPartner,
@@ -3108,7 +3109,7 @@ describe("the rest of marketing", () => {
         found: true,
         slug: "insta",
         kind: "path",
-        url: "/?utm_source=instagram&utm_medium=social&utm_campaign=bio",
+        url: "/?utm_source=instagram&utm_medium=social&utm_campaign=bio&via=insta",
       });
       await execute(resolveLink, { slug: " INSTA " }, shop, run);
       const clicks = async () =>
@@ -3224,7 +3225,7 @@ describe("the rest of marketing", () => {
         found: true,
         slug: "insta",
         kind: "path",
-        url: "/checkout",
+        url: "/checkout?via=insta",
       });
       expect(await historyOf(w.handle, insta)).toContain(
         "Pointed the short link /go/insta at /checkout",
@@ -3295,7 +3296,7 @@ describe("the rest of marketing", () => {
       // the visitor stays on whichever one they came in on.
       const here = await follow("insta");
       expect(here.status).toBe(307);
-      expect(here.headers.get("location")).toBe("/checkout");
+      expect(here.headers.get("location")).toBe("/checkout?via=insta");
       expect(here.headers.get("cache-control")).toBe("no-store");
       expect(here.headers.get("x-robots-tag")).toBe("noindex");
       expect(here.headers.get("set-cookie")).toBeNull();
@@ -3318,14 +3319,14 @@ describe("the rest of marketing", () => {
           referer: "https://evil.example/",
         },
       );
-      expect(steered.headers.get("location")).toBe("/checkout");
+      expect(steered.headers.get("location")).toBe("/checkout?via=insta");
       const elsewhere = await followShortLink(
         new NextRequest("https://evil.example/go/insta", {
           headers: { "user-agent": PHONE },
         }),
         { params: Promise.resolve({ slug: "insta" }) },
       );
-      expect(elsewhere.headers.get("location")).toBe("/checkout");
+      expect(elsewhere.headers.get("location")).toBe("/checkout?via=insta");
 
       // No such link, or not a slug at all: the front page.
       for (const slug of ["nope", "backstage", "%2F%2Fevil.example", ".."]) {
@@ -3352,7 +3353,7 @@ describe("the rest of marketing", () => {
       );
       const labelled = await follow("round-trip");
       expect(labelled.headers.get("location")).toBe(
-        "/checkout?size=6&utm_source=flyer&utm_medium=print#top",
+        "/checkout?size=6&utm_source=flyer&utm_medium=print&via=round-trip#top",
       );
       for (const slug of ["insta", "round-trip", "nope"]) {
         expect((await follow(slug)).headers.get("location"), slug).toMatch(
@@ -3404,7 +3405,7 @@ describe("the rest of marketing", () => {
         );
         // They are still told where it goes.
         expect(response.status).toBe(307);
-        expect(response.headers.get("location")).toBe("/checkout");
+        expect(response.headers.get("location")).toBe("/checkout?via=insta");
       }
       expect(await clicks()).toBe(before);
 
@@ -3417,7 +3418,7 @@ describe("the rest of marketing", () => {
         context,
       );
       expect(head.status).toBe(307);
-      expect(head.headers.get("location")).toBe("/checkout");
+      expect(head.headers.get("location")).toBe("/checkout?via=insta");
       expect(await clicks()).toBe(before);
 
       for (const agent of [
@@ -4221,7 +4222,7 @@ describe("the rest of marketing", () => {
       expect(new Set(names).size).toBe(names.length);
       for (const op of MARKETING_OPS) {
         expect(op.name).toMatch(
-          /^(marketing|campaigns|promoCodes|social|links|reviews|partners)\./,
+          /^(marketing|campaigns|promoCodes|social|links|reviews|partners|collabs)\./,
         );
         expect(op.description.length, op.name).toBeGreaterThan(60);
         expect(op.description, op.name).not.toMatch(/\u{2014}/u);
@@ -4333,6 +4334,7 @@ describe("the demo data", () => {
       CREW10: "live",
       SIDELINE5: "finished",
       KITBAG: "not-started",
+      ROVERS10: "live",
     });
 
     const posts = await execute(listSocialPosts, {}, system, run());
@@ -4356,6 +4358,8 @@ describe("the demo data", () => {
     const short = await execute(listLinks, { sort: "clicks" }, system, run());
     expect(short.map((link) => [link.slug, link.clicks, link.active])).toEqual([
       ["insta", 46, true],
+      ["kai", 38, true],
+      ["rovers", 31, true],
       ["packs", 23, true],
       ["flyer", 9, true],
       ["old-bio", 3, false],
@@ -4375,7 +4379,7 @@ describe("the demo data", () => {
     expect(shown.filter((review) => review.verified)).toHaveLength(1);
 
     const people = await execute(listPartners, {}, system, run());
-    expect(people).toHaveLength(4);
+    expect(people).toHaveLength(5);
     expect(new Set(people.map((partner) => partner.status)).size).toBe(4);
     expect(people.filter((partner) => partner.permissionOnFile)).toHaveLength(
       1,
@@ -4437,6 +4441,52 @@ describe("the demo data", () => {
       "The Corner Dairy (sample)",
     ]);
     expect(overview.topLinks[0]?.slug).toBe("insta");
+
+    // Two collabs, paid the two ways there are, with one that paid for
+    // itself and one that has not yet.
+    const board = await execute(collabBoard, {}, system, run());
+    expect(
+      board.map((row) => [
+        row.name,
+        row.orders,
+        row.salesCents,
+        row.spendCents,
+        row.cutOwingCents,
+        row.backPerDollarCents,
+      ]),
+    ).toEqual([
+      // A 10% cut and a box of product: $63.39 out, $167.90 back.
+      ["Sample Rovers FC", 3, 16_790, 6339, 1539, 265],
+      // A flat fee and a six pack: $177.00 out, $139.00 back.
+      ["Kai Kicks (sample creator)", 2, 13_900, 17_700, 0, 79],
+    ]);
+    expect(overview.collabs).toEqual(board);
+    const rovers = board[0]?.partnerId ?? "";
+    const theirs = await execute(
+      partnerResults,
+      { partnerId: rovers },
+      system,
+      run(),
+    );
+    expect(theirs.takings).toEqual({
+      orders: 3,
+      salesCents: 16_790,
+      discountCents: 1710,
+      commissionCents: 1539,
+      newCustomers: 3,
+    });
+    expect(theirs.codes.map((code) => [code.code, code.orders])).toEqual([
+      ["ROVERS10", 3],
+    ]);
+    // Two of the three came through the poster; one typed the code.
+    expect(
+      theirs.links.map((link) => [
+        link.slug,
+        link.code,
+        link.clicks,
+        link.orders,
+      ]),
+    ).toEqual([["rovers", "ROVERS10", 31, 2]]);
   });
 
   describe("the screens", () => {
@@ -4491,7 +4541,7 @@ describe("the demo data", () => {
           CampaignPage({ params: at(row.id), searchParams: nothing() }),
         ]),
         ...codes.map((row): [string, Promise<ReactNode>] => [
-          `promo code: ${row.state}`,
+          `promo code: ${row.code}`,
           PromoCodePage({ params: at(row.id), searchParams: nothing() }),
         ]),
         ...posts.map((row): [string, Promise<ReactNode>] => [
@@ -4503,7 +4553,7 @@ describe("the demo data", () => {
           ReviewPage({ params: at(row.id), searchParams: nothing() }),
         ]),
         ...people.map((row): [string, Promise<ReactNode>] => [
-          `partner: ${row.status}`,
+          `partner: ${row.name}`,
           PartnerPage({ params: at(row.id), searchParams: nothing() }),
         ]),
       ];
@@ -4516,7 +4566,7 @@ describe("the demo data", () => {
       signedIn.role = "owner";
       const drawn = await screens();
       // Sixteen kinds of screen, and one of each record the demo holds.
-      expect(drawn.length).toBe(16 + 2 + 3 + 6 + 5 + 4);
+      expect(drawn.length).toBe(16 + 2 + 4 + 6 + 5 + 5);
       for (const [name, html] of drawn) {
         expect(problemsIn(html), name).toEqual([]);
         expect(html, name).toContain("<h1");
@@ -4532,7 +4582,7 @@ describe("the demo data", () => {
       // Codes work at the checkout now, so nothing says otherwise.
       expect(page.get("promo codes")).toContain("One code an order.");
       expect(page.get("promo codes")).not.toContain("does not take promo");
-      expect(page.get("promo code: live")).toContain(
+      expect(page.get("promo code: CREW10")).toContain(
         "A customer can use it at the checkout now.",
       );
       expect(page.get("social planner")).toContain(
@@ -4552,13 +4602,48 @@ describe("the demo data", () => {
       expect(page.get("review: pending, clean")).toContain("Publish it");
 
       // The permission gate is the first thing on a partner's screen.
-      const dairy = page.get("partner: active") ?? "";
+      const dairy = page.get("partner: The Corner Dairy (sample)") ?? "";
       expect(dairy).toContain("They may be named in public");
-      const rovers = page.get("partner: talking") ?? "";
+      const rovers = page.get("partner: Sample Rovers FC") ?? "";
       expect(rovers).toContain("Do not name them in public");
       expect(rovers.indexOf("Do not name them in public")).toBeLessThan(
         rovers.indexOf("Next step"),
       );
+
+      // A collab says what came back in one sentence, then shows its working.
+      expect(rovers).toContain(
+        "Sample Rovers FC have brought in 3 paid orders worth $167.90. Working with them has cost $63.39 so far, so $2.65 in sales has come back for every $1 spent.",
+      );
+      expect(rovers).toContain("$15.39 of their cut is still to pay.");
+      expect(rovers).toContain("ROVERS10");
+      expect(rovers).toContain("/go/rovers");
+      expect(rovers).toContain("They get 10% of each sale they bring in");
+      const kai = page.get("partner: Kai Kicks (sample creator)") ?? "";
+      expect(kai).toContain(
+        "so $0.79 in sales has come back for every $1 spent.",
+      );
+      expect(kai).toContain("They are not on a cut.");
+      // Somebody with no code, link or cost is told how it starts.
+      expect(dairy).toContain("Nothing yet. Give The Corner Dairy (sample)");
+      // Both lists of collabs: the front page and the partners list.
+      for (const name of ["marketing", "partners"]) {
+        expect(page.get(name), name).toContain("Collabs: what came back");
+        expect(page.get(name), name).toContain("back per $1");
+      }
+
+      // A code says whose it is and what it has brought in.
+      const roversCode = page.get("promo code: ROVERS10") ?? "";
+      expect(roversCode).toContain("Whose it is");
+      expect(roversCode).toContain("Sample Rovers FC");
+      expect(roversCode).toContain("What it has brought in");
+      expect(page.get("promo code: CREW10")).toContain("Ours");
+
+      // Every link has a QR code to download, and says what it carries.
+      const links = page.get("links") ?? "";
+      expect(links).toContain("For print (SVG)");
+      expect(links).toContain("As a picture (PNG)");
+      expect(links).toContain("Carries the code");
+      expect(links.match(/role="img"/g)?.length).toBe(6);
 
       // A caption can be copied with scripting off: a read-only box.
       expect(page.get("post: approved (Down in one)")).toMatch(

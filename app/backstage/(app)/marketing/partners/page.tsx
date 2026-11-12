@@ -11,6 +11,7 @@ import {
 } from "@/components/backstage/ui";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { execute } from "@/lib/backstage/core/op";
+import { collabBoard } from "@/lib/backstage/marketing/collabs";
 import { dayLabel } from "@/lib/backstage/marketing/dates";
 import { listPartners } from "@/lib/backstage/marketing/partners";
 import {
@@ -19,6 +20,7 @@ import {
   PARTNER_STATUSES,
 } from "@/lib/backstage/marketing/status";
 
+import { CollabBoard } from "../collab-parts";
 import {
   FilterTabs,
   Flash,
@@ -59,16 +61,20 @@ export default async function PartnersPage({
   const show: TabKey =
     TABS.find((tab) => tab.key === params.show)?.key ??
     (params.due === "1" ? "due" : q === "" ? "open" : "all");
-  const rows = await execute(
-    listPartners,
-    {
-      status: show === "due" ? "all" : show,
-      due: show === "due",
-      q: q === "" ? undefined : q,
-      limit: 200,
-    },
-    await staffCaller(),
-  );
+  const caller = await staffCaller();
+  const [rows, collabs] = await Promise.all([
+    execute(
+      listPartners,
+      {
+        status: show === "due" ? "all" : show,
+        due: show === "due",
+        q: q === "" ? undefined : q,
+        limit: 200,
+      },
+      caller,
+    ),
+    execute(collabBoard, {}, caller),
+  ]);
   const canWrite = staff.role !== "viewer";
 
   return (
@@ -169,6 +175,17 @@ export default async function PartnersPage({
           </ul>
         )}
       </Panel>
+
+      {collabs.length === 0 ? null : (
+        <Panel title="Collabs: what came back" flush className="mt-6">
+          <CollabBoard rows={collabs} />
+          <p className="bk-muted border-navy-line border-t-2 px-4 py-3 text-[0.9375rem] leading-snug md:px-6">
+            Everyone with a promo code, a short link or a cost written down.
+            Sales are paid orders, delivery included, less refunds. It is sales
+            back for each dollar spent, not profit.
+          </p>
+        </Panel>
+      )}
 
       {canWrite ? (
         <Panel title="Add a partner" className="mt-6">

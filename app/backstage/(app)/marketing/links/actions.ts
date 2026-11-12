@@ -24,6 +24,15 @@ const utm = (form: FormData) => ({
   campaign: formText(form, "utmCampaign"),
 });
 
+/** A drop-down whose first choice ("Ours", "None") means nobody. */
+const chosen = (form: FormData, key: string): string | null =>
+  formText(form, key) === "" ? null : formText(form, key);
+
+const owner = (form: FormData) => ({
+  partnerId: chosen(form, "partnerId"),
+  promoCodeId: chosen(form, "promoCodeId"),
+});
+
 export async function createLinkAction(form: FormData): Promise<void> {
   await submit(
     createLink,
@@ -33,6 +42,7 @@ export async function createLinkAction(form: FormData): Promise<void> {
       label: formText(form, "label"),
       utm: utm(form),
       showOrder: showOrder(form),
+      ...owner(form),
     },
     {
       back: `${PAGE}#new`,
@@ -51,6 +61,7 @@ export async function updateLinkAction(form: FormData): Promise<void> {
       label: formText(form, "label"),
       utm: utm(form),
       showOrder: showOrder(form),
+      ...owner(form),
     },
     { back: PAGE, done: "Link saved." },
   );

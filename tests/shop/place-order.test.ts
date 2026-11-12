@@ -211,6 +211,77 @@ describe("placing an order", () => {
   });
 });
 
+describe("where a visit came from, and who is asking about a code", () => {
+  it("hands the visit's labels on with the order, and nothing when there are none", async () => {
+    const h = harness();
+    await placeOrder(
+      good({ source: { via: "rovers", utm_source: "rovers" } }),
+      h.deps,
+    );
+    await placeOrder(good(), h.deps);
+    expect(h.orders[0]?.source).toEqual({
+      via: "rovers",
+      utm_source: "rovers",
+    });
+    expect(h.orders[1]).not.toHaveProperty("source");
+  });
+
+  it("never loses an order over a label it cannot read", async () => {
+    for (const source of [
+      "not an object",
+      42,
+      ["via", "rovers"],
+      { via: 7 },
+      { via: "x".repeat(500) },
+      Object.fromEntries(
+        Array.from({ length: 30 }, (_, index) => [`k${String(index)}`, "v"]),
+      ),
+    ]) {
+      const h = harness();
+      const result = await placeOrder(good({ source }), h.deps);
+      expect(result.ok, JSON.stringify(source).slice(0, 40)).toBe(true);
+      expect(h.orders[0]).not.toHaveProperty("source");
+    }
+  });
+
+  it("tells the code check who the buyer is, tidied, both times it asks", async () => {
+    const h = harness();
+    const asked: (string | undefined)[] = [];
+    let refuseSave = false;
+    const store: OrderSink = {
+      ...h.deps.store,
+      async saveOrder(order) {
+        if (refuseSave) throw new Error("the code's last use just went");
+        await h.deps.store.saveOrder(order);
+      },
+      async checkCode(_code, order) {
+        asked.push(order.email);
+        return {
+          ok: true,
+          code: "CREW10",
+          label: "10% off",
+          discountCents: 270,
+          deliveryDiscountCents: 0,
+        };
+      },
+    };
+    const deps = { ...h.deps, store };
+    expect((await placeOrder(good({ promoCode: "crew10" }), deps)).ok).toBe(
+      true,
+    );
+    expect(asked).toEqual(["sam@example.co.nz"]);
+
+    // When saving refuses, the code is asked about again, for the same buyer.
+    refuseSave = true;
+    await placeOrder(good({ promoCode: "crew10" }), deps);
+    expect(asked).toEqual([
+      "sam@example.co.nz",
+      "sam@example.co.nz",
+      "sam@example.co.nz",
+    ]);
+  });
+});
+
 describe("order numbers", () => {
   it("are QP- and six unambiguous characters", () => {
     for (let i = 0; i < 200; i += 1) {

@@ -16,11 +16,12 @@
  * record the code in.
  */
 
-import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, ne, or, sql } from "drizzle-orm";
 
 import { CODES } from "@/content/site";
-import { promoCodes } from "@/db/schema";
+import { orders, promoCodes } from "@/db/schema";
 import type { DbOrTx } from "@/lib/db/types";
+import { normalisePromoCode, PROMO_CODE_PATTERN } from "@/lib/shop/code";
 import { assertCents, formatNzd } from "@/lib/shop/money";
 
 import { conflict, notFound } from "../core/errors";
@@ -44,13 +45,9 @@ export type PromoTerms = Pick<
   | "active"
 >;
 
-/** Three to twenty-four capitals, digits and hyphens: "CREW10". */
-export const PROMO_CODE_PATTERN = /^[A-Z0-9](?:[A-Z0-9-]{1,22})[A-Z0-9]$/;
-
-/** A code as stored: no spaces, upper case. "crew 10 " is "CREW10". */
-export function normalisePromoCode(input: string): string {
-  return input.replace(/\s+/g, "").toUpperCase();
-}
+// What a code looks like lives in lib/shop/code, which imports nothing, so
+// the browser can use it too. Everything else about a code is here.
+export { normalisePromoCode, PROMO_CODE_PATTERN };
 
 /**
  * A whole percentage of an amount, in whole cents.
@@ -215,6 +212,38 @@ export async function findPromo(
     .from(promoCodes)
     .where(eq(promoCodes.code, wanted));
   return row ?? null;
+}
+
+/**
+ * Has this customer (told apart by email address) already got an order on
+ * this code? Orders that were called off do not count: nothing was bought.
+ *
+ * `exceptNumber` leaves one order out, for asking from inside the
+ * transaction that has just written it.
+ */
+export async function usedByCustomer(
+  db: DbOrTx,
+  code: string,
+  email: string,
+  exceptNumber?: string,
+): Promise<boolean> {
+  const who = email.trim().toLowerCase();
+  if (who === "") return false;
+  const rows = await db
+    .select({ id: orders.id })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.promoCode, normalisePromoCode(code)),
+        eq(orders.email, who),
+        ne(orders.status, "cancelled"),
+        exceptNumber === undefined
+          ? undefined
+          : ne(orders.number, exceptNumber),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
 }
 
 /**
