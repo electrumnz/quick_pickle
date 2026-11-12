@@ -13,6 +13,7 @@ import "server-only";
 
 import { on } from "./core/events";
 import { closePaymentPage } from "./orders/listeners";
+import { sendRefund } from "./orders/refunds";
 
 let registered = false;
 
@@ -22,6 +23,7 @@ export function registerHandlers(): void {
   registered = true;
 
   on("order.cancelled", "close the payment page", closePaymentPage());
+  on("order.refund_requested", "send the money back", sendRefund());
 
   // More are added here as their areas land:
   //   on("mail.queued", "send the email", ...)

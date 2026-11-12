@@ -76,7 +76,7 @@ export async function refundAction(form: FormData): Promise<void> {
       amountCents: Number.isNaN(amountCents) ? -1 : amountCents,
       reason: formText(form, "reason"),
     },
-    { back: page(form), done: "Refund recorded." },
+    { back: page(form), done: "Refund saved." },
   );
 }
 

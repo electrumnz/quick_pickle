@@ -300,9 +300,30 @@ export function expireCheckoutSession(
 
 export type StripeRefund = {
   readonly id: string;
+  /** pending, requires_action, succeeded, failed or canceled. */
   readonly status: string | null;
   readonly amount: number;
+  readonly metadata?: Readonly<Record<string, string>> | null;
 };
+
+/**
+ * The refunds Stripe already has against a payment. Asked before sending one
+ * again after an unknown outcome: Stripe only remembers an idempotency key
+ * for a day, and a refund must not go twice because we came back on day two.
+ */
+export async function listRefunds(
+  secretKey: string,
+  paymentIntent: string,
+  fetchImpl: Fetch = fetch,
+): Promise<readonly StripeRefund[]> {
+  const page = await call<{ data?: StripeRefund[] }>(
+    fetchImpl,
+    secretKey,
+    "GET",
+    `/v1/refunds?payment_intent=${encodeURIComponent(paymentIntent)}&limit=100`,
+  );
+  return page.data ?? [];
+}
 
 export function createRefund(
   secretKey: string,

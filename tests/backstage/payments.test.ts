@@ -4,7 +4,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { auditLog, events, orders } from "@/db/schema";
 import { systemCaller } from "@/lib/backstage/core/actor";
 import { execute } from "@/lib/backstage/core/op";
-import { cancelOrder, getOrder } from "@/lib/backstage/orders/ops";
+import {
+  cancelOrder,
+  getOrder,
+  recordRefund,
+} from "@/lib/backstage/orders/ops";
 import {
   attachPayment,
   markPaid,
@@ -19,6 +23,7 @@ import {
 } from "@/lib/db/client";
 import type { PaymentProvider } from "@/lib/shop/payments";
 import { closePaymentPage } from "@/lib/backstage/orders/listeners";
+import { sendRefund } from "@/lib/backstage/orders/refunds";
 import { settleOnReturn } from "@/lib/shop/payments/settle";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
@@ -648,5 +653,267 @@ describe("an order that is paid for somewhere else", () => {
         }),
       ).toEqual({ state: "unknown" });
     });
+  });
+});
+
+describe("giving money back on an order paid through Stripe", () => {
+  let handle: DbHandle;
+  const ENV = { STRIPE_SECRET_KEY: "sk_test_abc" };
+  const staff = { ...systemCaller("Ashleigh", "ui"), confirmed: true };
+
+  beforeAll(async () => {
+    handle = await openEmbedded();
+    useDbHandle(handle);
+  });
+  afterAll(async () => {
+    await closeDb();
+  });
+
+  /** An order sent to Stripe and paid there. */
+  const paidOrder = async (email: string) => {
+    const result = await placeOrder(form({ email }), {
+      payments: elsewhere(),
+      store: getStore({ NODE_ENV: "test" }),
+      returnUrls: URLS,
+    });
+    if (!result.ok) throw new Error("order failed");
+    const number = result.order.number;
+    await execute(
+      markPaid,
+      {
+        number,
+        provider: "stripe",
+        reference: `cs_test_${number}`,
+        amountCents: 8850,
+        currency: "nzd",
+        test: false,
+      },
+      stripe,
+    );
+    return number;
+  };
+
+  /**
+   * Stripe, as far as a refund needs it: the payment page (which names the
+   * payment), the refunds it already holds, and making one.
+   */
+  const stripeApi = (
+    options: {
+      refunds?: Record<string, unknown>[];
+      onCreate?: number | "down";
+      payment?: string | null;
+      madeStatus?: string;
+    } = {},
+  ) => {
+    const asked: string[] = [];
+    const keys: string[] = [];
+    const fetchImpl = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(url).replace("https://api.stripe.com", "");
+      const method = init?.method ?? "GET";
+      asked.push(`${method} ${path.split("?")[0] ?? ""}`);
+      const json = (status: number, body: unknown) =>
+        new Response(JSON.stringify(body), { status });
+      if (method === "GET" && path.startsWith("/v1/checkout/sessions/")) {
+        return json(200, {
+          id: path.split("/").pop(),
+          status: "complete",
+          payment_status: "paid",
+          payment_intent:
+            options.payment === undefined ? "pi_123" : options.payment,
+        });
+      }
+      if (method === "GET" && path.startsWith("/v1/refunds")) {
+        return json(200, { data: options.refunds ?? [] });
+      }
+      if (method === "POST" && path === "/v1/refunds") {
+        const headers = init?.headers as Record<string, string>;
+        keys.push(headers["Idempotency-Key"] ?? "");
+        if (options.onCreate === "down") throw new Error("network");
+        if (options.onCreate === 500) {
+          return json(500, {
+            error: { message: "Stripe is having a moment." },
+          });
+        }
+        if (options.onCreate === 400) {
+          return json(400, {
+            error: {
+              message: "Charge ch_1 has already been refunded.",
+              code: "charge_already_refunded",
+            },
+          });
+        }
+        return json(200, {
+          id: "re_made",
+          status: options.madeStatus ?? "succeeded",
+          amount: 2000,
+        });
+      }
+      return json(404, { error: { message: "not in this test" } });
+    }) as typeof fetch;
+    return { asked, keys, fetchImpl };
+  };
+
+  const refund = async (number: string, amountCents = 2000) => {
+    const result = await execute(
+      recordRefund,
+      { number, amountCents, reason: "Arrived damaged" },
+      staff,
+    );
+    const [order] = await handle.db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(eq(orders.number, number));
+    const [event] = await handle.db
+      .select()
+      .from(events)
+      .where(
+        and(
+          eq(events.entityId, order?.id ?? ""),
+          eq(events.type, "order.refund_requested"),
+        ),
+      );
+    if (event === undefined) throw new Error("no refund event");
+    return {
+      result,
+      event: {
+        id: event.id,
+        at: event.at,
+        type: event.type,
+        entityType: event.entityType,
+        entityId: event.entityId,
+        payload: event.payload,
+        attempt: 1,
+      },
+    };
+  };
+
+  const detail = (number: string) => execute(getOrder, { number }, shop);
+  const ctx = () => ({ db: handle.db, now: new Date() });
+
+  it("is saved as on its way, then sent, then written down as gone", async () => {
+    const number = await paidOrder("refund-ok@example.co.nz");
+    const { result, event } = await refund(number);
+    expect(result).toEqual({ refundedCents: 2000, sent: "by-stripe" });
+
+    // Saved, and counted against what is left, but nothing has gone yet.
+    let order = await detail(number);
+    expect(order.refunds).toMatchObject([{ status: "pending" }]);
+    expect(order).toMatchObject({
+      refundedCents: 2000,
+      paymentStatus: "part_refunded",
+    });
+
+    const api = stripeApi();
+    await sendRefund({ env: ENV, fetchImpl: api.fetchImpl })(event, ctx());
+    expect(api.asked).toEqual([
+      `GET /v1/checkout/sessions/cs_test_${number}`,
+      "GET /v1/refunds",
+      "POST /v1/refunds",
+    ]);
+    // Asked for by our own refund's id, so asking twice refunds once.
+    const refundId = order.refunds[0]?.id ?? "";
+    expect(api.keys).toEqual([`refund-${refundId}`]);
+
+    order = await detail(number);
+    expect(order.refunds).toMatchObject([
+      { status: "done", providerReference: "re_made" },
+    ]);
+    expect(order.refundedCents).toBe(2000);
+
+    // The same event again (a retry, a second worker) sends nothing.
+    const again = stripeApi();
+    await sendRefund({ env: ENV, fetchImpl: again.fetchImpl })(event, ctx());
+    expect(again.asked).toHaveLength(0);
+  });
+
+  it("does not send a refund Stripe already has, however late the retry", async () => {
+    const number = await paidOrder("refund-late@example.co.nz");
+    const { event } = await refund(number);
+    const refundId = (await detail(number)).refunds[0]?.id ?? "";
+
+    // It went the first time, but the answer never reached us. Days later a
+    // person sends it round again; Stripe no longer remembers the request,
+    // but it still has the refund, with our id on it.
+    const api = stripeApi({
+      refunds: [
+        {
+          id: "re_first_time",
+          status: "succeeded",
+          amount: 2000,
+          metadata: { refund_id: refundId },
+        },
+      ],
+    });
+    await sendRefund({ env: ENV, fetchImpl: api.fetchImpl })(event, ctx());
+    expect(api.asked).not.toContain("POST /v1/refunds");
+    expect((await detail(number)).refunds).toMatchObject([
+      { status: "done", providerReference: "re_first_time" },
+    ]);
+  });
+
+  it("takes the refund back off the order when Stripe refuses it", async () => {
+    const number = await paidOrder("refund-no@example.co.nz");
+    const { event } = await refund(number);
+    const api = stripeApi({ onCreate: 400 });
+    await sendRefund({ env: ENV, fetchImpl: api.fetchImpl })(event, ctx());
+
+    const order = await detail(number);
+    expect(order.refunds).toMatchObject([{ status: "failed" }]);
+    // What is left to refund is the whole amount again.
+    expect(order).toMatchObject({ refundedCents: 0, paymentStatus: "paid" });
+    const lines = await handle.db
+      .select({ summary: auditLog.summary })
+      .from(auditLog)
+      .where(eq(auditLog.operation, "orders.refundSettled"));
+    expect(
+      lines.some(
+        (line) =>
+          line.summary.includes(number) &&
+          line.summary.includes("did not go through") &&
+          line.summary.includes("already been refunded"),
+      ),
+    ).toBe(true);
+  });
+
+  it("leaves it waiting, to be tried again, when Stripe cannot be reached", async () => {
+    const number = await paidOrder("refund-down@example.co.nz");
+    const { event } = await refund(number);
+    for (const onCreate of ["down", 500] as const) {
+      const api = stripeApi({ onCreate });
+      await expect(
+        sendRefund({ env: ENV, fetchImpl: api.fetchImpl })(event, ctx()),
+      ).rejects.toThrow();
+    }
+    const order = await detail(number);
+    expect(order.refunds).toMatchObject([{ status: "pending" }]);
+    expect(order.refundedCents).toBe(2000);
+
+    // And when Stripe is back, the same event finishes the job.
+    const api = stripeApi();
+    await sendRefund({ env: ENV, fetchImpl: api.fetchImpl })(event, ctx());
+    expect((await detail(number)).refunds).toMatchObject([{ status: "done" }]);
+  });
+
+  it("counts a refund on its way against what is left", async () => {
+    const number = await paidOrder("refund-cap@example.co.nz");
+    await refund(number, 8000);
+    await expect(
+      execute(
+        recordRefund,
+        { number, amountCents: 1000, reason: "And the rest" },
+        staff,
+      ),
+    ).rejects.toMatchObject({ code: "invalid_input" });
+  });
+
+  it("fails cleanly when Stripe has no payment for the order", async () => {
+    const number = await paidOrder("refund-nopi@example.co.nz");
+    const { event } = await refund(number);
+    const api = stripeApi({ payment: null });
+    await sendRefund({ env: ENV, fetchImpl: api.fetchImpl })(event, ctx());
+    const order = await detail(number);
+    expect(order.refunds).toMatchObject([{ status: "failed" }]);
+    expect(order.refundedCents).toBe(0);
+    expect(api.asked).not.toContain("POST /v1/refunds");
   });
 });
