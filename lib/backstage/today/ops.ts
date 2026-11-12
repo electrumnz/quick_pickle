@@ -21,6 +21,7 @@ import { lastTick } from "../clock/tick";
 import { listStuckEvents } from "../core/events";
 import { defineOp } from "../core/op";
 import { marketingNeedsYou } from "../marketing/overview";
+import { plansNeeds } from "../plans/needs";
 
 export type Need = {
   /** Stable, so a screen can key on it and a test can find it. */
@@ -174,6 +175,17 @@ export const needsYou = defineOp({
         urgent: item.key === "held",
         title: item.sentence,
         detail: "In Marketing.",
+        href: item.href,
+      });
+    }
+
+    // Plans: tasks that are due, and a compliance check that has come round.
+    for (const item of await plansNeeds(ctx.db, ctx.now)) {
+      needs.push({
+        key: `plans-${item.key}`,
+        urgent: item.urgent,
+        title: item.title,
+        detail: item.detail,
         href: item.href,
       });
     }
