@@ -31,13 +31,20 @@ Updated 12 November 2026. Honest status, not a summary.
 - [ ] **A customer email address.** The policies and FAQ leave a gap where it goes.
 - [ ] **The legal entity, NZBN and GST status.** The terms of sale name no company yet, and
       receipts cannot show GST until the registration is confirmed.
-- [ ] **Pick a payment processor.** The checkout is ours end to end and runs in test mode.
-      Stripe is the obvious choice for New Zealand (cards, Apple Pay and Google Pay inside
-      our own checkout, which is the single biggest lift on a phone). It plugs in at
-      `lib/shop/payments`.
-- [ ] **Somewhere to keep orders.** A database (Supabase or Neon) and an email sender for
-      receipts. Until then a deployed test order is written to the server log and nowhere
-      else. It plugs in at `lib/shop/store`.
+- [ ] **A Stripe account.** The processor is decided: Stripe (cards, Apple Pay and Google
+      Pay, no monthly fee). It needs an account in the business's name, then its test keys
+      first and its live keys at launch. It plugs in at `lib/shop/payments`.
+- [ ] **Finish moving to Quick Pickle's own accounts**, apart from Keece:
+      a free Supabase organisation (made 12 November) and a free Vercel account (in
+      progress). Connect the two with Vercel's Supabase integration, Production only, and
+      add `BACKSTAGE_SETUP_CODE`. Then open `/backstage/set-up` once to make the owner login.
+- [ ] **Two tokens, as GitHub repository secrets**, so the repository's own automation can
+      run the database and the hosting: `QP_SUPABASE_ACCESS_TOKEN` and `QP_VERCEL_TOKEN`.
+- [ ] **Email for the business's own domain.** Resend to start with (free tier, sending and
+      receiving); Cloudflare for the domain's DNS, and for receiving if the free tier's daily
+      cap ever bites. Both need the domain first.
+- [ ] **Vercel's free plan is not for a business taking money.** At launch: Vercel Pro
+      (US$20 a month), or move hosting to Cloudflare. Decide then.
 - [ ] **A domain.**
 - [ ] **Open the site to search at launch.** It happens on its own when `UNCONFIRMED` in
       `content/offer.ts` is empty. At the same time, set `categories:seo` in
@@ -45,6 +52,38 @@ Updated 12 November 2026. Honest status, not a summary.
       site that says noindex on purpose cannot pass it.
 - [ ] **Ashleigh's nod on the two proposed Lucky poses in use**: celebrating (order placed)
       and asleep (empty jar, 404). Both were generated from her art, not drawn by her.
+
+## The back end: what is built and what is next
+
+Everything Ashleigh needs to run the business, except accounting (Xero). In build order.
+
+- [x] **Foundations.** Database (Postgres, self-migrating, row level security on every
+      table), staff sign-in with roles, the activity log, and one list of operations that
+      every screen, automation and bot goes through.
+- [x] **Orders and customers.** The queue by stage, search, a page per order with its
+      history, packing slips, refunds recorded, customer tags and notes, the Pickle Crew
+      list with consent on file.
+- [ ] **Payments for real.** Stripe behind the existing seam: a pending order, a hosted
+      payment page for exactly that amount, a signed webhook to mark it paid.
+- [ ] **Order emails.** Receipt, on the courier, cancelled. Plain, and free of anything
+      promotional so they stay outside the marketing-email rules.
+- [ ] **Stock and batches.** Shots on hand, batches with best-before dates, which batch
+      went to which order (so a recall list is one press), suppliers and purchase orders.
+- [ ] **The inbox.** Mail for the business's domain lands in the back end, threaded by
+      our own rules (reply headers, order numbers, the same person and subject), linked to
+      customers and orders, answered from there.
+- [ ] **Marketing.** Campaigns to the crew with approval before sending, promo codes, a
+      social planner, tracked links, reviews with moderation.
+- [ ] **Automations and routines.** Rules that react to events, schedules that run, a
+      daily digest, and an approval queue for anything outward.
+- [ ] **Plans.** Business plan, marketing plan, budget and unit economics, how-to sheets,
+      the compliance register for a food business, the open questions for Ashleigh.
+- [ ] **Run the shop from the back end.** Prices, ship date, launch mode, delivery rates
+      and the announcement, without a deploy.
+- [ ] **Numbers.** Sales, the funnel (our own, no cookies), crew growth.
+- [ ] **Xero and couriers.**
+- [ ] **Claude tooling (MCP).** Last, over the same operations: a small tool set, per-user
+      sign-in, every call in the activity log.
 
 ## Would make it sell harder
 

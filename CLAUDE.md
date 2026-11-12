@@ -1,7 +1,15 @@
 # QUICK PICKLE
 
-A one-page shop for Quick Pickle: pickle juice shots, sold direct, in New Zealand.
-The juice is clear. There are no pickles in the bottle.
+Two things in one repository, for Quick Pickle: pickle juice shots, sold direct, in New
+Zealand. The juice is clear. There are no pickles in the bottle.
+
+1. **The shop.** A one-page site with its own jar and checkout.
+2. **The back end** (`/backstage`). Everything Ashleigh needs to run the business: orders,
+   customers, stock, the inbox, marketing, plans and budget, automations. Accounting is the
+   one thing it will never do; that is Xero's job.
+
+There is no human writing code here. The owner (Sam) has handed the repository, the
+database and the hosting to Claude: build it, verify it, merge it.
 
 The brand is Ashleigh Lennard's: the logo, Lucky the superhero cat, the three colours and
 the four fonts. "Brand Guide v2" (Grok's write-up of her files) is a starting point, not a
@@ -49,24 +57,98 @@ reads them as machine-written. Code comments are not copy.
 is computed from `content/offer.ts` by `lib/shop/pricing.ts`, and computed again on the
 server when an order is placed. There is no price field on any form.
 
+**Every change in the back end goes through an operation.** `lib/backstage/core/op.ts` is
+the one path: it checks the input, checks the role, runs the change in a transaction with
+its activity-log line and its events, and refuses anything outward or irreversible until
+someone has said yes. A screen, an automation, a schedule and Claude (through MCP) all call
+the same operations. Nothing writes to a table any other way, and nothing sends an email,
+charges a card or calls another service from inside a transaction.
+
+**Real records only ever sit behind a sign-in.** With a database connected, the back end
+always asks for one. With none it runs on invented records and says so on every screen.
+
+**Never touch the Keece database or Vercel projects.** They belong to a different business
+that happens to share an account owner. Quick Pickle has its own Supabase organisation and
+its own Vercel account.
+
 ## How it is built
 
-Next.js 16 App Router · React 19 · TypeScript · Tailwind v4 · Vercel. No CMS, no Shopify,
-no database yet. Commerce is native: our catalogue, our jar, our checkout, our orders.
+Next.js 16 App Router · React 19 · TypeScript · Tailwind v4 · Postgres (Supabase) through
+Drizzle · Vercel. No CMS and no Shopify. Commerce is native: our catalogue, our jar, our
+checkout, our orders.
 
 ```
-app/                 the page, /checkout, /order/thanks, the fine print, /backstage
-components/brand/    Lucky and the lockup (inline vector), raster art, icons, the bottle
-components/site/     the sections of the page
-components/cart/     the jar: provider, header button, sheet
-components/checkout/ the form and its Server Action
-content/             EVERY word and EVERY commercial fact. Edit copy and prices here.
-lib/brand/           tokens.css (the only file with a hex), fonts, generated art data
-lib/shop/            money, jar, pricing, orders, the payment seam, the store seam
-legal/               COPY-RULES.md and the scanner
-scripts/             build-art.mjs, build-vectors.py, build-media.mjs, prelaunch.mts
-tests/  e2e/         vitest and Playwright
+app/(site)/            the shop: the page, /checkout, /order/thanks, the fine print
+app/backstage/(door)/  sign-in, first-time set-up, choose a password
+app/backstage/(app)/   everything behind the door, one folder per area
+app/layout.tsx         the document and fonts only. No stylesheet, no script.
+proxy.ts               in front of /backstage only: path header, no-store, noindex
+components/brand/      Lucky and the lockup (inline vector), raster art, icons, the bottle
+components/site/ cart/ checkout/ ui/   the shop
+components/backstage/  the back end's parts: nav, ui kit, forms
+content/               EVERY customer-facing word and commercial fact
+db/schema/             the tables. `npm run db:generate` turns a change into a migration
+db/migrations/         generated SQL, plus the copy embedded in the build
+lib/db/                the one connection, the migration runner, ids
+lib/backstage/         core (operations, actors, errors), auth, and one folder per area
+lib/shop/              money, jar, pricing, orders, the payment seam, the store seam
+lib/brand/             tokens.css (the only file with a hex), base.css, fonts, art data
+lib/time.ts            New Zealand time. Every conversion goes through it.
+legal/                 COPY-RULES.md and the scanner
+tests/  e2e/           vitest and Playwright
 ```
+
+`lib/backstage/README.md` is the guide to adding an area to the back end.
+
+### The shop and the back end do not share a stylesheet or a script
+
+`app/globals.css` is the shop's and is loaded by `app/(site)/layout.tsx` (and the 404).
+`app/backstage/backstage.css` is the back end's. Both import the same tokens and the same
+brand base (`lib/brand/base.css`), each has its own copy of Tailwind, and each **only scans
+the folders it names** with `@source`. So the shop never downloads a back-end style and its
+Lighthouse budget does not move as the back end grows.
+
+The catch: a file that renders on a public page but is not under a scanned folder loses its
+utility classes with no error. Add the folder to the list. `e2e/site.spec.ts` has a test for
+the way this showed up the first time.
+
+A link from the back end to the shop is `ShopLink` (a plain anchor, full page load), never
+`next/link`: a client-side hop between the two would stack one stylesheet on the other.
+
+### The database
+
+- `DATABASE_URL` (or `POSTGRES_URL`, which the Vercel and Supabase integration writes) is a
+  real Postgres. With neither set the app runs on PGlite, Postgres in the same process: in
+  memory for tests and deployments, under `.data/pglite` in development.
+- The app migrates itself on first connection, from SQL embedded in the build. Change
+  `db/schema`, run `npm run db:generate`, commit the result. A migration that has run
+  anywhere real is never edited; add another.
+- **A Vercel preview ignores the database** unless `QP_PREVIEW_DATABASE=1`. Previews run
+  unmerged code and take test orders. They get the demo data.
+- **Every table calls `.enableRLS()`** and a test fails if one does not. Supabase publishes
+  the `public` schema through its Data API otherwise. The app connects as the owner, which
+  RLS does not apply to.
+- Ids are a prefix and 20 readable characters (`ord_…`), random. Sort by `created_at`.
+- Money is integer cents. Moments are `timestamptz`, shown in New Zealand time by
+  `lib/time.ts`. Never `new Date("2026-11-12T09:00")` on the server: it is UTC there.
+- In a sub-query that looks back at the outer row, write the outer column in full
+  (`"orders"."id"`). Drizzle drops the table name in a one-table query and the bare column
+  then means the inner table's.
+
+### The back end
+
+- **Sign-in:** named accounts with roles (owner, staff, viewer). argon2id passwords,
+  sessions stored as hashes, lock-out after five wrong tries, one-time links for invitations.
+  The first owner is made once at `/backstage/set-up` with `BACKSTAGE_SETUP_CODE`.
+- `requireStaff()` is the lock, called by every page and (through `staffCaller()`) every
+  action. `proxy.ts` is not the lock.
+- **Outward and irreversible operations** (`effect: "outward" | "destructive"`) need a yes.
+  A form's button is the yes. A bot has to ask first.
+- **Demo mode** (no database): open, seeded through the real operations, labelled on every
+  screen. The label lives only in the back end. Nothing on a public page says "demo".
+- The old build's "one shared password, no email" rule was dropped on purpose: with several
+  people and bots at work the activity log has to say who did what. Its "no MCP" decision is
+  also reversed: an MCP connection is planned, built last, over the same operations.
 
 ### Commerce
 
@@ -74,8 +156,8 @@ tests/  e2e/         vitest and Playwright
 - `lib/shop/payments` is where a processor plugs in. Today `PAYMENT_PROVIDER` is `test`:
   the checkout records the order, charges nobody, and says so on every screen. An unknown
   provider name throws rather than falling back to test mode.
-- `lib/shop/store` is where orders are written. `file` in development (`.data/`), `log` in
-  production. The log store keeps nothing, which is acceptable only while payments are test.
+- `lib/shop/store` is where the shop hands an order over. The default is `db`: the back
+  end's own `orders.record` operation, so an order is on the Orders screen as it is placed.
 - The "order's in" page reads a short-lived httpOnly receipt cookie. It is display only.
 
 ### Design rules that came from measuring
@@ -127,14 +209,31 @@ Video and reels go in the slots in `content/media.ts`, encoded by `scripts/build
 - **Never `pkill -f` on a broad pattern.** Kill by PID.
 - Playwright is pinned to the version whose Chromium is preinstalled in the cloud sandbox
   (1.63). Do not run `playwright install` there.
+- The browser tests start **two** servers from one build: the site (no database, so its
+  back end is open and on demo data) and a second copy with `BACKSTAGE_AUTH=required` for
+  the sign-in tests. React clears a form's fields when its action returns; a test that types
+  straight after pressing a button must wait for the reply first (see `press` in
+  `e2e/backstage-auth.spec.ts`).
+- `getByRole("alert")` also matches Next's route announcer after a client-side navigation.
+  Scope it: `page.locator("main [role=alert]")`.
+- With several agents in the tree: each owns its folders, nobody runs `git stash`, `git
+checkout -- <path>`, `git add -A` or `db:generate` but the one integrating, and every
+  build takes a private `NEXT_DIST_DIR`.
 - ESLint 9 not 10, TypeScript 6 not 7: both held back on purpose by the Next toolchain.
 - Customer-facing writing is plain everyday New Zealand English with British spelling.
 
 ## Deploying
 
-The Vercel project tracks this repository. Production follows `main`; every other branch
-gets a preview URL. Never push a red build to `main`: Vercel keeps the last good deployment,
-so a failed build silently freezes production rather than breaking it.
+Production follows `main`; every other branch gets a preview. Never push a red build to
+`main`: Vercel keeps the last good deployment, so a failed build silently freezes
+production rather than breaking it. Claude merges its own pull requests once CI is green
+(Sam, 12 November 2026: "you own all three").
+
+Quick Pickle is moving to its own free Vercel account and its own Supabase organisation,
+both apart from Keece. Production needs `DATABASE_URL` or `POSTGRES_URL` (Production
+environment only) and `BACKSTAGE_SETUP_CODE`. Vercel's free plan does not allow a business
+that takes money, so launch means either Vercel Pro or moving hosting to Cloudflare: keep
+the app free of Vercel-only services in its core paths so that move stays cheap.
 
 The site is not launched. See `TODO.md` for what stands between this and taking money.
 
