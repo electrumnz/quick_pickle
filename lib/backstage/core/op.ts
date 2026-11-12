@@ -20,6 +20,7 @@ import { auditLog, events } from "@/db/schema";
 import { getDb } from "@/lib/db/client";
 import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
+import { underTestRunner } from "@/lib/under-test";
 
 import { can, type Access, type Actor, type Caller } from "./actor";
 import { OpError } from "./errors";
@@ -250,7 +251,9 @@ let dispatcherAsked = false;
 async function ensureDispatcher(): Promise<void> {
   if (dispatcherAsked || commitHook !== null) return;
   dispatcherAsked = true;
-  if (process.env.NODE_ENV === "test") return;
+  // Asked of the test runner's own marks too, so that a test standing in
+  // for production (NODE_ENV set by hand) still has nothing done behind it.
+  if (underTestRunner()) return;
   try {
     const { boot } = await import("@/lib/backstage/boot");
     boot();
