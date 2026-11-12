@@ -10,4 +10,6 @@ export async function seedDemoData(db: Db): Promise<void> {
   await seedDemoOrders(db, now);
   const { seedMarketingDemo } = await import("./marketing/demo");
   await seedMarketingDemo(db, now);
+  const { seedPlansDemo } = await import("./plans/demo");
+  await seedPlansDemo(db, now);
 }

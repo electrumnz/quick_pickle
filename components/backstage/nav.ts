@@ -41,6 +41,12 @@ export const DESTINATIONS: readonly Destination[] = [
       "Emails to the Pickle Crew, promo codes, the social planner, tracked links, reviews and partners.",
   },
   {
+    href: "/backstage/plans",
+    label: "Plans",
+    blurb:
+      "The plan, the budget, how we do things, the to-do list, questions to answer and the compliance checklist.",
+  },
+  {
     href: "/backstage/brand",
     label: "Brand",
     blurb: "The living brand guide: voice, colours, type, Lucky.",
