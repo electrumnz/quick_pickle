@@ -43,6 +43,13 @@ function Paths({ paths }: { readonly paths: readonly ArtPath[] | undefined }) {
 }
 
 /**
+ * The id of the running drawing once the hero has put it in the document.
+ * Other art on the same page (the bottle label) can borrow it with <use>
+ * instead of fetching the file again.
+ */
+export const LUCKY_RUN_ID = "qp-lucky-run";
+
+/**
  * Lucky running, pickle raised. `animated` brings the marks to life; without
  * it this is exactly her drawing, still.
  */
@@ -83,7 +90,15 @@ type SvgProps = {
   readonly animated?: boolean;
 };
 
-export function LuckyRun({ className, title, animated = false }: SvgProps) {
+export function LuckyRun({
+  className,
+  title,
+  animated = false,
+  shareable = false,
+}: SvgProps & {
+  /** Give the drawing an id so other art on the page can reuse it. Once per page. */
+  readonly shareable?: boolean;
+}) {
   return (
     <svg
       viewBox={`0 0 ${String(LUCKY_RUN_SIZE.width)} ${String(LUCKY_RUN_SIZE.height)}`}
@@ -93,7 +108,9 @@ export function LuckyRun({ className, title, animated = false }: SvgProps) {
       focusable="false"
     >
       {title ? <title>{title}</title> : null}
-      <LuckyRunGroups animated={animated} />
+      <g id={shareable ? LUCKY_RUN_ID : undefined}>
+        <LuckyRunGroups animated={animated} />
+      </g>
     </svg>
   );
 }

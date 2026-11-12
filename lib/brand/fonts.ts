@@ -54,12 +54,25 @@ export const dinCondensed = localFont({
 });
 
 export const poppins = localFont({
-  src: [
-    { path: "./fonts/poppins-medium.woff2", weight: "500", style: "normal" },
-    { path: "./fonts/poppins-semibold.woff2", weight: "600", style: "normal" },
-  ],
+  src: "./fonts/poppins-medium.woff2",
+  weight: "500",
+  style: "normal",
   display: "swap",
   variable: "--font-poppins",
+});
+
+/**
+ * Its own loader so it can skip the preload: nothing on the first screen is
+ * bold, and a preloaded font the first paint does not need is bandwidth taken
+ * from the things it does. tokens.css points `strong` at it.
+ */
+export const poppinsSemiBold = localFont({
+  src: "./fonts/poppins-semibold.woff2",
+  weight: "600",
+  style: "normal",
+  display: "swap",
+  preload: false,
+  variable: "--font-poppins-semibold",
 });
 
 /** Put this on `<html>`. */
@@ -68,4 +81,5 @@ export const fontVariables = [
   varsitySenior.variable,
   dinCondensed.variable,
   poppins.variable,
+  poppinsSemiBold.variable,
 ].join(" ");

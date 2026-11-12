@@ -1,5 +1,7 @@
 import { useId } from "react";
 
+import { LUCKY_RUN_ID } from "./Vector";
+
 /**
  * The shot bottle, as an illustration.
  *
@@ -24,13 +26,25 @@ type Props = {
   readonly title?: string;
   /** Draw the label artwork. Turn off under about 80px tall. */
   readonly detail?: boolean;
+  /**
+   * Where the label's Lucky comes from. `file` loads /brand/lucky-run.svg.
+   * `page` reuses the drawing the hero has already put in the document
+   * (see LUCKY_RUN_ID in Vector.tsx), which costs no request at all. Only
+   * use `page` where the hero's inline Lucky is on the same page.
+   */
+  readonly lucky?: "file" | "page";
 };
 
 /** One outline, used for the bottle and again on top to keep the edge crisp. */
 const BODY =
   "M28 72h64c7 3 11 10 11 19v121c0 11-8 19-19 19H36c-11 0-19-8-19-19V91c0-9 4-16 11-19z";
 
-export function Bottle({ className, title, detail = true }: Props) {
+export function Bottle({
+  className,
+  title,
+  detail = true,
+  lucky = "file",
+}: Props) {
   // Unique per bottle, so several on one page never share a clip path.
   const clip = `qp-label-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
 
@@ -75,13 +89,21 @@ export function Bottle({ className, title, detail = true }: Props) {
             >
               QUICK PICKLE
             </text>
-            <image
-              href="/brand/lucky-run.svg"
-              x="27"
-              y="156"
-              width="68"
-              height="45"
-            />
+            {lucky === "page" ? (
+              // The hero's drawing is 227.8 units wide; 68 / 227.8 = 0.2985.
+              <use
+                href={`#${LUCKY_RUN_ID}`}
+                transform="translate(27 156) scale(0.2985)"
+              />
+            ) : (
+              <image
+                href="/brand/lucky-run.svg"
+                x="27"
+                y="156"
+                width="68"
+                height="45"
+              />
+            )}
           </>
         ) : (
           <path

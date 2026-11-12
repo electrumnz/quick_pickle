@@ -86,7 +86,11 @@ export function Shop() {
           </h2>
           <p className="mt-3 max-w-[34rem]">{BUY.body}</p>
         </div>
-        <BuyBox shipDate={shipDateText()} productLoop={MEDIA.productLoop} />
+        <BuyBox
+          shipDate={shipDateText()}
+          productLoop={MEDIA.productLoop}
+          luckyOnPage={MEDIA.heroLoop === null}
+        />
       </div>
     </section>
   );
@@ -498,6 +502,7 @@ export function SiteFooter() {
                   <li key={link.href}>
                     <Link
                       href={link.href}
+                      prefetch={false}
                       className="hover:text-olive flex min-h-11 items-center text-[1rem] transition-colors duration-150"
                     >
                       {link.label}

@@ -49,9 +49,12 @@ type Props = {
   readonly shipDate: string | null;
   /** A product clip to show in place of the illustration, when there is one. */
   readonly productLoop: Media | null;
+  /** True when the hero has drawn Lucky inline, so the labels can reuse him. */
+  readonly luckyOnPage: boolean;
 };
 
-export function BuyBox({ shipDate, productLoop }: Props) {
+export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
+  const lucky = luckyOnPage ? "page" : "file";
   const { add, open, selectedSku, select } = useCart();
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
@@ -103,9 +106,15 @@ export function BuyBox({ shipDate, productLoop }: Props) {
               aria-label={BUY.bottleAlt}
               className="relative flex items-end justify-center gap-1"
             >
-              <Bottle className="h-36 w-auto -rotate-[7deg] translate-y-1 md:h-48" />
-              <Bottle className="z-10 h-48 w-auto md:h-64" />
-              <Bottle className="h-36 w-auto translate-y-1 rotate-[7deg] md:h-48" />
+              <Bottle
+                lucky={lucky}
+                className="h-36 w-auto -rotate-[7deg] translate-y-1 md:h-48"
+              />
+              <Bottle lucky={lucky} className="z-10 h-48 w-auto md:h-64" />
+              <Bottle
+                lucky={lucky}
+                className="h-36 w-auto translate-y-1 rotate-[7deg] md:h-48"
+              />
             </div>
           )}
           <p className="label bg-navy text-cream relative mx-auto mt-4 w-fit rounded-full px-4 py-1.5 text-[1.15rem] leading-none">

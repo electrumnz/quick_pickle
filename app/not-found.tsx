@@ -4,6 +4,14 @@ import { Art } from "@/components/brand/Art";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { NOT_FOUND } from "@/content/site";
 
+/**
+ * The 404.
+ *
+ * Next carries this component inside every page, ready in case a route turns
+ * out not to exist. So nothing here may ask for a high-priority fetch: an
+ * `eager` image on this page becomes a preload on EVERY page, which is how the
+ * sleeping cat (40 kB) came to be the first image the home page downloaded.
+ */
 export default function NotFound() {
   return (
     <>
@@ -17,7 +25,6 @@ export default function NotFound() {
           alt={NOT_FOUND.alt}
           sizes="(min-width: 768px) 260px, 50vw"
           className="w-[50%] max-w-[16rem]"
-          eager
         />
         <h1 className="display text-cream mt-8 text-[min(17vw,6rem)] leading-[0.9]">
           {NOT_FOUND.title.map((line) => (

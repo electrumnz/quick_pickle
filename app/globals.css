@@ -45,8 +45,12 @@
     text-wrap: pretty;
   }
 
+  /* SemiBold is a separate, un-preloaded face (lib/brand/fonts.ts), so
+     anything bold has to ask for it by family as well as by weight. */
   strong,
-  b {
+  b,
+  .font-semibold {
+    font-family: var(--font-sans-strong);
     font-weight: 600;
   }
 

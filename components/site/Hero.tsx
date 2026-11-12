@@ -83,6 +83,7 @@ export function Hero() {
             <div className="hero-lucky mx-auto w-full max-w-[27rem] md:max-w-none">
               <LuckyRun
                 animated
+                shareable
                 title={HERO.luckyAlt}
                 className="h-auto max-h-[30svh] w-full md:max-h-none"
               />

@@ -55,6 +55,9 @@
   --font-label: var(--font-din), "Oswald", "Arial Narrow", sans-serif;
   --font-sans:
     var(--font-poppins), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans-strong:
+    var(--font-poppins-semibold), var(--font-poppins), "Helvetica Neue",
+    Helvetica, Arial, sans-serif;
 
   --text-hero: clamp(2.75rem, 13.5vw, 6.25rem);
   --text-hero--line-height: 0.92;

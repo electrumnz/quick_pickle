@@ -21,6 +21,7 @@ export function SiteHeader({
       <div className="max-w-page px-gutter mx-auto flex h-14 items-center justify-between gap-4 md:h-16">
         <Link
           href="/"
+          prefetch={false}
           aria-label={HEADER.home}
           className="varsity text-cream flex min-h-11 items-center text-[1.55rem] leading-none whitespace-nowrap [text-shadow:2px_2px_0_var(--color-pink)] md:text-[1.8rem]"
         >
