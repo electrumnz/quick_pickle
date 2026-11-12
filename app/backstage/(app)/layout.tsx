@@ -44,13 +44,13 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <Link href="/backstage" className="bk-wordmark px-3">
           <span className="cap-trim">Quick Pickle</span>
         </Link>
-        <p className="label text-olive px-3 text-[0.95rem]">Backstage</p>
+        <p className="label text-cream px-3 text-[0.95rem]">Backstage</p>
         <RailNav isOwner={isOwner} counts={counts} />
         <div className="bk-user">
           <p className="font-semibold">{staff.name}</p>
           <p className="text-cream/80">{ROLE_LABEL[staff.role]}</p>
           <div className="mt-3 flex flex-col gap-1">
-            <ShopLink className="label text-olive inline-flex min-h-11 items-center text-[1.05rem]">
+            <ShopLink className="label text-cream inline-flex min-h-11 items-center text-[1.05rem] decoration-2 underline-offset-4 hover:underline">
               <span className="cap-trim">View the shop</span>
             </ShopLink>
             {demo ? null : (
@@ -72,7 +72,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           <span className="cap-trim">Quick Pickle</span>
           <span className="bk-wordmark-tag cap-trim">Backstage</span>
         </Link>
-        <ShopLink className="label text-olive inline-flex min-h-11 items-center text-[1.05rem]">
+        <ShopLink className="label text-cream inline-flex min-h-11 items-center text-[1.05rem] decoration-2 underline-offset-4 hover:underline">
           <span className="cap-trim">Shop</span>
         </ShopLink>
       </header>

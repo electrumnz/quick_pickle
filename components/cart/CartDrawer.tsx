@@ -93,7 +93,7 @@ export function CartDrawer() {
             <h2 id="jar-title" className="varsity text-[1.75rem] leading-none">
               <span className="cap-trim inline-block">{JAR.title}</span>
               {count > 0 && ready ? (
-                <span className="label text-olive ml-3 text-[1.1rem]">
+                <span className="label text-cream ml-3 text-[1.1rem]">
                   {count} {count === 1 ? "pack" : "packs"}
                 </span>
               ) : null}

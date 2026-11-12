@@ -145,7 +145,10 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 
 - [ ] Real product photography or approved illustration of the bottle and the packs.
 - [ ] A hero loop and reels. The slots are in `content/media.ts`; the encoder is
-      `scripts/build-media.mjs`.
+      `scripts/build-media.mjs`. Nothing on the Drive is to be used yet: on 13 November
+      (New Zealand time) the brand pack marked every motion file it holds (the hero loop,
+      the films, the stingers) as superseded, pending a rebuild. Never the films that carry
+      "for the quads" or "performance with pickles", whatever state they are in.
 - [ ] Reviews, once there are real ones. None are invented.
 - [ ] Subscribe and save, once there is a second batch to subscribe to.
 

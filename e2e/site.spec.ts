@@ -4,6 +4,73 @@ import { expect, test } from "@playwright/test";
  * The one page, as a visitor meets it. Runs at a phone's size first.
  */
 
+/**
+ * Every element whose own words are cut off, by its own box or by one it
+ * sits in. Things cut off on purpose (the ticker, words kept for screen
+ * readers) and things not on show are left out. It runs in the page.
+ */
+function cutOffWords(): string[] {
+  const cuts = (value: string) => value === "hidden" || value === "clip";
+  const found: string[] = [];
+  for (const el of Array.from(document.querySelectorAll("body *"))) {
+    // Cut off on purpose, or not on show at all.
+    if (
+      el.closest(
+        '[aria-hidden="true"], [data-marquee], .sr-only, [hidden], dialog:not([open]), details:not([open]) > :not(summary), script, style, noscript',
+      ) !== null
+    ) {
+      continue;
+    }
+    const words = Array.from(el.childNodes)
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => (node.textContent ?? "").trim())
+      .join(" ")
+      .trim();
+    if (words === "") continue;
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    if (
+      rect.width === 0 ||
+      rect.height === 0 ||
+      style.visibility === "hidden"
+    ) {
+      continue;
+    }
+    const name = `${el.tagName.toLowerCase()} "${words.slice(0, 40)}"`;
+    // By its own box.
+    if (
+      (cuts(style.overflowX) && el.scrollWidth > el.clientWidth + 1) ||
+      (cuts(style.overflowY) && el.scrollHeight > el.clientHeight + 1)
+    ) {
+      found.push(`${name} is cut off by its own box`);
+      continue;
+    }
+    // By a box it sits in.
+    for (
+      let up = el.parentElement;
+      up !== null && up !== document.body;
+      up = up.parentElement
+    ) {
+      const outer = getComputedStyle(up);
+      if (!cuts(outer.overflowX) && !cuts(outer.overflowY)) continue;
+      const box = up.getBoundingClientRect();
+      const across =
+        cuts(outer.overflowX) &&
+        (rect.right > box.right + 1 || rect.left < box.left - 1);
+      const down =
+        cuts(outer.overflowY) &&
+        (rect.bottom > box.bottom + 1 || rect.top < box.top - 1);
+      if (across || down) {
+        found.push(
+          `${name} is cut off by ${up.tagName.toLowerCase()}.${String(up.className).slice(0, 50)}`,
+        );
+        break;
+      }
+    }
+  }
+  return found;
+}
+
 test.describe("the page", () => {
   test("says what it is and puts the button on the first screen", async ({
     page,
@@ -69,6 +136,55 @@ test.describe("the page", () => {
           0,
         );
       }
+    }
+  });
+
+  test("cuts nothing off when a reader spaces the text out", async ({
+    page,
+  }) => {
+    // WCAG 1.4.12, and the brand pack's own rule: with line height 1.5,
+    // paragraphs 2em apart, letters 0.12em apart and words 0.16em apart,
+    // every word must still be there to read.
+    const SPACED = `
+      * {
+        line-height: 1.5 !important;
+        letter-spacing: 0.12em !important;
+        word-spacing: 0.16em !important;
+      }
+      p { margin-bottom: 2em !important; }
+    `;
+    // First, proof that the check can see a cut-off line at all.
+    await page.goto("/delivery");
+    await page.evaluate(() => {
+      const probe = document.createElement("p");
+      probe.textContent = "A line that is far too long for the box it is in";
+      probe.style.cssText =
+        "inline-size:40px;overflow:hidden;white-space:nowrap";
+      document.querySelector("main")?.append(probe);
+    });
+    expect(await page.evaluate(cutOffWords)).toEqual([
+      'p "A line that is far too long for the box " is cut off by its own box',
+    ]);
+
+    for (const path of [
+      "/",
+      "/checkout",
+      "/delivery",
+      "/privacy",
+      "/for/clubs",
+    ]) {
+      await page.goto(path);
+      await page.addStyleTag({ content: SPACED });
+      await page.waitForTimeout(400);
+      const sideways = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      );
+      expect(sideways, `${path} scrolls sideways`).toBeLessThanOrEqual(0);
+
+      const cutOff = await page.evaluate(cutOffWords);
+      expect(cutOff, path).toEqual([]);
     }
   });
 

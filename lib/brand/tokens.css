@@ -23,7 +23,7 @@
   /* --- colour ---------------------------------------------------------- */
   --color-navy: #22235c;
   --color-navy-soft: #3a3b7a;
-  --color-navy-deep: #18182f;
+  --color-navy-deep: #0e0e25;
   --color-navy-muted: #5a5b86;
   --color-navy-line: #c8c8d6;
 
@@ -108,6 +108,12 @@
 }
 
 :root {
+  /* The focus ring: navy, cream, navy, two pixels each, outside the control.
+     From the brand pack's UI kit. One ring for every ground. */
+  --focus-ring:
+    0 0 0 2px var(--color-navy), 0 0 0 4px var(--color-cream),
+    0 0 0 6px var(--color-navy);
+
   /* Durations, straight from the brand guide's motion page. */
   --qp-instant: 100ms;
   --qp-fast: 160ms;

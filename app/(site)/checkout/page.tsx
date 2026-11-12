@@ -37,7 +37,7 @@ export default async function CheckoutPage({
           </Link>
           <Link
             href="/#shop"
-            className="label text-cream hover:text-olive flex min-h-11 items-center text-[1.1rem]"
+            className="label text-cream flex min-h-11 items-center text-[1.1rem] decoration-2 underline-offset-4 hover:underline"
           >
             <span className="cap-trim">{CHECKOUT.back}</span>
           </Link>

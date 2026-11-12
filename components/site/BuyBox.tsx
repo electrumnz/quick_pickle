@@ -187,7 +187,7 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
                   {/* The focus ring belongs to the card, not the hidden input. */}
                   <span
                     aria-hidden="true"
-                    className="peer-focus-visible:outline-pink pointer-events-none absolute -inset-[3px] rounded-[18px] outline-offset-2 peer-focus-visible:outline-[3px]"
+                    className="focus-proxy pointer-events-none absolute -inset-[3px] rounded-[18px]"
                   />
                   {tag ? (
                     <span
