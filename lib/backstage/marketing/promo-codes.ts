@@ -79,6 +79,13 @@ export type PromoRow = {
   readonly partnerName: string | null;
   /** One use for each customer, told apart by email. */
   readonly oncePerCustomer: boolean;
+  /** The code people are given when they join the Pickle Crew. */
+  readonly crewWelcome: boolean;
+  /**
+   * A special: it comes off by itself and is looked after on its own
+   * screen (specials.ts). Never true in a list of codes.
+   */
+  readonly automatic: boolean;
   /** Where it stands right now. */
   readonly state: PromoState;
   /** "10% off", "$5 off", "Free standard delivery". */
@@ -103,6 +110,8 @@ function toRow(promo: Promo, now: Date, partnerName: string | null): PromoRow {
     partnerId: promo.partnerId,
     partnerName: promo.partnerId === null ? null : partnerName,
     oncePerCustomer: promo.oncePerCustomer,
+    crewWelcome: promo.crewWelcome,
+    automatic: promo.automatic,
     state: promoState(promo, now),
     label: promoLabel(promo),
     createdAt: promo.createdAt,
@@ -117,6 +126,18 @@ async function loadPromo(db: DbOrTx, id: string): Promise<Promo> {
     .where(eq(promoCodes.id, id));
   if (promo === undefined) throw notFound("That code");
   return promo;
+}
+
+/**
+ * A special is changed and switched on its own screen, where switching it
+ * on is treated as the publishing it is. It is not to be reached round the
+ * side, through a code's operations.
+ */
+function refuseSpecial(promo: Promo): void {
+  if (!promo.automatic) return;
+  throw conflict(
+    `${promo.code} is a special, not a code. Change it or switch it on the Specials screen.`,
+  );
 }
 
 /** The name of the partner a code belongs to, or a refusal if there is none. */
@@ -199,7 +220,7 @@ export const listPromoCodes = defineOp({
   name: "promoCodes.list",
   title: "List promo codes",
   description:
-    "Every promo code, newest first, with what it gives, how often it has been used and where it stands right now: live, not started, finished, used up, or switched off. A code that belongs to a partner (a club or creator) says whose it is. `partnerId` narrows to one partner's codes.",
+    "Every promo code, newest first, with what it gives, how often it has been used and where it stands right now: live, not started, finished, used up, or switched off. A code that belongs to a partner (a club or creator) says whose it is, and the one handed out for joining the Pickle Crew says so. `partnerId` narrows to one partner's codes. Specials (savings that come off with no code) are not codes and are listed by `specials.list`.",
   access: "read",
   input: z.object({
     partnerId: recordId.optional(),
@@ -211,9 +232,12 @@ export const listPromoCodes = defineOp({
       .from(promoCodes)
       .leftJoin(partners, eq(partners.id, promoCodes.partnerId))
       .where(
-        input.partnerId === undefined
-          ? undefined
-          : eq(promoCodes.partnerId, input.partnerId),
+        and(
+          eq(promoCodes.automatic, false),
+          input.partnerId === undefined
+            ? undefined
+            : eq(promoCodes.partnerId, input.partnerId),
+        ),
       )
       .orderBy(desc(promoCodes.createdAt), desc(promoCodes.id))
       .limit(input.limit);
@@ -332,6 +356,7 @@ export const updatePromoCode = defineOp({
   }),
   async run(ctx, input): Promise<{ id: string }> {
     const promo = await loadPromo(ctx.db, input.id);
+    refuseSpecial(promo);
     const usedAlready = `${promo.code} has already been used, so what it gives cannot change kind. Switch it off and make a new code.`;
     if (
       input.kind !== undefined &&
@@ -356,6 +381,10 @@ export const updatePromoCode = defineOp({
       oncePerCustomer: input.oncePerCustomer ?? promo.oncePerCustomer,
     };
     const partnerName = await partnerNameOf(ctx.db, next.partnerId);
+    if (promo.crewWelcome && next.partnerId !== null) {
+      const message = `${promo.code} is the Pickle Crew's welcome code, so it has to stay the shop's own. Pick another welcome code first.`;
+      throw new OpError("invalid_input", message, { partnerId: message });
+    }
     // A change of kind is guarded in the statement itself, so an order that
     // uses the code at this very moment cannot slip in underneath it.
     const changed = await ctx.db
@@ -395,7 +424,11 @@ export const setPromoCodeActive = defineOp({
   input: z.object({ id: recordId, active: z.boolean() }),
   async run(ctx, input): Promise<{ active: boolean }> {
     const promo = await loadPromo(ctx.db, input.id);
-    if (promo.active === input.active) return { active: promo.active };
+    refuseSpecial(promo);
+    if (promo.active === input.active) {
+      ctx.nothingChanged();
+      return { active: promo.active };
+    }
     await ctx.db
       .update(promoCodes)
       .set({ active: input.active, updatedAt: ctx.now })
@@ -459,6 +492,78 @@ export const peekPromoCode = defineOp({
   async run(ctx, input): Promise<PromoPeek> {
     const promo = await findPromo(ctx.db, input.code);
     if (promo === null || promoState(promo, ctx.now) !== "live") {
+      return { ok: false };
+    }
+    return { ok: true, code: promo.code, label: promoLabel(promo) };
+  },
+});
+
+export const setCrewWelcomeCode = defineOp({
+  name: "promoCodes.setCrewWelcome",
+  title: "Choose the Pickle Crew's welcome code",
+  description:
+    "Makes one promo code the code people are given when they join the Pickle Crew on the site (`on: true`), or stops handing it out (`on: false`). There is at most one: choosing a code takes over from whichever was chosen before. The code has to be the shop's own (not a partner's) and not a special. Choosing it also makes it work once for each customer, which is what a welcome code should do; that can be changed afterwards. It is only handed out while it could be used: a code that is switched off, finished or used up is not shown to anybody.",
+  access: "write",
+  input: z.object({ id: recordId, on: z.boolean() }),
+  async run(ctx, input): Promise<{ code: string; on: boolean }> {
+    const promo = await loadPromo(ctx.db, input.id);
+    refuseSpecial(promo);
+    if (promo.crewWelcome === input.on) {
+      ctx.nothingChanged();
+      return { code: promo.code, on: input.on };
+    }
+    if (!input.on) {
+      await ctx.db
+        .update(promoCodes)
+        .set({ crewWelcome: false, updatedAt: ctx.now })
+        .where(eq(promoCodes.id, promo.id));
+      await ctx.audit({
+        entity: { type: "promo", id: promo.id },
+        summary: `Stopped handing out ${promo.code} to people who join the Pickle Crew`,
+      });
+      return { code: promo.code, on: false };
+    }
+    if (promo.partnerId !== null) {
+      throw conflict(
+        `${promo.code} belongs to a partner, and every order placed with it is credited to them. The welcome code has to be the shop's own.`,
+      );
+    }
+    // One at a time. The one before steps down in the same transaction, and
+    // the index on the table holds the line if two people do this at once.
+    const before = await ctx.db
+      .update(promoCodes)
+      .set({ crewWelcome: false, updatedAt: ctx.now })
+      .where(eq(promoCodes.crewWelcome, true))
+      .returning({ code: promoCodes.code });
+    await ctx.db
+      .update(promoCodes)
+      .set({ crewWelcome: true, oncePerCustomer: true, updatedAt: ctx.now })
+      .where(eq(promoCodes.id, promo.id));
+    const took = before[0]?.code;
+    await ctx.audit({
+      entity: { type: "promo", id: promo.id },
+      summary: `Made ${promo.code} the Pickle Crew's welcome code (${promoLabel(promo).toLowerCase()}, once for each customer)${took === undefined ? "" : `, in place of ${took}`}`,
+      data: { code: promo.code, inPlaceOf: took ?? null },
+    });
+    return { code: promo.code, on: true };
+  },
+});
+
+export const crewWelcomeCode = defineOp({
+  name: "promoCodes.crewWelcome",
+  title: "The Pickle Crew's welcome code, if it is live",
+  description:
+    "For the shop, when somebody joins the Pickle Crew: the code to give them and what it gives in a few words, but only if one has been chosen and a customer could use it right now. Anything else is a plain no, so nobody is handed a code the checkout would refuse. It counts nothing.",
+  access: "read",
+  input: z.object({}),
+  async run(ctx): Promise<PromoPeek> {
+    const [promo] = await ctx.db
+      .select()
+      .from(promoCodes)
+      .where(
+        and(eq(promoCodes.crewWelcome, true), eq(promoCodes.automatic, false)),
+      );
+    if (promo === undefined || promoState(promo, ctx.now) !== "live") {
       return { ok: false };
     }
     return { ok: true, code: promo.code, label: promoLabel(promo) };

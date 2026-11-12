@@ -27,14 +27,22 @@ export default async function PromoCodesPage({
         title="Promo codes"
         lead="Codes a customer types at the checkout for money off or free delivery. One code an order."
         actions={
-          canWrite ? (
+          <>
             <Link
-              href="/backstage/marketing/promo-codes/new"
-              className="bk-btn"
+              href="/backstage/marketing/promo-codes/specials"
+              className="bk-btn bk-btn-quiet"
             >
-              <span className="cap-trim">New code</span>
+              <span className="cap-trim">Specials</span>
             </Link>
-          ) : null
+            {canWrite ? (
+              <Link
+                href="/backstage/marketing/promo-codes/new"
+                className="bk-btn"
+              >
+                <span className="cap-trim">New code</span>
+              </Link>
+            ) : null}
+          </>
         }
       />
       <MarketingNav current="promo-codes" />
@@ -61,6 +69,7 @@ export default async function PromoCodesPage({
                       {promo.partnerName === null
                         ? ""
                         : `, for ${promo.partnerName}`}
+                      {promo.crewWelcome ? ". The Crew's welcome code" : ""}
                     </span>
                     <span className="bk-muted block text-[0.9375rem]">
                       {promoSmallPrint(promo)}

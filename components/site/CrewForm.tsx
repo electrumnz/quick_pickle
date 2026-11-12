@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 
-import { CREW } from "@/content/site";
+import { useCart } from "@/components/cart/CartProvider";
+import { CREW, WELCOME } from "@/content/site";
 
 import { joinCrew, type CrewState } from "./actions";
 
@@ -17,15 +18,36 @@ const INITIAL: CrewState = { status: "idle" };
  */
 export function CrewForm() {
   const [state, action, pending] = useActionState(joinCrew, INITIAL);
+  const { carriedCode, carryCode } = useCart();
+
+  // A new member's code is kept for the checkout, so they never have to
+  // type it. If they arrived carrying another code, that one stays.
+  const welcome = state.status === "joined" ? state.welcome : undefined;
+  const welcomeCode = welcome?.code;
+  useEffect(() => {
+    if (welcomeCode !== undefined) carryCode(welcomeCode);
+  }, [welcomeCode, carryCode]);
 
   if (state.status === "joined") {
     return (
-      <p
-        role="status"
-        className="varsity text-olive mt-6 text-[1.75rem] leading-tight"
-      >
-        {CREW.success}
-      </p>
+      <div role="status">
+        <p className="varsity text-olive mt-6 text-[1.75rem] leading-tight">
+          {CREW.success}
+        </p>
+        {welcome === undefined ? null : (
+          <p
+            data-testid="crew-welcome-code"
+            className="bg-cream text-navy mt-4 max-w-[30rem] rounded-[14px] px-4 py-3 leading-snug"
+          >
+            <strong>
+              {WELCOME.lead} {welcome.code}: {welcome.label}.
+            </strong>{" "}
+            {/* Said as saved only once it is: with scripting off, or with
+                another code already in hand, it has to be typed. */}
+            {carriedCode === welcome.code ? WELCOME.saved : WELCOME.typeIt}
+          </p>
+        )}
+      </div>
     );
   }
 

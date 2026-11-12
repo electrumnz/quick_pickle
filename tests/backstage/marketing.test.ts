@@ -20,6 +20,7 @@ import PartnersPage from "@/app/backstage/(app)/marketing/partners/page";
 import PromoCodePage from "@/app/backstage/(app)/marketing/promo-codes/[id]/page";
 import NewPromoCodePage from "@/app/backstage/(app)/marketing/promo-codes/new/page";
 import PromoCodesPage from "@/app/backstage/(app)/marketing/promo-codes/page";
+import SpecialsPage from "@/app/backstage/(app)/marketing/promo-codes/specials/page";
 import ReviewPage from "@/app/backstage/(app)/marketing/reviews/[id]/page";
 import ReviewsPage from "@/app/backstage/(app)/marketing/reviews/page";
 import SocialPostPage from "@/app/backstage/(app)/marketing/social/[id]/page";
@@ -140,6 +141,7 @@ import {
   setPromoCodeActive,
   updatePromoCode,
 } from "@/lib/backstage/marketing/promo-codes";
+import { listSpecials } from "@/lib/backstage/marketing/specials";
 import {
   addReview,
   countReviews,
@@ -4222,7 +4224,7 @@ describe("the rest of marketing", () => {
       expect(new Set(names).size).toBe(names.length);
       for (const op of MARKETING_OPS) {
         expect(op.name).toMatch(
-          /^(marketing|campaigns|promoCodes|social|links|reviews|partners|collabs)\./,
+          /^(marketing|campaigns|promoCodes|specials|social|links|reviews|partners|collabs)\./,
         );
         expect(op.description.length, op.name).toBeGreaterThan(60);
         expect(op.description, op.name).not.toMatch(/\u{2014}/u);
@@ -4335,7 +4337,17 @@ describe("the demo data", () => {
       SIDELINE5: "finished",
       KITBAG: "not-started",
       ROVERS10: "live",
+      // The Crew's welcome code. The special (OPENING) is not a code, and
+      // is not in this list.
+      HELLO10: "live",
     });
+    expect(codes.filter((code) => code.crewWelcome).map((c) => c.code)).toEqual(
+      ["HELLO10"],
+    );
+    const specials = await execute(listSpecials, {}, system, run());
+    expect(
+      specials.map((each) => [each.code, each.active, each.state]),
+    ).toEqual([["OPENING", false, "off"]]);
 
     const posts = await execute(listSocialPosts, {}, system, run());
     expect(posts).toHaveLength(6);
@@ -4513,6 +4525,7 @@ describe("the demo data", () => {
         ],
         ["promo codes", PromoCodesPage({ searchParams: nothing() })],
         ["new promo code", NewPromoCodePage({ searchParams: nothing() })],
+        ["specials", SpecialsPage({ searchParams: nothing() })],
         ["social planner", SocialPlannerPage({ searchParams: nothing() })],
         [
           "social planner, done",
@@ -4565,8 +4578,8 @@ describe("the demo data", () => {
     it("all draw, with every field labelled and nothing left unfilled", async () => {
       signedIn.role = "owner";
       const drawn = await screens();
-      // Sixteen kinds of screen, and one of each record the demo holds.
-      expect(drawn.length).toBe(16 + 2 + 4 + 6 + 5 + 5);
+      // Seventeen kinds of screen, and one of each record the demo holds.
+      expect(drawn.length).toBe(17 + 2 + 5 + 6 + 5 + 5);
       for (const [name, html] of drawn) {
         expect(problemsIn(html), name).toEqual([]);
         expect(html, name).toContain("<h1");

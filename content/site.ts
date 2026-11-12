@@ -409,6 +409,53 @@ export const CODES = {
   carriedNo: "came with your link, but it can't be used on this order.",
 } as const;
 
+/**
+ * A special: a saving that comes off by itself, with no code to type.
+ *
+ * What a special gives and when it ends are never typed by anybody. They are
+ * put together from these words and the special's own terms
+ * (lib/backstage/marketing/specials.ts), so the sentence a customer reads is
+ * what the checkout does: "10% off every pack, until Sunday 15 November."
+ */
+export const SPECIAL = {
+  /** The small word in front of it, wherever it is said. */
+  tag: "Special",
+  /** "10% off every pack". The figure is put in front. */
+  percentTail: "off every pack",
+  /** "$5 off your order". */
+  amountTail: "off your order",
+  /** With a smallest order: "10% off when you spend $40 or more on packs". */
+  off: "off",
+  minimumLead: "when you spend",
+  minimumTail: "or more on packs",
+  /** "for the first 50 orders" */
+  limitLead: "for the first",
+  limitTail: "orders",
+  /** "until Sunday 15 November": the last day it works. */
+  until: "until",
+  /** Under the sentence, wherever it is said. */
+  noCode: "No code needed.",
+  /** After `noCode`, on the page and in the jar. */
+  comesOff: "It comes off at the checkout.",
+  /** Under the code box, when a code is worth less than the special. */
+  beatsCode:
+    "The special takes more off than that code, so the special is what's on this order. It's one saving an order.",
+  /** With the order, when the special that was showing has ended or changed. */
+  gone: "The special changed while you were checking out, so your total is different now. Have a look at it, then try again.",
+} as const;
+
+/**
+ * The code somebody is given when they join the Pickle Crew, if one is set
+ * up. Read as: "Your code is CREW10: 10% off. It's saved for you, and comes
+ * off at the checkout."
+ */
+export const WELCOME = {
+  lead: "Your code is",
+  saved: "It's saved for you, and comes off at the checkout.",
+  /** When they already arrived with another code in hand. */
+  typeIt: "Type it in at the checkout.",
+} as const;
+
 export const THANKS = {
   metaTitle: "Order placed",
   title: ["Order's", "in!"],

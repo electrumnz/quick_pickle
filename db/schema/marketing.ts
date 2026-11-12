@@ -114,12 +114,34 @@ export const promoCodes = pgTable(
     partnerId: text().references(() => partners.id, { onDelete: "set null" }),
     /** One use for each customer, told apart by email address. */
     oncePerCustomer: boolean().notNull().default(false),
+    /**
+     * A special: it comes off by itself at the checkout, with nothing to
+     * type, and the shop says so on the page while it is on. Everything
+     * else about it (what it gives, its dates, its limit, counting a use)
+     * is a code's. `code` is then only the word it goes by on an order.
+     */
+    automatic: boolean().notNull().default(false),
+    /**
+     * What a special is called where customers can read it: "Launch week".
+     * Optional, and checked against the copy rules when it is switched on.
+     * What it gives and when it ends are never typed: the shop writes
+     * those from the terms, so they cannot be wrong.
+     */
+    publicName: text().notNull().default(""),
+    /**
+     * The one code handed to somebody when they join the Pickle Crew. At
+     * most one code has this set, and the index below holds that.
+     */
+    crewWelcome: boolean().notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     uniqueIndex("promo_codes_code_key").on(t.code),
     index("promo_codes_partner_idx").on(t.partnerId),
+    uniqueIndex("promo_codes_one_crew_welcome")
+      .on(t.crewWelcome)
+      .where(sql`${t.crewWelcome}`),
   ],
 ).enableRLS();
 

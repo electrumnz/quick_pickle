@@ -72,6 +72,13 @@ export const checkoutSchema = z.object({
   /** What the buyer typed in the code box. Checked and priced on the server. */
   promoCode: trimmed(40).optional().or(z.literal("")),
   /**
+   * The special the buyer was shown coming off their order, by the word it
+   * goes by. A word and never a number: the server works the saving out for
+   * itself, and refuses the order if that special no longer applies, so
+   * nobody pays more than the total they pressed the button on.
+   */
+  special: trimmed(40).optional().or(z.literal("")),
+  /**
    * Where the visit came from, as the buyer's browser remembers it: the
    * short link it followed and any utm labels. A label for the order and
    * nothing more. The server keeps only what it recognises.
@@ -153,7 +160,18 @@ export type Order = {
   readonly promo: {
     readonly code: string;
     readonly deliveryDiscountCents: number;
+    /**
+     * Set when the saving was a special (nobody typed anything): what to
+     * call it on a receipt, its own name or what it gives.
+     */
+    readonly special?: string;
   } | null;
+  /**
+   * A code the buyer typed that the special beat. Nothing came off for it
+   * and its use is not counted, but whoever it belongs to still brought the
+   * order in, so the back end credits them.
+   */
+  readonly creditCode?: string;
   readonly payment: PaymentRecord;
   readonly joinCrew: boolean;
   /** The link and labels the visit came with, when the browser said. */

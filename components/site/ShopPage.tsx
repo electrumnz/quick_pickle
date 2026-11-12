@@ -14,6 +14,7 @@ import {
 } from "@/components/site/Sections";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { StickyBuyBar } from "@/components/site/StickyBuyBar";
+import { specialForPage } from "@/lib/shop/special-now";
 
 /**
  * Quick Pickle, the one page.
@@ -40,7 +41,7 @@ import { StickyBuyBar } from "@/components/site/StickyBuyBar";
  * for everybody. `page` is the page's short name, which the visit counter
  * and an order read off <main> to say which page was shown.
  */
-export function ShopPage({
+export async function ShopPage({
   words,
   page = "home",
   preview = false,
@@ -50,9 +51,12 @@ export function ShopPage({
   /** A member of staff looking at a draft. The visit counter stays quiet. */
   readonly preview?: boolean;
 }) {
+  // A special that is on is said twice: first in the line across the top,
+  // and again where the packs are picked. Usually there is none.
+  const special = await specialForPage();
   return (
     <>
-      <TopTicker />
+      <TopTicker special={special} />
       <SiteHeader />
       <main
         id="main"
@@ -62,7 +66,7 @@ export function ShopPage({
       >
         <Hero words={words} />
         <Band />
-        <Shop />
+        <Shop special={special} />
         <Truths />
         <Ritual />
         <ReelsSection />

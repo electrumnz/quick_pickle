@@ -8,6 +8,7 @@
  *
  *   campaigns.ts     emails to the Pickle Crew, from draft to sent
  *   promo-codes.ts   codes a customer types at the checkout
+ *   specials.ts      a saving that comes off by itself, and says so on the page
  *   social.ts        the planner for posts and reels
  *   links.ts         tracked short links (/go/<slug>)
  *   reviews.ts       reviews, read by a person before anyone sees them
@@ -28,6 +29,7 @@ export * from "./partners";
 export * from "./promo-codes";
 export * from "./reviews";
 export * from "./social";
+export * from "./specials";
 
 import {
   approveCampaign,
@@ -76,9 +78,11 @@ import {
 import {
   checkPromoCode,
   createPromoCode,
+  crewWelcomeCode,
   getPromoCode,
   listPromoCodes,
   peekPromoCode,
+  setCrewWelcomeCode,
   setPromoCodeActive,
   updatePromoCode,
 } from "./promo-codes";
@@ -103,8 +107,11 @@ import {
   updateSocialPost,
 } from "./social";
 
+import { SPECIALS_OPS } from "./specials";
+
 /** Every operation in the area, for a registry to pick up in one go. */
 export const MARKETING_OPS = [
+  ...SPECIALS_OPS,
   marketingOverview,
   marketingNeedsYou,
   listCampaigns,
@@ -129,6 +136,8 @@ export const MARKETING_OPS = [
   setPromoCodeActive,
   checkPromoCode,
   peekPromoCode,
+  setCrewWelcomeCode,
+  crewWelcomeCode,
   promoCodeResults,
   listSocialPosts,
   getSocialPost,

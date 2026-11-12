@@ -18,7 +18,7 @@ import {
 } from "@/lib/shop/receipt";
 import { quote } from "@/lib/shop/pricing";
 import { BUYER_COOKIE } from "@/lib/shop/routing";
-import { getStore } from "@/lib/shop/store";
+import { getStore, type SpecialCheck, type SpecialNow } from "@/lib/shop/store";
 import { siteUrl } from "@/lib/site";
 
 /**
@@ -124,6 +124,53 @@ export async function describeCode(code: string): Promise<CarriedCode> {
   }
 }
 
+/** What the checkout is told the special takes off this jar. */
+export type SpecialAnswer = SpecialCheck;
+
+/**
+ * What the special that is on takes off this jar, if one is on and the jar
+ * meets its terms. A special is a saving nobody types a code for. Like a
+ * code's answer this is for showing the buyer the total before they place
+ * the order: the jar is priced here from the offer, nothing is counted, and
+ * placing the order works it out again from scratch.
+ */
+export async function specialFor(
+  linesJson: string,
+  rural: boolean,
+): Promise<SpecialAnswer> {
+  let lines: z.infer<typeof codeLines>;
+  try {
+    lines = codeLines.parse(JSON.parse(linesJson));
+  } catch {
+    return { ok: false };
+  }
+  const priced = quote(normaliseCart({ lines }), { rural: rural === true });
+  try {
+    const store = getStore();
+    if (store.special === undefined) return { ok: false };
+    return await store.special({
+      subtotalCents: priced.subtotalCents,
+      deliveryCents: priced.deliveryCents,
+    });
+  } catch {
+    // Not knowing is the same as none. If one does apply, placing the order
+    // takes it off anyway: the buyer pays less than they were shown.
+    return { ok: false };
+  }
+}
+
+/**
+ * The special to tell a visitor about, or null: its name and one sentence
+ * saying what it gives. For the note in the jar.
+ */
+export async function describeSpecial(): Promise<SpecialNow | null> {
+  try {
+    return (await getStore().currentSpecial?.()) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 const TEXT_FIELDS = [
   "email",
   "phone",
@@ -137,6 +184,7 @@ const TEXT_FIELDS = [
   "postcode",
   "notes",
   "promoCode",
+  "special",
 ] as const;
 
 function text(form: FormData, key: string): string {

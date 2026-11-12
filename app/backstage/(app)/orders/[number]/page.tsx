@@ -354,7 +354,9 @@ export default async function OrderPage({
               <dd className="bk-num">{formatNzdExact(order.subtotalCents)}</dd>
               {order.promoCode !== null ? (
                 <>
-                  <dt>Code {order.promoCode}</dt>
+                  <dt>
+                    {order.bySpecial ? "Special" : "Code"} {order.promoCode}
+                  </dt>
                   <dd className="bk-num">
                     {order.discountCents > 0
                       ? `-${formatNzdExact(order.discountCents)}`

@@ -282,6 +282,191 @@ describe("where a visit came from, and who is asking about a code", () => {
   });
 });
 
+describe("a special, which comes off with nothing typed", () => {
+  type Special = Awaited<ReturnType<NonNullable<OrderSink["special"]>>>;
+  const LAUNCH: Special = {
+    ok: true,
+    code: "LAUNCH",
+    name: "Launch week",
+    label: "10% off",
+    discountCents: 270,
+    deliveryDiscountCents: 0,
+  };
+  const code = (discountCents: number) => ({
+    ok: true as const,
+    code: "CREW10",
+    label: "a code",
+    discountCents,
+    deliveryDiscountCents: 0,
+  });
+
+  function withSpecial(special: () => Special | Promise<Special>) {
+    const h = harness();
+    const store: OrderSink = {
+      ...h.deps.store,
+      special: async () => special(),
+    };
+    return { ...h, deps: { ...h.deps, store } };
+  }
+
+  it("is taken off, named on the order, and said on the payment page", async () => {
+    const h = withSpecial(() => LAUNCH);
+    const result = await placeOrder(good(), h.deps);
+    expect(result.ok).toBe(true);
+    expect(h.orders[0]).toMatchObject({
+      discountCents: 270,
+      totalCents: small.priceCents - 270 + SHIPPING.standardCents,
+      promo: {
+        code: "LAUNCH",
+        deliveryDiscountCents: 0,
+        special: "Launch week",
+      },
+    });
+    expect(h.orders[0]?.creditCode).toBeUndefined();
+    expect(h.charges[0]).toMatchObject({
+      amountCents: small.priceCents - 270 + SHIPPING.standardCents,
+      discountCents: 270,
+      discountLabel: "Special: Launch week",
+    });
+    // One with no name of its own goes by what it gives.
+    const plain = withSpecial(() => ({ ...LAUNCH, name: "" }));
+    await placeOrder(good(), plain.deps);
+    expect(plain.orders[0]?.promo?.special).toBe("10% off");
+    expect(plain.charges[0]?.discountLabel).toBe("Special: 10% off");
+  });
+
+  it("is asked about the jar as priced here, never as the browser says", async () => {
+    const seen: unknown[] = [];
+    const h = withSpecial(() => ({ ok: false }));
+    const store: OrderSink = {
+      ...h.deps.store,
+      special: async (order) => {
+        seen.push(order);
+        return { ok: false };
+      },
+    };
+    await placeOrder(
+      good({ lines: [{ sku: small.sku, qty: 2 }], subtotalCents: 1 }),
+      { ...h.deps, store },
+    );
+    expect(seen).toEqual([
+      {
+        subtotalCents: small.priceCents * 2,
+        deliveryCents:
+          small.priceCents * 2 >= SHIPPING.freeOverCents
+            ? 0
+            : SHIPPING.standardCents,
+      },
+    ]);
+  });
+
+  it("is one saving an order: the bigger wins, and a tie goes to the code", async () => {
+    for (const [codeCents, wins, credit] of [
+      [200, "LAUNCH", "CREW10"],
+      [270, "CREW10", undefined],
+      [400, "CREW10", undefined],
+    ] as const) {
+      const h = withSpecial(() => LAUNCH);
+      const store: OrderSink = {
+        ...h.deps.store,
+        checkCode: async () => code(codeCents),
+      };
+      const result = await placeOrder(good({ promoCode: "crew10" }), {
+        ...h.deps,
+        store,
+      });
+      expect(result.ok, String(codeCents)).toBe(true);
+      expect(h.orders[0]?.promo?.code, String(codeCents)).toBe(wins);
+      expect(h.orders[0]?.discountCents).toBe(Math.max(codeCents, 270));
+      // A code the special beat still says whose order it was.
+      expect(h.orders[0]?.creditCode, String(codeCents)).toBe(credit);
+    }
+  });
+
+  it("still refuses a code that cannot be used, whatever the special gives", async () => {
+    const h = withSpecial(() => LAUNCH);
+    const store: OrderSink = {
+      ...h.deps.store,
+      checkCode: async () => ({ ok: false, reason: "That code has finished." }),
+    };
+    const result = await placeOrder(good({ promoCode: "OLD" }), {
+      ...h.deps,
+      store,
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "invalid",
+      errors: { promoCode: "That code has finished." },
+    });
+    expect(h.orders).toHaveLength(0);
+    expect(h.charges).toHaveLength(0);
+  });
+
+  it("never takes more than the buyer was shown: a special that has gone stops the order", async () => {
+    for (const now of [
+      () => ({ ok: false }) as Special,
+      () => ({ ...LAUNCH, code: "OTHER" }) as Special,
+      () => Promise.reject(new Error("the database blinked")),
+    ]) {
+      const h = withSpecial(now);
+      const result = await placeOrder(good({ special: "launch" }), h.deps);
+      expect(result).toMatchObject({
+        ok: false,
+        reason: "invalid",
+        errors: { special: expect.stringContaining("total is different") },
+      });
+      expect(h.orders).toHaveLength(0);
+      expect(h.charges).toHaveLength(0);
+    }
+    // Shown, and still what comes off.
+    const h = withSpecial(() => LAUNCH);
+    expect((await placeOrder(good({ special: " launch " }), h.deps)).ok).toBe(
+      true,
+    );
+  });
+
+  it("gives a special nobody was shown: paying less needs nobody's leave", async () => {
+    const h = withSpecial(() => LAUNCH);
+    expect((await placeOrder(good({ special: "" }), h.deps)).ok).toBe(true);
+    expect(h.orders[0]?.promo?.code).toBe("LAUNCH");
+    // And one that cannot be read is simply no special.
+    const blind = withSpecial(() => Promise.reject(new Error("down")));
+    expect((await placeOrder(good(), blind.deps)).ok).toBe(true);
+    expect(blind.orders[0]).toMatchObject({ promo: null, discountCents: 0 });
+  });
+
+  it("says the total changed when saving refuses a special that was fine a moment ago", async () => {
+    let calls = 0;
+    const h = withSpecial(() => {
+      calls += 1;
+      return calls === 1 ? LAUNCH : { ok: false };
+    });
+    const store: OrderSink = {
+      ...h.deps.store,
+      async saveOrder() {
+        throw new Error("its last use just went");
+      },
+    };
+    const result = await placeOrder(good(), { ...h.deps, store });
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "invalid",
+      errors: { special: expect.stringContaining("total is different") },
+    });
+    // Still there and unchanged: then it was something else that failed.
+    const steady = withSpecial(() => LAUNCH);
+    const failing: OrderSink = {
+      ...steady.deps.store,
+      async saveOrder() {
+        throw new Error("the disk is full");
+      },
+    };
+    expect(
+      await placeOrder(good(), { ...steady.deps, store: failing }),
+    ).toEqual({ ok: false, reason: "failed" });
+  });
+});
+
 describe("order numbers", () => {
   it("are QP- and six unambiguous characters", () => {
     for (let i = 0; i < 200; i += 1) {
