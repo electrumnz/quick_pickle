@@ -336,6 +336,31 @@ go-live list shows when it last ran and what is stuck.
   end's own `orders.record` operation, so an order is on the Orders screen as it is placed.
 - The "order's in" page reads a short-lived httpOnly receipt cookie. It is display only.
 
+### Stock
+
+- **Shots are counted by batch, from movements.** Nothing stores how many are left: on hand
+  is the sum of a batch's rows in `stock_movements`. A wrong count is put right with another
+  movement and a reason, never by writing a number over it. Anything that takes stock locks
+  the batch rows first, in id order, and counts after.
+- **One pool.** An order is its total shots across every line (`orderShots` in
+  `lib/backstage/stock/allocation.ts`). Packs of 6, 12 and 24 draw on the same shots;
+  nothing is checked, promised or taken a pack at a time.
+- **The batch is confirmed at packing, never guessed.** Placing or paying for an order
+  writes no movement: its shots only count as promised. `orders.markPacked` takes them, from
+  the batch the person packing names (`batchCode`, or `batches` for a box that mixes them).
+  With one batch on sale that one is used; with a choice and no name it refuses. First
+  expired, first out is only the suggestion on the screen. Unpacking puts the shots back;
+  cancelling a packed order writes them off unless told they went back on the shelf. A test
+  order takes no stock. That is what makes a batch's recall list one query, and true.
+- **Only a batch that is released and still good is sold from.** Made-on and best-before
+  are New Zealand calendar dates (`date` columns, read as "2026-11-12"). A batch is good
+  through the end of its best-before day here: ask `isGoodOn` with `todayKey(ctx.now)`
+  (`lib/backstage/stock/dates.ts`), and never compare one with an instant.
+- **With no batch recorded, nothing happens.** Until a first batch has been recorded as
+  made (`tracking`), orders pack exactly as they did, Today lists nothing about shots, and
+  an order's page says nothing about batches. Once there is one, an order packed while no
+  batch is on sale says so, because it is on no recall list.
+
 ### Design rules that came from measuring
 
 - **Mobile first.** The phone layout is the design; wider screens only add room. The button

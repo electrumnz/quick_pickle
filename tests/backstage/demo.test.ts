@@ -4,6 +4,7 @@ import { systemCaller } from "@/lib/backstage/core/actor";
 import { execute } from "@/lib/backstage/core/op";
 import { seedDemoData } from "@/lib/backstage/demo";
 import { countOrders, listOrders } from "@/lib/backstage/orders/ops";
+import { stockPicture } from "@/lib/backstage/stock/ops";
 import { needsYou } from "@/lib/backstage/today/ops";
 import {
   closeDb,
@@ -26,7 +27,8 @@ describe("the demo records", () => {
     handle = await openEmbedded();
     useDbHandle(handle);
     await seedDemoData(handle.db);
-  });
+    // Every area's demo, a few hundred operations: slow on a busy machine.
+  }, 60_000);
   afterAll(async () => {
     await closeDb();
   });
@@ -60,5 +62,24 @@ describe("the demo records", () => {
     });
     // Marketing's own waiting list is there too, after it.
     expect(needs.some((need) => need.key.startsWith("marketing-"))).toBe(true);
+    // And stock's: the labels that are late, and the run getting near its
+    // date. Neither is money or a customer waiting, so neither comes first.
+    const stock = needs.filter((need) => need.key.startsWith("stock-"));
+    expect(stock.map((need) => [need.key, need.urgent])).toEqual([
+      ["stock-purchase-overdue", false],
+      ["stock-near-best-before", false],
+    ]);
+  });
+
+  it("put stock on the shelf, and give every box already packed its batch", async () => {
+    const picture = await execute(stockPicture, {}, viewer);
+    expect(picture.tracking).toBe(true);
+    // Stock goes in after the orders, and writes down which batch each
+    // packed or sent one came from: none is left off the recall list.
+    expect(picture.noBatchRecorded).toBe(0);
+    // What is waiting to be packed is covered, with some left to sell.
+    expect(picture.promised).toBeGreaterThan(0);
+    expect(picture.available).toBeGreaterThan(0);
+    expect(picture.pastDate).toBe(0);
   });
 });

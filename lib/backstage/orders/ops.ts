@@ -51,6 +51,8 @@ import {
   usedByCustomer,
   type Promo,
 } from "../marketing/promo";
+import { batchCodeSchema, packedBatchesSchema } from "../stock/inputs";
+import { putBackOrderStock, takeOrderStock } from "../stock/order-moves";
 import { loadOrder } from "./load";
 import { paymentStatusAfter, refundsThroughStripe } from "./refunds";
 import { canMove, OPEN_STATUSES, STATUS_LABEL } from "./status";
@@ -605,15 +607,30 @@ export const markPacked = defineOp({
   name: "orders.markPacked",
   title: "Mark an order as packed",
   description:
-    "Says the box is packed and waiting for the courier. Only for an order that is paid. Use `undo` to put a packed order back to 'to pack'.",
+    "Says the box is packed and waiting for the courier. Only for an order that is paid. Packing is the moment the order's shots leave stock, and the batch they are taken from is the one that is in the box: name it with `batchCode`, or for a box that mixes batches give `batches` (a code and a number of shots for each, adding up to all the shots in the order, whatever packs they are in). If neither is given and only one batch is on sale, that batch is used; if there is a choice it is refused and lists the batches, because the recall list has to rest on what was really packed and not on a guess. stock.orderStock says which batch to use first. Only a released batch still within its best-before date can be used. If no released batch has any stock the order still packs and no batch is recorded; if there is stock but not enough, it is refused with the number on hand. A test order takes no stock. Use `undo` to put a packed order back to 'to pack', which puts its shots back in the batches they came from.",
   access: "write",
-  input: z.object({ number: orderNumber, undo: z.boolean().default(false) }),
+  input: z
+    .object({
+      number: orderNumber,
+      undo: z.boolean().default(false),
+      /** The code of the batch that is in the box: "B001". */
+      batchCode: batchCodeSchema.optional(),
+      /** For a box that mixes batches: how many shots from each. */
+      batches: packedBatchesSchema.optional(),
+    })
+    .refine(
+      (value) => value.batchCode === undefined || value.batches === undefined,
+      { message: "Name one batch, or the mix, not both", path: ["batches"] },
+    ),
   async run(ctx, input): Promise<{ status: OrderStatus }> {
     const order = await loadOrder(ctx.db, input.number, {
       forChange: true,
     });
     const to: OrderStatus = input.undo ? "paid" : "packed";
-    if (order.status === to) return { status: to };
+    if (order.status === to) {
+      ctx.nothingChanged();
+      return { status: to };
+    }
     if (!canMove(order.status, to)) refuseMove(order.status, to, order.number);
     await ctx.db
       .update(orders)
@@ -623,12 +640,25 @@ export const markPacked = defineOp({
         updatedAt: ctx.now,
       })
       .where(eq(orders.id, order.id));
+    // Stock moves with the stage, in the same transaction (lib/backstage/stock).
+    // Packing is where the batch goes on record: the one the person packing
+    // says is in the box. Unpacking says the box was never made up, so its
+    // shots are back where they came from.
+    const stock = input.undo
+      ? await putBackOrderStock(ctx, order, "not packed after all", {
+          restock: true,
+        })
+      : await takeOrderStock(ctx, order, {
+          batchCode: input.batchCode,
+          batches: input.batches,
+        });
     const entity = { type: "order", id: order.id };
     await ctx.audit({
       entity,
       summary: input.undo
-        ? `Put ${order.number} back to "to pack"`
-        : `Packed ${order.number}`,
+        ? `Put ${order.number} back to "to pack"${stock.words === "" ? "" : `. ${stock.words}`}`
+        : `Packed ${order.number}${stock.words === "" ? "" : `: ${stock.words}`}`,
+      ...(stock.moves.length === 0 ? {} : { data: { stock: stock.moves } }),
     });
     if (!input.undo) {
       await ctx.emit({
@@ -645,7 +675,7 @@ export const markShipped = defineOp({
   name: "orders.markShipped",
   title: "Mark an order as shipped",
   description:
-    "Says the order has gone with the courier, with the tracking details if there are any. The customer is told it is on its way. It cannot be undone, so check the order number.",
+    "Says the order has gone with the courier, with the tracking details if there are any. The customer is told it is on its way. It cannot be undone, so check the order number. An order shipped without being marked packed first has its shots taken out of stock here if only one batch is on sale; if there is a choice of batch it is refused, and has to be marked packed first with the batch that is in the box (orders.markPacked).",
   access: "write",
   effect: "outward",
   input: z.object({
@@ -685,11 +715,23 @@ export const markShipped = defineOp({
         updatedAt: ctx.now,
       })
       .where(eq(orders.id, order.id));
+    // Shipped straight from "to pack": its shots leave the shelf now. With
+    // more than one batch on sale this refuses, and the order has to be
+    // marked packed first, which is where the batch is named.
+    const stock =
+      order.status === "paid" ? await takeOrderStock(ctx, order) : null;
     const entity = { type: "order", id: order.id };
     await ctx.audit({
       entity,
-      summary: `Shipped ${order.number}${carrier ? ` with ${carrier}` : ""}${trackingNumber ? `, tracking ${trackingNumber}` : ""}`,
-      data: { carrier, trackingNumber, trackingUrl },
+      summary: `Shipped ${order.number}${carrier ? ` with ${carrier}` : ""}${trackingNumber ? `, tracking ${trackingNumber}` : ""}${stock === null || stock.words === "" ? "" : `. Took ${stock.words}`}`,
+      data: {
+        carrier,
+        trackingNumber,
+        trackingUrl,
+        ...(stock === null || stock.moves.length === 0
+          ? {}
+          : { stock: stock.moves }),
+      },
     });
     await ctx.emit({
       type: "order.shipped",
@@ -736,12 +778,14 @@ export const cancelOrder = defineOp({
   name: "orders.cancel",
   title: "Cancel an order",
   description:
-    "Calls an order off before it has shipped, with the reason. Cancelling does not give money back by itself: record the refund as well if they have paid. If the buyer had not paid yet, their payment page is closed so they cannot pay for it afterwards.",
+    "Calls an order off before it has shipped, with the reason. Cancelling does not give money back by itself: record the refund as well if they have paid. If the buyer had not paid yet, their payment page is closed so they cannot pay for it afterwards. If the order had been packed, its shots come off the order: with `restock` true they go back on the shelf in the batches they came from, and otherwise they are written off, because nothing goes back on the shelf unless a person says it has.",
   access: "write",
   effect: "outward",
   input: z.object({
     number: orderNumber,
     reason: z.string().trim().min(3, "Say why, in a few words").max(280),
+    /** The packed bottles are going back on the shelf. */
+    restock: z.boolean().default(false),
   }),
   explain: (input) => `This cancels ${input.number}. It cannot be undone.`,
   async run(ctx, input): Promise<{ status: OrderStatus }> {
@@ -760,10 +804,16 @@ export const cancelOrder = defineOp({
         updatedAt: ctx.now,
       })
       .where(eq(orders.id, order.id));
+    // A packed box holds shots from stock (lib/backstage/stock). They go
+    // back on the shelf only if the person cancelling says so.
+    const stock = await putBackOrderStock(ctx, order, "order cancelled", {
+      restock: input.restock,
+    });
     const entity = { type: "order", id: order.id };
     await ctx.audit({
       entity,
-      summary: `Cancelled ${order.number}: ${input.reason}`,
+      summary: `Cancelled ${order.number}: ${input.reason}${stock.words === "" ? "" : `${/[.!?]$/.test(input.reason) ? "" : "."} ${stock.words}`}`,
+      ...(stock.moves.length === 0 ? {} : { data: { stock: stock.moves } }),
     });
     await ctx.emit({
       type: "order.cancelled",

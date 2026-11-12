@@ -16,10 +16,18 @@ import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
 import { getOrder, type OrderDetail } from "@/lib/backstage/orders/ops";
 import { refundsThroughStripe } from "@/lib/backstage/orders/refunds";
+import { orderStock, type OrderStock } from "@/lib/backstage/stock/ops";
 import { formatNzd, formatNzdExact } from "@/lib/shop/money";
 import { NZ_REGIONS } from "@/lib/shop/order";
 import { formatNzDateTime } from "@/lib/time";
 
+import {
+  CancelRestock,
+  OrderStockPanel,
+  PackFrom,
+  ShipNote,
+  UnpackNote,
+} from "../../stock/order-parts";
 import {
   addressAction,
   cancelAction,
@@ -48,9 +56,12 @@ function Number({ value }: { readonly value: string }) {
 function NextStep({
   order,
   canWrite,
+  stock,
 }: {
   readonly order: OrderDetail;
   readonly canWrite: boolean;
+  /** Where its shots come from when it is packed (lib/backstage/stock). */
+  readonly stock: OrderStock;
 }) {
   if (!canWrite) {
     return (
@@ -80,11 +91,13 @@ function NextStep({
       ) : null}
 
       {can("packed") ? (
-        <form action={packAction}>
+        <form action={packAction} className="flex flex-col gap-3">
           <Number value={order.number} />
-          <SubmitButton pending="Saving" className="bk-btn w-full">
-            Mark as packed
-          </SubmitButton>
+          <PackFrom stock={stock}>
+            <SubmitButton pending="Saving" className="bk-btn w-full">
+              Mark as packed
+            </SubmitButton>
+          </PackFrom>
         </form>
       ) : null}
 
@@ -139,6 +152,7 @@ function NextStep({
           <p className="bk-muted text-[0.9375rem] leading-snug">
             This tells the customer it is on its way and cannot be undone.
           </p>
+          {can("packed") ? <ShipNote stock={stock} /> : null}
         </form>
       ) : null}
 
@@ -158,6 +172,7 @@ function NextStep({
           <SubmitButton pending="Saving" className="bk-btn bk-btn-quiet w-full">
             Not packed after all
           </SubmitButton>
+          <UnpackNote stock={stock} />
         </form>
       ) : null}
 
@@ -180,6 +195,7 @@ function NextStep({
                 className="field"
               />
             </div>
+            <CancelRestock stock={stock} />
             <SubmitButton
               pending="Cancelling"
               className="bk-btn bk-btn-pink w-full"
@@ -233,6 +249,7 @@ export default async function OrderPage({
     { entityType: "order", entityId: order.id, limit: 100 },
     caller,
   );
+  const stock = await execute(orderStock, { number: order.number }, caller);
   const canWrite = staff.role !== "viewer";
   const editable = ["pending", "paid", "packed"].includes(order.status);
   const refundable =
@@ -394,6 +411,13 @@ export default async function OrderPage({
             </dl>
           </Panel>
 
+          <OrderStockPanel
+            number={order.number}
+            status={order.status}
+            stock={stock}
+            canWrite={canWrite}
+          />
+
           <Panel title="History" flush>
             <div id="history" className="scroll-mt-24">
               <ActivityList lines={history} now={now} />
@@ -427,7 +451,7 @@ export default async function OrderPage({
 
         <div className="flex flex-col gap-6">
           <Panel title="Next step">
-            <NextStep order={order} canWrite={canWrite} />
+            <NextStep order={order} canWrite={canWrite} stock={stock} />
           </Panel>
 
           <Panel title="Who and where">

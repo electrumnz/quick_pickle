@@ -27,6 +27,22 @@ const PAGES = [
   "/backstage/orders/QP-SHRT55",
   "/backstage/orders/QP-PACK22/slip",
   "/backstage/customers",
+  // Stock. The demo's batches and purchase orders have steady codes: B002
+  // is on sale with orders filled from it, B004 is only planned (the "record
+  // it as made" form), PO-0002 is sent and late (the "received" form) and
+  // PO-0003 is a draft (its lines can still be changed).
+  "/backstage/stock",
+  "/backstage/stock/batches",
+  "/backstage/stock/batches/new",
+  "/backstage/stock/batches/B002",
+  "/backstage/stock/batches/B004",
+  "/backstage/stock/batches/B002/recall-list",
+  "/backstage/stock/materials",
+  "/backstage/stock/suppliers",
+  "/backstage/stock/purchase-orders",
+  "/backstage/stock/purchase-orders/new",
+  "/backstage/stock/purchase-orders/PO-0002",
+  "/backstage/stock/purchase-orders/PO-0003",
   "/backstage/marketing",
   "/backstage/marketing/campaigns",
   "/backstage/marketing/campaigns/new",
@@ -93,6 +109,10 @@ for (const [name, list, link] of [
     "/backstage/marketing/pages",
     "Clubs (sample)",
   ],
+  // The demo's labels: under their reorder level, with an order for more
+  // that is late. And the people they come from.
+  ["a material", "/backstage/stock/materials", "Wrap label"],
+  ["a supplier", "/backstage/stock/suppliers", "Label Press"],
 ] as const) {
   test(`axe: ${name}`, async ({ page }) => {
     await page.goto(list);
