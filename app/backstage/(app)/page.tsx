@@ -16,8 +16,10 @@ import { listActivity } from "@/lib/backstage/activity/ops";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { execute } from "@/lib/backstage/core/op";
 import { countCrew } from "@/lib/backstage/crew/ops";
+import { numbersToday, type DayNumbers } from "@/lib/backstage/numbers/ops";
 import { countOrders, listOrders } from "@/lib/backstage/orders/ops";
 import { needsYou } from "@/lib/backstage/today/ops";
+import { formatNzdExact } from "@/lib/shop/money";
 import { nzParts } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Today" };
@@ -30,6 +32,25 @@ function greeting(now: Date): string {
 }
 
 /**
+ * A day's sales and visits as a few words: "3 orders worth $156.00 and 41
+ * visits". Visits are left out until the shop has counted its first one, so
+ * a counter that is not running yet never reads as an empty shop.
+ */
+function dayInWords(
+  day: DayNumbers,
+  options: { readonly soFar: boolean; readonly countVisits: boolean },
+): string {
+  const sold =
+    day.orders === 0
+      ? options.soFar
+        ? "no orders yet"
+        : "no orders"
+      : `${String(day.orders)} ${day.orders === 1 ? "order" : "orders"} worth ${formatNzdExact(day.salesCents)}`;
+  if (!options.countVisits) return sold;
+  return `${sold} and ${String(day.visits)} ${day.visits === 1 ? "visit" : "visits"}`;
+}
+
+/**
  * Today: what needs a person now, and what happened while they were away.
  * Each area of the back end adds its own "waiting on you" block here as it
  * is built.
@@ -38,13 +59,15 @@ export default async function TodayPage() {
   const staff = await requireStaff("/backstage");
   const now = new Date();
   const caller = await staffCaller();
-  const [lines, counts, toPack, crew, needs] = await Promise.all([
+  const [lines, counts, toPack, crew, needs, soFar] = await Promise.all([
     execute(listActivity, { limit: 12 }, caller),
     execute(countOrders, {}, caller),
     execute(listOrders, { status: "paid", limit: 8 }, caller),
     execute(countCrew, {}, caller),
     execute(needsYou, {}, caller),
+    execute(numbersToday, {}, caller),
   ]);
+  const countVisits = !soFar.noVisitsYet;
   const firstName = staff.name.split(" ")[0] ?? staff.name;
 
   return (
@@ -75,6 +98,24 @@ export default async function TodayPage() {
           value={crew.subscribed}
           note="On the mailing list"
         />
+      </div>
+
+      {/* The pulse, in two lines. Sales are paid orders less refunds; visits
+          are the shop's own count. The working is on the Numbers screen. */}
+      <div className="mb-6">
+        <Panel>
+          <p className="leading-snug" data-testid="today-so-far">
+            <strong>Today so far:</strong>{" "}
+            {dayInWords(soFar.today, { soFar: true, countVisits })}.
+          </p>
+          <p className="bk-muted mt-1 text-[0.9375rem] leading-snug">
+            Yesterday:{" "}
+            {dayInWords(soFar.yesterday, { soFar: false, countVisits })}.{" "}
+            <Link href="/backstage/numbers" className="link">
+              All the numbers
+            </Link>
+          </p>
+        </Panel>
       </div>
 
       {/* Only there when something is: the things that will not sort

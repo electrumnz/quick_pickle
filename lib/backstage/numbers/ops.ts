@@ -462,4 +462,85 @@ export const numbersSummary = defineOp({
 });
 
 /** Every operation in the area, for a registry to pick up in one go. */
-export const NUMBERS_OPS = [recordSeen, numbersSummary] as const;
+/* ---- today so far ---------------------------------------------------------- */
+
+export type DayNumbers = {
+  /** The New Zealand day, as a date key. */
+  readonly day: string;
+  /** Paid orders placed that day, not counting test orders or ones called off. */
+  readonly orders: number;
+  /** What they came to, delivery included, less refunds. */
+  readonly salesCents: number;
+  /** Visits to the shop that day, by our own count. */
+  readonly visits: number;
+};
+
+export type TodaySoFar = {
+  readonly today: DayNumbers;
+  readonly yesterday: DayNumbers;
+  /** True when not one visit has ever been counted: the counter is new. */
+  readonly noVisitsYet: boolean;
+};
+
+export const numbersToday = defineOp({
+  name: "numbers.today",
+  title: "Today so far",
+  description:
+    "Sales and visits for today so far and for yesterday, as New Zealand days: paid orders (test orders and cancelled ones are never sales), what they came to less refunds, and visits to the shop by its own count, which runs a little low. The same rules as `numbers.summary`, for the two days a person asks about first.",
+  access: "read",
+  input: z.object({}),
+  async run(ctx): Promise<TodaySoFar> {
+    const todayKey = nzDateKey(ctx.now);
+    const yesterdayKey = addDays(todayKey, -1);
+    const from = startOfNzDay(yesterdayKey);
+    const middle = startOfNzDay(todayKey);
+    const to = startOfNzDay(addDays(todayKey, 1));
+    const cut = middle.toISOString();
+
+    const [[sold], [seen], [everSeen]] = await Promise.all([
+      ctx.db
+        .select({
+          ordersToday: sql<number>`(count(*) filter (where ${orders.placedAt} >= ${cut}::timestamptz))::int`,
+          ordersYesterday: sql<number>`(count(*) filter (where ${orders.placedAt} < ${cut}::timestamptz))::int`,
+          salesToday: sql<number>`coalesce(sum(${orders.totalCents} - ${orders.refundedCents}) filter (where ${orders.placedAt} >= ${cut}::timestamptz), 0)::int`,
+          salesYesterday: sql<number>`coalesce(sum(${orders.totalCents} - ${orders.refundedCents}) filter (where ${orders.placedAt} < ${cut}::timestamptz), 0)::int`,
+        })
+        .from(orders)
+        .where(
+          and(gte(orders.placedAt, from), lt(orders.placedAt, to), isSale),
+        ),
+      ctx.db
+        .select({
+          today: sql<number>`(count(distinct ${pageEvents.visit}) filter (where ${pageEvents.at} >= ${cut}::timestamptz))::int`,
+          yesterday: sql<number>`(count(distinct ${pageEvents.visit}) filter (where ${pageEvents.at} < ${cut}::timestamptz))::int`,
+        })
+        .from(pageEvents)
+        .where(
+          and(
+            gte(pageEvents.at, from),
+            lt(pageEvents.at, to),
+            eq(pageEvents.kind, "view"),
+          ),
+        ),
+      ctx.db.select({ id: pageEvents.id }).from(pageEvents).limit(1),
+    ]);
+
+    return {
+      today: {
+        day: todayKey,
+        orders: sold?.ordersToday ?? 0,
+        salesCents: sold?.salesToday ?? 0,
+        visits: seen?.today ?? 0,
+      },
+      yesterday: {
+        day: yesterdayKey,
+        orders: sold?.ordersYesterday ?? 0,
+        salesCents: sold?.salesYesterday ?? 0,
+        visits: seen?.yesterday ?? 0,
+      },
+      noVisitsYet: everSeen === undefined,
+    };
+  },
+});
+
+export const NUMBERS_OPS = [recordSeen, numbersSummary, numbersToday] as const;
