@@ -1,0 +1,11 @@
+{
+  "actions": [
+    "status",
+    "connect-database",
+    "ensure-setup-code",
+    "redeploy",
+    "status"
+  ],
+  "confirm": "yes",
+  "why": "First connection: give production its database login and its set-up code, then build it again so both take effect."
+}

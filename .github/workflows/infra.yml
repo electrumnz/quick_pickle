@@ -5,10 +5,21 @@ name: Infra
 # Supabase and Stripe is read, and how the few settings the app needs are
 # made. scripts/infra/run.mjs says what each action does.
 #
-# Started by hand (or by the API) only. It never runs for a pull request, so
-# code from a fork never sees a secret.
+# It runs two ways:
+#
+#   every push to main   reads the state (the "status" action, which changes
+#                        nothing). If that push changed
+#                        .github/infra-request.json, it does what the file
+#                        asks instead. That is how a change is requested: a
+#                        commit, reviewed and merged like any other.
+#   by hand              Actions tab, Infra, Run workflow.
+#
+# It never runs for a pull request or for any branch but main, so unmerged
+# code never sees a secret.
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       action:
@@ -19,6 +30,7 @@ on:
         options:
           - status
           - ensure-setup-code
+          - connect-database
       confirm:
         description: Type yes for an action that changes a setting
         type: string
@@ -34,7 +46,7 @@ concurrency:
 
 jobs:
   run:
-    name: ${{ inputs.action }}
+    name: infra
     # Only ever the code on main: a branch cannot borrow the secrets.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -59,6 +71,13 @@ jobs:
           QP_VERCEL_TOKEN: ${{ secrets.QP_VERCEL_TOKEN }}
           QP_STRIPE_SECRET_KEY: ${{ secrets.QP_STRIPE_SECRET_KEY }}
           QP_STRIPE_PUBLISHABLE_KEY: ${{ secrets.QP_STRIPE_PUBLISHABLE_KEY }}
+          INFRA_EVENT: ${{ github.event_name }}
           INFRA_ACTION: ${{ inputs.action }}
           INFRA_CONFIRM: ${{ inputs.confirm }}
+          # True when a commit in this push added or changed the request file.
+          INFRA_REQUEST_CHANGED: >-
+            ${{ github.event_name == 'push' && (
+              contains(toJSON(github.event.commits.*.modified), '.github/infra-request.json') ||
+              contains(toJSON(github.event.commits.*.added), '.github/infra-request.json')
+            ) }}
         run: node scripts/infra/run.mjs
