@@ -198,7 +198,7 @@ export default function BrandGuidePage() {
 
       <div className="max-w-page px-gutter mx-auto pb-20">
         <Section id="idea" title="The idea" lead={IDEA.summary}>
-          <div className="grid gap-8 lg:grid-cols-2">
+          <div className="grid gap-8 lg:grid-cols-2 [&>*]:min-w-0">
             <div>
               <h3 className="label text-[1.25rem]">
                 Why this and not the deck
@@ -486,7 +486,7 @@ export default function BrandGuidePage() {
             ))}
           </ul>
 
-          <div className="mt-10 grid gap-10 lg:grid-cols-2">
+          <div className="mt-10 grid gap-10 lg:grid-cols-2 [&>*]:min-w-0">
             <div>
               <h3 className="label text-[1.25rem]">The rules</h3>
               <div className="mt-3">
@@ -692,7 +692,7 @@ export default function BrandGuidePage() {
         </Section>
 
         <Section id="motion" title="Motion" lead={MOTION.summary}>
-          <div className="grid gap-10 lg:grid-cols-2">
+          <div className="grid gap-10 lg:grid-cols-2 [&>*]:min-w-0">
             <Rules items={MOTION.rules} />
             <div className="card-flat overflow-x-auto">
               <table className="w-full text-left text-[0.9375rem]">

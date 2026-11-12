@@ -33,7 +33,7 @@
           }
         ],
         "categories:seo": [
-          "error",
+          "warn",
           {
             "minScore": 0.95
           }
@@ -66,6 +66,54 @@
           "error",
           {
             "maxNumericValue": 1600000
+          }
+        ],
+        "document-title": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "meta-description": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "link-text": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "crawlable-anchors": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "http-status-code": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "html-has-lang": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "viewport": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "largest-contentful-paint": [
+          "warn",
+          {
+            "maxNumericValue": 2500
           }
         ]
       }

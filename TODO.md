@@ -33,6 +33,10 @@ Updated 12 November 2026. Honest status, not a summary.
       receipts. Until then a deployed test order is written to the server log and nowhere
       else. It plugs in at `lib/shop/store`.
 - [ ] **A domain.**
+- [ ] **Open the site to search at launch.** It happens on its own when `UNCONFIRMED` in
+      `content/offer.ts` is empty. At the same time, set `categories:seo` in
+      `lighthouserc.json` back from `warn` to `error`: it is a warning today only because a
+      site that says noindex on purpose cannot pass it.
 - [ ] **Ashleigh's nod on the two proposed Lucky poses in use**: celebrating (order placed)
       and asleep (empty jar, 404). Both were generated from her art, not drawn by her.
 

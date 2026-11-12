@@ -51,12 +51,25 @@ test.describe("the page", () => {
     }
   });
 
-  test("never scrolls sideways", async ({ page }) => {
-    await page.goto("/");
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - window.innerWidth,
-    );
-    expect(overflow).toBeLessThanOrEqual(0);
+  test("never scrolls sideways, down to the narrowest phone", async ({
+    page,
+  }) => {
+    // 320 is an iPhone SE in zoomed display mode: the tightest real screen.
+    const widths = [320, 360, page.viewportSize()?.width ?? 412];
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 720 });
+      for (const path of ["/", "/checkout", "/delivery", "/backstage/brand"]) {
+        await page.goto(path);
+        const overflow = await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth -
+            document.documentElement.clientWidth,
+        );
+        expect(overflow, `${path} at ${String(width)}px`).toBeLessThanOrEqual(
+          0,
+        );
+      }
+    }
   });
 
   test("answers its questions without leaving the page", async ({ page }) => {

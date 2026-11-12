@@ -81,7 +81,7 @@ export function BuyBox({ shipDate }: Props) {
   }
 
   return (
-    <div className="mt-8 grid gap-8 md:grid-cols-2 md:items-start md:gap-12">
+    <div className="mt-8 grid gap-8 md:grid-cols-2 md:items-start md:gap-12 [&>*]:min-w-0">
       {/* The product, illustrated. Sticks beside the picker on wide screens. */}
       <div className="md:sticky md:top-24">
         <div className="card bg-olive-wash relative overflow-hidden px-6 pt-8 pb-5">
@@ -127,6 +127,8 @@ export function BuyBox({ shipDate }: Props) {
                 <label
                   key={option.sku}
                   className={`relative block cursor-pointer rounded-[18px] border-[3px] p-4 transition-transform duration-100 active:scale-[0.985] ${
+                    tag ? "pt-5" : ""
+                  } ${
                     selected
                       ? "border-navy bg-paper shadow-hard"
                       : "border-navy-line bg-paper/60"
@@ -207,11 +209,11 @@ export function BuyBox({ shipDate }: Props) {
           </div>
         </fieldset>
 
-        <div className="mt-6 flex items-stretch gap-3">
+        <div className="mt-6 flex flex-wrap items-stretch gap-3">
           <div
             role="group"
             aria-label={BUY.quantity}
-            className="border-navy bg-paper flex shrink-0 items-center rounded-[12px] border-[3px]"
+            className="border-navy bg-paper flex min-h-[3.75rem] shrink-0 items-center rounded-[12px] border-[3px]"
           >
             <button
               type="button"
@@ -241,7 +243,7 @@ export function BuyBox({ shipDate }: Props) {
             </button>
           </div>
 
-          <div className="relative min-w-0 flex-1">
+          <div className="relative min-w-[13.5rem] flex-1">
             <button
               type="button"
               onClick={handleAdd}

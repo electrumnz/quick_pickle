@@ -46,7 +46,7 @@ export function Hero() {
 
           {/* Two lines on a phone, sized to span the screen; three on a wide
               screen, where the column is narrower than the viewport. */}
-          <h1 className="display text-cream animate-rise mt-4 text-[min(23.4vw,7rem)] leading-[0.9] [animation-delay:70ms] md:text-[clamp(5rem,10.4vw,10.5rem)]">
+          <h1 className="display text-cream animate-rise mt-4 text-[min(22.4vw,7rem)] leading-[0.9] [animation-delay:70ms] md:text-[clamp(5rem,10.4vw,10.5rem)]">
             {HERO.title.map((part) => (
               <span key={part.text}>
                 {part.text}
@@ -80,7 +80,7 @@ export function Hero() {
               <LuckyRun
                 animated
                 title={HERO.luckyAlt}
-                className="h-auto max-h-[34svh] w-full md:max-h-none"
+                className="h-auto max-h-[30svh] w-full md:max-h-none"
               />
             </div>
           )}
