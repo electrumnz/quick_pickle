@@ -53,6 +53,8 @@ export type PlaceOrderDeps = {
   readonly store: OrderSink;
   readonly now?: () => Date;
   readonly orderNumber?: () => string;
+  /** Where a payment page sends the buyer back to. Full addresses. */
+  readonly returnUrls?: { readonly success: string; readonly cancel: string };
 };
 
 function emptyToNull(value: string | undefined): string | null {
@@ -81,15 +83,33 @@ export async function placeOrder(
   }
 
   const number = (deps.orderNumber ?? newOrderNumber)();
-  const placedAt = (deps.now ?? (() => new Date()))().toISOString();
+  const now = (deps.now ?? (() => new Date()))();
+  const placedAt = now.toISOString();
 
   try {
-    const payment = await deps.payments.charge({
-      orderNumber: number,
-      amountCents: priced.totalCents,
-      currency: "NZD",
-      email: input.email,
-    });
+    const started = await deps.payments.begin(
+      {
+        orderNumber: number,
+        amountCents: priced.totalCents,
+        currency: "NZD",
+        email: input.email,
+        lines: priced.lines.map((line) => ({
+          name: line.pack.name,
+          qty: line.qty,
+          unitCents: line.unitCents,
+        })),
+        shippingCents: priced.shippingCents,
+        successUrl: deps.returnUrls?.success ?? "",
+        cancelUrl: deps.returnUrls?.cancel ?? "",
+      },
+      now,
+    );
+    // A provider that sends the buyer away to pay needs the order saved
+    // first and finished later. That path is not wired in yet, so such a
+    // provider cannot take an order here: better no order than an unpaid one
+    // that looks paid.
+    if (started.kind !== "done") return { ok: false, reason: "failed" };
+    const payment = started.payment;
 
     const order: Order = {
       number,
