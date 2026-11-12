@@ -1,10 +1,25 @@
 /**
- * Writing back: drafts, sending, trying again, and saved replies.
+ * Writing back: drafts, sending, and saved replies.
  *
  * A reply is written as a draft, which nobody outside the back end ever
  * sees, and sent by `mail.send`, which needs a yes because once it has gone
  * it has gone. Sending here means queuing: the message is handed to the mail
  * provider afterwards, outside the transaction (outbound.ts).
+ *
+ * `mail.send` is where the copy rules meet a reply (legal/COPY-RULES.md,
+ * lib/backstage/core/copy.ts). The finished words, signature and all, are
+ * read before anything is queued:
+ *
+ *   banned       never goes out. Nothing clears it: the words have to change.
+ *   restricted   goes out only when a PERSON has said, for this reply, that
+ *                they have read what was flagged and it is right to send.
+ *                That is written down with the message and in the activity
+ *                log. A bot cannot say it: its reply is refused, and a
+ *                person has to send it.
+ *
+ * Nothing is exempt, the customer's own name included. A reply is words a
+ * person typed, with no way to tell a name from a claim, so "Hi Nelson" is
+ * read like everything else (it is restricted, and takes a tick).
  */
 
 import { and, desc, eq, inArray } from "drizzle-orm";
@@ -19,23 +34,24 @@ import {
   mailTemplates,
   orders,
 } from "@/db/schema";
+import { databaseUrl } from "@/lib/db/client";
 import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
+import { mailConnection, mailFrom } from "@/lib/mail";
 
+import {
+  checkOutgoing,
+  refuseUnsendable,
+  type OutgoingProblem,
+} from "../core/copy";
 import { conflict, notFound, OpError } from "../core/errors";
 import { defineOp, type OpContext } from "../core/op";
-import {
-  findSendingMailbox,
-  sendingMailbox,
-  whyNotEmail,
-  writeQueued,
-} from "./outbound";
+import { findSendingMailbox, whyNotEmail, writeOutbound } from "./outbound";
 import { snippetOf, splitReply } from "./reply";
 import {
   conversationIdSchema,
   emailSchema,
   messageIdSchema,
-  nothingChanged,
   oneLine,
 } from "./schemas";
 import {
@@ -172,16 +188,19 @@ type DraftFields = {
 };
 
 /**
- * Write the draft. Returns the row as it now is. A row that has already
- * been sent is returned untouched: the caller decides what that means.
+ * Write the draft. Returns the row as it now is, and whether anything was
+ * written. A row that has already been sent is returned untouched: the
+ * caller decides what that means.
  */
 async function putDraft(
   ctx: OpContext,
   conversation: ConversationRow,
   fields: DraftFields,
   existing: MessageRow | undefined,
-): Promise<MessageRow> {
-  if (existing !== undefined && existing.status !== "draft") return existing;
+): Promise<{ readonly row: MessageRow; readonly changed: boolean }> {
+  if (existing !== undefined && existing.status !== "draft") {
+    return { row: existing, changed: false };
+  }
 
   const to =
     fields.to ??
@@ -198,6 +217,14 @@ async function putDraft(
       : existing !== undefined && existing.subject !== ""
         ? existing.subject
         : `Re: ${conversation.subject}`.slice(0, 300);
+  if (
+    existing !== undefined &&
+    existing.toAddresses[0] === to &&
+    existing.subject === subject &&
+    existing.textBody === fields.body
+  ) {
+    return { row: existing, changed: false };
+  }
   const authorId = ctx.actor.type === "system" ? null : ctx.actor.userId;
   const changes = {
     toAddresses: [to],
@@ -213,10 +240,8 @@ async function putDraft(
       .update(mailMessages)
       .set(changes)
       .where(eq(mailMessages.id, existing.id));
-    return { ...existing, ...changes };
+    return { row: { ...existing, ...changes }, changed: true };
   }
-  // A draft can be written before any mailbox is set up. Sending cannot.
-  const mailbox = await findSendingMailbox(ctx.db, conversation.mailboxId);
   const [row] = await ctx.db
     .insert(mailMessages)
     .values({
@@ -224,14 +249,15 @@ async function putDraft(
       conversationId: conversation.id,
       direction: "out",
       status: "draft",
-      fromAddress: mailbox?.address ?? "",
-      fromName: mailbox?.displayName ?? "",
+      // Filled in when it is sent: a draft has not left from anywhere yet.
+      fromAddress: mailFrom() ?? "",
+      fromName: "",
       ...changes,
       createdAt: ctx.now,
     })
     .returning();
   if (row === undefined) throw new Error("The draft was not saved.");
-  return row;
+  return { row, changed: true };
 }
 
 export const saveDraft = defineOp({
@@ -261,16 +287,22 @@ export const saveDraft = defineOp({
     const conversation = await conversationFor(ctx.db, input.conversationId);
     const existing = await draftIn(ctx.db, conversation, input.draftId);
     const draft = await putDraft(ctx, conversation, input, existing);
-    if (draft.status !== "draft") {
+    if (draft.row.status !== "draft") {
       // It went while this was being typed. Nothing to save over.
-      return { draftId: draft.id, status: draft.status, saved: false };
+      ctx.nothingChanged();
+      return { draftId: draft.row.id, status: draft.row.status, saved: false };
+    }
+    if (!draft.changed) {
+      // Saved again with nothing different in it.
+      ctx.nothingChanged();
+      return { draftId: draft.row.id, status: "draft", saved: true };
     }
     await ctx.audit({
       entity: { type: "conversation", id: conversation.id },
-      summary: `Saved a draft reply to ${draft.toAddresses.join(", ")} in "${conversation.subject}"`,
-      data: { messageId: draft.id },
+      summary: `Saved a draft reply to ${draft.row.toAddresses.join(", ")} in "${conversation.subject}"`,
+      data: { messageId: draft.row.id },
     });
-    return { draftId: draft.id, status: "draft", saved: true };
+    return { draftId: draft.row.id, status: "draft", saved: true };
   },
 });
 
@@ -287,7 +319,11 @@ export const discardDraft = defineOp({
       .from(mailMessages)
       .where(eq(mailMessages.id, input.draftId))
       .for("update");
-    if (draft === undefined) throw notFound("That draft");
+    if (draft === undefined) {
+      // Thrown away already.
+      ctx.nothingChanged();
+      return { discarded: false };
+    }
     if (draft.status !== "draft") {
       throw conflict(
         "That reply has already been sent, so it cannot be thrown away.",
@@ -303,11 +339,47 @@ export const discardDraft = defineOp({
   },
 });
 
+/* ------------------------------------------------------------------------
+   What the copy rules make of a reply
+   --------------------------------------------------------------------- */
+
+export type ReplyCopy = {
+  /** Words that can never go out. The reply has to change. */
+  readonly banned: readonly OutgoingProblem[];
+  /** Words that need a person to say they have read them. */
+  readonly restricted: readonly OutgoingProblem[];
+};
+
+/**
+ * Read a reply as it would be sent: the subject, and the words with the
+ * signature under them. For a screen to show before anything is pressed,
+ * and for `mail.send`, which reads it again whatever the screen showed.
+ */
+export function replyCopy(reply: {
+  readonly subject: string;
+  readonly body: string;
+  readonly signature: string;
+}): ReplyCopy {
+  const problems = checkOutgoing({
+    subject: reply.subject,
+    body: signed(reply.body, reply.signature),
+  });
+  return {
+    banned: problems.filter((problem) => problem.kind !== "restricted"),
+    restricted: problems.filter((problem) => problem.kind === "restricted"),
+  };
+}
+
+function signed(body: string, signature: string): string {
+  const name = signature.trim();
+  return name === "" ? body.trim() : `${body.trim()}\n\n${name}`;
+}
+
 export const sendReply = defineOp({
   name: "mail.send",
   title: "Send a reply",
   description:
-    "Sends a reply in a conversation to `to` with `subject`. Give `body` to send those words (they replace any draft), or leave it out to send the draft as it was saved. The mailbox's signature is added underneath. The email is queued and handed to the mail provider straight afterwards; the conversation moves to waiting once it has gone. Refused if the address is on the do-not-email list, if there is nothing written, if a template blank such as {{first_name}} has not been filled in, or if the words break a copy rule (legal/COPY-RULES.md: nothing about what the product does to a body, and no em dashes), in which case the answer names the words to change. It cannot be unsent.",
+    "Sends a reply in a conversation to `to` with `subject`. Give `body` to send those words (they replace any draft), or leave it out to send the draft as it was saved. The signature is added underneath. The email is queued and handed to the mail provider straight afterwards; the conversation moves to waiting once it has gone. The finished words are read against the copy rules first (legal/COPY-RULES.md). A banned phrase refuses it and names the words to change: nothing about what the product does to a body, and no em dashes. A restricted phrase refuses it too, unless a person sends it with `acknowledgeRestricted: true`, which is that person saying they have read what was flagged and it is right to send; that is written down with the reply. A bot cannot say that: a reply of a bot's with a restricted phrase in it has to be sent by a person. Also refused if the address is on the do-not-email list, if there is nothing written, if a template blank such as {{first_name}} has not been filled in, or if email is not connected. It cannot be unsent. Needs a yes from a person.",
   access: "write",
   effect: "outward",
   input: z.object({
@@ -316,6 +388,7 @@ export const sendReply = defineOp({
     to: emailSchema,
     subject: oneLine(300).min(1, "A subject is needed"),
     body: bodySchema.optional(),
+    acknowledgeRestricted: z.boolean().default(false),
   }),
   explain: (input) =>
     `This sends "${input.subject}" to ${input.to}. Once it has gone it cannot be called back.`,
@@ -333,7 +406,7 @@ export const sendReply = defineOp({
     const existing = await draftIn(ctx.db, conversation, input.draftId);
     if (existing !== undefined && existing.status !== "draft") {
       // Pressed twice. The first press sent it.
-      nothingChanged(ctx);
+      ctx.nothingChanged();
       return {
         messageId: existing.id,
         conversationId: conversation.id,
@@ -353,123 +426,70 @@ export const sendReply = defineOp({
       const message = `Fill in ${blanks.join(", ")} before sending.`;
       throw new OpError("invalid_input", message, { body: message });
     }
-    const mailbox = await sendingMailbox(ctx.db, conversation.mailboxId);
-    const blocked = await whyNotEmail(ctx.db, [input.to], "reply");
+    const blocked = await whyNotEmail(ctx.db, [input.to]);
     if (blocked !== null) throw conflict(blocked);
 
-    const contact = await contactOf(ctx.db, conversation);
-    const signature = mailbox.signature.trim();
-    const { messageId } = await writeQueued(ctx, {
-      conversation,
-      mailbox,
-      messageId: existing?.id ?? input.draftId,
-      isDraft: existing !== undefined,
-      to: [input.to],
-      subject: input.subject,
-      text: signature === "" ? body : `${body}\n\n${signature}`,
-      html: null,
-      // Their own name is not a claim about anything.
-      personal: contact === undefined ? [] : [contact.name],
-      headers: {},
-      kind: "reply",
-    });
+    // With real records behind it and no way to send, a reply would only
+    // look as though it had gone. (On invented records it is written down
+    // and marked as not sent, like every email there.)
+    const connection = mailConnection();
+    if (!connection.delivers && databaseUrl() !== null) {
+      const why =
+        connection.problem ?? connection.held ?? "Email is not connected.";
+      throw new OpError(
+        "unavailable",
+        `This reply was not sent, because nothing can be sent from here. ${why} The go-live list in Settings says what is missing.`,
+      );
+    }
 
+    const mailbox = await findSendingMailbox(ctx.db, conversation.mailboxId);
+    const text = signed(body, mailbox?.signature ?? "");
+
+    // The copy rules, over the finished words. Only a person can clear a
+    // restricted phrase, and only by saying so for this reply.
+    const parts = { subject: input.subject, body: text };
+    const restricted = [
+      ...new Set(
+        checkOutgoing(parts)
+          .filter((problem) => problem.kind === "restricted")
+          .map((problem) => problem.rule),
+      ),
+    ];
+    const byAPerson = ctx.actor.type === "human";
+    const { cleared } = refuseUnsendable(parts, {
+      checked: input.acknowledgeRestricted && byAPerson ? restricted : [],
+    });
+    const checked = [...new Set(cleared.map((problem) => problem.rule))];
+
+    const contact = await contactOf(ctx.db, conversation);
     const who =
       contact !== undefined && contact.email === input.to && contact.name !== ""
         ? contact.name
         : input.to;
+    const written = await writeOutbound(ctx, {
+      id: existing?.id ?? input.draftId,
+      fromDraft: existing !== undefined,
+      conversation,
+      to: { address: input.to, name: who === input.to ? "" : who },
+      subject: input.subject,
+      text,
+      html: null,
+      kind: "reply",
+      links: [],
+      notes: checked.length === 0 ? {} : { "qp:checked": checked.join(", ") },
+    });
+
     await ctx.audit({
       entity: { type: "conversation", id: conversation.id },
-      summary: `Queued a reply to ${who}: ${input.subject}`,
-      data: { messageId, to: input.to },
+      summary: `Queued a reply to ${who}: ${input.subject}${checked.length === 0 ? "" : `, having read what the copy rules flagged (${checked.join(", ")})`}`,
+      data: { messageId: written.messageId, to: input.to, checked },
     });
     return {
-      messageId,
+      messageId: written.messageId,
       conversationId: conversation.id,
-      status: "queued",
+      status: written.status,
       already: false,
     };
-  },
-});
-
-export const retrySend = defineOp({
-  name: "mail.retrySend",
-  title: "Try again to send an email",
-  description:
-    "Puts an email that failed to send back in the queue, exactly as it was. Use it after fixing whatever stopped it (the mail provider was down, a key was wrong). Only for an email marked failed. If the failure was one where we could not tell whether the email went, and more than a day has passed, the person may already have it and this sends a second copy: check with them first. An email that bounced did leave and came back: write a new one to a better address instead.",
-  access: "write",
-  effect: "outward",
-  input: z.object({ messageId: messageIdSchema }),
-  explain: () =>
-    "This tries again to send an email that did not go the first time. If it is one we could not tell had gone, the person may get it twice.",
-  async run(
-    ctx,
-    input,
-  ): Promise<{ messageId: string; status: MessageRow["status"] }> {
-    const [message] = await ctx.db
-      .select()
-      .from(mailMessages)
-      .where(eq(mailMessages.id, input.messageId))
-      .for("update");
-    if (message === undefined || message.direction !== "out") {
-      throw notFound("That email");
-    }
-    if (message.status === "queued" || message.status === "sent") {
-      nothingChanged(ctx);
-      return { messageId: message.id, status: message.status };
-    }
-    if (message.status !== "failed") {
-      throw conflict(
-        message.status === "bounced"
-          ? "That email was sent and came back. Write a new one to an address that works."
-          : "Only an email that failed to send can be tried again.",
-      );
-    }
-    const kind = message.headers["qp:kind"];
-    const blocked = await whyNotEmail(
-      ctx.db,
-      message.toAddresses,
-      kind === "transactional" || kind === "marketing" || kind === "staff"
-        ? kind
-        : "reply",
-    );
-    if (blocked !== null) throw conflict(blocked);
-
-    // A parked email is one the provider may have sent and no longer
-    // remembers. A person choosing to send it again is a new send, with a
-    // new key. Anything else keeps its key, so the provider can still spot
-    // a repeat.
-    const headers = { ...message.headers };
-    delete headers["qp:seen"];
-    if (headers["qp:parked"] === "1") {
-      delete headers["qp:parked"];
-      delete headers["qp:unknown"];
-      delete headers["qp:first-tried"];
-      headers["qp:resend"] = String(Number(headers["qp:resend"] ?? "0") + 1);
-    }
-    await ctx.db
-      .update(mailMessages)
-      .set({ status: "queued", error: null, headers })
-      .where(eq(mailMessages.id, message.id));
-    const entity = { type: "conversation", id: message.conversationId };
-    await ctx.audit({
-      entity,
-      summary: `Queued "${message.subject}" to ${message.toAddresses.join(", ")} to be sent again`,
-      data: { messageId: message.id },
-    });
-    await ctx.emit({
-      type: "mail.queued",
-      entity,
-      payload: {
-        conversationId: message.conversationId,
-        messageId: message.id,
-        to: message.toAddresses,
-        subject: message.subject,
-        kind: kind ?? "reply",
-        retry: true,
-      },
-    });
-    return { messageId: message.id, status: "queued" };
   },
 });
 
@@ -589,12 +609,12 @@ export const applyTemplate = defineOp({
     await ctx.audit({
       entity: { type: "conversation", id: conversation.id },
       summary: `Put the saved reply "${template.name}" into a draft in "${conversation.subject}"`,
-      data: { messageId: draft.id, templateId: template.id },
+      data: { messageId: draft.row.id, templateId: template.id },
     });
     return {
-      draftId: draft.id,
+      draftId: draft.row.id,
       body,
-      unfilled: unfilledBlanks(`${draft.subject}\n${body}`),
+      unfilled: unfilledBlanks(`${draft.row.subject}\n${body}`),
     };
   },
 });

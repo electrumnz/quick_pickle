@@ -22,7 +22,11 @@ import {
   handleInboundRaw,
   handleResendWebhook,
 } from "@/lib/backstage/mail/endpoints";
-import { deliverQueuedMail, sendReply } from "@/lib/backstage/mail/ops";
+import {
+  deliverQueuedMail,
+  listConversations,
+  sendReply,
+} from "@/lib/backstage/mail/ops";
 import {
   closeDb,
   openEmbedded,
@@ -30,7 +34,8 @@ import {
   type DbHandle,
 } from "@/lib/db/client";
 import { newId } from "@/lib/db/id";
-import { clearSentForTests } from "@/lib/mail";
+
+import { fakeResend, FROM, LIVE } from "./helpers";
 
 /**
  * The two doors mail comes in by. What matters most here is who is let in:
@@ -44,10 +49,13 @@ const API_KEY = "re_TestKey_0123456789abcdef";
 const DOWNLOAD = "https://inbound.example-cdn.com/raw/abc?signature=xyz";
 
 const fixture = (name: string): Uint8Array<ArrayBuffer> =>
-  new Uint8Array(readFileSync(join(process.cwd(), "tests/fixtures/mail", name)));
+  new Uint8Array(
+    readFileSync(join(process.cwd(), "tests/fixtures/mail", name)),
+  );
 
 let handle: DbHandle;
 let staff: Caller;
+const resend = fakeResend();
 
 const count = async () => (await handle.db.select().from(mailMessages)).length;
 
@@ -55,6 +63,8 @@ const body = async (response: Response) =>
   (await response.json()) as Record<string, unknown>;
 
 beforeAll(async () => {
+  // The address an email is written from is read when it is written.
+  process.env.MAIL_FROM = FROM;
   handle = await openEmbedded();
   useDbHandle(handle);
   const id = newId("usr");
@@ -79,7 +89,8 @@ beforeAll(async () => {
       displayName: "Quick Pickle orders",
     },
   ]);
-});
+  // A fresh database with every migration run: slow on a busy machine.
+}, 60_000);
 
 afterAll(async () => {
   await closeDb();
@@ -144,7 +155,7 @@ describe("POST /api/mail/inbound", () => {
       { authorization: INBOUND_SECRET },
       { "x-api-key": INBOUND_SECRET },
       { cookie: `qp_staff=${INBOUND_SECRET}` },
-    ]) {
+    ] as Record<string, string>[]) {
       const response = await post(fixture("where-is-my-order.eml"), headers);
       expect(response.status, JSON.stringify(headers)).toBe(401);
       expect(response.headers.get("www-authenticate")).toBe("Bearer");
@@ -508,8 +519,9 @@ describe("POST /api/mail/resend", () => {
   it("answers 200 and does nothing for events it has no use for", async () => {
     const before = await count();
     for (const payload of [
-      { type: "email.sent", data: { email_id: EMAIL_ID } },
+      { type: "email.clicked", data: { email_id: EMAIL_ID } },
       { type: "email.opened", data: { email_id: EMAIL_ID } },
+      { type: "email.sent", data: {} },
       { type: "contact.created", data: { id: "x" } },
       { type: "email.received", data: {} },
       { type: "email.received", data: { email_id: "../../domains" } },
@@ -539,12 +551,10 @@ describe("POST /api/mail/resend", () => {
         staff,
         { db: handle.db, now: NOW },
       );
-      const delivery = await deliverQueuedMail(
-        handle.db,
-        sent.messageId,
-        NOW,
-        { env: {} },
-      );
+      const delivery = await deliverQueuedMail(handle.db, sent.messageId, NOW, {
+        env: LIVE,
+        fetch: resend.fetch,
+      });
       if (delivery.status !== "sent") throw new Error("not sent");
       return { messageId: sent.messageId, providerId: delivery.providerId };
     };
@@ -564,7 +574,6 @@ describe("POST /api/mail/resend", () => {
       )[0]?.status;
 
     beforeAll(async () => {
-      clearSentForTests();
       const [inbound] = await handle.db
         .select()
         .from(mailMessages)
@@ -633,7 +642,8 @@ describe("POST /api/mail/resend", () => {
           bounce: {
             type: "Permanent",
             subType: "General",
-            message: "The recipient's mail server\n permanently rejected the email.",
+            message:
+              "The recipient's mail server\n permanently rejected the email.",
           },
         },
       });
@@ -644,7 +654,16 @@ describe("POST /api/mail/resend", () => {
         status: "bounced",
         error: "The recipient's mail server permanently rejected the email.",
       });
-      expect(await status()).toBe("needs-reply");
+      // Whose turn it is does not change: a machine told us this. It is put
+      // in front of a person by the Not delivered pile instead.
+      expect(await status()).toBe("waiting");
+      const pile = await execute(listConversations, { tab: "trouble" }, staff, {
+        db: handle.db,
+        now: NOW,
+      });
+      expect(pile.map((row) => [row.id, row.trouble])).toEqual([
+        [conversationId, "bounced"],
+      ]);
       expect(await handle.db.select().from(mailSuppressions)).toMatchObject([
         { email: "liam.carter@example.co.nz", reason: "bounce" },
       ]);
@@ -692,13 +711,19 @@ describe("POST /api/mail/resend", () => {
         data: {
           email_id: soft.providerId,
           to: ["liam@carterfamily.example.com"],
-          bounce: { type: "Transient", subType: "MailboxFull", message: "Full" },
+          bounce: {
+            type: "Transient",
+            subType: "MailboxFull",
+            message: "Full",
+          },
         },
       });
       expect(await body(response)).toEqual({ ok: true, result: "bounced" });
       expect((await message(soft.messageId))?.status).toBe("bounced");
       expect(
-        (await handle.db.select().from(mailSuppressions)).map((row) => row.email),
+        (await handle.db.select().from(mailSuppressions)).map(
+          (row) => row.email,
+        ),
       ).toEqual(["liam.carter@example.co.nz"]);
     });
 
@@ -745,9 +770,9 @@ describe("POST /api/mail/resend", () => {
       });
     try {
       delete process.env.RESEND_WEBHOOK_SECRET;
-      expect((await resendRoute(request(sign(payload, "msg_2b1f", now)))).status).toBe(
-        503,
-      );
+      expect(
+        (await resendRoute(request(sign(payload, "msg_2b1f", now)))).status,
+      ).toBe(503);
       process.env.RESEND_WEBHOOK_SECRET = WEBHOOK_SECRET;
       expect((await resendRoute(request("v1,AAAA"))).status).toBe(401);
       const ok = await resendRoute(request(sign(payload, "msg_2b1f", now)));

@@ -49,7 +49,7 @@ export const needsYou = defineOp({
   name: "today.needs",
   title: "What needs a person now",
   description:
-    "The things that will not sort themselves out: a payment that does not match its order, an order paid for after it was cancelled, a refund that did not go through, an email to a customer that was tried and did not go, steps that have failed and run out of tries, a clock that has stopped, what stock has waiting (orders that need more shots than are ready to sell, shots past their best-before date, stock running low, a purchase order that is overdue, a batch close to its best-before date), whatever marketing has waiting (a campaign that stopped itself, reviews to read, posts due, partners to follow up), and tasks and compliance checks that are due. Most urgent first. Empty when nothing needs anyone.",
+    "The things that will not sort themselves out: a payment that does not match its order, an order paid for after it was cancelled, a refund that did not go through, emails waiting for a reply (urgent once one has waited two working days), an email of ours that was tried and did not go or came back, steps that have failed and run out of tries, a clock that has stopped, what stock has waiting (orders that need more shots than are ready to sell, shots past their best-before date, stock running low, a purchase order that is overdue, a batch close to its best-before date), whatever marketing has waiting (a campaign that stopped itself, reviews to read, posts due, partners to follow up), and tasks and compliance checks that are due. Most urgent first. Empty when nothing needs anyone.",
   access: "read",
   input: z.object({}),
   async run(ctx): Promise<Need[]> {
@@ -136,9 +136,10 @@ export const needsYou = defineOp({
       });
     }
 
-    // An email that was tried and did not go: somebody has been told
-    // something is on its way to them, and it is not.
-    for (const item of await mailNeeds(ctx.db)) needs.push(item);
+    // Mail: conversations waiting for a reply, and each email of ours that
+    // was tried and did not get there. Somebody has been told something is on
+    // its way to them, and it is not.
+    for (const item of await mailNeeds(ctx.db, ctx.now)) needs.push(item);
 
     // Steps that have had all their tries.
     const stuck = await listStuckEvents(ctx.db, 200);

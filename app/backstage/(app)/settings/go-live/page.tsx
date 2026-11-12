@@ -6,6 +6,7 @@ import { PACKS, PRODUCT, SHIPPING, STORE, UNCONFIRMED } from "@/content/offer";
 import { requireStaff } from "@/lib/backstage/auth/current";
 import { lastTick } from "@/lib/backstage/clock/tick";
 import { listStuckEvents } from "@/lib/backstage/core/events";
+import { resendWebhookSecretState } from "@/lib/backstage/mail/config";
 import { getDb } from "@/lib/db/client";
 import { mailConnection } from "@/lib/mail";
 import { limitsState } from "@/lib/shop/caller";
@@ -51,6 +52,9 @@ export default async function GoLivePage() {
     mail.missing.length === 0
       ? ""
       : ` Still to set: ${mail.missing.join(", ")}.`;
+  // What Resend tells us afterwards: mail received for us, and what became
+  // of mail we sent. Its calls are only let in with the signing secret.
+  const hearing = resendWebhookSecretState() === "set";
 
   // The clock: the timed request that retries a step that failed and closes
   // an order nobody paid for. Quiet for 20 minutes means it has stopped.
@@ -77,6 +81,13 @@ export default async function GoLivePage() {
       detail: mail.delivers
         ? `Connected. Receipts and the emails that follow them are sent through Resend, from ${mail.from ?? "the address in MAIL_FROM"}.`
         : `Not being sent. ${mail.problem ?? mail.held ?? ""}${mailMissing} Until they are, the shop promises nobody a receipt, and what would have gone is written down on each order.`,
+    },
+    {
+      ok: hearing,
+      label: "Bounces and incoming mail",
+      detail: hearing
+        ? "Connected. Resend tells the back end when mail arrives for us and when an email of ours comes back or is marked as spam, and an address that does either is not written to again."
+        : "Not connected. Mail does not arrive in the inbox by itself, and a bounce or a spam complaint is not heard, so nothing stops us writing to that address again. Still to set: RESEND_WEBHOOK_SECRET.",
     },
     {
       ok: ticking,

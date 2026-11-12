@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { snippetOf } from "@/lib/backstage/mail/conversations";
 import {
   hasReplyPrefix,
   isGenericSubject,
@@ -9,8 +8,8 @@ import {
 } from "@/lib/backstage/mail/subjects";
 
 /**
- * Subject lines boiled down for matching, and the first words of a message
- * for a list. Pure functions: no database anywhere in this file.
+ * Subject lines boiled down for matching. Pure functions: no database
+ * anywhere in this file.
  */
 
 describe("subject keys", () => {
@@ -103,24 +102,5 @@ describe("what looks like a reply", () => {
     ]) {
       expect(hasReplyPrefix(subject), subject).toBe(false);
     }
-  });
-});
-
-describe("snippets", () => {
-  it("puts the first words on one line", () => {
-    expect(snippetOf("Hi there,\n\n  Where is\tmy order?  ")).toBe(
-      "Hi there, Where is my order?",
-    );
-    expect(snippetOf("")).toBe("");
-  });
-
-  it("cuts at a word and says there is more", () => {
-    const long = "Twelve shots of pickle juice ".repeat(12);
-    const cut = snippetOf(long);
-    expect(cut.length).toBeLessThanOrEqual(141);
-    expect(cut.endsWith("…")).toBe(true);
-    expect(cut).not.toMatch(/\s…$/);
-    // One enormous word has nowhere better to be cut than the limit.
-    expect(snippetOf("x".repeat(500))).toBe(`${"x".repeat(140)}…`);
   });
 });

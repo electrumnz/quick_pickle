@@ -86,15 +86,11 @@ describe("reply tokens", () => {
 
   it("lives in the reply address, which fits in an email address", () => {
     const address = replyAddress(ID, "hello@quickpickle.example", KEY);
-    expect(address).toBe(
-      `reply+${replyToken(ID, KEY)}@quickpickle.example`,
-    );
+    expect(address).toBe(`reply+${replyToken(ID, KEY)}@quickpickle.example`);
     // The part before the @ may be 64 characters and no more.
     expect(address.split("@")[0]?.length).toBeLessThanOrEqual(64);
     expect(tokenInAddress(address)).toBe(replyToken(ID, KEY));
-    expect(tokenInAddress(address.toUpperCase())).toBe(
-      replyToken(ID, KEY),
-    );
+    expect(tokenInAddress(address.toUpperCase())).toBe(replyToken(ID, KEY));
     expect(tokenInAddress("hello@quickpickle.example")).toBeNull();
     expect(tokenInAddress("reply@quickpickle.example")).toBeNull();
     expect(tokenInAddress("reply+@quickpickle.example")).toBeNull();

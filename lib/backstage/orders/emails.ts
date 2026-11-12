@@ -643,7 +643,12 @@ export type OrderEmail = {
    */
   readonly status: (typeof mailMessages.$inferSelect)["status"];
   readonly why: string | null;
-  /** It failed, and can be tried again by hand (mail.retrySend). */
+  /**
+   * It did not go this time and the queue will try again by itself (the
+   * provider was busy). Nobody needs to do anything yet.
+   */
+  readonly retrying: boolean;
+  /** It failed for good, and can be tried again by hand (mail.retrySend). */
   readonly canRetry: boolean;
 };
 
@@ -651,7 +656,7 @@ export const listOrderEmails = defineOp({
   name: "orders.emails",
   title: "List the emails written for an order",
   description:
-    "The emails the back end has written to an order's customer about it, oldest first: which one (receipt, on the courier, cancelled, a payment on its way back), who to, when, and what became of it. `sent` means the mail provider took it. `not_sent` means it was written down and deliberately not sent, and `why` says so in a sentence (no mail provider is connected, it is a test order, the address is on the do-not-email list). `failed` means it was tried and did not go, with the reason, and can be tried again with mail.retrySend. Nothing listed here as anything but `sent` has reached the customer.",
+    "The emails the back end has written to an order's customer about it, oldest first: which one (receipt, on the courier, cancelled, a payment on its way back), who to, when, and what became of it. `sent` means the mail provider took it. `not_sent` means it was written down and deliberately not sent, and `why` says so in a sentence (no mail provider is connected, it is a test order, the address is on the do-not-email list). `failed` means it was tried and did not go, with the reason: either the queue is still trying by itself (`retrying`), or it has stopped and the email can be tried again with mail.retrySend (`canRetry`). Nothing listed here as anything but `sent` has reached the customer.",
   access: "read",
   input: z.object({ number: orderNumber }),
   async run(ctx, input): Promise<OrderEmail[]> {
@@ -682,6 +687,7 @@ export const listOrderEmails = defineOp({
         at: mailMessages.at,
         status: mailMessages.status,
         error: mailMessages.error,
+        headers: mailMessages.headers,
         createdAt: mailMessages.createdAt,
       })
       .from(mailMessages)
@@ -689,6 +695,8 @@ export const listOrderEmails = defineOp({
       .orderBy(asc(mailMessages.createdAt), asc(mailMessages.at));
     return rows.map((row) => {
       const about = wanted.get(row.id) ?? "receipt";
+      const retrying =
+        row.status === "failed" && row.headers["qp:retrying"] === "1";
       return {
         id: row.id,
         about,
@@ -698,7 +706,8 @@ export const listOrderEmails = defineOp({
         at: row.at,
         status: row.status,
         why: row.error,
-        canRetry: row.status === "failed",
+        retrying,
+        canRetry: row.status === "failed" && !retrying,
       };
     });
   },

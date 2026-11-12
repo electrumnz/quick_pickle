@@ -2,6 +2,9 @@
  * The inbox: reading the queue, opening a conversation, and saying whose
  * turn it is, whose job it is and what it is about.
  *
+ * A message is read here as plain text, cut into what is new and what is
+ * quoted. Its HTML is never handed to a screen (sanitise.ts says why).
+ *
  * The rest of the inbox's operations live beside this file and are
  * re-exported at the bottom, so everything the area can do is importable
  * from here:
@@ -55,6 +58,7 @@ import {
   users,
   type ContactKind,
   type ConversationStatus,
+  type OrderStatus,
   type ThreadedBy,
 } from "@/db/schema";
 import type { DbOrTx } from "@/lib/db/types";
@@ -63,7 +67,6 @@ import { formatNzDateTime } from "@/lib/time";
 
 import { conflict, notFound, OpError } from "../core/errors";
 import { defineOp } from "../core/op";
-import { readFile } from "../files/storage";
 import {
   addLinks,
   describeLinks,
@@ -78,21 +81,8 @@ import {
   whyNotEmail,
   type EmailStanding,
 } from "./outbound";
-import { attachmentsOf, originalHtml, parseMime } from "./parse";
 import { splitReply, type Segment } from "./reply";
-import {
-  emailDocument,
-  looksLikeImage,
-  renderEmailBody,
-  textDocument,
-} from "./sanitise";
-import {
-  contactIdSchema,
-  conversationIdSchema,
-  emailSchema,
-  messageIdSchema,
-  nothingChanged,
-} from "./schemas";
+import { contactIdSchema, conversationIdSchema, emailSchema } from "./schemas";
 import {
   CONVERSATION_STATUSES,
   NUDGE_AFTER_WORKING_DAYS,
@@ -166,13 +156,15 @@ const hasPerson: SQL = sql`exists (
 
 /**
  * How an email of ours failed to get there, if one did, nothing has been
- * sent since, and nobody has said it is dealt with. Otherwise null.
+ * sent since, and nobody has said it is dealt with. Otherwise null. One the
+ * queue is still trying by itself is not counted until the queue gives up.
  */
 const undelivered = sql<"failed" | "bounced" | null>`(
   select m.status from mail_messages m
   where m.conversation_id = "mail_conversations"."id"
     and m.direction = 'out' and m.status in ('failed', 'bounced')
     and (m.headers->>'qp:seen') is null
+    and (m.headers->>'qp:retrying') is null
     and not exists (
       select 1 from mail_messages later
       where later.conversation_id = m.conversation_id
@@ -475,6 +467,22 @@ export const countConversations = defineOp({
   },
 });
 
+export const countWaiting = defineOp({
+  name: "mail.waiting",
+  title: "Count what is waiting for a reply",
+  description:
+    "One number: how many conversations are waiting on us right now (needing a reply, and not put away until later). It is the figure beside Inbox in the menu. For every pile at once, use mail.counts.",
+  access: "read",
+  input: z.object({}),
+  async run(ctx): Promise<{ needsReply: number }> {
+    const [row] = await ctx.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(mailConversations)
+      .where(tabFilter("needs-reply", ctx.now));
+    return { needsReply: row?.n ?? 0 };
+  },
+});
+
 export const listConversationsFor = defineOp({
   name: "mail.listConversationsFor",
   title: "List the emails about a record",
@@ -541,12 +549,15 @@ export type MessageView = {
   readonly error: string | null;
   /** When the provider told us it arrived, for one of ours. */
   readonly deliveredAt: string | null;
-  /** Why nothing left, for one of ours that was recorded and not sent. */
-  readonly notSent: string | null;
   /** We could not tell whether it went, and it is too late to try safely. */
   readonly parked: boolean;
-  /** What the copy rules flagged for a second look, for one of ours. */
-  readonly copyNote: string | null;
+  /** It did not go this time, and the queue will try again by itself. */
+  readonly retrying: boolean;
+  /**
+   * The restricted copy rules a person said they had read before sending
+   * it, for one of ours: "R-19, PROV-04".
+   */
+  readonly checked: string | null;
   /** Things that were left out when it was taken in. */
   readonly skipped: string | null;
   /** Which member of staff wrote it, for one of ours. */
@@ -562,10 +573,11 @@ export type MessageView = {
   }[];
   /** The plain text, cut into what is new and what is quoted. */
   readonly text: readonly Segment[];
-  /** It has a formatted version, read through mail.getMessageBody. */
-  readonly hasHtml: boolean;
-  /** Pictures the formatted version asks for. None load unless asked. */
-  readonly pictures: number;
+  /**
+   * It arrived with formatting and no plain text, so these words were read
+   * out of its HTML. The original is the stored file.
+   */
+  readonly fromHtml: boolean;
   /** The untouched original, as a stored file. */
   readonly rawFileId: string | null;
 };
@@ -574,7 +586,7 @@ export type MessageView = {
 export type OrderPanel = {
   readonly id: string;
   readonly number: string;
-  readonly status: string;
+  readonly status: OrderStatus;
   readonly placedAt: Date;
   readonly totalCents: number;
   readonly name: string;
@@ -613,7 +625,11 @@ export type ConversationDetail = {
     readonly kind: ContactKind;
     readonly blocked: boolean;
     readonly notes: string;
-    readonly customer: { readonly id: string; readonly name: string } | null;
+    readonly customer: {
+      readonly id: string;
+      readonly name: string;
+      readonly email: string;
+    } | null;
     readonly supplier: { readonly id: string; readonly name: string } | null;
     /** Their other conversations that are not spam. */
     readonly otherConversations: number;
@@ -650,15 +666,12 @@ export type ConversationDetail = {
 };
 
 const MESSAGES_SHOWN = 200;
-/** Pictures bigger than this are a download, not part of the page. */
-const MAX_INLINE_IMAGE = 1024 * 1024;
-const MAX_INLINE_TOTAL = 4 * 1024 * 1024;
 
 export const getConversation = defineOp({
   name: "mail.getConversation",
   title: "Open one conversation",
   description:
-    "Everything about one conversation: its messages oldest first (who from, who to, when, who or what wrote each, how each was threaded and why, attachments, and the text cut into what is new and what is quoted), the contact and the customer or supplier they are, what it is linked to, the orders among those with their status and tracking, who it is assigned to, any unsent draft, where a reply would go and whether that address may be emailed. Messages come as plain text. A message's formatted version came from a stranger: read it with mail.getMessageBody and show it only the way that operation says.",
+    "Everything about one conversation: its messages oldest first (who from, who to, when, who or what wrote each, how each was threaded and why, attachments, and the text cut into what is new and what is quoted), the contact and the customer or supplier they are, what it is linked to, the orders among those with their status and tracking, who it is assigned to, any unsent draft, where a reply would go and whether that address may be emailed. Messages come as plain text and nothing else: an email's own formatting came from a stranger and is never shown. The untouched original of each is kept as a file (`rawFileId`).",
   access: "read",
   input: z.object({ id: conversationIdSchema }),
   async run(ctx, input): Promise<ConversationDetail> {
@@ -757,9 +770,9 @@ export const getConversation = defineOp({
         pinned: row.pinned,
         error: row.error,
         deliveredAt: row.headers["qp:delivered"] ?? null,
-        notSent: row.headers["qp:not-sent"] ?? null,
         parked: row.headers["qp:parked"] === "1",
-        copyNote: row.headers["qp:copy"] ?? null,
+        retrying: row.status === "failed" && row.headers["qp:retrying"] === "1",
+        checked: row.headers["qp:checked"] ?? null,
         skipped: row.headers["qp:skipped"] ?? null,
         author:
           authors.find((author) => author.id === row.authorId)?.name ?? null,
@@ -772,8 +785,7 @@ export const getConversation = defineOp({
           fileId: file.fileId,
         })),
         text: splitReply(row.textBody).segments,
-        hasHtml: row.htmlBody !== null,
-        pictures: Number(row.headers["qp:pictures"] ?? "0") || 0,
+        fromHtml: row.headers["qp:from-html"] === "1",
         rawFileId: row.rawFileId,
       });
     }
@@ -790,7 +802,7 @@ export const getConversation = defineOp({
       .orderBy(desc(mailMessages.at), desc(mailMessages.createdAt))
       .limit(1);
 
-    let customer: { id: string; name: string } | null = null;
+    let customer: { id: string; name: string; email: string } | null = null;
     let supplier: { id: string; name: string } | null = null;
     let otherConversations = 0;
     if (contact !== undefined) {
@@ -804,6 +816,7 @@ export const getConversation = defineOp({
           customer = {
             id: row.id,
             name: `${row.firstName} ${row.lastName}`.trim() || row.email,
+            email: row.email,
           };
         }
       }
@@ -849,12 +862,7 @@ export const getConversation = defineOp({
     const targets = await replyTargetsFor(db, conversation);
     const to = draft?.toAddresses[0] ?? targets.to;
     const standing = to === null ? null : await emailStanding(db, to);
-    const blocked =
-      mailbox === null
-        ? "No mailbox is set up to send from. Add one in the inbox settings first."
-        : to === null
-          ? null
-          : await whyNotEmail(db, [to], "reply");
+    const blocked = to === null ? null : await whyNotEmail(db, [to]);
 
     const orderIds = links
       .filter((link) => link.entityType === "order")
@@ -956,103 +964,6 @@ export const getConversation = defineOp({
 });
 
 /* ------------------------------------------------------------------------
-   One message's formatted body
-   --------------------------------------------------------------------- */
-
-export type MessageBody = {
-  /**
-   * A whole HTML page. It came from a stranger: serve it on its own, with
-   * `emailBodyHeaders` (sanitise.ts) and nothing else, and show it only in
-   * a sandboxed frame. Never put it into another page.
-   */
-  readonly document: string;
-  readonly form: "formatted" | "text";
-  readonly showPictures: boolean;
-};
-
-export const getMessageBody = defineOp({
-  name: "mail.getMessageBody",
-  title: "Read one email's formatted version",
-  description:
-    "The formatted (HTML) version of one message, as a complete page, cleaned afresh from the original email each time it is asked for. `pictures: true` lets it load the pictures it asks for, its own and other servers'; leave it false and nothing loads, which is the default because a remote picture tells its sender the email was opened. The page came from a stranger. It is safe only when served by itself with the headers in lib/backstage/mail/sanitise.ts (`emailBodyHeaders`) and shown in a sandboxed frame, which is what the inbox's own body route does. Do not paste it into anything else. For the words alone, use the plain text in mail.getConversation.",
-  access: "read",
-  input: z.object({
-    conversationId: conversationIdSchema,
-    messageId: messageIdSchema,
-    pictures: z.boolean().default(false),
-  }),
-  async run(ctx, input): Promise<MessageBody> {
-    const [row] = await ctx.db
-      .select()
-      .from(mailMessages)
-      .where(
-        and(
-          eq(mailMessages.id, input.messageId),
-          eq(mailMessages.conversationId, input.conversationId),
-        ),
-      )
-      .limit(1);
-    if (row === undefined || row.status === "draft") {
-      throw notFound("That email");
-    }
-
-    let html: string | null = null;
-    const own: Record<string, string> = {};
-    if (row.direction === "in" && row.rawFileId !== null) {
-      const stored = await readFile(ctx.db, row.rawFileId);
-      if (stored !== null) {
-        try {
-          const email = await parseMime(stored.bytes);
-          html = originalHtml(email);
-          if (html !== null && input.pictures) {
-            // Only this message's own parts, only the picture types that
-            // are what they say they are, and only while they fit on a page.
-            let budget = MAX_INLINE_TOTAL;
-            for (const part of attachmentsOf(email)) {
-              const size = part.bytes.byteLength;
-              if (
-                part.contentId === null ||
-                own[part.contentId] !== undefined ||
-                size > MAX_INLINE_IMAGE ||
-                size > budget ||
-                !looksLikeImage(part.bytes, part.contentType)
-              ) {
-                continue;
-              }
-              budget -= size;
-              own[part.contentId] =
-                `data:${part.contentType};base64,${Buffer.from(part.bytes).toString("base64")}`;
-            }
-          }
-        } catch {
-          html = null;
-        }
-      }
-    }
-    // The original was too big to keep, or it is one of ours: the copy we
-    // hold, cleaned again all the same.
-    html ??= row.htmlBody;
-    if (html === null) {
-      return {
-        document: textDocument(row.textBody),
-        form: "text",
-        showPictures: false,
-      };
-    }
-    return {
-      document: emailDocument(
-        renderEmailBody(html, {
-          showPictures: input.pictures,
-          ownPictures: own,
-        }),
-      ),
-      form: "formatted",
-      showPictures: input.pictures,
-    };
-  },
-});
-
-/* ------------------------------------------------------------------------
    May this address be emailed
    --------------------------------------------------------------------- */
 
@@ -1060,7 +971,7 @@ export const getEmailStanding = defineOp({
   name: "mail.emailStanding",
   title: "Check whether an address may be emailed",
   description:
-    'Where an email address stands with the do-not-email list: whether order emails and replies may go to it (`canEmail`), whether marketing may (`canMarket`), and if not, why (`reason`: "bounce", "complaint" or "manual"), how far that reaches (`scope`: "everything" or "marketing") and since when. An address that bounced, or was listed by hand, gets nothing. One whose owner marked an email as spam gets no marketing and still gets its order emails. Use it to show "cannot email this customer" beside a customer or an order.',
+    'Where an email address stands with the do-not-email list: whether anything may be sent to it (`canEmail`), and if not, why (`reason`: "bounce", "complaint" or "manual") and since when. An address on the list gets nothing at all: no replies, and none of its own order\'s emails. Use it to show "cannot email this customer" beside a customer or an order.',
   access: "read",
   input: z.object({ address: emailSchema }),
   async run(ctx, input): Promise<EmailStanding> {
@@ -1111,7 +1022,7 @@ export const dismissFailure = defineOp({
     });
     const dismissed = await markFailuresSeen(ctx.db, conversation.id, ctx.now);
     if (dismissed === 0) {
-      nothingChanged(ctx);
+      ctx.nothingChanged();
       return { dismissed };
     }
     await ctx.audit({
@@ -1152,7 +1063,7 @@ export const setConversationStatus = defineOp({
       conversation.snoozedUntil === null
     ) {
       if (dismissed === 0) {
-        nothingChanged(ctx);
+        ctx.nothingChanged();
       } else {
         await ctx.audit({
           entity,
@@ -1194,7 +1105,8 @@ export const snoozeConversation = defineOp({
   access: "write",
   input: z.object({
     conversationId: conversationIdSchema,
-    until: z.union([z.enum(SNOOZE_PRESETS), z.coerce.date(), z.null()]),
+    // Null first: read as a date, null would be the first of January 1970.
+    until: z.union([z.null(), z.enum(SNOOZE_PRESETS), z.coerce.date()]),
   }),
   async run(ctx, input): Promise<{ snoozedUntil: Date | null }> {
     const conversation = await conversationFor(ctx.db, input.conversationId, {
@@ -1203,7 +1115,7 @@ export const snoozeConversation = defineOp({
     const entity = { type: "conversation", id: conversation.id };
     if (input.until === null) {
       if (conversation.snoozedUntil === null) {
-        nothingChanged(ctx);
+        ctx.nothingChanged();
         return { snoozedUntil: null };
       }
       await ctx.db
@@ -1264,7 +1176,7 @@ export const assignConversation = defineOp({
       lock: true,
     });
     if (conversation.assigneeId === input.assigneeId) {
-      nothingChanged(ctx);
+      ctx.nothingChanged();
       return { assigneeId: input.assigneeId };
     }
     let name = "nobody";
@@ -1435,7 +1347,7 @@ export const addConversationLink = defineOp({
         data: { entityType: input.entityType, entityId: found.id },
       });
     } else {
-      nothingChanged(ctx);
+      ctx.nothingChanged();
     }
     return {
       added: added.length > 0,
@@ -1468,7 +1380,7 @@ export const removeConversationLink = defineOp({
       )
       .limit(1);
     if (link === undefined) {
-      nothingChanged(ctx);
+      ctx.nothingChanged();
       return { removed: false };
     }
     const [described] = await describeLinks(ctx.db, [link]);
@@ -1493,14 +1405,10 @@ export * from "./ops-setup";
 export * from "./ops-thread";
 export {
   deliverQueuedMail,
-  queueMail,
-  queuedMessageIds,
   recordFailed,
+  recordNotSent,
   recordSent,
-  suppressionScope,
+  retrySend,
   type DeliveryResult,
   type EmailStanding,
-  type QueuedMail,
-  type QueueMailInput,
-  type SuppressionScope,
 } from "./outbound";

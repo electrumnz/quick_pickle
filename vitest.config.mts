@@ -19,12 +19,16 @@ export default defineConfig({
   test: {
     environment: "node",
     // A test never sees the mail settings of the machine it runs on. One
-    // that needs a provider, a key or an address hands in its own, with a
-    // fake `fetch` beside it: no test can reach the real mail provider.
+    // that needs a provider, a key, a secret or an address hands in its own,
+    // with a fake `fetch` beside it: no test can reach the real mail
+    // provider, and none is let in by a secret it did not set.
     env: {
       MAIL_PROVIDER: "",
       RESEND_API_KEY: "",
       MAIL_FROM: "",
+      RESEND_WEBHOOK_SECRET: "",
+      MAIL_INBOUND_SECRET: "",
+      MAIL_TOKEN_SECRET: "",
     },
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     exclude: ["e2e/**", "node_modules/**", ".next/**"],

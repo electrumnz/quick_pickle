@@ -1,12 +1,12 @@
 /**
- * Resend, over plain HTTP. No SDK: one endpoint for sending does not need
- * one, and every call here takes the `fetch` to use so a test can hand in a
- * fake.
+ * Resend, over plain HTTP. No SDK: two endpoints for sending and receiving
+ * do not need one, and every call here takes the `fetch` to use so a test
+ * can hand in a fake.
  *
  * Two rules run through this file. The API key goes to api.resend.com and
- * nowhere else. And the key never appears in an error, a log line or
- * anything else that leaves this file: whatever a failure says is scrubbed
- * first.
+ * nowhere else, not even to a download address Resend itself gives us. And
+ * the key never appears in an error, a log line or anything else that leaves
+ * this file: whatever a failure says is scrubbed first.
  */
 
 import { MailSendError, type OutgoingMail, type SendResult } from "./types";
@@ -192,5 +192,199 @@ export async function sendWithResend(
     id,
     delivered: true,
     ...(messageId === "" ? {} : { messageId }),
+  };
+}
+
+/* ------------------------------------------------------------------------
+   Receiving: fetching an email Resend took in for us
+   --------------------------------------------------------------------- */
+
+/** Something went wrong fetching a received email. `status` is Resend's, if any. */
+export class ResendFetchError extends Error {
+  constructor(
+    message: string,
+    readonly status: number | null,
+  ) {
+    super(message);
+    this.name = "ResendFetchError";
+  }
+}
+
+/** Resend's ids are UUIDs. Anything else has no business in a URL path. */
+const EMAIL_ID = /^[A-Za-z0-9_-]{6,80}$/;
+
+function field(source: unknown, name: string): unknown {
+  return typeof source === "object" && source !== null && name in source
+    ? (source as Record<string, unknown>)[name]
+    : undefined;
+}
+
+/**
+ * Where the untouched original of a received email can be downloaded, read
+ * out of the answer from `GET /emails/receiving/{id}`.
+ *
+ * The documented field is `raw.download_url`. The others are tried in case
+ * the answer is wrapped in `data` or the field has been renamed; anything
+ * that is not an https address on a public host is refused.
+ */
+export function rawDownloadUrl(answer: unknown): string | null {
+  const root = field(answer, "data") ?? answer;
+  const raw = field(root, "raw");
+  const candidates = [
+    field(raw, "download_url"),
+    field(raw, "url"),
+    field(root, "raw_download_url"),
+    field(root, "raw_url"),
+    raw,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string" || candidate.length > 4000) continue;
+    try {
+      const url = new URL(candidate);
+      if (url.protocol !== "https:") continue;
+      if (url.username !== "" || url.password !== "") continue;
+      const host = url.hostname.toLowerCase();
+      if (
+        host === "localhost" ||
+        host.endsWith(".localhost") ||
+        host.endsWith(".local") ||
+        host.endsWith(".internal") ||
+        !host.includes(".") ||
+        /^[\d.]+$/.test(host) ||
+        host.startsWith("[")
+      ) {
+        continue;
+      }
+      return url.href;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+async function readCapped(
+  response: Response,
+  maxBytes: number,
+): Promise<Uint8Array> {
+  const declared = Number(response.headers.get("content-length") ?? "");
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    throw new ResendFetchError("That email is too big to take in.", null);
+  }
+  if (response.body === null) return new Uint8Array(0);
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel();
+      throw new ResendFetchError("That email is too big to take in.", null);
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return out;
+}
+
+/**
+ * The addresses a received email was really delivered to, read out of the
+ * answer from `GET /emails/receiving/{id}`: `received_for`, which Resend
+ * takes from the message's own Received headers. A string or a list of
+ * them; anything else is no addresses.
+ */
+export function receivedFor(answer: unknown): string[] {
+  const root = field(answer, "data") ?? answer;
+  const value = field(root, "received_for");
+  const list = Array.isArray(value) ? value : [value];
+  return list
+    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "" && entry.length <= 254)
+    .slice(0, 10);
+}
+
+export type ReceivedEmail = {
+  readonly raw: Uint8Array;
+  /** Where it was really delivered, when Resend says. */
+  readonly receivedFor: readonly string[];
+};
+
+/**
+ * Fetch the raw original of an email Resend received for us: first its
+ * record, then the bytes from the signed download address in that record.
+ */
+export async function fetchReceivedRaw(
+  emailId: string,
+  options: ResendOptions & { readonly maxBytes: number },
+): Promise<Uint8Array> {
+  return (await fetchReceived(emailId, options)).raw;
+}
+
+/** The same, with the addresses the email was really delivered to. */
+export async function fetchReceived(
+  emailId: string,
+  options: ResendOptions & { readonly maxBytes: number },
+): Promise<ReceivedEmail> {
+  if (!EMAIL_ID.test(emailId)) {
+    throw new ResendFetchError("That is not an email id.", null);
+  }
+
+  let record: Response;
+  try {
+    record = await options.fetch(`${API}/emails/receiving/${emailId}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${options.apiKey}` },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch {
+    throw new ResendFetchError("Resend could not be reached.", null);
+  }
+  if (!record.ok) {
+    throw new ResendFetchError(
+      `Resend would not hand over that email (${String(record.status)}).`,
+      record.status,
+    );
+  }
+  let answer: unknown;
+  try {
+    answer = await record.json();
+  } catch {
+    throw new ResendFetchError("Resend's answer could not be read.", null);
+  }
+  const url = rawDownloadUrl(answer);
+  if (url === null) {
+    throw new ResendFetchError(
+      "Resend's answer had no address to download the original from.",
+      null,
+    );
+  }
+
+  // A signed address on someone else's host. It gets no key from us.
+  let download: Response;
+  try {
+    download = await options.fetch(url, {
+      method: "GET",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch {
+    throw new ResendFetchError("The original could not be downloaded.", null);
+  }
+  if (!download.ok) {
+    throw new ResendFetchError(
+      `The original could not be downloaded (${String(download.status)}).`,
+      download.status,
+    );
+  }
+  return {
+    raw: await readCapped(download, options.maxBytes),
+    receivedFor: receivedFor(answer),
   };
 }

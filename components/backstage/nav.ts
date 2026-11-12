@@ -29,6 +29,12 @@ export const DESTINATIONS: readonly Destination[] = [
     tab: true,
   },
   {
+    href: "/backstage/inbox",
+    label: "Inbox",
+    blurb: "Email to the business, kept in conversations, and answered here.",
+    tab: true,
+  },
+  {
     href: "/backstage/customers",
     label: "Customers",
     blurb: "Everyone who has ordered, and the Pickle Crew list.",

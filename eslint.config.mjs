@@ -17,8 +17,6 @@ const eslintConfig = defineConfig([
     ".scratch/**",
     // Private copies of the repository that helpers work in.
     ".claude/**",
-    // Unfinished areas parked until they are moved in. See .wip/README.md.
-    ".wip/**",
     // Generated from the official vector art by scripts/build-vectors.py.
     "lib/brand/art/lucky-run.ts",
     "lib/brand/art/lucky-up.ts",

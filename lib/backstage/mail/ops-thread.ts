@@ -48,7 +48,7 @@ import {
 } from "./conversations";
 import { splitReply } from "./reply";
 import { conversationIdSchema, messageIdSchema } from "./schemas";
-import { subjectKey, tidySubject } from "./threading";
+import { subjectKey, tidySubject } from "./subjects";
 
 type MessageRow = typeof mailMessages.$inferSelect;
 type ConversationRow = typeof mailConversations.$inferSelect;
@@ -268,6 +268,8 @@ export const moveMessage = defineOp({
       );
     }
     if (input.to === message.conversationId) {
+      // It is there already.
+      ctx.nothingChanged();
       return {
         conversationId: message.conversationId,
         moved: false,
