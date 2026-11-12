@@ -42,6 +42,13 @@ npm run audit:copy:selftest   # proves the scanner still catches the deck's own 
 
 A wink is a claim too. "We can't tell you what it does" implies it does something.
 
+Not every word a customer reads is in the repository: a reply typed in the inbox, a
+campaign, a template kept in the database, anything a bot drafts. So the rules themselves
+live in `legal/scripts/rules.mjs`, and **every operation that sends or publishes words runs
+the finished text through `refuseUnsendable` (`lib/backstage/core/copy.ts`) first**, whoever
+wrote it. A banned term never goes out. A restricted one goes out only when a person has
+recorded that they checked it; a bot cannot. Em dashes are refused there too.
+
 **Facts must be literally true.** Fair Trading Act s 9, 12A, 13. Nothing about the product
 is guessed: no ingredient, volume, origin, storage line or process word ("strained",
 "brewed") appears until Ashleigh confirms it. Unknown commercial facts carry a stand-in in
