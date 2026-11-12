@@ -320,7 +320,7 @@ async function supabaseStatus() {
       );
     }
     const queue = await readOnlyQuery(
-      "select type, count(*)::int as n, count(*) filter (where handled_at is null)::int as waiting, coalesce(max(attempts), 0)::int as most_tries from public.events group by 1 order by 1",
+      "select type, count(*)::int as n, count(*) filter (where processed_at is null)::int as waiting, coalesce(max(attempts), 0)::int as most_tries from public.events group by 1 order by 1",
     );
     for (const row of Array.isArray(queue) ? queue : []) {
       console.log(
