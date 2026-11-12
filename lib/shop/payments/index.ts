@@ -105,6 +105,26 @@ export function paymentsAreTest(env: Env = process.env): boolean {
   }
 }
 
+/**
+ * What the checkout should tell the buyer about paying.
+ *
+ *   practice   no processor: the order is recorded and nothing else happens
+ *   sandbox    a real processor in its own test mode: its payment page, no
+ *              real money
+ *   live       real money
+ */
+export type CheckoutMode = "practice" | "sandbox" | "live";
+
+export function checkoutMode(env: Env = process.env): CheckoutMode {
+  try {
+    const provider = getPaymentProvider(env);
+    if (!provider.savesFirst) return provider.isTest ? "practice" : "live";
+    return provider.isTest ? "sandbox" : "live";
+  } catch {
+    return "practice";
+  }
+}
+
 /** The name of the configured provider, or "test" if it cannot be read. */
 export function paymentProviderName(env: Env = process.env): string {
   try {

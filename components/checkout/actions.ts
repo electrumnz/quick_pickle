@@ -12,6 +12,7 @@ import {
   receiptFor,
 } from "@/lib/shop/receipt";
 import { getStore } from "@/lib/shop/store";
+import { siteUrl } from "@/lib/site";
 
 /**
  * The checkout's Server Action.
@@ -79,9 +80,14 @@ export async function submitCheckout(
 
   let result;
   try {
+    const base = siteUrl();
     result = await placeOrder(raw, {
       payments: getPaymentProvider(),
       store: getStore(),
+      returnUrls: {
+        success: `${base}/order/thanks`,
+        cancel: `${base}/checkout?payment=cancelled`,
+      },
     });
   } catch {
     return { status: "failed", errors: {}, values };
@@ -102,6 +108,8 @@ export async function submitCheckout(
     maxAge: RECEIPT_MAX_AGE_SECONDS,
   });
 
-  // redirect() signals by throwing, so it sits outside every try above.
-  redirect("/order/thanks");
+  // redirect() signals by throwing, so it sits outside every try above. With
+  // a payment still to make, the buyer goes to the processor's page; that
+  // address comes from the processor's own reply, never from the form.
+  redirect(result.payAt ?? "/order/thanks");
 }

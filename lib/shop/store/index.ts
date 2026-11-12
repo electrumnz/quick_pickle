@@ -39,6 +39,16 @@ export type Store = {
   readonly durable: boolean;
   saveOrder(order: Order): Promise<void>;
   saveSignup(signup: CrewSignup): Promise<void>;
+  /**
+   * For a payment the buyer goes away to make: note the payment page on the
+   * order, and close the order if that page could not be made. Only the
+   * database store can do either, because only it can find an order again.
+   */
+  attachPayment?(
+    number: string,
+    payment: { readonly provider: string; readonly reference: string },
+  ): Promise<void>;
+  closeUnpaid?(number: string, reason: string): Promise<void>;
 };
 
 const DATA_DIR = join(process.cwd(), ".data");
@@ -103,6 +113,23 @@ function dbStore(env: Record<string, string | undefined>): Store {
       await execute(
         joinCrew,
         { email: signup.email, source: signup.source },
+        systemCaller("The shop", "storefront"),
+      );
+    },
+    async attachPayment(number, payment) {
+      const { attachPayment } = await import("@/lib/backstage/orders/payments");
+      await execute(
+        attachPayment,
+        { number, provider: payment.provider, reference: payment.reference },
+        systemCaller("The shop", "storefront"),
+      );
+    },
+    async closeUnpaid(number, reason) {
+      const { paymentExpired } =
+        await import("@/lib/backstage/orders/payments");
+      await execute(
+        paymentExpired,
+        { number, reason },
         systemCaller("The shop", "storefront"),
       );
     },

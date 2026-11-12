@@ -25,6 +25,8 @@ export const receiptSchema = z.object({
   placedAt: z.string().max(40),
   mode: z.enum(["preorder", "live"]),
   test: z.boolean(),
+  /** True when the buyer was sent away to pay and may not have yet. */
+  pending: z.boolean().optional(),
   firstName: z.string().max(60),
   email: z.string().max(254),
   city: z.string().max(80),
@@ -54,6 +56,7 @@ export function receiptFor(order: Order): Receipt {
     placedAt: order.placedAt,
     mode: order.mode,
     test: order.payment.status === "test",
+    pending: order.payment.status === "pending",
     firstName: order.customer.firstName,
     email: order.customer.email,
     city: order.delivery.city,

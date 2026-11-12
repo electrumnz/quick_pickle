@@ -3,11 +3,14 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { Art } from "@/components/brand/Art";
+import { CheckAgain } from "@/components/checkout/CheckAgain";
 import { ClearJar } from "@/components/checkout/ClearJar";
 import { SiteFooter } from "@/components/site/Sections";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { CHECKOUT, JAR, THANKS } from "@/content/site";
 import { formatNzdExact } from "@/lib/shop/money";
+import { checkoutMode } from "@/lib/shop/payments";
+import { settleOnReturn } from "@/lib/shop/payments/settle";
 import { parseReceipt, RECEIPT_COOKIE } from "@/lib/shop/receipt";
 
 export const metadata: Metadata = {
@@ -105,6 +108,77 @@ export default async function ThanksPage() {
     );
   }
 
+  // The buyer was sent away to pay. Find out how that went before saying
+  // anything: nothing is celebrated on the strength of a cookie.
+  const settled = receipt.pending ? await settleOnReturn(receipt.number) : null;
+
+  if (settled === "awaiting" || settled === "unknown") {
+    return (
+      <>
+        <CheckAgain />
+        <SiteHeader minimal />
+        <main id="main" className="bg-cream px-gutter flex-1 py-16">
+          <div className="mx-auto flex max-w-[28rem] flex-col items-center text-center">
+            <Art name="lucky-flying" alt="" sizes="200px" className="w-44" />
+            <h1 className="varsity mt-6 text-[2.25rem] leading-none">
+              {THANKS.awaitingTitle.join(" ")}
+            </h1>
+            <p className="text-navy-muted mt-3" role="status">
+              {THANKS.awaitingBody}
+            </p>
+            <p className="label mt-5 text-[1.1rem]">
+              {THANKS.numberLabel}{" "}
+              <span data-testid="order-number">{receipt.number}</span>
+            </p>
+            <Link href="/order/thanks" prefetch={false} className="btn mt-7">
+              <span className="cap-trim">{THANKS.awaitingAgain}</span>
+            </Link>
+          </div>
+        </main>
+        <SiteFooter />
+      </>
+    );
+  }
+
+  if (settled === "closed") {
+    return (
+      <>
+        <SiteHeader minimal />
+        <main id="main" className="bg-cream px-gutter flex-1 py-16">
+          <div className="mx-auto flex max-w-[28rem] flex-col items-center text-center">
+            <Art
+              name="lucky-sleeping"
+              alt={JAR.emptyAlt}
+              sizes="200px"
+              className="w-44"
+            />
+            <h1 className="varsity mt-6 text-[2.25rem] leading-none">
+              {THANKS.closedTitle.join(" ")}
+            </h1>
+            <p className="text-navy-muted mt-3">{THANKS.closedBody}</p>
+            <Link href="/checkout" className="btn mt-7">
+              <span className="cap-trim">{THANKS.closedCta}</span>
+            </Link>
+          </div>
+        </main>
+        <SiteFooter />
+      </>
+    );
+  }
+
+  // Paid (or never needed a payment page). A payment made with the
+  // processor in its own test mode says so, like any other test order.
+  const sandbox = settled !== null && checkoutMode() === "sandbox";
+  const note =
+    settled === "review"
+      ? THANKS.reviewNote
+      : receipt.test
+        ? THANKS.testNote
+        : sandbox
+          ? THANKS.sandboxNote
+          : null;
+  const isTest = receipt.test || sandbox;
+
   return (
     <>
       <ClearJar />
@@ -157,12 +231,12 @@ export default async function ThanksPage() {
 
         <section className="bg-cream px-gutter pt-10 pb-16">
           <div className="mx-auto max-w-[34rem]">
-            {receipt.test ? (
+            {note !== null ? (
               <p
                 role="note"
                 className="border-navy bg-olive-wash mb-6 rounded-[14px] border-2 border-dashed p-4 text-[0.9375rem] leading-snug"
               >
-                {THANKS.testNote}
+                {note}
               </p>
             ) : null}
 
@@ -221,7 +295,7 @@ export default async function ThanksPage() {
               </p>
             </div>
 
-            {receipt.test ? null : (
+            {isTest || settled === "review" ? null : (
               <p className="mt-6 leading-relaxed">
                 {THANKS.emailNote} <strong>{receipt.email}</strong>.{" "}
                 {receipt.mode === "preorder"

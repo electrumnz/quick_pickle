@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
 import { CHECKOUT, HEADER } from "@/content/site";
-import { paymentsAreTest } from "@/lib/shop/payments";
+import { checkoutMode } from "@/lib/shop/payments";
 
 export const metadata: Metadata = {
   title: CHECKOUT.metaTitle,
@@ -17,7 +17,13 @@ export const metadata: Metadata = {
  * The chrome is stripped to a wordmark and a way back. No ticker, no nav, no
  * jar button: the only thing to do on this page is finish.
  */
-export default function CheckoutPage() {
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ payment?: string | string[] }>;
+}) {
+  // Back from the payment page without paying.
+  const cancelled = (await searchParams).payment === "cancelled";
   return (
     <>
       <header className="on-navy bg-navy border-navy-deep border-b-[3px]">
@@ -39,7 +45,7 @@ export default function CheckoutPage() {
       </header>
       <main id="main" className="bg-cream px-gutter flex-1 pt-8 pb-20">
         <div className="max-w-page mx-auto">
-          <CheckoutForm testMode={paymentsAreTest()} />
+          <CheckoutForm mode={checkoutMode()} cancelled={cancelled} />
         </div>
       </main>
     </>

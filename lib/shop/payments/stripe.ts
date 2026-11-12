@@ -21,13 +21,14 @@ const API = "https://api.stripe.com";
 type Fetch = typeof fetch;
 
 export class StripeError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-    readonly code: string | null,
-  ) {
+  readonly status: number;
+  readonly code: string | null;
+
+  constructor(message: string, status: number, code: string | null) {
     super(message);
     this.name = "StripeError";
+    this.status = status;
+    this.code = code;
   }
 }
 
