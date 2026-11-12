@@ -11,6 +11,7 @@ import { seedDemoData } from "@/lib/backstage/demo";
 import {
   KEEP_VISITS_DAYS,
   numbersSummary,
+  numbersToday,
   pruneVisits,
   recordSeen,
   seenRow,
@@ -431,6 +432,56 @@ describe("the numbers", () => {
     expect(numbers.daily[4]?.salesCents).toBe(5500);
     expect(numbers.funnel.visits).toBe(5);
     expect(numbers.before).toEqual({ orders: 1, salesCents: 5500, visits: 1 });
+  });
+
+  it("says today so far and yesterday, by the New Zealand day", async () => {
+    const today = () => execute(numbersToday, {}, viewer, at(NOW));
+    // Nothing yet, and no visit ever counted: it says so, not "no visitors".
+    expect(await today()).toEqual({
+      today: { day: "2026-11-12", orders: 0, salesCents: 0, visits: 0 },
+      yesterday: { day: "2026-11-11", orders: 0, salesCents: 0, visits: 0 },
+      noVisitsYet: true,
+    });
+
+    const midnight = nzToInstant(2026, 11, 12, 0, 0);
+    // Yesterday: its last second, and one from the morning.
+    await step("view", visitId(), new Date(midnight.getTime() - 1000));
+    await step("view", visitId(), nzToInstant(2026, 11, 11, 9, 0));
+    await buy({}, new Date(midnight.getTime() - 1000));
+    // Today: its first second, and now. One visitor looked twice: one visit.
+    const twice = visitId();
+    await step("view", twice, midnight);
+    await step("view", twice, NOW);
+    await step("add", twice, NOW);
+    await step("view", visitId(), NOW);
+    await buy({}, midnight);
+    await buy({ email: "second@example.co.nz" });
+    // Never sales: a test order, and one that was called off.
+    await buy({}, NOW, "test");
+    const calledOff = await buy();
+    await execute(
+      cancelOrder,
+      { number: calledOff, reason: "Ordered twice by mistake" },
+      staff,
+    );
+    // The day before yesterday and tomorrow belong to neither.
+    await step("view", visitId(), new Date(midnight.getTime() - DAY - 1000));
+    await buy({}, new Date(midnight.getTime() - DAY - 1000));
+    await step("view", visitId(), new Date(midnight.getTime() + DAY));
+
+    expect(await today()).toEqual({
+      today: { day: "2026-11-12", orders: 2, salesCents: 11_000, visits: 2 },
+      yesterday: { day: "2026-11-11", orders: 1, salesCents: 5500, visits: 2 },
+      noVisitsYet: false,
+    });
+    // It agrees with the Numbers screen for the same two days.
+    const week = await summary();
+    expect(
+      week.daily.slice(-2).map((d) => [d.day, d.orders, d.visits]),
+    ).toEqual([
+      ["2026-11-11", 1, 2],
+      ["2026-11-12", 2, 2],
+    ]);
   });
 
   it("treats the day the clocks change as one day", async () => {

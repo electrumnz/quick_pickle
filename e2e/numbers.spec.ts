@@ -100,3 +100,18 @@ test("the numbers page reads the same at each range", async ({ page }) => {
   // Ninety days is drawn a week at a time.
   await expect(page.getByText("Week by week")).toBeVisible();
 });
+
+test("Today says how the day is going, in a sentence, and points at the numbers", async ({
+  page,
+}) => {
+  await page.goto("/backstage");
+  const soFar = page.getByTestId("today-so-far");
+  // Sales are paid orders; visits are the shop's own count. Whatever else
+  // is running against this server, it reads as one of these two shapes.
+  await expect(soFar).toHaveText(
+    /^Today so far: (no orders yet|\d+ orders? worth \$[\d,]+\.\d{2}) and \d+ visits?\.$/,
+  );
+  await expect(page.getByText(/^Yesterday: /)).toBeVisible();
+  await page.getByRole("link", { name: "All the numbers" }).click();
+  await expect(page).toHaveURL(/\/backstage\/numbers$/);
+});

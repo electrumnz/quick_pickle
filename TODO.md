@@ -126,6 +126,7 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 - [x] **Numbers.** Sales, visits and how far they get (our own count, no cookies, nobody
       identified), where visits came from with the sales from each, phones against
       desktops, and how the crew list is moving.
+      Today carries the pulse in two lines: today so far and yesterday, by the same rules.
 - [ ] **Xero and couriers.**
 - [ ] **Claude tooling (MCP).** Last, over the same operations: a small tool set, per-user
       sign-in, every call in the activity log.
