@@ -29,6 +29,12 @@ const PAGES = [
   "/backstage/orders/QP-SHRT55",
   "/backstage/orders/QP-PACK22/slip",
   "/backstage/customers",
+  // The inbox: the queue, every conversation there is, the machines'
+  // notices, and its settings.
+  "/backstage/inbox",
+  "/backstage/inbox?pile=all",
+  "/backstage/inbox?pile=notices",
+  "/backstage/inbox/settings",
   // Stock. The demo's batches and purchase orders have steady codes: B002
   // is on sale with orders filled from it, B004 is only planned (the "record
   // it as made" form), PO-0002 is sent and late (the "received" form) and
@@ -118,6 +124,14 @@ for (const [name, list, link] of [
     "a landing page's editor, with its preview in a frame",
     "/backstage/marketing/pages",
     "Clubs (sample)",
+  ],
+  // Two of the demo's conversations: one about an order, with the order's
+  // details beside it, and one with a reply started from a saved one.
+  ["a conversation about an order", "/backstage/inbox", "Where is my order?"],
+  [
+    "a conversation with a reply started",
+    "/backstage/inbox",
+    "Wholesale for our club",
   ],
   // The demo's labels: under their reorder level, with an order for more
   // that is late. And the people they come from.

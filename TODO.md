@@ -65,6 +65,37 @@ Updated 12 November 2026. Honest status, not a summary.
      Connected", `npm run prelaunch` stops listing it, and the infra run's `status` prints
      "order emails in production: the settings are there". After that, the test purchase
      above sends a receipt that says it was a Stripe test payment.
+- [ ] **Connect the inbox, so mail arrives and a bounce is heard.** The inbox is built and
+      nothing reaches it yet. It needs sending connected first (above), and the same Resend
+      account. Until step 2 is done, an address that bounces or marks us as spam is not
+      known about, and would be written to again.
+  1. **Decide where the domain's mail goes.** For mail to land in the inbox, Resend has to
+     receive it: on Resend's Domains page, turn on receiving for the domain and add the
+     MX record it shows, exactly as shown. If the domain already has a mailbox somewhere
+     else (Google Workspace, say) do not add it beside that one: mail only goes to
+     whichever MX record comes first. Either receive on a subdomain (`mail.` the domain)
+     and set `MAIL_FROM` to an address on it, or have the other mailbox forward to an
+     address on that subdomain, or skip this step and read replies in that mailbox. Step
+     2 is worth doing by itself whichever it is.
+  2. **A webhook in Resend** (Webhooks, Add endpoint) that calls
+     `https://<the site>/api/mail/resend`, for these events: `email.received`,
+     `email.sent`, `email.delivered`, `email.bounced`, `email.complained`, `email.failed`
+     and `email.suppressed`. Copy its signing secret (`whsec_...`) into
+     `RESEND_WEBHOOK_SECRET` on production. A sending-only API key cannot read a received
+     email, so if receiving is on, `RESEND_API_KEY` has to be a full-access key.
+  3. **Only once mail arrives here: `MAIL_TOKEN_SECRET`** on production, any long random
+     string (`openssl rand -hex 32`). Each email then asks for its replies at an address
+     of its own (`reply+...@` the domain), so a reply finds its conversation wherever
+     that has been moved. Never set it while replies are read in a mailbox elsewhere:
+     that mailbox would not get them.
+  4. **A signature**, in Inbox settings (`/backstage/inbox/settings`), and the starter
+     replies if they are wanted. Read the "damaged in the post" one against the returns
+     policy first: it says what the policy says, and has to keep saying it.
+  5. **Check it.** Inbox settings says "Hearing from Resend: On". Send an email to the
+     address from a phone: it shows in the inbox within a minute. Reply from the inbox,
+     and answer that reply from the phone: it joins the same conversation.
+     `MAIL_INBOUND_SECRET` is not needed for any of this. It is for a mail forwarder of
+     our own, if Resend's receiving is ever not used.
 - [ ] **Tell pre-order customers the ship date, by hand.** The delivery page and the
       "order's in" page promise the ship date by email before anything is sent. Nothing sends
       that by itself. When the date is set, somebody has to email the people with pre-orders.
@@ -116,9 +147,21 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       on no recall list. Not built: a purchase order is printed or sent by hand (nothing is
       emailed), an order is received all at once, and the shop does not yet stop selling
       when the shelf is empty.
-- [ ] **The inbox.** Mail for the business's domain lands in the back end, threaded by
-      our own rules (reply headers, order numbers, the same person and subject), linked to
-      customers and orders, answered from there.
+- [x] **The inbox.** Mail for the business's address lands in the back end and is kept in
+      conversations by our own rules: a reply address of its own, the message it answers,
+      an order number from the customer who placed that order, or the same person under
+      the same subject. Each message says why it is where it is, and a person can move
+      one, merge two conversations or split one, with later replies following. An order
+      number links the conversation to the order whoever quotes it, and a second address
+      can be tied to its customer by hand. It is answered from there, with saved replies
+      and a signature, and a reply is read against the copy rules as it is sent: a banned
+      phrase never goes, and a restricted one goes only on a person's tick, which is kept.
+      An email's own HTML is never drawn. A bounce or a spam complaint puts the address on
+      a do-not-email list that nothing is sent past. What is waiting shows on Today.
+      Still to do by a person: connect it (above). Not built: attaching a file to a reply,
+      writing to somebody who has not written first, and more than one member of staff
+      sharing the queue (a conversation can be given to somebody through an operation, and
+      there is no screen for it, because one person runs this).
 - [x] **Marketing.** Campaigns to the crew with approval before sending, a social planner,
       reviews read by a person before anyone sees them, and partners with a written yes on
       file before they are named. Not built: a campaign that is sent is queued, one row for

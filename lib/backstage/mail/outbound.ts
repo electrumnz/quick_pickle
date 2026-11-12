@@ -9,7 +9,8 @@
  *      against the copy rules (lib/backstage/core/copy.ts) by then. It does
  *      not talk to the mail provider. `writeOutbound` below is that step,
  *      for an operation to call with its own context: an order's emails
- *      (lib/backstage/orders/emails.ts) are the first to use it.
+ *      (lib/backstage/orders/emails.ts) and a reply written in the inbox
+ *      (`mail.send`, ops-reply.ts) both use it.
  *
  *   2. `deliverQueuedMail` SENDS it, after that transaction has committed
  *      and outside any transaction of its own, then records what happened
@@ -37,6 +38,7 @@ import { z } from "zod";
 
 import { STORE } from "@/content/offer";
 import {
+  mailboxes,
   mailContacts,
   mailConversations,
   mailLinks,
@@ -64,11 +66,16 @@ import { defineOp, execute, type OpContext } from "../core/op";
 import {
   addLinks,
   contactFor,
+  defaultMailbox,
   recomputeConversation,
   snippetOf,
   type LinkRef,
+  type MailboxRow,
 } from "./conversations";
+import { receivingConnected } from "./config";
+import { splitReply } from "./reply";
 import { subjectKey, tidySubject } from "./subjects";
+import { replyAddress, replyToken, TOKEN_HEADER, tokenKey } from "./token";
 
 type Env = Record<string, string | undefined>;
 type MessageRow = typeof mailMessages.$inferSelect;
@@ -118,6 +125,73 @@ export async function whyNotEmail(
     : `${row.email} is on the do-not-email list because ${SUPPRESSED_BECAUSE[row.reason]}.`;
 }
 
+export type EmailStanding = {
+  readonly address: string;
+  /** False when it is on the do-not-email list: nothing may go to it. */
+  readonly canEmail: boolean;
+  readonly reason: SuppressionRow["reason"] | null;
+  /** A sentence for a screen, or null when nothing stands in the way. */
+  readonly because: string | null;
+  /** What the mail system or the person who listed it said. */
+  readonly detail: string;
+  readonly since: Date | null;
+};
+
+/** Where an address stands with the do-not-email list. */
+export async function emailStanding(
+  db: DbOrTx,
+  address: string,
+): Promise<EmailStanding> {
+  const email = address.trim().toLowerCase();
+  const [row] = await db
+    .select()
+    .from(mailSuppressions)
+    .where(eq(mailSuppressions.email, email))
+    .limit(1);
+  return row === undefined
+    ? {
+        address: email,
+        canEmail: true,
+        reason: null,
+        because: null,
+        detail: "",
+        since: null,
+      }
+    : {
+        address: email,
+        canEmail: false,
+        reason: row.reason,
+        because: `${row.email} is on the do-not-email list because ${SUPPRESSED_BECAUSE[row.reason]}.`,
+        detail: row.detail,
+        since: row.at,
+      };
+}
+
+/* ------------------------------------------------------------------------
+   The mailbox a reply is signed from
+   --------------------------------------------------------------------- */
+
+/**
+ * The mailbox a conversation belongs to: its own, or the default, or none
+ * if no mailbox has been set up. A mailbox is an address of ours that mail
+ * arrives at, and where the signature under a reply is kept. Every email is
+ * SENT from the one address in MAIL_FROM, whichever mailbox it is signed as.
+ */
+export async function findSendingMailbox(
+  db: DbOrTx,
+  mailboxId: string | null,
+): Promise<MailboxRow | null> {
+  if (mailboxId !== null) {
+    const [row] = await db
+      .select()
+      .from(mailboxes)
+      .where(eq(mailboxes.id, mailboxId))
+      .limit(1);
+    if (row !== undefined) return row;
+  }
+  return defaultMailbox(db);
+}
+
 /* ------------------------------------------------------------------------
    Our own notes on a message
    --------------------------------------------------------------------- */
@@ -128,17 +202,26 @@ export async function whyNotEmail(
  * which no real header can have. The notes are never sent.
  *
  *   qp:kind          transactional | reply
+ *   qp:checked       the restricted copy rules a person said they had read
+ *                    before sending it: "R-19, PROV-04"
  *   qp:order         the id of the order it is about, for an order's email
  *   qp:order-email   which of an order's emails it is: receipt, shipped ...
  *   qp:first-tried   when the first try that got no clear answer was made
  *   qp:unknown       "1": a try got no clear answer, so it may have gone
  *   qp:parked        "1": too late to try again safely; a person decides
+ *   qp:retrying      "1": the last try failed and the queue will try again
+ *                    by itself, so nobody needs to do anything yet
  *   qp:resend        how many times a person has sent it afresh
  *   qp:provider-message-id  the Message-ID the provider says it went out with
  */
 
 /** The notes a try leaves on a message until it is known to have gone. */
-const TRY_NOTES = ["qp:first-tried", "qp:unknown", "qp:parked"] as const;
+const TRY_NOTES = [
+  "qp:first-tried",
+  "qp:unknown",
+  "qp:parked",
+  "qp:retrying",
+] as const;
 
 function without(
   headers: Readonly<Record<string, string>>,
@@ -184,6 +267,13 @@ export type OutboundSpec = {
    * email, say): why, in a sentence. It is written down as `not_sent`.
    */
   readonly notSent?: string | null;
+  /**
+   * The conversation it is a reply in, already held by the caller. Left
+   * out, it joins the conversation `links` points at, or starts one.
+   */
+  readonly conversation?: ConversationRow;
+  /** The row named by `id` is a draft being sent: it is filled in, not added. */
+  readonly fromDraft?: boolean;
 };
 
 export type Written = {
@@ -236,9 +326,9 @@ export async function writeOutbound(
   );
 
   // The conversation with this person that is already about the same thing.
-  let conversation: ConversationRow | undefined;
+  let conversation: ConversationRow | undefined = spec.conversation;
   const [primary] = spec.links;
-  if (primary !== undefined) {
+  if (conversation === undefined && primary !== undefined) {
     const [linked] = await db
       .select({ conversation: mailConversations })
       .from(mailConversations)
@@ -284,7 +374,9 @@ export async function writeOutbound(
   }
 
   const about: LinkRef[] = [...spec.links];
-  if (contact.customerId !== null) {
+  // A reply in a conversation leaves what it is about alone: a link a
+  // person took off is not put back because we answered.
+  if (spec.conversation === undefined && contact.customerId !== null) {
     about.push({ entityType: "customer", entityId: contact.customerId });
   }
   await addLinks(db, conversation.id, about, "auto", ctx.now);
@@ -319,12 +411,21 @@ export async function writeOutbound(
     // So a holiday auto-responder does not answer a receipt.
     ...(machine ? { "Auto-Submitted": "auto-generated" } : {}),
   };
+  // Where a reply to it comes back to. With a key (MAIL_TOKEN_SECRET) and a
+  // door open for incoming mail, that is an address of its own that names
+  // THIS message, so the reply finds its conversation wherever a person has
+  // since moved it. With no key, or with nothing to bring mail in, there is
+  // no such address: a reply goes to the address it was sent from, which
+  // somebody reads. (A reply address nothing listens at would swallow every
+  // answer a customer gave.)
+  const key = tokenKey();
+  if (key !== null) headers[TOKEN_HEADER] = replyToken(id, key);
+  const ownReplyAddress = key !== null && from !== "" && receivingConnected();
 
-  const status = notSent === null ? "queued" : "not_sent";
-  await db.insert(mailMessages).values({
-    id,
+  const status: Written["status"] = notSent === null ? "queued" : "not_sent";
+  const values = {
     conversationId: conversation.id,
-    direction: "out",
+    direction: "out" as const,
     status,
     messageId: from === "" ? null : messageIdFor(id, from),
     inReplyTo,
@@ -332,17 +433,24 @@ export async function writeOutbound(
     fromAddress: from,
     fromName: STORE.name,
     toAddresses: [address],
+    ccAddresses: [],
+    replyTo: ownReplyAddress ? replyAddress(id, from, key) : null,
     subject,
     textBody: spec.text,
     htmlBody: spec.html,
-    snippet: snippetOf(spec.text),
+    // What we wrote this time, not anything quoted under it.
+    snippet: snippetOf(splitReply(spec.text).fresh),
     at: ctx.now,
     headers,
     automated: machine,
     authorId: machine || ctx.actor.type === "system" ? null : ctx.actor.userId,
     error: notSent,
-    createdAt: ctx.now,
-  });
+  };
+  if (spec.fromDraft === true) {
+    await db.update(mailMessages).set(values).where(eq(mailMessages.id, id));
+  } else {
+    await db.insert(mailMessages).values({ id, ...values, createdAt: ctx.now });
+  }
   await recomputeConversation(db, conversation.id, ctx.now);
 
   if (status === "queued") {
@@ -531,7 +639,7 @@ export const recordFailed = defineOp({
   name: "mail.recordFailed",
   title: "Record that an email could not be sent",
   description:
-    "Marks a queued email as failed, with the reason. Called by the mail queue when the provider refuses an email, cannot be reached, or is set up wrongly. It does not change whose turn the conversation is. Not for people or bots. A failed email can be tried again with mail.retrySend.",
+    "Marks a queued email as failed, with the reason. Called by the mail queue when the provider refuses an email, cannot be reached, or is set up wrongly. `retrying` says the queue will try it again by itself (the provider was busy): it is then not put in front of a person until the queue has given up. It does not change whose turn the conversation is. Not for people or bots. A failed email can be tried again with mail.retrySend.",
   access: "write",
   input: z.object({
     messageId: outboundId,
@@ -541,6 +649,8 @@ export const recordFailed = defineOp({
     outcome: z.enum(["refused", "unknown"]).default("refused"),
     /** Too late to try again safely. A person has to decide. */
     parked: z.boolean().default(false),
+    /** The queue will try again by itself. Nobody needs to do anything yet. */
+    retrying: z.boolean().default(false),
   }),
   async run(ctx, input): Promise<{ status: MessageRow["status"] }> {
     systemOnly(ctx);
@@ -555,6 +665,9 @@ export const recordFailed = defineOp({
       headers["qp:unknown"] = "1";
     }
     if (input.parked) headers["qp:parked"] = "1";
+    const retrying = input.retrying && input.retryable && !input.parked;
+    if (retrying) headers["qp:retrying"] = "1";
+    else delete headers["qp:retrying"];
     const error = input.parked ? PARKED : input.error;
     if (
       message.status === "failed" &&
@@ -573,12 +686,15 @@ export const recordFailed = defineOp({
 
     await ctx.audit({
       entity: entityOf(message),
-      summary: `Could not send "${message.subject}" to ${message.toAddresses.join(", ")}: ${error}`,
+      summary: retrying
+        ? `Could not send "${message.subject}" to ${message.toAddresses.join(", ")} this time, and will try again: ${error}`
+        : `Could not send "${message.subject}" to ${message.toAddresses.join(", ")}: ${error}`,
       data: {
         messageId: message.id,
         retryable: input.retryable,
         outcome: input.outcome,
         parked: input.parked,
+        retrying,
       },
     });
     await ctx.emit({
@@ -591,6 +707,7 @@ export const recordFailed = defineOp({
         retryable: input.retryable && !input.parked,
         outcome: input.outcome,
         parked: input.parked,
+        retrying,
         to: message.toAddresses,
       },
     });
@@ -674,12 +791,21 @@ const queue = systemCaller("Mail", "automation");
  *
  * The provider is called outside any transaction. Nothing here throws for a
  * provider's refusal: that is recorded on the message and returned.
+ *
+ * `willRetry` is the caller saying that, if the provider is only busy, it
+ * will come round again by itself (the event pipeline does, until it runs
+ * out of tries). The failure is then written down as one that is still being
+ * tried, which no screen asks a person to deal with.
  */
 export async function deliverQueuedMail(
   db: Db,
   messageId: string,
   now: Date,
-  options: { readonly env?: Env; readonly fetch?: typeof fetch } = {},
+  options: {
+    readonly env?: Env;
+    readonly fetch?: typeof fetch;
+    readonly willRetry?: boolean;
+  } = {},
 ): Promise<DeliveryResult> {
   const env = options.env ?? process.env;
   const [message] = await db
@@ -703,7 +829,13 @@ export async function deliverQueuedMail(
   ): Promise<DeliveryResult> => {
     await execute(
       recordFailed,
-      { messageId, error: error.slice(0, 400), retryable, outcome },
+      {
+        messageId,
+        error: error.slice(0, 400),
+        retryable,
+        outcome,
+        retrying: retryable && options.willRetry === true,
+      },
       queue,
       at,
     );
@@ -870,6 +1002,8 @@ export const retrySend = defineOp({
       headers = without(headers, TRY_NOTES);
       headers["qp:resend"] = String(Number(headers["qp:resend"] ?? "0") + 1);
     }
+    // A person has taken it over from the queue.
+    delete headers["qp:retrying"];
     // It goes from the address that is set now.
     const from = mailFrom() ?? message.fromAddress;
     await ctx.db

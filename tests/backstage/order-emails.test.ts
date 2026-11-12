@@ -1,5 +1,13 @@
 import { and, asc, eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { ORDER_EMAILS } from "@/content/emails";
 import { THANKS } from "@/content/site";
@@ -17,7 +25,12 @@ import {
 import { systemCaller, type Caller } from "@/lib/backstage/core/actor";
 import { checkOutgoing } from "@/lib/backstage/core/copy";
 import { OpError } from "@/lib/backstage/core/errors";
-import { clearHandlers, on, processEvents } from "@/lib/backstage/core/events";
+import {
+  clearHandlers,
+  MAX_ATTEMPTS,
+  on,
+  processEvents,
+} from "@/lib/backstage/core/events";
 import { execute } from "@/lib/backstage/core/op";
 import { registerHandlers } from "@/lib/backstage/handlers";
 import { needsYou } from "@/lib/backstage/today/ops";
@@ -176,7 +189,8 @@ describe("an order's emails", () => {
     staff = await make("staff");
     viewer = await make("viewer");
     bot = await make("staff", "bot");
-  });
+    // A fresh database with every migration run: slow on a busy machine.
+  }, 60_000);
   afterAll(async () => {
     if (fromBefore === undefined) delete process.env.MAIL_FROM;
     else process.env.MAIL_FROM = fromBefore;
@@ -760,6 +774,26 @@ describe("an order's emails", () => {
       );
     });
 
+    it("gives the number alone when the courier has no link of its own, and never makes one up", async () => {
+      const order = await place();
+      await execute(
+        markShipped,
+        {
+          number: order.number,
+          carrier: "Castle Parcels",
+          trackingNumber: "CP123456",
+        },
+        staff,
+        { db: handle.db, now: at(30) },
+      );
+      const email = await written(order.number, "shipped", at(31));
+      expect(email.textBody).toContain("It's with Castle Parcels.");
+      expect(email.textBody).toContain("Tracking number: CP123456");
+      expect(email.textBody).not.toContain("Track it");
+      expect(email.textBody).not.toMatch(/https?:/);
+      expect(email.htmlBody).not.toContain("<a ");
+    });
+
     it("joins the conversation the receipt started, and threads under it", async () => {
       const order = await place();
       const receipt = await written(order.number, "receipt");
@@ -1234,7 +1268,7 @@ describe("an order's emails", () => {
     });
 
     it("tries again when the provider was busy, with the same key, so one email is one email", async () => {
-      const { email } = await queued();
+      const { order, email } = await queued();
       const { fetch, calls } = fakeFetch([
         new Response("slow down", { status: 429 }),
         taken("re-email-0003"),
@@ -1242,23 +1276,79 @@ describe("an order's emails", () => {
       on("mail.queued", "send the email", sendQueuedMail({ env: LIVE, fetch }));
       const first = await processEvents(handle.db, { now: at(3) });
       expect(first.failed).toBe(1);
-      expect(await message(email.id)).toMatchObject({
+      const busy = await message(email.id);
+      expect(busy).toMatchObject({
         status: "failed",
         error: "Resend refused the email (429): slow down",
       });
+      // It is still being tried, so nobody is asked to do anything yet:
+      // fifty orders shipped at once must not put fifty lines on Today.
+      expect(busy.headers["qp:retrying"]).toBe("1");
+      const onToday = async (when: Date) =>
+        (await execute(needsYou, {}, viewer, { db: handle.db, now: when }))
+          .filter((need) => need.key === `email-failed:${email.id}`)
+          .map((need) => need.title);
+      expect(await onToday(at(4))).toEqual([]);
+      expect(
+        (
+          await execute(listOrderEmails, { number: order.number }, viewer, {
+            db: handle.db,
+          })
+        ).map((row) => [row.status, row.retrying, row.canRetry]),
+      ).toEqual([["failed", true, false]]);
+      expect(await historyOf(order.id)).toContain(
+        `Could not send "Your Quick Pickle order ${order.number}" to ${order.email} this time, and will try again: Resend refused the email (429): slow down`,
+      );
+
       // The pipeline's own wait, then round again.
       const second = await processEvents(handle.db, { now: at(10) });
       expect(second).toMatchObject({ failed: 0, gaveUp: 0 });
-      expect(await message(email.id)).toMatchObject({
+      const gone = await message(email.id);
+      expect(gone).toMatchObject({
         status: "sent",
         providerId: "re-email-0003",
         error: null,
       });
+      expect(gone.headers["qp:retrying"]).toBeUndefined();
       expect(
         calls.map((call) =>
           new Headers(call.init.headers).get("idempotency-key"),
         ),
       ).toEqual([email.id, email.id]);
+    });
+
+    it("on the pipeline's last try, a provider that is still busy is a failure for a person, said once", async () => {
+      const { order, email } = await queued();
+      const { fetch } = fakeFetch([new Response("slow down", { status: 429 })]);
+      on("mail.queued", "send the email", sendQueuedMail({ env: LIVE, fetch }));
+      // Seven tries have been and gone.
+      await handle.db
+        .update(events)
+        .set({ attempts: MAX_ATTEMPTS - 1 })
+        .where(eq(events.type, "mail.queued"));
+      const last = await processEvents(handle.db, { now: at(3) });
+      // Not thrown, so there is no stuck step beside the email's own line.
+      expect(last).toMatchObject({ failed: 0, gaveUp: 0 });
+      const after = await message(email.id);
+      expect(after.status).toBe("failed");
+      expect(after.headers["qp:retrying"]).toBeUndefined();
+      expect(
+        (await execute(needsYou, {}, viewer, { db: handle.db, now: at(4) }))
+          .filter((need) => need.key === `email-failed:${email.id}`)
+          .map((need) => [need.title, need.href]),
+      ).toEqual([
+        [
+          `An email about ${order.number} did not go`,
+          `/backstage/orders/${order.number}`,
+        ],
+      ]);
+      expect(
+        (
+          await execute(listOrderEmails, { number: order.number }, viewer, {
+            db: handle.db,
+          })
+        ).map((row) => [row.status, row.retrying, row.canRetry]),
+      ).toEqual([["failed", false, true]]);
     });
 
     it("parks an email nobody can vouch for once the provider would no longer spot a repeat", async () => {
@@ -1452,6 +1542,85 @@ describe("an order's emails", () => {
         ["On the courier", "sent", order.email],
         ["Payment on its way back", "sent", order.email],
       ]);
+    });
+
+    it("twenty orders shipped in one go, to a provider that takes four at a time: each customer gets one email and nobody is asked to do anything", async () => {
+      // The pipeline writes a line for every try that fails. Twenty-odd of
+      // them are expected here and say nothing.
+      const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+      // A provider with a rate limit: it takes the first four emails of every
+      // pass and tells the rest to slow down.
+      let allowance = 0;
+      const went: string[] = [];
+      const limited = (async (
+        _input: RequestInfo | URL,
+        init?: RequestInit,
+      ) => {
+        if (allowance <= 0) return new Response("slow down", { status: 429 });
+        allowance -= 1;
+        const key = new Headers(init?.headers).get("idempotency-key") ?? "";
+        if (!went.includes(key)) went.push(key);
+        return taken(`re-burst-${String(went.indexOf(key) + 1)}`);
+      }) as typeof fetch;
+      on(
+        "order.shipped",
+        "write the shipped email",
+        emailAboutOrder("shipped"),
+      );
+      on(
+        "mail.queued",
+        "send the email",
+        sendQueuedMail({ env: LIVE, fetch: limited }),
+      );
+
+      const placed: Awaited<ReturnType<typeof place>>[] = [];
+      for (let n = 0; n < 20; n += 1) placed.push(await place());
+      // Their receipts are not this test's business.
+      await handle.db.delete(events);
+      for (const order of placed) {
+        await execute(
+          markShipped,
+          { number: order.number, carrier: "NZ Post" },
+          staff,
+          { db: handle.db, now: at(30) },
+        );
+      }
+
+      // Lines on Today about these twenty orders' emails.
+      const emailLines = async (when: Date) =>
+        (await execute(needsYou, {}, viewer, { db: handle.db, now: when }))
+          .filter(
+            (need) =>
+              need.key.startsWith("email-") &&
+              placed.some((order) => need.title.includes(order.number)),
+          )
+          .map((need) => need.title);
+      let passes = 0;
+      for (let minute = 31; went.length < placed.length; minute += 70) {
+        passes += 1;
+        if (passes > 30) throw new Error("the burst never drained");
+        allowance = 4;
+        await processEvents(handle.db, { now: at(minute), limit: 200 });
+        allowance = 4;
+        await processEvents(handle.db, { now: at(minute + 1), limit: 200 });
+        // However far behind the queue is, it is the queue's to sort out.
+        expect(await emailLines(at(minute + 2))).toEqual([]);
+      }
+
+      expect(went).toHaveLength(placed.length);
+      expect(new Set(went).size).toBe(placed.length);
+      for (const order of placed) {
+        expect(
+          (
+            await execute(listOrderEmails, { number: order.number }, viewer, {
+              db: handle.db,
+            })
+          )
+            .filter((row) => row.about === "shipped")
+            .map((row) => [row.status, row.retrying]),
+        ).toEqual([["sent", false]]);
+      }
+      quiet.mockRestore();
     });
 
     it("with the back end's own listeners, in a test, everything is written down and nothing is sent", async () => {

@@ -1,9 +1,17 @@
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { mailMessages } from "@/db/schema";
 import { systemCaller } from "@/lib/backstage/core/actor";
 import { execute } from "@/lib/backstage/core/op";
 import { seedDemoData } from "@/lib/backstage/demo";
+import {
+  countConversations,
+  getConversation,
+  listConversations,
+  listTemplates,
+  type InboxTab,
+} from "@/lib/backstage/mail/ops";
 import { listOrderEmails } from "@/lib/backstage/orders/emails";
 import { countOrders, listOrders } from "@/lib/backstage/orders/ops";
 import { stockPicture } from "@/lib/backstage/stock/ops";
@@ -102,17 +110,129 @@ describe("the demo records", () => {
         "A test order: nobody was charged, so there is no receipt to send.",
       ],
     ]);
-    // And across every order in the demo, nothing at all has gone anywhere.
-    const all = await handle.db
+    // And across every email of ours in the demo, nothing at all has gone
+    // anywhere. (A draft has not been sent either: it is not a message yet.)
+    const ours = await handle.db
       .select({ status: mailMessages.status, to: mailMessages.toAddresses })
-      .from(mailMessages);
-    expect(all.length).toBeGreaterThan(10);
-    expect(new Set(all.map((row) => row.status))).toEqual(
-      new Set(["not_sent"]),
+      .from(mailMessages)
+      .where(eq(mailMessages.direction, "out"));
+    expect(ours.length).toBeGreaterThan(10);
+    expect(new Set(ours.map((row) => row.status))).toEqual(
+      new Set(["not_sent", "draft"]),
     );
-    for (const row of all) {
+    for (const row of ours) {
       expect(row.to.join(",")).toMatch(/@example\.co\.nz$/);
     }
+  });
+
+  it("put something in every pile of the inbox, from people who are made up", async () => {
+    const pile = async (tab: InboxTab) =>
+      (await execute(listConversations, { tab, limit: 200 }, viewer)).map(
+        (row) => row.subject,
+      );
+    expect((await pile("needs-reply")).sort()).toEqual([
+      "Change of address",
+      "Delivery for the club",
+      "Where is my order?",
+      "Wholesale for our club",
+    ]);
+    expect(await pile("done")).toEqual(["Has my order left yet?"]);
+    expect(await pile("spam")).toEqual(["A new website for half the price"]);
+    // A courier's notice, and the emails the orders themselves wrote.
+    const notices = await pile("notices");
+    expect(notices).toContain("Your parcel LZ8011558011NZ is on its way");
+    expect(notices.length).toBeGreaterThan(5);
+    expect(await execute(countConversations, {}, viewer)).toMatchObject({
+      "needs-reply": 4,
+      waiting: 0,
+      trouble: 0,
+      snoozed: 0,
+      done: 1,
+      spam: 1,
+    });
+
+    // Everybody who wrote in is invented.
+    const received = await handle.db
+      .select({ from: mailMessages.fromAddress })
+      .from(mailMessages)
+      .where(eq(mailMessages.direction, "in"));
+    expect(received).toHaveLength(8);
+    for (const row of received) {
+      expect(row.from).toMatch(/@(?:[a-z]+\.)?example\.co\.nz$/);
+    }
+    // The starter replies are there to try, and today says mail is waiting
+    // without calling it urgent: none of it is two working days old.
+    expect(await execute(listTemplates, {}, viewer)).toHaveLength(5);
+    const needs = await execute(needsYou, {}, viewer);
+    expect(
+      needs.find((need) => need.key === "inbox-needs-reply"),
+    ).toMatchObject({
+      urgent: false,
+      title: "4 emails are waiting for a reply",
+      href: "/backstage/inbox",
+    });
+  });
+
+  it("show each way an email finds its conversation", async () => {
+    const open = async (subject: string) => {
+      const [row] = (
+        await execute(listConversations, { tab: "all", limit: 200 }, viewer)
+      ).filter((each) => each.subject === subject);
+      if (row === undefined) throw new Error(`no conversation "${subject}"`);
+      return execute(getConversation, { id: row.id }, viewer);
+    };
+
+    // A follow-up joins what it answers.
+    const priya = await open("Has my order left yet?");
+    expect(priya.messages.map((message) => message.threadedBy)).toEqual([
+      "new",
+      "headers",
+    ]);
+    expect(priya.contact?.customer?.name).toBe("Priya Nair");
+
+    // The customer who placed the order is tied to it and to themselves.
+    const liam = await open("Where is my order?");
+    expect(
+      liam.links.map((link) => `${link.kind} ${link.label}`).sort(),
+    ).toEqual(["Customer Liam Carter", "Order QP-SENT66"]);
+    expect(liam.orders).toMatchObject([{ number: "QP-SENT66", theirs: true }]);
+
+    // Somebody else quoting that order is linked to it and kept apart.
+    const moana = await open("Delivery for the club");
+    expect(moana.id).not.toBe(liam.id);
+    expect(moana.contact?.customer).toBeNull();
+    expect(moana.links.map((link) => `${link.kind} ${link.label}`)).toEqual([
+      "Order QP-SENT66",
+    ]);
+    expect(moana.orders).toMatchObject([{ theirs: false }]);
+    expect(moana.messages[0]?.threadedReason).toContain(
+      "which is not this sender's own, so it was linked and kept apart",
+    );
+
+    // A courier's notice finds the order by its tracking number.
+    const courier = await open("Your parcel LZ8011558011NZ is on its way");
+    expect(courier.status).toBe("done");
+    expect(courier.messages[0]).toMatchObject({
+      kind: "bulk",
+      automated: true,
+    });
+    expect(courier.links.map((link) => link.label)).toEqual(["QP-SENT66"]);
+
+    // A reply started from a saved one, with the name filled in, not sent.
+    const kahu = await open("Wholesale for our club");
+    expect(kahu.messages).toHaveLength(1);
+    expect(kahu.draft?.body).toMatch(/^Hi Kahu,/);
+    expect(kahu.draft?.body).not.toContain("{{");
+
+    // The email that came as markup is words, and only words.
+    const aroha = await open("Change of address");
+    expect(aroha.messages[0]).toMatchObject({ fromHtml: true });
+    const words = aroha.messages[0]?.text.map((part) => part.text).join("\n");
+    expect(words).toContain("can I change the address on QP-PACK44?");
+    expect(JSON.stringify(aroha)).not.toMatch(
+      /<\/?[a-z]|pixel\.example|changed by an email/i,
+    );
+    expect(aroha.links.map((link) => link.label)).toContain("QP-PACK44");
   });
 
   it("put stock on the shelf, and give every box already packed its batch", async () => {

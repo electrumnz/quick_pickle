@@ -7,6 +7,10 @@
  * whether a person or a machine wrote it), done before any transaction is
  * opened. ingest.ts takes what this returns and files it.
  *
+ * What the inbox shows of a message is its plain text. A message that has
+ * no text part has its words read out of its HTML, after that has been
+ * cleaned. The HTML itself is never shown (sanitise.ts).
+ *
  * Every value that came from the message is the sender's and is treated that
  * way: lengths are capped, control characters are dropped, addresses are
  * checked for shape, and nothing is trusted because of where it sat.
@@ -102,6 +106,8 @@ export type ParsedMail = {
   readonly htmlBody: string | null;
   /** Pictures the HTML asks for: its own, and other people's servers'. */
   readonly pictures: number;
+  /** It had no text part, so its words were read out of its HTML. */
+  readonly textFromHtml: boolean;
   /** What the sender wrote this time: no quotes, no sign-off. */
   readonly fresh: string;
   /** The earlier messages it quotes underneath, if any. */
@@ -430,7 +436,7 @@ const NAMES_BY_TYPE: Readonly<Record<string, string>> = {
   "text/calendar": "invitation.ics",
 };
 
-export function attachmentsOf(
+function attachmentsOf(
   email: Email,
   skipped: string[] = [],
 ): ParsedAttachment[] {
@@ -508,7 +514,7 @@ function isLimitError(error: unknown): boolean {
  * that came back kept as a part of its own, so it can be looked into and so
  * it does not run on into the mail system's note above it.
  */
-export async function parseMime(raw: Uint8Array): Promise<Email> {
+async function parseMime(raw: Uint8Array): Promise<Email> {
   const read = async (options: { forceRfc822Attachments?: boolean }) => {
     try {
       return await PostalMime.parse(raw, options);
@@ -529,7 +535,7 @@ export async function parseMime(raw: Uint8Array): Promise<Email> {
 }
 
 /** The HTML a message carries, or null if it has none or far too much. */
-export function originalHtml(email: Email): string | null {
+function originalHtml(email: Email): string | null {
   const html = email.html ?? "";
   return html.trim() === "" || html.length > MAX_HTML_CHARS ? null : html;
 }
@@ -594,8 +600,8 @@ export async function parseRawEmail(
     if (value !== null && value !== "") headers[key] = oneLine(value, 500);
   }
 
-  // A cleaned copy of the HTML, to keep beside the text. What is shown on
-  // the screen is cleaned again, from the original, every time it is opened.
+  // A cleaned copy of the HTML, to keep beside the text and to read the
+  // words from when there is no text part. It is never shown as HTML.
   let htmlBody: string | null = null;
   let pictures = 0;
   if ((email.html ?? "").length > MAX_HTML_CHARS) {
@@ -614,11 +620,13 @@ export async function parseRawEmail(
   let textBody = (email.text ?? "")
     .replace(/\r\n?/g, "\n")
     .replace(CONTROL, "");
+  let textFromHtml = false;
   if (textBody.trim() === "" && htmlBody !== null) {
     textBody = htmlToText(htmlBody, {
       wordwrap: false,
       selectors: [{ selector: "img", format: "skip" }],
     });
+    textFromHtml = textBody.trim() !== "";
   }
   if (textBody.length > MAX_TEXT_CHARS) {
     textBody = `${textBody.slice(0, MAX_TEXT_CHARS)}\n\n[The rest of this message is in the original.]`;
@@ -652,6 +660,7 @@ export async function parseRawEmail(
     textBody,
     htmlBody,
     pictures,
+    textFromHtml,
     fresh: split.fresh,
     quoted: split.segments
       .filter((segment) => segment.kind === "quoted")

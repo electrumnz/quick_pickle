@@ -60,13 +60,15 @@ import {
 import { parseRawEmail, type ParsedMail } from "./parse";
 import { splitReply } from "./reply";
 import {
-  decideThread,
-  findReferences,
   hasReplyPrefix,
   isGenericSubject,
   subjectKey,
   THREAD_WINDOW_DAYS,
   tidySubject,
+} from "./subjects";
+import {
+  decideThread,
+  findReferences,
   type HeaderFact,
   type MailKind,
   type ReferenceFact,
@@ -697,7 +699,8 @@ export const ingestMail = defineOp({
     };
     if (parsed.kindBecause !== null) notes["qp:automated"] = parsed.kindBecause;
     if (skipped.length > 0) notes["qp:skipped"] = skipped.join(" ");
-    if (parsed.pictures > 0) notes["qp:pictures"] = String(parsed.pictures);
+    // It had no text part: what is shown was read out of its HTML.
+    if (parsed.textFromHtml) notes["qp:from-html"] = "1";
     if (parsed.messageId !== null && parsed.messageId !== lookup.storeAs) {
       notes["qp:arrived-as"] = parsed.messageId;
     }
@@ -717,8 +720,8 @@ export const ingestMail = defineOp({
       replyTo: parsed.replyTo,
       subject: parsed.subject,
       textBody: parsed.textBody,
-      // A cleaned copy, to search and to fall back on. The screen cleans
-      // the original afresh every time it shows it (sanitise.ts).
+      // A cleaned copy, for the record. It is never shown as HTML: the
+      // screen shows the plain text (sanitise.ts).
       htmlBody: parsed.htmlBody,
       snippet: parsed.snippet,
       at,
@@ -798,6 +801,11 @@ export const ingestMail = defineOp({
         ours = bounce.tokens
           .map((token) => named.get(token.trim().toLowerCase()))
           .find((row) => row?.direction === "out");
+      }
+      // A report about something that never left us cannot be true: an
+      // email that was only written down, or one that is still waiting.
+      if (ours !== undefined && ours.status !== "sent") {
+        ours = ours.status === "bounced" ? ours : undefined;
       }
       if (ours !== undefined) {
         // Only an address we really wrote to can be struck off because of it.

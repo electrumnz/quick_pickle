@@ -31,9 +31,7 @@ function sign(secret: string, id: string, timestamp: string, body: string) {
   return `v1,${createHmac("sha256", key).update(`${id}.${timestamp}.${body}`).digest("base64")}`;
 }
 
-const check = (
-  over: Partial<Parameters<typeof verifySvixSignature>[0]> = {},
-) =>
+const check = (over: Partial<Parameters<typeof verifySvixSignature>[0]> = {}) =>
   verifySvixSignature({
     secret: DOC.secret,
     id: DOC.id,
@@ -54,9 +52,9 @@ describe("the Svix signature on a Resend webhook", () => {
   });
 
   it("refuses the wrong secret", () => {
-    expect(
-      check({ secret: "whsec_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }),
-    ).toEqual({ ok: false, reason: "mismatch" });
+    expect(check({ secret: "whsec_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" })).toEqual(
+      { ok: false, reason: "mismatch" },
+    );
   });
 
   it("refuses a body, an id or a timestamp that was changed after signing", () => {

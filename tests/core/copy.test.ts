@@ -97,6 +97,32 @@ describe("words that are about to leave", () => {
     ).toEqual([]);
   });
 
+  it("lets the prescribed answer to a health question through, and nothing that leans on it", () => {
+    // Word for word from legal/COPY-RULES.md, section 5.
+    const answer =
+      "Quick Pickle is a food and we don't make health claims about it. Your doctor or physio is the one to ask.";
+    expect(checkOutgoing({ body: answer })).toEqual([]);
+    // A phone's apostrophe, and the long way of saying it.
+    expect(
+      checkOutgoing({ body: "We don’t make health claims about it." }),
+    ).toEqual([]);
+    expect(
+      checkOutgoing({ body: "We do not make health claims about it." }),
+    ).toEqual([]);
+
+    // Only the denial is excused. The word anywhere else is still refused.
+    for (const body of [
+      "It is a healthy little shot.",
+      "Read our health claims here.",
+      "We make health claims you can trust.",
+      "We don't make health claims, but it is good for you.",
+      "We don't make health claims. Ask anyone about their cramps.",
+    ]) {
+      const kinds = checkOutgoing({ body }).map((problem) => problem.kind);
+      expect(kinds, body).toContain("banned");
+    }
+  });
+
   it("reports both kinds together, banned first", () => {
     const error = refusal(() =>
       refuseUnsendable({

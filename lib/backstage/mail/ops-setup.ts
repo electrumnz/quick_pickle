@@ -1,41 +1,42 @@
 /**
  * The inbox's furniture: the people who write to us, the replies worth
- * keeping, the addresses we send from, the addresses we must not write to,
+ * keeping, the signature under a reply, the addresses we must not write to,
  * and a plain account of what is and is not connected.
  */
 
-import { asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import {
   customers,
   mailboxes,
   mailContacts,
+  mailConversations,
   mailMessages,
   mailSuppressions,
   mailTemplates,
   suppliers,
   type ContactKind,
 } from "@/db/schema";
+import { STORE } from "@/content/offer";
 import { newId } from "@/lib/db/id";
-import { mailConnection, type MailConnection } from "@/lib/mail";
+import { mailConnection, mailFrom, type MailConnection } from "@/lib/mail";
 
+import { checkOutgoing } from "../core/copy";
 import { conflict, notFound, OpError } from "../core/errors";
 import { defineOp } from "../core/op";
 import {
   inboundSecretState,
-  resendApiKey,
   resendWebhookSecretState,
   type SecretState,
 } from "./config";
-import { recomputeConversation } from "./conversations";
-import { suppressionScope, type SuppressionScope } from "./outbound";
 import {
-  contactIdSchema,
-  emailSchema,
-  nothingChanged,
-  oneLine,
-} from "./schemas";
+  addLinks,
+  defaultMailbox,
+  recomputeConversation,
+  type LinkRef,
+} from "./conversations";
+import { contactIdSchema, emailSchema, oneLine } from "./schemas";
 import { CONTACT_KINDS } from "./status";
 import { STARTER_TEMPLATES } from "./templates";
 import { REPLY_LOCAL_PREFIX, tokenKeyState, type TokenKeyState } from "./token";
@@ -135,7 +136,7 @@ export const updateContact = defineOp({
   name: "mail.updateContact",
   title: "Change a contact's details",
   description:
-    'Changes a contact\'s name, what kind of sender they are (customer, supplier, courier, partner, automated, other) or the staff notes about them. `customerEmail` ties the address to the customer with that email, so that mail from it is recognised as theirs (give "" to untie it): this is how to tell the inbox that a second address belongs to someone we already know. `supplier` does the same for a supplier, by its name or email. The tie matters: an email that quotes an order only joins the conversation about that order when it is from the customer who placed it. Nothing here is shown to the contact.',
+    'Changes a contact\'s name, what kind of sender they are (customer, supplier, courier, partner, automated, other) or the staff notes about them. `customerEmail` ties the address to the customer with that email, so that mail from it is recognised as theirs (give "" to untie it): this is how to tell the inbox that a second address belongs to someone we already know. `supplier` does the same for a supplier, by its name or email. The tie matters: an email that quotes an order only joins the conversation about that order when it is from the customer who placed it. Tying an address also links the conversations already had with it to that customer or supplier, so they show there (`linked` says how many); untying leaves those links for a person to take off. Nothing here is shown to the contact.',
   access: "write",
   input: z.object({
     id: contactIdSchema,
@@ -145,7 +146,7 @@ export const updateContact = defineOp({
     customerEmail: z.union([emailSchema, z.literal("")]).optional(),
     supplier: z.string().trim().max(254).optional(),
   }),
-  async run(ctx, input): Promise<{ id: string }> {
+  async run(ctx, input): Promise<{ id: string; linked: number }> {
     const [contact] = await ctx.db
       .select()
       .from(mailContacts)
@@ -214,24 +215,60 @@ export const updateContact = defineOp({
     if (next.customerId !== contact.customerId) changed.push("customer");
     if (next.supplierId !== contact.supplierId) changed.push("supplier");
     if (changed.length === 0) {
-      nothingChanged(ctx);
-      return { id: contact.id };
+      ctx.nothingChanged();
+      return { id: contact.id, linked: 0 };
     }
 
     await ctx.db
       .update(mailContacts)
       .set(next)
       .where(eq(mailContacts.id, contact.id));
+
+    // What has already been said from this address belongs with whoever it
+    // has just been tied to: the conversations so far now show on them.
+    const tiedTo: LinkRef[] = [];
+    if (next.customerId !== null && next.customerId !== contact.customerId) {
+      tiedTo.push({ entityType: "customer", entityId: next.customerId });
+    }
+    if (next.supplierId !== null && next.supplierId !== contact.supplierId) {
+      tiedTo.push({ entityType: "supplier", entityId: next.supplierId });
+    }
+    let linked = 0;
+    if (tiedTo.length > 0) {
+      const theirs = await ctx.db
+        .select({ id: mailConversations.id })
+        .from(mailConversations)
+        .where(
+          and(
+            eq(mailConversations.contactId, contact.id),
+            ne(mailConversations.status, "spam"),
+          ),
+        )
+        .orderBy(desc(mailConversations.lastMessageAt))
+        .limit(200);
+      for (const conversation of theirs) {
+        const added = await addLinks(
+          ctx.db,
+          conversation.id,
+          tiedTo,
+          "manual",
+          ctx.now,
+        );
+        if (added.length > 0) linked += 1;
+      }
+    }
+
     await ctx.audit({
       entity: { type: "mail_contact", id: contact.id },
-      summary: `Updated ${changed.join(", ")} for ${contact.email}`,
+      summary: `Updated ${changed.join(", ")} for ${contact.email}${linked === 0 ? "" : `, and linked ${String(linked)} ${linked === 1 ? "conversation" : "conversations"} with them to match`}`,
       data: {
         changed,
         customerId: next.customerId,
         supplierId: next.supplierId,
+        linked,
       },
     });
-    return { id: contact.id };
+    return { id: contact.id, linked };
   },
 });
 
@@ -250,7 +287,7 @@ export const blockContact = defineOp({
       .for("update");
     if (contact === undefined) throw notFound("That contact");
     if (contact.blocked === input.blocked) {
-      nothingChanged(ctx);
+      ctx.nothingChanged();
       return { blocked: input.blocked };
     }
     await ctx.db
@@ -289,6 +326,32 @@ const templateFields = {
     .max(20_000, "That is too long for a saved reply"),
 };
 
+/**
+ * Words that are kept to be sent later must not be ones that can never be
+ * sent. A banned phrase or an em dash is refused here, where it can be put
+ * right, instead of at the moment somebody is trying to answer a customer.
+ * (A restricted phrase may be kept: whoever sends it has to say they have
+ * read it, each time. `mail.send` reads the finished reply whatever was
+ * saved.)
+ */
+function refuseUnkeepable(parts: Readonly<Record<string, string>>): void {
+  const standing = checkOutgoing(parts).filter(
+    (problem) => problem.kind !== "restricted",
+  );
+  const [first] = standing;
+  if (first === undefined) return;
+  const said = standing
+    .map(
+      (problem) =>
+        `"${problem.found}" in the ${problem.part}: ${problem.why} (${problem.rule})`,
+    )
+    .join(" ");
+  // A form shows the message beside the field it is about, so the field's
+  // own words have to say the whole of it.
+  const message = `This cannot be kept as written, because it could never be sent. ${said}`;
+  throw new OpError("invalid_input", message, { [first.part]: message });
+}
+
 export const listTemplates = defineOp({
   name: "mail.listTemplates",
   title: "List saved replies",
@@ -314,13 +377,14 @@ export const saveTemplate = defineOp({
   name: "mail.saveTemplate",
   title: "Save a reply for next time",
   description:
-    "Adds a saved reply, or changes one (give its `id`). A saved reply is sent to customers word for word, so it is bound by the copy rules like everything else the business says: it must never say or hint at what the product does to a body. Leave `subject` empty for a reply that keeps the conversation's own subject.",
+    "Adds a saved reply, or changes one (give its `id`). A saved reply is sent to customers word for word, so it is bound by the copy rules like everything else the business says: it must never say or hint at what the product does to a body. A banned phrase, or an em dash, is refused here and names the words to change. Leave `subject` empty for a reply that keeps the conversation's own subject.",
   access: "write",
   input: z.object({
     id: z.string().trim().min(1).max(60).optional(),
     ...templateFields,
   }),
   async run(ctx, input): Promise<{ id: string }> {
+    refuseUnkeepable({ subject: input.subject, body: input.body });
     const [sameName] = await ctx.db
       .select({ id: mailTemplates.id })
       .from(mailTemplates)
@@ -356,6 +420,7 @@ export const saveTemplate = defineOp({
       existing.subject === input.subject &&
       existing.body === input.body
     ) {
+      ctx.nothingChanged();
       return { id: existing.id };
     }
     await ctx.db
@@ -393,7 +458,7 @@ export const removeTemplate = defineOp({
       .where(eq(mailTemplates.id, input.id))
       .returning();
     if (existing === undefined) {
-      nothingChanged(ctx);
+      ctx.nothingChanged();
       return { removed: false };
     }
     await ctx.audit({
@@ -421,23 +486,22 @@ export const loadStarterTemplates = defineOp({
     const missing = STARTER_TEMPLATES.filter(
       (template) => !existing.has(template.name.toLowerCase()),
     );
-    if (missing.length > 0) {
-      await ctx.db.insert(mailTemplates).values(
-        missing.map((template) => ({
-          id: newId("tpl"),
-          name: template.name,
-          subject: template.subject,
-          body: template.body,
-          createdAt: ctx.now,
-          updatedAt: ctx.now,
-        })),
-      );
+    if (missing.length === 0) {
+      ctx.nothingChanged();
+      return { added: 0 };
     }
+    await ctx.db.insert(mailTemplates).values(
+      missing.map((template) => ({
+        id: newId("tpl"),
+        name: template.name,
+        subject: template.subject,
+        body: template.body,
+        createdAt: ctx.now,
+        updatedAt: ctx.now,
+      })),
+    );
     await ctx.audit({
-      summary:
-        missing.length === 0
-          ? "Checked the starter replies: all were already there"
-          : `Added ${String(missing.length)} starter ${missing.length === 1 ? "reply" : "replies"}: ${missing.map((template) => template.name).join(", ")}`,
+      summary: `Added ${String(missing.length)} starter ${missing.length === 1 ? "reply" : "replies"}: ${missing.map((template) => template.name).join(", ")}`,
     });
     return { added: missing.length };
   },
@@ -459,7 +523,7 @@ export const listMailboxes = defineOp({
   name: "mail.listMailboxes",
   title: "List our mailboxes",
   description:
-    "The addresses of ours that receive and send mail, the default first. Each has the name mail is sent as and the signature added under replies written from it.",
+    "The addresses of ours that mail arrives at, the default first, each with the signature added under replies in its conversations. Every email is sent from the one address in MAIL_FROM, whichever of these it is signed as.",
   access: "read",
   input: z.object({}),
   async run(ctx): Promise<MailboxView[]> {
@@ -480,7 +544,7 @@ export const saveMailbox = defineOp({
   name: "mail.saveMailbox",
   title: "Add or change a mailbox",
   description:
-    "Adds an address of ours (hello@, orders@), or changes one (give its `id`): the name mail is sent as, the plain-text signature added under replies, and whether it is the default. The default mailbox takes mail that was not addressed to any mailbox by name, and there is always exactly one. This only tells the back end about the address. Mail for it still has to be routed here, and the sending domain still has to be verified with the mail provider: neither is done by this.",
+    "Adds an address of ours that mail arrives at (hello@, orders@), or changes one (give its `id`): its name, the plain-text signature added under replies in its conversations, and whether it is the default. The default mailbox takes mail that was not addressed to any mailbox by name, and there is always exactly one. This only tells the back end about the address: mail for it still has to be routed here, and it does not change the address email is sent from, which is MAIL_FROM. To change only the signature, use mail.setSignature.",
   access: "admin",
   input: z.object({
     id: z.string().trim().min(1).max(60).optional(),
@@ -490,6 +554,7 @@ export const saveMailbox = defineOp({
     isDefault: z.boolean().default(false),
   }),
   async run(ctx, input): Promise<{ id: string }> {
+    refuseUnkeepable({ signature: input.signature });
     if (input.address.startsWith(REPLY_LOCAL_PREFIX)) {
       throw new OpError(
         "invalid_input",
@@ -520,16 +585,27 @@ export const saveMailbox = defineOp({
         "This is the default mailbox. Make another one the default first.",
       );
     }
-    if (isDefault) {
-      await ctx.db.update(mailboxes).set({ isDefault: false });
-    }
-
     const values = {
       address: input.address,
       displayName: input.displayName,
       signature: input.signature,
       isDefault,
     };
+    if (
+      existing !== undefined &&
+      existing.address === values.address &&
+      existing.displayName === values.displayName &&
+      existing.signature === values.signature &&
+      existing.isDefault === values.isDefault
+    ) {
+      // Saved again with nothing different in it.
+      ctx.nothingChanged();
+      return { id: existing.id };
+    }
+    if (isDefault) {
+      await ctx.db.update(mailboxes).set({ isDefault: false });
+    }
+
     const id = existing?.id ?? newId("mbx");
     if (existing === undefined) {
       await ctx.db
@@ -549,35 +625,54 @@ export const saveMailbox = defineOp({
   },
 });
 
-export const removeMailbox = defineOp({
-  name: "mail.removeMailbox",
-  title: "Remove a mailbox",
+export const setSignature = defineOp({
+  name: "mail.setSignature",
+  title: "Change the signature under replies",
   description:
-    "Takes an address of ours off the list. Its conversations stay and fall back to the default mailbox for replies. The default mailbox cannot be removed while there are others: make another one the default first. Mail still arriving for the address is filed under the default.",
-  access: "admin",
-  effect: "destructive",
-  input: z.object({ id: z.string().trim().min(1).max(60) }),
-  explain: () =>
-    "This removes the mailbox. Its conversations stay, and replies to them will come from the default mailbox.",
-  async run(ctx, input): Promise<{ removed: boolean }> {
-    const all = await ctx.db.select().from(mailboxes).for("update");
-    const existing = all.find((mailbox) => mailbox.id === input.id);
-    if (existing === undefined) {
-      nothingChanged(ctx);
-      return { removed: false };
+    "Sets the plain-text signature added under every reply written in the inbox: a name, a line or two. It is sent to customers, so a banned phrase or an em dash is refused here. It is kept on the default mailbox; if there is none yet, one is made for the address email is sent from (MAIL_FROM). An order's own emails are not signed with it.",
+  access: "write",
+  input: z.object({ signature: z.string().trim().max(2000) }),
+  async run(ctx, input): Promise<{ signature: string }> {
+    refuseUnkeepable({ signature: input.signature });
+    const existing = await defaultMailbox(ctx.db);
+    if (existing !== null) {
+      if (existing.signature === input.signature) {
+        ctx.nothingChanged();
+        return { signature: input.signature };
+      }
+      await ctx.db
+        .update(mailboxes)
+        .set({ signature: input.signature })
+        .where(eq(mailboxes.id, existing.id));
+      await ctx.audit({
+        entity: { type: "mailbox", id: existing.id },
+        summary:
+          input.signature === ""
+            ? "Took the signature off replies"
+            : "Changed the signature under replies",
+      });
+      return { signature: input.signature };
     }
-    if (existing.isDefault && all.length > 1) {
+    const address = mailFrom();
+    if (address === null) {
       throw conflict(
-        "This is the default mailbox. Make another one the default first.",
+        "There is nowhere to keep a signature yet: no address to send from has been set (MAIL_FROM).",
       );
     }
-    await ctx.db.delete(mailboxes).where(eq(mailboxes.id, existing.id));
-    await ctx.audit({
-      entity: { type: "mailbox", id: existing.id },
-      summary: `Removed the mailbox ${existing.address}`,
-      data: { displayName: existing.displayName },
+    const id = newId("mbx");
+    await ctx.db.insert(mailboxes).values({
+      id,
+      address,
+      displayName: STORE.name,
+      signature: input.signature,
+      isDefault: true,
+      createdAt: ctx.now,
     });
-    return { removed: true };
+    await ctx.audit({
+      entity: { type: "mailbox", id },
+      summary: `Set the signature under replies, and made ${address} the mailbox it is kept on`,
+    });
+    return { signature: input.signature };
   },
 });
 
@@ -588,8 +683,6 @@ export const removeMailbox = defineOp({
 export type SuppressionRow = {
   readonly email: string;
   readonly reason: "bounce" | "complaint" | "manual";
-  /** What it stops: every email, or only marketing. */
-  readonly scope: SuppressionScope;
   readonly detail: string;
   readonly at: Date;
 };
@@ -598,7 +691,7 @@ export const listSuppressions = defineOp({
   name: "mail.listSuppressions",
   title: "Read the do-not-email list",
   description:
-    'Addresses we must not email, newest first, with why (the last email to them bounced, they marked one of ours as spam, or someone put them on the list by hand) and how far it reaches: `scope` is "everything" for a bounce or a hand-made entry, and "marketing" for a spam complaint, which stops marketing and lets order emails and replies through. Checked before anything is sent.',
+    "Addresses we must not email, newest first, with why: the last email to them bounced, they marked one of ours as spam, or someone put them on the list by hand. An address on it gets nothing at all, its own order's emails included. Checked before anything is sent.",
   access: "read",
   input: z.object({
     q: z.string().trim().max(80).optional(),
@@ -617,7 +710,7 @@ export const listSuppressions = defineOp({
       )
       .orderBy(desc(mailSuppressions.at))
       .limit(input.limit);
-    return rows.map((row) => ({ ...row, scope: suppressionScope(row.reason) }));
+    return rows;
   },
 });
 
@@ -643,7 +736,7 @@ export const suppressAddress = defineOp({
       .onConflictDoNothing()
       .returning({ email: mailSuppressions.email });
     if (rows.length === 0) {
-      nothingChanged(ctx);
+      ctx.nothingChanged();
       return { added: false };
     }
     await ctx.audit({
@@ -658,7 +751,7 @@ export const unsuppressAddress = defineOp({
   name: "mail.unsuppress",
   title: "Allow emailing an address again",
   description:
-    "Takes an address off the do-not-email list. Owners only, because the list is there for a reason: an address that bounced will bounce again unless it has been fixed, and writing to someone who marked us as spam or asked us to stop is how a sender gets blocked, or breaks the law on unsolicited email.",
+    "Takes an address off the do-not-email list. Owners only, because the list is there for a reason: an address that bounced will bounce again unless it has been fixed, and writing to someone who marked us as spam or asked us to stop is how a sender gets blocked, or breaks the law on unsolicited email. The mail provider keeps a list of its own, and may still refuse the address until it is taken off there as well.",
   access: "admin",
   input: z.object({ email: emailSchema }),
   async run(ctx, input): Promise<{ removed: boolean }> {
@@ -667,7 +760,7 @@ export const unsuppressAddress = defineOp({
       .where(eq(mailSuppressions.email, input.email))
       .returning();
     if (row === undefined) {
-      nothingChanged(ctx);
+      ctx.nothingChanged();
       return { removed: false };
     }
     await ctx.audit({
@@ -683,36 +776,35 @@ export const unsuppressAddress = defineOp({
    --------------------------------------------------------------------- */
 
 export type MailSetup = {
-  /** How mail leaves, and whether it really does. */
+  /** How mail leaves, and whether it really does. Names, never values. */
   readonly sending: MailConnection;
-  readonly resendKeySet: boolean;
-  /** The secret that guards POST /api/mail/inbound. */
-  readonly inboundSecret: SecretState;
-  /** The secret Resend's webhooks are checked against. */
+  /** The secret Resend's webhooks are checked against (RESEND_WEBHOOK_SECRET). */
   readonly resendWebhookSecret: SecretState;
-  /** The key reply addresses are signed with. */
+  /** The secret that guards POST /api/mail/inbound (MAIL_INBOUND_SECRET). */
+  readonly inboundSecret: SecretState;
+  /** The key reply addresses are signed with (MAIL_TOKEN_SECRET). */
   readonly replyTokens: TokenKeyState;
-  readonly mailboxes: number;
+  /** The signature under replies, and the mailbox it is kept on. */
+  readonly signature: string;
+  readonly mailbox: string | null;
 };
 
 export const getMailSetup = defineOp({
   name: "mail.connection",
   title: "See what email is connected to",
   description:
-    "A plain account of how email is set up: which provider sends it and whether anything really leaves, whether each secret the inbound endpoints need is set (never the secrets themselves), whether reply addresses are being signed, and how many mailboxes there are.",
+    "A plain account of how email is set up: which provider sends it, whether anything really leaves and if not why, the names of the settings that are missing (never a value), whether each secret the two inbound doors need is set, whether reply addresses are being signed, and the signature under replies.",
   access: "read",
   input: z.object({}),
   async run(ctx): Promise<MailSetup> {
-    const [row] = await ctx.db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(mailboxes);
+    const mailbox = await defaultMailbox(ctx.db);
     return {
       sending: mailConnection(),
-      resendKeySet: resendApiKey() !== null,
-      inboundSecret: inboundSecretState(),
       resendWebhookSecret: resendWebhookSecretState(),
+      inboundSecret: inboundSecretState(),
       replyTokens: tokenKeyState(),
-      mailboxes: row?.n ?? 0,
+      signature: mailbox?.signature ?? "",
+      mailbox: mailbox?.address ?? null,
     };
   },
 });
@@ -735,7 +827,7 @@ export const recordProviderEvent = defineOp({
   name: "mail.recordProviderEvent",
   title: "Record what became of an email we sent",
   description:
-    "Records what the mail provider says happened to an email after it left: it was delivered, it bounced, the person marked it as spam, or the provider could not send it after all. A bounce or a failure marks the email and puts its conversation on the Not delivered pile; whose turn the conversation is does not change. A hard bounce puts the address on the do-not-email list for everything. A spam complaint puts it there for marketing only, so its order emails still go. Also keeps the Message-ID the provider says the email really went out with, which is the one a reply will name. Called by the provider's webhook. Not for people or bots.",
+    "Records what the mail provider says happened to an email after it left: it was delivered, it bounced, the person marked it as spam, or the provider could not send it after all. A bounce or a failure marks the email and puts its conversation on the Not delivered pile; whose turn the conversation is does not change. A hard bounce, or a spam complaint, puts the address on the do-not-email list, and nothing more is sent to it. Also keeps the Message-ID the provider says the email really went out with, which is the one a reply will name. Called by the provider's webhook. Not for people or bots.",
   access: "write",
   input: z.object({
     providerId: z.string().trim().min(1).max(200),
@@ -758,7 +850,7 @@ export const recordProviderEvent = defineOp({
       .where(eq(mailMessages.providerId, input.providerId))
       .for("update");
     if (message === undefined || message.direction !== "out") {
-      nothingChanged(ctx);
+      ctx.nothingChanged();
       return { matched: false, changed: false };
     }
     const entity = { type: "conversation", id: message.conversationId };
@@ -796,13 +888,13 @@ export const recordProviderEvent = defineOp({
     if (learned) await note({ "qp:provider-message-id": reported });
 
     if (input.event === "sent") {
-      if (!learned) nothingChanged(ctx);
+      if (!learned) ctx.nothingChanged();
       return { matched: true, changed: learned };
     }
 
     if (input.event === "delivered") {
       if (message.headers["qp:delivered"] !== undefined) {
-        if (!learned) nothingChanged(ctx);
+        if (!learned) ctx.nothingChanged();
         return { matched: true, changed: learned };
       }
       await note({ "qp:delivered": ctx.now.toISOString() });
@@ -816,14 +908,14 @@ export const recordProviderEvent = defineOp({
 
     if (input.event === "complained") {
       if (message.headers["qp:complaint"] !== undefined) {
-        if (!learned) nothingChanged(ctx);
+        if (!learned) ctx.nothingChanged();
         return { matched: true, changed: learned };
       }
       await note({ "qp:complaint": ctx.now.toISOString() });
       const suppressed = await suppress("complaint");
       await ctx.audit({
         entity,
-        summary: `${named} marked our email "${message.subject}" as spam and will get no more marketing email. Order emails and replies still go`,
+        summary: `${named} marked our email "${message.subject}" as spam and will not be emailed again`,
         data: { messageId: message.id, suppressed },
       });
       await ctx.emit({
@@ -842,7 +934,7 @@ export const recordProviderEvent = defineOp({
     if (input.event === "failed") {
       // The provider took it and then could not send it.
       if (message.status !== "sent") {
-        if (!learned) nothingChanged(ctx);
+        if (!learned) ctx.nothingChanged();
         return { matched: true, changed: learned };
       }
       const error =
@@ -883,7 +975,7 @@ export const recordProviderEvent = defineOp({
     }
 
     if (message.status === "bounced") {
-      if (!learned) nothingChanged(ctx);
+      if (!learned) ctx.nothingChanged();
       return { matched: true, changed: learned };
     }
     const suppressed = input.permanent ? await suppress("bounce") : [];

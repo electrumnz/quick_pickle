@@ -3,10 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   decideThread,
   findReferences,
-  hasReplyPrefix,
-  isGenericSubject,
-  subjectKey,
-  tidySubject,
   type ConversationFacts,
   type ReferenceFact,
   type Sender,
@@ -15,7 +11,8 @@ import {
 
 /**
  * Threading as a pure function: what the lookups found goes in, a decision
- * and its reason come out. No database anywhere in this file.
+ * and its reason come out. No database anywhere in this file. (What a
+ * subject line boils down to is in tests/backstage/mail-subjects.test.ts.)
  */
 
 const NOW = new Date("2026-11-12T00:00:00Z");
@@ -74,70 +71,6 @@ const input = (over: Partial<ThreadInput> = {}): ThreadInput => ({
   ...over,
 });
 
-describe("subject keys", () => {
-  it("strips every reply and forward prefix, whatever the language or spacing", () => {
-    for (const subject of [
-      "Where is my parcel?",
-      "Re: Where is my parcel?",
-      "RE : Where is my parcel?",
-      "Fwd: Re: where is my parcel",
-      "FW: RE: Fwd: Where is my parcel?",
-      "AW: Where is my parcel?",
-      "SV: Where is my parcel?",
-      "Re[2]: Where is my parcel?",
-      "  re:   WHERE   is my   parcel ?  ",
-    ]) {
-      expect(subjectKey(subject), subject).toBe("where is my parcel");
-    }
-  });
-
-  it("strips gateway tags and ticket numbers in brackets", () => {
-    expect(subjectKey("[External] Bottles")).toBe("bottles");
-    expect(subjectKey("RE: [EXT] (External) Bottles")).toBe("bottles");
-    expect(subjectKey("RE: [External] Bottles (Case 48213-B)")).toBe("bottles");
-    expect(subjectKey("Bottles [Ticket #48213]")).toBe("bottles");
-    expect(subjectKey("Bottles [#991] and caps (ref: 12-34)")).toBe(
-      "bottles and caps",
-    );
-  });
-
-  it("leaves a ticket number that is not in brackets alone", () => {
-    // Two tickets are two things. Only the reference rule may join them.
-    expect(subjectKey("Ticket #48213 update")).toBe("ticket #48213 update");
-    expect(subjectKey("Ticket #48213 update")).not.toBe(
-      subjectKey("Ticket #48214 update"),
-    );
-  });
-
-  it("knows a subject that says nothing", () => {
-    for (const subject of [
-      "",
-      "Hi",
-      "Re: hello",
-      "Question",
-      "ENQUIRY",
-      "Fwd: Order",
-      "invoice",
-      "(no subject)",
-      "!!!",
-      "123",
-    ]) {
-      expect(isGenericSubject(subjectKey(subject)), subject).toBe(true);
-    }
-    expect(isGenericSubject(subjectKey("Bottles for the March run"))).toBe(
-      false,
-    );
-  });
-
-  it("tidies a title without shouting or tags", () => {
-    expect(tidySubject("RE: [External]  Where is   my order?")).toBe(
-      "Where is my order?",
-    );
-    expect(tidySubject("   ")).toBe("(no subject)");
-    expect(tidySubject("x".repeat(500))).toHaveLength(200);
-  });
-});
-
 describe("numbers of ours in a message", () => {
   it("finds order numbers in any case and nothing that only looks like one", () => {
     const found = findReferences(
@@ -163,35 +96,6 @@ describe("numbers of ours in a message", () => {
     expect(codes).toContain("B001");
     expect(codes).toContain("LZ8011558011NZ");
     expect(codes).not.toContain("BATCH");
-  });
-});
-
-describe("what looks like a reply", () => {
-  it("knows a reply prefix in the languages we may see, past any gateway tag", () => {
-    for (const subject of [
-      "Re: Bottles",
-      "RE : Bottles",
-      "re[2]: Bottles",
-      "AW: Bottles",
-      "SV: Bottles",
-      "[External] Re: Bottles",
-      "(EXT) [SPAM?] RE: Bottles",
-    ]) {
-      expect(hasReplyPrefix(subject), subject).toBe(true);
-    }
-  });
-
-  it("does not take a forward, or a word that starts the same way, for a reply", () => {
-    for (const subject of [
-      "Bottles",
-      "Fwd: Bottles",
-      "FW: Re: Bottles",
-      "Regarding bottles",
-      "Refill order",
-      "",
-    ]) {
-      expect(hasReplyPrefix(subject), subject).toBe(false);
-    }
   });
 });
 
@@ -529,7 +433,10 @@ describe("rule 3: it quotes an order of the sender's own", () => {
 
 describe("rule 4: a reply that lost its headers", () => {
   const key = "bottles for the march run";
-  const earlier = conversation({ id: "cnv_subject", lastMessageAt: daysAgo(3) });
+  const earlier = conversation({
+    id: "cnv_subject",
+    lastMessageAt: daysAgo(3),
+  });
   const reply = (over: Partial<ThreadInput> = {}) =>
     input({
       subjectKey: key,
@@ -637,7 +544,9 @@ describe("rule 4: a reply that lost its headers", () => {
 
   it("joins a finished conversation: a late reply reopens it", () => {
     const decision = decideThread(
-      reply({ sameSubject: [conversation({ id: "cnv_done", status: "done" })] }),
+      reply({
+        sameSubject: [conversation({ id: "cnv_done", status: "done" })],
+      }),
     );
     expect(decision.conversationId).toBe("cnv_done");
   });

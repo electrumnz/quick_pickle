@@ -1,7 +1,8 @@
 /**
  * What the inbox reads from the environment, in one place.
  *
- *   MAIL_PROVIDER          how mail is sent: "log" (the default) or "resend"
+ *   MAIL_PROVIDER          how mail is sent: off (the default) or "resend".
+ *                          Read by lib/mail, with MAIL_FROM.
  *   RESEND_API_KEY         Resend's key, for sending and for fetching mail
  *                          Resend received for us
  *   RESEND_WEBHOOK_SECRET  the `whsec_…` secret Resend signs its webhooks with
@@ -50,4 +51,14 @@ export function resendWebhookSecret(env: Env = process.env): string | null {
 export function resendApiKey(env: Env = process.env): string | null {
   const key = (env.RESEND_API_KEY ?? "").trim();
   return key === "" ? null : key;
+}
+
+/**
+ * Is either door for incoming mail open? Until one is, nothing sent to an
+ * address of ours reaches this back end, so an email we send must not ask
+ * for its replies to come to a reply address of its own: nobody would ever
+ * see them. They go to the address it was sent from instead.
+ */
+export function receivingConnected(env: Env = process.env): boolean {
+  return resendWebhookSecret(env) !== null || inboundSecret(env) !== null;
 }

@@ -26,6 +26,9 @@ const NO_MAIL = {
   MAIL_PROVIDER: "off",
   RESEND_API_KEY: "",
   MAIL_FROM: "",
+  RESEND_WEBHOOK_SECRET: "",
+  MAIL_INBOUND_SECRET: "",
+  MAIL_TOKEN_SECRET: "",
 };
 
 export default defineConfig({

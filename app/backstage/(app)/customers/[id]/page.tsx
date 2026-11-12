@@ -20,6 +20,8 @@ import {
   getCustomer,
   type CustomerDetail,
 } from "@/lib/backstage/customers/ops";
+import { listConversationsFor } from "@/lib/backstage/mail/ops";
+import { STATUS_LABEL as CONVERSATION_LABEL } from "@/lib/backstage/mail/status";
 import { listOrders } from "@/lib/backstage/orders/ops";
 import { formatNzd } from "@/lib/shop/money";
 import { formatNzDate } from "@/lib/time";
@@ -64,6 +66,16 @@ export default async function CustomerPage({
     { customerId: customer.id, limit: 100 },
     caller,
   );
+  // What they have written, from whichever address is tied to them. A
+  // conversation that is nothing but an order's own emails is left out: the
+  // order's page lists those.
+  const conversations = (
+    await execute(
+      listConversationsFor,
+      { entityType: "customer", entityId: customer.id, limit: 20 },
+      caller,
+    )
+  ).filter((conversation) => !conversation.notice);
   const canWrite = staff.role !== "viewer";
   const [firstName = "", ...rest] = customer.name.split(" ");
 
@@ -115,43 +127,84 @@ export default async function CustomerPage({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
-        <Panel title="Orders" flush>
-          {orders.length === 0 ? (
-            <Empty title="No orders">
-              On the list, but has not ordered yet.
-            </Empty>
-          ) : (
-            <ul className="bk-rows">
-              {orders.map((order) => (
-                <li key={order.id}>
-                  <Link
-                    href={`/backstage/orders/${order.number}`}
-                    className="bk-row grid-cols-[1fr_auto]"
-                  >
-                    <span className="min-w-0">
-                      <span className="flex flex-wrap items-center gap-2 font-semibold tabular-nums">
-                        {order.number}
-                        <TestPill show={order.isTest} />
+        <div className="flex flex-col gap-6">
+          <Panel title="Orders" flush>
+            {orders.length === 0 ? (
+              <Empty title="No orders">
+                On the list, but has not ordered yet.
+              </Empty>
+            ) : (
+              <ul className="bk-rows">
+                {orders.map((order) => (
+                  <li key={order.id}>
+                    <Link
+                      href={`/backstage/orders/${order.number}`}
+                      className="bk-row grid-cols-[1fr_auto]"
+                    >
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-2 font-semibold tabular-nums">
+                          {order.number}
+                          <TestPill show={order.isTest} />
+                        </span>
+                        <span className="bk-muted block text-[0.9375rem]">
+                          {order.items}
+                        </span>
                       </span>
-                      <span className="bk-muted block text-[0.9375rem]">
-                        {order.items}
+                      <span className="flex flex-col items-end gap-1">
+                        <span className="bk-num font-semibold">
+                          {formatNzd(order.totalCents)}
+                        </span>
+                        <OrderStatusPill status={order.status} />
+                        <span className="bk-muted text-[0.875rem] whitespace-nowrap">
+                          <When at={order.placedAt} now={now} />
+                        </span>
                       </span>
-                    </span>
-                    <span className="flex flex-col items-end gap-1">
-                      <span className="bk-num font-semibold">
-                        {formatNzd(order.totalCents)}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+          {conversations.length > 0 ? (
+            <Panel title="Emails with them" flush>
+              <ul className="bk-rows" data-testid="customer-conversations">
+                {conversations.map((conversation) => (
+                  <li key={conversation.id}>
+                    <Link
+                      href={`/backstage/inbox/${conversation.id}`}
+                      className="bk-row grid-cols-[1fr_auto]"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-semibold">
+                          {conversation.subject === ""
+                            ? "(no subject)"
+                            : conversation.subject}
+                        </span>
+                        <span className="bk-muted block truncate text-[0.9375rem]">
+                          {conversation.snippet}
+                        </span>
                       </span>
-                      <OrderStatusPill status={order.status} />
-                      <span className="bk-muted text-[0.875rem] whitespace-nowrap">
-                        <When at={order.placedAt} now={now} />
+                      <span className="flex flex-col items-end gap-1">
+                        <Pill
+                          tone={
+                            conversation.status === "needs-reply"
+                              ? "todo"
+                              : "plain"
+                          }
+                        >
+                          {CONVERSATION_LABEL[conversation.status]}
+                        </Pill>
+                        <span className="bk-muted text-[0.875rem] whitespace-nowrap">
+                          <When at={conversation.lastMessageAt} now={now} />
+                        </span>
                       </span>
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          ) : null}
+        </div>
 
         <Panel title="About them">
           {canWrite ? (

@@ -21,6 +21,8 @@ import { listActivity } from "@/lib/backstage/activity/ops";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
+import { listConversationsFor } from "@/lib/backstage/mail/ops";
+import { STATUS_LABEL as CONVERSATION_LABEL } from "@/lib/backstage/mail/status";
 import {
   listOrderEmails,
   type OrderEmail,
@@ -108,7 +110,10 @@ function Emails({
       ) : (
         <ul className="bk-rows mt-3" data-testid="order-emails">
           {emails.map((email) => {
-            const state = EMAIL_STATE[email.status];
+            // The provider was busy: the queue is still on it.
+            const state = email.retrying
+              ? ({ word: "Trying again", tone: "doing" } as const)
+              : EMAIL_STATE[email.status];
             return (
               <li key={email.id} className="px-4 py-3 md:px-6">
                 <div className="flex flex-wrap items-center gap-2">
@@ -122,6 +127,9 @@ function Emails({
                 {email.why !== null ? (
                   <p className="mt-1 text-[0.9375rem] leading-snug">
                     {email.why}
+                    {email.retrying
+                      ? " It did not go this time, and will be tried again by itself in a few minutes."
+                      : ""}
                   </p>
                 ) : null}
                 {email.canRetry && canWrite ? (
@@ -355,6 +363,16 @@ export default async function OrderPage({
     { number: order.number },
     caller,
   );
+  // What people have written about this order, whatever address it came
+  // from. The order's own emails are listed separately, so a conversation
+  // that is nothing but those is left out.
+  const conversations = (
+    await execute(
+      listConversationsFor,
+      { entityType: "order", entityId: order.id, limit: 20 },
+      caller,
+    )
+  ).filter((conversation) => !conversation.notice);
   // Whether email really leaves from here, read from the same place the
   // outbox reads it. A test order's customer is never emailed.
   const mail = mailConnection();
@@ -540,6 +558,44 @@ export default async function OrderPage({
             lead={emailLead}
             canWrite={canWrite}
           />
+
+          {conversations.length > 0 ? (
+            <Panel title="Conversations about it" flush>
+              <ul className="bk-rows" data-testid="order-conversations">
+                {conversations.map((conversation) => (
+                  <li key={conversation.id}>
+                    <Link
+                      href={`/backstage/inbox/${conversation.id}`}
+                      className="bk-row grid-cols-[1fr_auto]"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-semibold">
+                          {conversation.subject === ""
+                            ? "(no subject)"
+                            : conversation.subject}
+                        </span>
+                        <span className="bk-muted block truncate text-[0.9375rem]">
+                          {conversation.contact?.name ||
+                            conversation.contact?.email ||
+                            "Unknown sender"}
+                          , <When at={conversation.lastMessageAt} now={now} />
+                        </span>
+                      </span>
+                      <Pill
+                        tone={
+                          conversation.status === "needs-reply"
+                            ? "todo"
+                            : "plain"
+                        }
+                      >
+                        {CONVERSATION_LABEL[conversation.status]}
+                      </Pill>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          ) : null}
 
           <Panel title="History" flush>
             <div id="history" className="scroll-mt-24">

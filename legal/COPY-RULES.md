@@ -210,7 +210,10 @@ going to dress it up" and "try one and see": both leave the reader to fill in an
    rescuing a seized-up leg is not.
 2. **Do not answer a health question with a claim.** If a customer asks whether it helps
    with cramps: "Quick Pickle is a food and we don't make health claims about it. Your
-   doctor or physio is the one to ask." Then stop.
+   doctor or physio is the one to ask." Then stop. That sentence has to be sendable from
+   the inbox, so "we don't make health claims" (and "we do not") is a term of art in the
+   scanner: the denial is excused, the word anywhere else is not, and nothing said around
+   it is.
 3. **Reviews and reposts.** A customer may say what they like on their own account. The
    moment we repost, quote, pin or put it on the site, it is our claim. Moderate first.
 4. **No invented social proof.** No reviews, ratings, counts or "as seen in" until they are

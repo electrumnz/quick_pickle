@@ -104,7 +104,8 @@ db/migrations/         generated SQL, plus the copy embedded in the build
 lib/db/                the one connection, the migration runner, ids
 lib/backstage/         core (operations, actors, errors), auth, and one folder per area
 lib/shop/              money, jar, pricing, orders, the payment seam, the store seam
-lib/mail/              the sending seam (off, or Resend), and an email written as pieces
+lib/mail/              the sending seam (off, or Resend), an email written as pieces, and
+                       the check on a webhook's signature
 lib/brand/             tokens.css (the only file with a hex), base.css, fonts, art data
 lib/time.ts            New Zealand time. Every conversion goes through it.
 legal/                 COPY-RULES.md and the scanner
@@ -112,10 +113,6 @@ tests/  e2e/           vitest and Playwright
 ```
 
 `lib/backstage/README.md` is the guide to adding an area to the back end.
-
-`.wip/` holds what is left of an area that was stopped part-built: the inbox (see its
-README). Sending, and an order's emails, have been finished and moved out of it. Nothing in
-it is built, linted, tested or scanned. An area is finished and wired in by moving it out.
 
 ### The shop and the back end do not share a stylesheet or a script
 
@@ -467,11 +464,15 @@ go-live list shows when it last ran and what is stuck.
   `mail.queued` event. A listener sends it after the commit and records what happened
   through an operation: `sent`; `not_sent` (written down and, on purpose, not sent: `error`
   holds the sentence why, and that is the end of it); or `failed` (tried again by the event
-  pipeline when the provider was busy, and by "Try sending it again" on the order when it
-  was not). The message's id is the idempotency key Resend is given, so one message is one
-  email however often its event is delivered. A try that got no clear answer is only
-  repeated while Resend still remembers the key (a day); after that it is parked for a
-  person, because nothing may risk a second copy on a guess.
+  pipeline when the provider was busy, and by "Try sending it again" when it was not). The
+  message's id is the idempotency key Resend is given, so one message is one email however
+  often its event is delivered. A try that got no clear answer is only repeated while
+  Resend still remembers the key (a day); after that it is parked for a person, because
+  nothing may risk a second copy on a guess.
+- **A failure the queue is still trying is nobody's problem yet.** Fifty orders shipped at
+  once can meet Resend's rate limit. Each email that is told to slow down is marked
+  `qp:retrying` and kept off Today and off the inbox's Not delivered pile until the
+  pipeline has had its last try, when it becomes an ordinary failure for a person.
 - **Every email is read before it is queued.** One of ours is written as pieces
   (`lib/mail/compose.ts`): our words, the recipient's own (their name, their address) and
   data (a number, a date, a link). `refuseUnsendable` reads the finished email with only
@@ -482,8 +483,10 @@ go-live list shows when it last ran and what is stuck.
 - **An order's emails** (`lib/backstage/orders/emails.ts`, one operation,
   `orders.emailCustomer`): the receipt on `order.paid`, on the courier on `order.shipped`,
   cancelled on `order.cancelled`, and a payment on its way back on `order.refunded` when
-  it went back through Stripe. Each is written once (its id is worked out from the order
-  and what it is about) and only when it is true. They are transactional under the
+  it went back through Stripe (a refund made from Stripe's own dashboard included: its
+  event names the refund like any other). Money a bank took back in a card dispute is
+  never written about. Each is written once (its id is worked out from the order and what
+  it is about) and only when it is true. They are transactional under the
   Unsolicited Electronic Messages Act 2007: **nothing promotional may ever be added to
   one**, which is also why they carry no unsubscribe link.
 - **A test order's customer is not emailed**, with one exception: a payment made in
@@ -496,6 +499,71 @@ go-live list shows when it last ran and what is stuck.
 - An address on `mail_suppressions` is sent nothing, its own order's emails included.
 - **No secret is logged or stored.** What Resend says when it refuses is scrubbed before it
   is kept, and the go-live list names the settings that are missing, never a value.
+
+### The inbox
+
+Mail to the business's address lands in the back end (`/backstage/inbox`), is kept in
+conversations, and is answered from there. `lib/backstage/mail/` is the area;
+`ingest.ts` is the one way a message gets in and `mail.send` the one way a reply gets out.
+
+- **Two ways in, both shut until their secret is set** (`endpoints.ts`).
+  `/api/mail/resend` is Resend's webhook: its Svix signature is checked against the body
+  exactly as it arrived, before that body is read (`RESEND_WEBHOOK_SECRET`). It brings mail
+  Resend received for us (the original is then fetched from Resend with the API key) and
+  what became of mail we sent. `/api/mail/inbound` takes a raw email from a forwarder that
+  holds `MAIL_INBOUND_SECRET`. Neither reads a cookie. An email already held is a success
+  that changes nothing.
+- **An email's HTML is never drawn.** A cleaned copy is stored, and the screen shows plain
+  text: the email's own, or the words read out of its HTML when it has no other. There is
+  no `dangerouslySetInnerHTML` in the inbox and there must never be. No picture is fetched,
+  nothing a stranger wrote is a link, and an attachment or the original is only ever a
+  download (`/backstage/files/<id>`, `nosniff`, sandboxed).
+- **Conversations are ours, not a mail program's** (`threading.ts`, a pure function). A
+  message joins one for a reason that can be said in a sentence, tried in this order: it
+  was sent to the reply address of a message of ours (a signed token); it answers a message
+  we hold (In-Reply-To, References); it quotes an order of the sender's own and exactly one
+  open conversation with them is about it; it is a reply that lost its headers, from the
+  same person, under the same subject, within thirty days. Otherwise it starts a new one.
+  The reason is kept on the message and shown. Never a provider's thread id, a subject
+  alone, or a number alone.
+- **An order number always links, and only joins for its own customer.** Anybody quoting
+  QP-7K2M9X gets that conversation shown on the order. Only the customer who placed it is
+  let into the conversation about it: a wrong join can put one person's details in front
+  of another. A second address is "the same customer" once a person says so (`mail.updateContact`
+  ties it, and links what it has already said to that customer).
+- **A token routes. It never says who is writing.** A message that arrives by a reply
+  address is filed in that conversation and still shown as from whoever sent it, and the
+  first message from a new address is pointed out before anyone answers it. A reply goes
+  to the address the last person wrote FROM: a Reply-To is offered and never used unasked.
+- **Rethreading by hand** is `mail.moveMessage`, `mail.mergeConversations` and
+  `mail.splitConversation`. A message a person placed is pinned: automatic threading
+  leaves it alone, and replies to it follow it wherever it is now.
+- **A reply meets the copy rules as it is sent**, signature and all (`mail.send`, outward,
+  needs a yes). A banned phrase or an em dash refuses it. A restricted one refuses it
+  unless a PERSON sends it with `acknowledgeRestricted`, which is written on the message
+  (`qp:checked`) and in the activity log; a bot's say-so is not taken. The screen's tick
+  covers the phrases it showed and nothing typed since. Nothing is exempt, the customer's
+  own name included. Saved replies and the signature are refused at save if they could
+  never be sent.
+- **With real records and no way to send, a reply is refused**, not written down as if it
+  had gone. (On demo data it is written down and marked as not sent, like every email.)
+- **Whose turn it is** is the conversation's status: needs a reply, waiting on them, done,
+  spam. Only a person's message puts the ball in our court. An out-of-office, a notice or a
+  delivery report never does, and a conversation every message of which came from a
+  machine sits in Notices. An email of ours that did not arrive does not change whose turn
+  it is: it puts the conversation on the Not delivered pile until a later one goes or a
+  person says it is dealt with.
+- **Bounces and complaints stop further sending.** A hard bounce (Resend's event, or a
+  delivery report that names an email we really sent) and a spam complaint put the address
+  on `mail_suppressions`. Only an owner takes one off.
+- **Reply addresses of their own** (`reply+<token>@`, `MAIL_TOKEN_SECRET`) are only used
+  while a way in is open. A reply address nothing listens at would swallow every answer a
+  customer gave, so without one replies are asked for at `MAIL_FROM`.
+- Every email is SENT from `MAIL_FROM`. A mailbox row is an address mail arrives at, and
+  where the signature under a reply is kept.
+- Nothing in the inbox is switched on by itself: with no secret set nothing arrives, and
+  the piles a person does not need every day (Not delivered, Put away) only show while
+  there is something in them.
 
 ### Design rules that came from measuring
 

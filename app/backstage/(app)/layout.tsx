@@ -6,6 +6,7 @@ import { ShopLink } from "@/components/backstage/ShopLink";
 import { RailNav, TabNav } from "@/components/backstage/NavLinks";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { execute } from "@/lib/backstage/core/op";
+import { countWaiting } from "@/lib/backstage/mail/ops";
 import { backstageMode } from "@/lib/backstage/mode";
 import { countOrders } from "@/lib/backstage/orders/ops";
 
@@ -28,8 +29,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   // Per-destination "waiting on you" counts. Each area adds its own.
   const counts: Record<string, number> = {};
   for (const item of DESTINATIONS) counts[item.href] = 0;
-  const orders = await execute(countOrders, {}, await staffCaller());
+  const caller = await staffCaller();
+  const orders = await execute(countOrders, {}, caller);
   counts["/backstage/orders"] = orders.paid;
+  const inbox = await execute(countWaiting, {}, caller);
+  counts["/backstage/inbox"] = inbox.needsReply;
 
   return (
     <div className="bk-shell">

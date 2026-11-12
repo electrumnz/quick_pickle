@@ -41,8 +41,9 @@ import {
  * tests/backstage/mail-threading.test.ts has the threading rules as a pure
  * function. This file is the same rules with the lookups behind them, fed
  * with emails exactly as they would arrive. Mail going out is in
- * tests/mail/outbound.test.ts, and what a person can do to a conversation is
- * in tests/mail/ops.test.ts.
+ * tests/mail/send.test.ts and tests/backstage/order-emails.test.ts, what a
+ * person can do to a conversation is in tests/mail/ops.test.ts, and the
+ * piles of the inbox are in tests/mail/piles.test.ts.
  */
 
 let inbox: Inbox;
@@ -80,7 +81,8 @@ beforeAll(async () => {
     { db, now: at(-400) },
   );
   priya = await inbox.placeOrder("QP-HERE77", "Priya", "Nair");
-});
+  // A fresh database with every migration run: slow on a busy machine.
+}, 60_000);
 
 afterAll(async () => {
   await closeDb();
@@ -176,7 +178,12 @@ describe("a first email", () => {
       await expect(
         execute(
           ingestMail,
-          { parsed, raw: new Uint8Array([1]), providerId: null, receivedAt: null },
+          {
+            parsed,
+            raw: new Uint8Array([1]),
+            providerId: null,
+            receivedAt: null,
+          },
           { ...caller, confirmed: true },
           { db: inbox.handle.db, now: at(1) },
         ),
@@ -314,7 +321,9 @@ describe("is it here already", () => {
     );
     expect(second.messageId).not.toBe(first.messageId);
     const kept = await inbox.message(second.messageId);
-    expect(kept.messageId).toMatch(/^<[0-9a-f]{40}@reused-message-id\.invalid>$/);
+    expect(kept.messageId).toMatch(
+      /^<[0-9a-f]{40}@reused-message-id\.invalid>$/,
+    );
     expect(kept.headers["qp:arrived-as"]).toBe("<always-the-same@example.com>");
     expect(kept.headers["qp:threaded"]).toMatch(/id of our own/);
     // And that one is still only kept once.
@@ -340,7 +349,11 @@ describe("is it here already", () => {
       "Do you do gift boxes?",
       at(50),
     );
-    const sentId = await inbox.reply(asked.conversationId, "Not yet, sorry.", at(51));
+    const sentId = await inbox.reply(
+      asked.conversationId,
+      "Not yet, sorry.",
+      at(51),
+    );
     await inbox.deliver(sentId, at(52));
     const sent = await inbox.message(sentId);
 
@@ -409,11 +422,15 @@ describe("who or what wrote it", () => {
       kind: "bulk",
       automated: true,
     });
-    expect((await inbox.conversation(notice.conversationId)).status).toBe("done");
+    expect((await inbox.conversation(notice.conversationId)).status).toBe(
+      "done",
+    );
     const kept = await inbox.message(notice.messageId);
     expect(kept.automated).toBe(true);
     expect(kept.headers["qp:kind"]).toBe("bulk");
-    expect(kept.headers["qp:automated"]).toBe("it says it was sent automatically");
+    expect(kept.headers["qp:automated"]).toBe(
+      "it says it was sent automatically",
+    );
     expect((await inbox.auditFor(notice.conversationId))[0]).toBe(
       "Automated email from Parcel updates: Ticket #48213 update",
     );
@@ -436,9 +453,15 @@ describe("who or what wrote it", () => {
       "When are you open?",
       at(110),
     );
-    const sentId = await inbox.reply(asked.conversationId, "Weekdays, 9 to 5.", at(111));
+    const sentId = await inbox.reply(
+      asked.conversationId,
+      "Weekdays, 9 to 5.",
+      at(111),
+    );
     await inbox.deliver(sentId, at(112));
-    expect((await inbox.conversation(asked.conversationId)).status).toBe("waiting");
+    expect((await inbox.conversation(asked.conversationId)).status).toBe(
+      "waiting",
+    );
     const ours = await inbox.message(sentId);
 
     for (const [n, headers] of [
@@ -453,7 +476,8 @@ describe("who or what wrote it", () => {
             {
               From: "Ivy <ivy@example.com>",
               To: ours.replyTo ?? "",
-              Subject: n === 4 ? "Out of office: Opening hours" : "Re: Opening hours",
+              Subject:
+                n === 4 ? "Out of office: Opening hours" : "Re: Opening hours",
               "Message-ID": `<ivy-auto-${String(n)}@example.com>`,
               "In-Reply-To": ours.messageId ?? "",
               ...headers,
@@ -468,7 +492,9 @@ describe("who or what wrote it", () => {
         kind: "auto-reply",
         automated: true,
       });
-      expect((await inbox.conversation(asked.conversationId)).status).toBe("waiting");
+      expect((await inbox.conversation(asked.conversationId)).status).toBe(
+        "waiting",
+      );
     }
     expect(await inbox.eventsFor(asked.conversationId)).not.toContain(
       "conversation.status_changed:needs-reply",
@@ -484,7 +510,9 @@ describe("who or what wrote it", () => {
       "Back now. Are you open on Saturday too?",
       at(130),
     );
-    expect((await inbox.conversation(asked.conversationId)).status).toBe("needs-reply");
+    expect((await inbox.conversation(asked.conversationId)).status).toBe(
+      "needs-reply",
+    );
   });
 
   it("a newsletter and a no-reply sender are bulk, and a plain email with odd headers is still a person", async () => {
@@ -520,10 +548,10 @@ describe("who or what wrote it", () => {
 
 describe("where it goes", () => {
   it("a reply joins by its headers, whatever its subject or Thread-Index say", async () => {
-    const [first] = (await inbox.handle.db
+    const [first] = await inbox.handle.db
       .select()
       .from(mailMessages)
-      .where(eq(mailMessages.messageId, "<liam-0001@mail.example.co.nz>")));
+      .where(eq(mailMessages.messageId, "<liam-0001@mail.example.co.nz>"));
     const reply = stored(await take(fixture("reply-by-headers.eml"), at(200)));
     expect(reply).toMatchObject({
       conversationId: first?.conversationId,
@@ -576,7 +604,10 @@ describe("where it goes", () => {
       at(220),
     );
     expect(await inbox.linksOf(first.conversationId)).toEqual(
-      [`customer:${priya.customerId}:auto`, `order:${priya.orderId}:auto`].sort(),
+      [
+        `customer:${priya.customerId}:auto`,
+        `order:${priya.orderId}:auto`,
+      ].sort(),
     );
 
     // A new email, new subject, no headers: the number and who it is from.
@@ -649,7 +680,11 @@ describe("where it goes", () => {
       "Could we get 40 packs?",
       at(250),
     );
-    const sentId = await inbox.reply(asked.conversationId, "Yes. When for?", at(251));
+    const sentId = await inbox.reply(
+      asked.conversationId,
+      "Yes. When for?",
+      at(251),
+    );
     await inbox.deliver(sentId, at(252));
     const ours = await inbox.message(sentId);
     expect(ours.replyTo).toBe(
@@ -727,7 +762,11 @@ describe("where it goes", () => {
       "How many can you do?",
       at(300),
     );
-    const sentId = await inbox.reply(first.conversationId, "About 400.", at(301));
+    const sentId = await inbox.reply(
+      first.conversationId,
+      "About 400.",
+      at(301),
+    );
     await inbox.deliver(sentId, at(302));
 
     // The same subject again with no "Re:" and nothing quoted is a new email.
@@ -741,7 +780,10 @@ describe("where it goes", () => {
     // Mark that one done, so one recent conversation is left under the subject.
     // (Two candidates are never guessed between.)
     const two = await inbox.receive(
-      { From: "Oli <oli@example.com>", Subject: "RE: Bottles for the March run" },
+      {
+        From: "Oli <oli@example.com>",
+        Subject: "RE: Bottles for the March run",
+      },
       "Sounds good.",
       at(304),
     );
@@ -755,7 +797,10 @@ describe("where it goes", () => {
       at(310),
     );
     const reply = await inbox.receive(
-      { From: "Pip <pip@example.com>", Subject: "Re: Labels for the summer packs" },
+      {
+        From: "Pip <pip@example.com>",
+        Subject: "Re: Labels for the summer packs",
+      },
       "Forgot to say, matte not gloss.",
       at(311),
     );
@@ -775,14 +820,20 @@ describe("where it goes", () => {
     });
     // Someone else with the same subject does not.
     const stranger = await inbox.receive(
-      { From: "Quin <quin@example.com>", Subject: "Re: Labels for the summer packs" },
+      {
+        From: "Quin <quin@example.com>",
+        Subject: "Re: Labels for the summer packs",
+      },
       "I have a view on labels too.",
       at(313),
     );
     expect(stranger.threadedBy).toBe("new");
     // Nor does Pip, 31 days on.
     const late = await inbox.receive(
-      { From: "Pip <pip@example.com>", Subject: "Re: Labels for the summer packs" },
+      {
+        From: "Pip <pip@example.com>",
+        Subject: "Re: Labels for the summer packs",
+      },
       "Did this ever happen?",
       new Date(at(313).getTime() + 31 * DAY),
     );
@@ -802,7 +853,9 @@ describe("where it goes", () => {
       .insert(purchaseOrders)
       .values({ id: purchaseId, number: "PO-0007", supplierId });
     const batchId = newId("bat");
-    await db.insert(batches).values({ id: batchId, code: "B001", name: "Batch 001" });
+    await db
+      .insert(batches)
+      .values({ id: batchId, code: "B001", name: "Batch 001" });
 
     const one = await inbox.receive(
       {
@@ -836,7 +889,10 @@ describe("where it goes", () => {
 
     // Their freight company quoting the same number is kept apart.
     const freight = await inbox.receive(
-      { From: "Freight desk <desk@freight.example.com>", Subject: "Pick-up booked" },
+      {
+        From: "Freight desk <desk@freight.example.com>",
+        Subject: "Pick-up booked",
+      },
       "Collecting PO-0007 from Example Label Co on Friday.",
       at(402),
     );
@@ -874,7 +930,9 @@ describe("where it goes", () => {
     expect(again).toMatchObject({ newConversation: true, spam: true });
     expect(again.reason).toBe("Filed as spam because this address is blocked.");
     expect(await inbox.eventsFor(again.conversationId)).toEqual([]);
-    expect((await inbox.conversation(first.conversationId)).messageCount).toBe(1);
+    expect((await inbox.conversation(first.conversationId)).messageCount).toBe(
+      1,
+    );
   });
 });
 
@@ -886,7 +944,9 @@ describe("what comes with it", () => {
       .from(mailAttachments)
       .where(eq(mailAttachments.messageId, quote.messageId));
     expect(
-      files.map((file) => [file.filename, file.contentType, file.inline]).sort(),
+      files
+        .map((file) => [file.filename, file.contentType, file.inline])
+        .sort(),
     ).toEqual([
       ["logo.png", "image/png", true],
       ["quote 5521.txt", "text/plain", false],
@@ -896,11 +956,11 @@ describe("what comes with it", () => {
       expect(kept?.bytes.byteLength).toBe(file.size);
     }
     // The copy that is kept holds no address for the message's own pictures.
-    // They are filled in from the original when the reader asks.
     const kept = await inbox.message(quote.messageId);
     expect(kept.htmlBody).toContain("<p>Hi,</p>");
     expect(kept.htmlBody).not.toMatch(/cid:|src=/);
-    expect(kept.headers["qp:pictures"]).toBe("2");
+    // It came with a text part, so that is what the inbox shows.
+    expect(kept.headers["qp:from-html"]).toBeUndefined();
   });
 
   it("keeps nothing hostile in the copy it stores", async () => {
@@ -911,9 +971,13 @@ describe("what comes with it", () => {
     expect(html).not.toMatch(
       /<script|<style|<iframe|<form|<object|<embed|<svg|<math|<link|<meta|<base|onerror|onload|onclick|javascript:|position|\ssrc="http/i,
     );
-    // One remote picture and one that named itself "x": only real addresses
-    // are counted, and none of them loads.
-    expect(kept.headers["qp:pictures"]).toBe("1");
+    // It has no text part, so what the inbox shows is the words read out of
+    // that cleaned copy: plain text, with nothing in it that could run.
+    expect(kept.headers["qp:from-html"]).toBe("1");
+    expect(kept.textBody).toContain("Hello");
+    expect(kept.textBody).not.toMatch(
+      /<[a-z!/]|javascript:|onerror|document\.cookie|alert\(/i,
+    );
   });
 
   it("finds the mailbox from the envelope when the headers do not name us", async () => {
@@ -954,14 +1018,20 @@ describe("a delivery report about something we sent", () => {
       "Are the caps recyclable?",
       at(700 + n * 10),
     );
-    const sentId = await inbox.reply(asked.conversationId, "They are.", at(701 + n * 10));
+    const sentId = await inbox.reply(
+      asked.conversationId,
+      "They are.",
+      at(701 + n * 10),
+    );
     await inbox.deliver(sentId, at(702 + n * 10));
     return { asked, sentId, ours: await inbox.message(sentId) };
   };
 
   it("marks our email, stops us writing there again, and does not change whose turn it is", async () => {
     const { asked, sentId, ours } = await sendTo("rae@example.com", 1);
-    expect((await inbox.conversation(asked.conversationId)).status).toBe("waiting");
+    expect((await inbox.conversation(asked.conversationId)).status).toBe(
+      "waiting",
+    );
 
     const report = stored(
       await take(
@@ -984,13 +1054,17 @@ describe("a delivery report about something we sent", () => {
       error: "550 5.1.1 No such mailbox here",
     });
     // A machine wrote the report. The ball stays where it was.
-    expect((await inbox.conversation(asked.conversationId)).status).toBe("waiting");
+    expect((await inbox.conversation(asked.conversationId)).status).toBe(
+      "waiting",
+    );
     const [listed] = await inbox.handle.db
       .select()
       .from(mailSuppressions)
       .where(eq(mailSuppressions.email, "rae@example.com"));
     expect(listed).toMatchObject({ reason: "bounce" });
-    expect(await inbox.eventsFor(asked.conversationId)).toContain("mail.bounced");
+    expect(await inbox.eventsFor(asked.conversationId)).toContain(
+      "mail.bounced",
+    );
     expect(await inbox.auditFor(asked.conversationId)).toContain(
       'Our email "Re: Question 1 about caps" to rae@example.com came back undelivered. rae@example.com will not be emailed again',
     );
@@ -1047,9 +1121,7 @@ describe("a delivery report about something we sent", () => {
     const [victim] = await inbox.handle.db
       .select({ n: count() })
       .from(mailSuppressions)
-      .where(
-        and(eq(mailSuppressions.email, "victim@example.com")),
-      );
+      .where(and(eq(mailSuppressions.email, "victim@example.com")));
     expect(victim?.n).toBe(0);
 
     // And one whose token does not check out finds nothing of ours.

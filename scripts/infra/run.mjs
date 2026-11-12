@@ -251,6 +251,14 @@ async function vercelStatus() {
   console.log(
     `  order emails in production: ${mailMissing.length === 0 ? "the settings are there" : `NOT connected. Missing: ${mailMissing.join(", ")}`}`,
   );
+  // What the inbox needs to hear from Resend (lib/backstage/mail/config.ts):
+  // mail received for us, and bounces and complaints about mail we sent.
+  console.log(
+    `  bounces and incoming mail in production: ${hasInProduction(names, "RESEND_WEBHOOK_SECRET") ? "the signing secret is there" : "NOT heard. Missing: RESEND_WEBHOOK_SECRET"}`,
+  );
+  console.log(
+    `  reply addresses of their own: ${hasInProduction(names, "MAIL_TOKEN_SECRET") ? "MAIL_TOKEN_SECRET is there" : "off (MAIL_TOKEN_SECRET is not set), so replies come to MAIL_FROM"}`,
+  );
 }
 
 // --- Supabase -------------------------------------------------------------
@@ -342,6 +350,19 @@ async function supabaseStatus() {
       console.log(
         `    emails ${row.direction === "out" ? "out" : "in"} / ${String(row.status)}: ${String(row.n)}`,
       );
+    }
+    // The inbox, by whose turn it is, and the do-not-email list by reason.
+    const talk = await readOnlyQuery(
+      "select status, count(*)::int as n from public.mail_conversations group by 1 order by 1",
+    );
+    for (const row of Array.isArray(talk) ? talk : []) {
+      console.log(`    conversations ${String(row.status)}: ${String(row.n)}`);
+    }
+    const stopped = await readOnlyQuery(
+      "select reason, count(*)::int as n from public.mail_suppressions group by 1 order by 1",
+    );
+    for (const row of Array.isArray(stopped) ? stopped : []) {
+      console.log(`    do not email (${String(row.reason)}): ${String(row.n)}`);
     }
     await clockStatus();
   } else {

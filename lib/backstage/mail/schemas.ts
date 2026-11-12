@@ -5,20 +5,6 @@
 
 import { z } from "zod";
 
-import type { OpContext } from "../core/op";
-
-/**
- * Say that an operation looked and found nothing to do, so no line is
- * written to the activity log for it.
- *
- * `ctx.nothingChanged()` is being added to the operation framework. Until
- * every copy of it has that, this calls it where it exists and does nothing
- * where it does not, which costs one harmless log line.
- */
-export function nothingChanged(ctx: OpContext): void {
-  (ctx as OpContext & { nothingChanged?: () => void }).nothingChanged?.();
-}
-
 export const conversationIdSchema = z
   .string()
   .trim()

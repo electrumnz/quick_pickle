@@ -54,6 +54,17 @@ export const TERMS_OF_ART = [
     re: /\bbest[\s-]+practices?\b/i,
     why: "Engineering term of art, not a claim about the product (e.g. the Lighthouse `best-practices` category).",
   },
+  {
+    id: "no-health-claims-answer",
+    rules: ["HC-14"],
+    // The one answer COPY-RULES.md section 5 gives to a customer's question about
+    // what the product does to a body, in the shape it is written there: "we don't
+    // make health claims". Only the denial is excused, and only the word inside it.
+    // "Health claims" on its own, "we make health claims", and whatever is said
+    // before or after the sentence are all still read, by every rule.
+    re: /\bwe\s+(?:don['’]t|do\s+not)\s+make\s+health\s+claims\b/i,
+    why: "The answer COPY-RULES.md section 5 prescribes for a health question. It denies a claim and makes none. Refusing it would stop staff giving the one reply the rules tell them to give.",
+  },
 ];
 
 export function termSpansFor(ruleId, text, cache) {

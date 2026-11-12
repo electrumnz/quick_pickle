@@ -51,15 +51,44 @@ export function unfilledBlanks(text: string): string[] {
   return [...new Set([...text.matchAll(BLANK)].map((match) => match[0]))];
 }
 
+/** The small words inside a surname: "van der", "de la", "te". */
+const PARTICLES = new Set([
+  "al",
+  "bin",
+  "da",
+  "de",
+  "del",
+  "den",
+  "der",
+  "di",
+  "du",
+  "la",
+  "le",
+  "te",
+  "van",
+  "von",
+]);
+
+const NAME_WORD = /^\p{Lu}[\p{L}'’.-]{0,29}$/u;
+
 /**
  * A first name to greet someone by, from the name on their email, or null
  * when the name is not a person's ("Parcel updates", an address, nothing).
+ *
+ * It is a guess, so it is a careful one: every word has to be written the
+ * way a name is, with a capital, or be one of the small words inside a
+ * surname. Anything else leaves the blank in the reply, where it is seen.
  */
 export function firstNameFrom(name: string): string | null {
   const tidy = name.replace(/\s+/g, " ").trim();
   if (tidy === "" || tidy.includes("@")) return null;
   // "Carter, Liam" is surname first.
   const given = tidy.includes(",") ? (tidy.split(",")[1] ?? "").trim() : tidy;
+  const words = tidy.replace(",", " ").split(" ").filter(Boolean);
+  if (words.length > 5) return null;
+  for (const word of words) {
+    if (!NAME_WORD.test(word) && !PARTICLES.has(word)) return null;
+  }
   const [first] = given.split(" ");
   return first !== undefined && /^\p{Lu}[\p{L}'’-]{1,29}$/u.test(first)
     ? first
@@ -104,7 +133,8 @@ export const STARTER_TEMPLATES: readonly StarterTemplate[] = [
     body: [
       "Hi {{first_name}},",
       "",
-      // copy-audit-ignore: a disclaimer, word for word from legal/COPY-RULES.md section 5. It says what the product is NOT.
+      // Word for word from legal/COPY-RULES.md section 5, which is why the
+      // copy rules let it through. Change neither without the other.
       "Thanks for asking. Quick Pickle is a food and we don't make health claims about it. Your doctor or physio is the one to ask.",
     ].join("\n"),
   },

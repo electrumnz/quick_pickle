@@ -66,6 +66,19 @@ export async function submit<I extends z.ZodType, O>(
   redirect(target);
 }
 
+/**
+ * Go to a page and say something there, for an action that does more than
+ * one thing and has to choose its own words. It redirects, so nothing after
+ * it runs: never call it from inside a `try` that catches everything.
+ */
+export function sayAndGo(
+  path: string,
+  notice: string,
+  tone: "good" | "bad",
+): never {
+  redirect(withNotice(path, notice, tone));
+}
+
 export function formText(form: FormData, key: string): string {
   const value = form.get(key);
   return typeof value === "string" ? value.trim() : "";

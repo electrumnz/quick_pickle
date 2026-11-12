@@ -13,6 +13,8 @@
  *   - no clock, so nothing is retried and nothing unpaid is closed
  *   - the checkout's limit on asks from one address, switched off by hand
  *   - order emails not connected, so nobody would get a receipt
+ *   - nothing listening for bounces and complaints, so an address that does
+ *     either would be written to again
  *
  * It reads the same modules the site does, so it cannot disagree with it.
  */
@@ -68,6 +70,13 @@ const checks: Check[] = [
     ok: mailReady,
     label: "Order emails are not connected",
     fix: "Verify the sending domain with Resend, then set MAIL_PROVIDER=resend, RESEND_API_KEY and MAIL_FROM on production. Until then nobody gets a receipt. TODO.md has the steps.",
+  },
+  {
+    // The same test lib/backstage/mail/config.ts makes: set, and long enough
+    // to be a secret.
+    ok: (env.RESEND_WEBHOOK_SECRET ?? "").trim().length >= 16,
+    label: "Bounces and incoming mail are not being heard",
+    fix: "Add a webhook in Resend that calls /api/mail/resend, and set RESEND_WEBHOOK_SECRET on production to its signing secret. Until then mail does not reach the inbox, and an address that bounces or complains is written to again. TODO.md has the steps.",
   },
   {
     ok: orderStore !== "" && orderStore !== "log" && orderStore !== "file",
