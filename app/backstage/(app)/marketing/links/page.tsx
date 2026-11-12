@@ -41,12 +41,15 @@ function LinkFields({
   partners,
   codes,
   forPartnerId,
+  forTarget,
 }: {
   readonly link?: LinkRow;
   readonly partners: readonly Choice[];
   readonly codes: readonly Choice[];
   /** For a new link started from a partner's page: already picked. */
   readonly forPartnerId?: string;
+  /** For a new link started from a landing page: where it goes. */
+  readonly forTarget?: string;
 }) {
   const key = link?.id ?? "new";
   return (
@@ -59,7 +62,7 @@ function LinkFields({
         maxLength={2000}
         autoCapitalize="none"
         spellCheck={false}
-        defaultValue={link?.target}
+        defaultValue={link?.target ?? forTarget}
         placeholder="/ or https://"
         hint="A page on this site, starting with one slash (like /checkout), or a full https address. Nothing else is allowed, and only an owner can point a link at another website."
       />
@@ -141,10 +144,15 @@ function LinkFields({
 export default async function LinksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ notice?: string; tone?: string; partner?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    tone?: string;
+    partner?: string;
+    target?: string;
+  }>;
 }) {
   const staff = await requireStaff();
-  const { notice, tone, partner } = await searchParams;
+  const { notice, tone, partner, target } = await searchParams;
   const caller = await staffCaller();
   const [rows, partnerRows, codeRows] = await Promise.all([
     execute(listLinks, { sort: "clicks", limit: 200 }, caller),
@@ -355,6 +363,13 @@ export default async function LinksPage({
               forPartnerId={
                 partners.some((row) => row.value === partner)
                   ? partner
+                  : undefined
+              }
+              // Only ever a page on this site: one slash, then the path.
+              forTarget={
+                target !== undefined &&
+                /^\/(?![/\\])[A-Za-z0-9\-._~/]{0,80}$/.test(target)
+                  ? target
                   : undefined
               }
             />

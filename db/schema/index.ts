@@ -9,5 +9,6 @@ export * from "./core";
 export * from "./files";
 export * from "./mail";
 export * from "./marketing";
+export * from "./pages";
 export * from "./plans";
 export * from "./stock";

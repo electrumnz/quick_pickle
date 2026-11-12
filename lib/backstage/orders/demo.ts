@@ -42,6 +42,8 @@ export type DemoOrder = {
   readonly code?: { readonly code: string; readonly percent: number };
   /** The short link the buyer came through. */
   readonly via?: string;
+  /** The landing page they were shown. Left out: the standard page. */
+  readonly page?: string;
 };
 
 const DEMO: readonly DemoOrder[] = [
@@ -288,7 +290,7 @@ export async function placeDemoOrders(
             16,
             "x",
           ),
-          page: "home",
+          page: order.page ?? "home",
           device: order.rural ? "desk" : "phone",
           ...(order.via === undefined ? {} : { via: order.via }),
         },

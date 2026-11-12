@@ -627,9 +627,18 @@ describe("the demo's month of visits", () => {
         "/go/rovers",
         "google.com",
         "facebook",
+        "/go/clubs",
       ]),
     );
-    expect(numbers.pages.map((page) => page.page)).toEqual(["home"]);
+    // The standard page, and the demo's one live landing page with the
+    // order that came through it.
+    expect(numbers.pages.map((page) => page.page)).toEqual(["home", "clubs"]);
+    expect(numbers.pages[1]).toMatchObject({
+      ordered: 1,
+      orders: 1,
+      salesCents: 8400,
+    });
+    expect(numbers.pages[1]?.visits).toBeGreaterThan(3);
     expect(numbers.daily).toHaveLength(30);
     expect(numbers.daily.every((day) => day.visits > 0)).toBe(true);
   });

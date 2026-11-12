@@ -43,6 +43,13 @@
       "when": 1794487909179,
       "tag": "0005_visits",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794489134006,
+      "tag": "0006_pages",
+      "breakpoints": true
     }
   ]
 }

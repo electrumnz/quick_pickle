@@ -18,7 +18,7 @@
 
 import { eq } from "drizzle-orm";
 
-import { links, partners } from "@/db/schema";
+import { links, pages, partners } from "@/db/schema";
 import type { DbOrTx } from "@/lib/db/types";
 
 import { SLUG_PATTERN, UTM_KEYS } from "./links";
@@ -78,8 +78,8 @@ export function tidySource(
   return out;
 }
 
-/** The pages there are to be shown. Only the standard one, so far. */
-const KNOWN_PAGES: readonly string[] = ["home"];
+/** The standard page. Every other page is a landing page, by its slug. */
+const HOME = "home";
 
 /**
  * The same, with `via` kept only if it names a short link of ours and
@@ -97,8 +97,12 @@ export async function knownSource(
       .where(eq(links.slug, source.via));
     if (link === undefined) delete source.via;
   }
-  if (source.page !== undefined && !KNOWN_PAGES.includes(source.page)) {
-    delete source.page;
+  if (source.page !== undefined && source.page !== HOME) {
+    const [page] = await db
+      .select({ id: pages.id })
+      .from(pages)
+      .where(eq(pages.slug, source.page));
+    if (page === undefined) delete source.page;
   }
   return Object.keys(source).length === 0 ? null : source;
 }

@@ -57,6 +57,15 @@ function currentPage(): string {
   }
 }
 
+/** A member of staff previewing a draft is not a visit. */
+function isPreview(): boolean {
+  try {
+    return document.querySelector("main")?.dataset.preview !== undefined;
+  } catch {
+    return false;
+  }
+}
+
 function device(): "phone" | "desk" {
   try {
     return window.matchMedia("(max-width: 767px)").matches ? "phone" : "desk";
@@ -73,7 +82,7 @@ export function seen(
   source: Readonly<Record<string, string>>,
 ): void {
   if (typeof window === "undefined" || VISIT === "") return;
-  if (askedNotToBeTracked()) return;
+  if (askedNotToBeTracked() || isPreview()) return;
   try {
     const body = JSON.stringify({
       kind: step,

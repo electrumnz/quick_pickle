@@ -56,7 +56,9 @@ is guessed: no ingredient, volume, origin, storage line or process word ("strain
 site tells crawlers to stay out and `npm run prelaunch` fails.
 
 **No demo or preview banner on public pages.** Test mode is explained once, on the
-checkout, where a visitor would otherwise expect a card field.
+checkout, where a visitor would otherwise expect a card field. (A staff preview of a
+landing page does carry a strip saying what it is. It is behind the sign-in, and a
+customer can never reach it.)
 
 **No em dashes in customer-facing copy.** Use a full stop, a comma or a colon. The founder
 reads them as machine-written. Code comments are not copy.
@@ -86,7 +88,8 @@ Drizzle · Vercel. No CMS and no Shopify. Commerce is native: our catalogue, our
 checkout, our orders.
 
 ```
-app/(site)/            the shop: the page, /checkout, /order/thanks, the fine print
+app/(site)/            the shop: the page, /checkout, /order/thanks, the fine print,
+                       landing pages (/for/<slug>) and their staff preview (/preview/<id>)
 app/backstage/(door)/  sign-in, first-time set-up, choose a password
 app/backstage/(app)/   everything behind the door, one folder per area
 app/layout.tsx         the document, the fonts and the shop's stylesheet. No script.
@@ -127,6 +130,32 @@ the way this showed up the first time.
 
 A link from the back end to the shop is `ShopLink` (a plain anchor, full page load), never
 `next/link`: a client-side hop between the two would stack one stylesheet on the other.
+
+### Landing pages
+
+A landing page is the one page with other words in the hero, for one audience or one
+advert: `/for/<slug>`. `components/site/ShopPage.tsx` is the page; the standard page and
+every landing page render it, so there is one shop and the parts under the hero are the
+same for everybody.
+
+- **A page keeps two sets of words: the draft and what is published.** Saving changes the
+  draft only. `pages.publish` is the one way words get out: it is outward, needs a yes, and
+  runs the copy rules over the finished text (`refuseUnsendable` and the marketing gate). A
+  banned term refuses it; a restricted one needs a recorded human check. The public address
+  only ever reads `published`.
+- A page that exists but is not up (a draft, or taken down) shows the **standard page** at
+  its address, because an advert or a printed QR code may still point there. An address
+  nobody made is a 404.
+- The public page is rendered once and kept for a minute. Publishing or taking down raises
+  an event whose listener throws the kept copy away, so a change shows at once.
+- `<main data-page>` says which page is on screen. The visit counter and an order both read
+  it, which is how Numbers tells the pages apart.
+- **The preview is the real page, not a likeness.** `/preview/<id>` lives among the shop's
+  routes so it is drawn by the shop's stylesheet, but `requireStaff()` is its lock like any
+  back-end page. It carries the strip, is never cached or indexed, may be framed only by
+  this site (the editor shows it in a phone-sized frame), and its visits are not counted.
+- The headline is set as written, a line to a line, at the biggest size its longest line
+  fits (`fitFor` in `components/site/Hero.tsx`).
 
 ### The database
 

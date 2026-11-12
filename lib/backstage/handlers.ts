@@ -14,6 +14,7 @@ import "server-only";
 import { on } from "./core/events";
 import { closePaymentPage } from "./orders/listeners";
 import { sendRefund } from "./orders/refunds";
+import { refreshPublicPage } from "./pages/listeners";
 
 let registered = false;
 
@@ -24,6 +25,8 @@ export function registerHandlers(): void {
 
   on("order.cancelled", "close the payment page", closePaymentPage());
   on("order.refund_requested", "send the money back", sendRefund());
+  on("page.published", "show the new words at once", refreshPublicPage());
+  on("page.taken_down", "stop showing the page at once", refreshPublicPage());
 
   // More are added here as their areas land:
   //   on("mail.queued", "send the email", ...)

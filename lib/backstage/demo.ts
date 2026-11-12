@@ -12,6 +12,8 @@ export async function seedDemoData(db: Db): Promise<void> {
   await seedMarketingDemo(db, now);
   const { seedPlansDemo } = await import("./plans/demo");
   await seedPlansDemo(db, now);
+  const { seedPagesDemo } = await import("./pages/demo");
+  await seedPagesDemo(db, now);
   // Last, because it fills in the visits that led to the orders above.
   const { seedNumbersDemo } = await import("./numbers/demo");
   await seedNumbersDemo(db, now);
