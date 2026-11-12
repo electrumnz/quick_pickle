@@ -310,6 +310,32 @@ check(
   (superiority.json?.findings ?? []).every((f) => f.surface === "consumer"),
 );
 
+// 9c2 — the brand's own first words. Every banned sentence in the Quick Pickle
+//       concept deck has to fail on a consumer surface, by its own rule.
+const conceptDeck = scanFixture("consumer", "must-fail-concept-deck.tsx");
+check(
+  "the concept deck's claim still FAILS",
+  conceptDeck.code === 1,
+  conceptDeck.out,
+);
+for (const id of ["TH-04", "QP-01", "QP-02", "QP-03", "QP-04"]) {
+  check(`concept-deck fixture trips ${id}`, ids(conceptDeck.json).has(id));
+}
+check(
+  '"cramps in 60 seconds flat" is caught as a speed-of-effect claim',
+  (conceptDeck.json?.findings ?? []).some(
+    (f) => f.id === "QP-01" && /60 seconds/i.test(f.match),
+  ),
+  conceptDeck.out,
+);
+check(
+  '"Performance with pickles" cannot be published without a recorded decision',
+  (conceptDeck.json?.findings ?? []).some(
+    (f) => f.id === "QP-02" && f.severity === "restricted",
+  ),
+  conceptDeck.out,
+);
+
 // 9d — parsing must not have become leniency: a health claim in a string literal,
 //      a template literal and JSX text all still fail on a consumer surface.
 const consumerHealth = scanFixture("consumer", "must-fail-health-claim.tsx");

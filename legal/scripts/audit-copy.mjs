@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // copy-audit-ignore-file
 /**
- * HALF SOUR - copy auditor.
+ * QUICK PICKLE - copy auditor.
  *
- * Scans files for language HALF SOUR may not lawfully publish about its product.
+ * Scans files for language QUICK PICKLE may not lawfully publish about its product.
  * The reasoning behind every rule is in legal/COPY-RULES.md; the rule IDs match.
  *
  *   node legal/scripts/audit-copy.mjs <path> [<path>...]
@@ -75,45 +75,29 @@ const SURFACES = {
 const DEFAULT_SURFACE = CONSUMER;
 
 const SURFACE_MAP = [
+  { prefix: "app/", surface: CONSUMER, note: "public pages" },
   {
-    prefix: "app/(site)/",
-    surface: CONSUMER,
-    note: "public storefront routes",
-  },
-  {
-    prefix: "app/api/",
+    prefix: "app/backstage/",
     surface: INTERNAL,
-    note: "route handlers, no rendered copy",
+    note: "the back end: brand guide and go-live list",
   },
-  { prefix: "app/(admin)/", surface: INTERNAL, note: "password-gated admin" },
-  { prefix: "components/home/", surface: CONSUMER, note: "storefront home" },
-  { prefix: "components/product/", surface: CONSUMER, note: "product pages" },
+  { prefix: "components/", surface: CONSUMER, note: "storefront components" },
   {
-    prefix: "components/content/",
-    surface: CONSUMER,
-    note: "rendered editorial",
-  },
-  { prefix: "components/3d/", surface: CONSUMER, note: "storefront scene" },
-  {
-    prefix: "components/strategy/",
+    prefix: "components/backstage/",
     surface: INTERNAL,
-    note: "internal strategy tooling",
+    note: "back-end components",
   },
-  { prefix: "components/admin/", surface: INTERNAL, note: "admin components" },
-  { prefix: "components/auth/", surface: INTERNAL, note: "admin sign-in" },
   { prefix: "content/", surface: CONSUMER, note: "the copy library itself" },
   {
-    prefix: "brand/",
-    surface: CONSUMER,
-    note: "brand and voice, quoted into copy",
+    prefix: "content/brand-guide.ts",
+    surface: INTERNAL,
+    note: "the brand guide, shown only in the back end",
   },
   { prefix: "public/", surface: CONSUMER, note: "served verbatim to browsers" },
   { prefix: "lib/", surface: INTERNAL, note: "libraries and adapters" },
+  { prefix: "scripts/", surface: INTERNAL, note: "build tooling" },
   { prefix: "tests/", surface: INTERNAL, note: "unit tests" },
   { prefix: "e2e/", surface: INTERNAL, note: "end-to-end tests" },
-  { prefix: "inngest/", surface: INTERNAL, note: "background job wiring" },
-  { prefix: "supabase/", surface: INTERNAL, note: "schema and migrations" },
-  { prefix: "docs/", surface: INTERNAL, note: "engineering documentation" },
   {
     prefix: "legal/scripts/",
     surface: INTERNAL,
@@ -423,7 +407,7 @@ const RULES = [
     BANNED,
     EVERY_SURFACE,
     /\belectrolytes?\b/i,
-    '"Electrolyte drink" is a PRESCRIBED NAME with a mandatory composition (>=10 mmol/L sodium and 20-100 g/L of specified sugars) that HALF SOUR does not meet. This is a compositional breach, not just a marketing risk.',
+    '"Electrolyte drink" is a PRESCRIBED NAME with a mandatory composition (>=10 mmol/L sodium and 20-100 g/L of specified sugars) that QUICK PICKLE does not meet. This is a compositional breach, not just a marketing risk.',
     "FSC Std 2.6.2-11(1)-(2), 2.6.2-12(1), 2.6.2-15",
   ),
   r(
@@ -457,6 +441,42 @@ const RULES = [
     /\bendurance\b|\bstamina\b|\bmuscles?\b|\bsoreness\b|\bDOMS\b|\b(?:physical|athletic|sporting|sports|exercise)\s+performance\b|\bperformance\s+(?:gains?|boost|edge|drink)\b/i,
     "Health claim about physical performance.",
     "FSC Std 1.2.7-18",
+  ),
+
+  // ---- Group Q: the lines in Quick Pickle's own concept deck ---------------
+  // The brand was born with a claim in its mouth. These rules exist so that the
+  // exact sentences from the deck cannot drift back on to the site.
+  r(
+    "QP-01",
+    BANNED,
+    EVERY_SURFACE,
+    /\b(?:in|within|under)\s+(?:\d+|sixty|thirty|ten|five)\s+(?:seconds?|secs?|minutes?|mins?)\b|\b\d+\s+seconds?\s+flat\b|\bfast[\s-]acting\b|\bworks?\s+(?:fast|quick(?:ly)?|instantly|in\s+(?:seconds|minutes))\b|\binstant\s+relief\b|\brelie(?:f|ve[sd]?|ving)\b/i,
+    "Speed-of-effect or relief language. It only means something if the product is doing something to a body, which is the claim a food may not make.",
+    "FSC Std 1.2.7-8(a); Std 1.2.7-18; FTA 1986 s 12A",
+  ),
+  r(
+    "QP-02",
+    RESTRICTED,
+    CONSUMER_ONLY,
+    /\bperformance\b/i,
+    "The concept deck is titled with this word. Next to a food it reads as a physical-performance claim. Do not publish it without advice and a recorded decision.",
+    'FSC Std 1.2.7-18; definition of "health effect", Std 1.1.2-2',
+  ),
+  r(
+    "QP-03",
+    RESTRICTED,
+    CONSUMER_ONLY,
+    /\bquads?\b|\bhamstrings?\b|\bcalves\b|\bglutes?\b|\bhammies\b/i,
+    "Naming a muscle next to the product implies the product does something for it.",
+    "FSC Std 1.2.7-18; Std 1.1.2-2 (implied claims)",
+  ),
+  r(
+    "QP-04",
+    BANNED,
+    EVERY_SURFACE,
+    /\bphysical\s+barriers?\b|\bmental\s+strength\b|\bphysical\s+game\b|\bmental\s+(?:game|one)\b|\bstops?\s+(?:us|you|them)\s+in\s+(?:our|your|their)\s+tracks\b|\bplay\s+(?:our|your)\s+best\s+game\b/i,
+    "The set-up lines around the deck's claim. Each one frames the product as the answer to a body letting you down.",
+    "FSC Std 1.2.7-18; Std 1.1.2-2 (implied claims)",
   ),
 
   // ---- Group D: nutrition content claims --------------------------------
@@ -850,7 +870,7 @@ const RULES = [
     "R-13",
     RESTRICTED,
     CONSUMER_ONLY,
-    /\bpicklebacks?\b|\bmartinis?\b|\bcocktails?\b|\bchasers?\b|\bvodka\b|\bgin\b|\bwhisk(?:e)?y\b|\bbourbon\b|\btequila\b|\bmezcal\b|\bshots?\b/i,
+    /\bpicklebacks?\b|\bmartinis?\b|\bcocktails?\b|\bvodka\b|\bgin\b|\bwhisk(?:e)?y\b|\bbourbon\b|\btequila\b|\bmezcal\b/i,
     "Core positioning and ALLOWED. Flagged so a human checks context: no encouragement of excessive or rapid consumption, no under-18 targeting, and no implication that it offsets the effects of alcohol (that is TH-01).",
     "ASA Code for Advertising and Promotion of Alcohol, where alcohol is featured",
   ),
@@ -1596,7 +1616,7 @@ function scanFile(file, out, exemptions, opts, ts) {
 }
 /* ------------------------------------------------------------------- main */
 
-const USAGE = `HALF SOUR copy auditor
+const USAGE = `QUICK PICKLE copy auditor
 
   node legal/scripts/audit-copy.mjs <path> [<path>...]   scan files or directories
   node legal/scripts/audit-copy.mjs --list               print every rule

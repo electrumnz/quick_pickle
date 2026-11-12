@@ -13,14 +13,14 @@ const eslintConfig = defineConfig([
     "test-results/**",
     ".lighthouseci/**",
     "next-env.d.ts",
-    // Generation working files: prompt scratch, model outputs and the
-    // throwaway builds the image/video units diff against. Gitignored, so
-    // linting it only ever reports on someone else's build artefact.
-    ".gen/**",
-    // Private build directories. `distDir` is redirected here so two
-    // concurrent builds cannot share `.next`; the output is a build
-    // artefact like any other and reported 2,766 errors belonging to nobody.
+    // Private build directories (see next.config.ts).
     ".scratch/**",
+    // Generated from the official vector art by scripts/build-vectors.py.
+    "lib/brand/art/lucky-run.ts",
+    "lib/brand/art/lucky-up.ts",
+    "lib/brand/art/lockup-letters.ts",
+    // Deliberately-bad copy the scanner's self-test must catch.
+    "legal/test-fixtures/**",
   ]),
   ...nextVitals,
   ...nextTs,
@@ -34,31 +34,6 @@ const eslintConfig = defineConfig([
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
     },
-  },
-  {
-    // react-three-fiber does not re-render a WebGL scene; it mutates one.
-    //
-    // `react-hooks/immutability` enforces the React Compiler's model, in which
-    // a value produced by a hook is frozen once render is over. Every frame of
-    // this directory breaks that on purpose: `useFrame` advances a shader's
-    // `uTime` uniform, writes an object's position and rotation, and sets
-    // material properties on the instances `useMemo` built — and `useThree`
-    // hands back the renderer and the camera precisely so they can be
-    // configured in place. There is no immutable spelling of any of it. A
-    // material rebuilt to satisfy the rule would recompile its shader program,
-    // which is the single most expensive thing this scene can do, and a camera
-    // "replaced" rather than moved is not a camera the renderer is holding.
-    //
-    // So this is scoped to the one directory that drives a render loop, and to
-    // the one rule whose model does not describe that loop. The rest of the
-    // React Compiler set stays on here and earned its keep: `purity` caught a
-    // clock read during render in the lab's FPS probe, and
-    // `set-state-in-effect` caught two effects mirroring values that should
-    // have been derived, one of which left a forced quality tier latched on.
-    // Nothing outside components/3d is affected, and nothing in it is exempt
-    // from any other rule.
-    files: ["components/3d/**/*.{ts,tsx}"],
-    rules: { "react-hooks/immutability": "off" },
   },
 ]);
 

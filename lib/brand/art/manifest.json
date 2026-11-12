@@ -1,0 +1,470 @@
+{
+  "logo-primary": {
+    "width": 3900,
+    "height": 2373,
+    "sources": [
+      {
+        "width": 480,
+        "height": 292,
+        "file": "logo-primary-480.webp",
+        "bytes": 57782
+      },
+      {
+        "width": 800,
+        "height": 487,
+        "file": "logo-primary-800.webp",
+        "bytes": 111816
+      },
+      {
+        "width": 1200,
+        "height": 730,
+        "file": "logo-primary-1200.webp",
+        "bytes": 193574
+      },
+      {
+        "width": 1600,
+        "height": 974,
+        "file": "logo-primary-1600.webp",
+        "bytes": 287876
+      }
+    ]
+  },
+  "lucky-flying": {
+    "width": 3236,
+    "height": 2559,
+    "sources": [
+      {
+        "width": 280,
+        "height": 221,
+        "file": "lucky-flying-280.webp",
+        "bytes": 23504
+      },
+      {
+        "width": 480,
+        "height": 380,
+        "file": "lucky-flying-480.webp",
+        "bytes": 44208
+      },
+      {
+        "width": 720,
+        "height": 569,
+        "file": "lucky-flying-720.webp",
+        "bytes": 74434
+      },
+      {
+        "width": 1080,
+        "height": 854,
+        "file": "lucky-flying-1080.webp",
+        "bytes": 124334
+      }
+    ]
+  },
+  "lucky-celebrate": {
+    "width": 1793,
+    "height": 1982,
+    "sources": [
+      {
+        "width": 280,
+        "height": 310,
+        "file": "lucky-celebrate-280.webp",
+        "bytes": 33408
+      },
+      {
+        "width": 480,
+        "height": 531,
+        "file": "lucky-celebrate-480.webp",
+        "bytes": 64384
+      },
+      {
+        "width": 720,
+        "height": 796,
+        "file": "lucky-celebrate-720.webp",
+        "bytes": 105250
+      }
+    ]
+  },
+  "lucky-sleeping": {
+    "width": 1412,
+    "height": 1978,
+    "sources": [
+      {
+        "width": 240,
+        "height": 336,
+        "file": "lucky-sleeping-240.webp",
+        "bytes": 21964
+      },
+      {
+        "width": 400,
+        "height": 560,
+        "file": "lucky-sleeping-400.webp",
+        "bytes": 41784
+      },
+      {
+        "width": 640,
+        "height": 897,
+        "file": "lucky-sleeping-640.webp",
+        "bytes": 72294
+      }
+    ]
+  },
+  "lucky-thumbs-up": {
+    "width": 1977,
+    "height": 1984,
+    "sources": [
+      {
+        "width": 280,
+        "height": 281,
+        "file": "lucky-thumbs-up-280.webp",
+        "bytes": 25922
+      },
+      {
+        "width": 480,
+        "height": 482,
+        "file": "lucky-thumbs-up-480.webp",
+        "bytes": 50058
+      },
+      {
+        "width": 720,
+        "height": 723,
+        "file": "lucky-thumbs-up-720.webp",
+        "bytes": 79784
+      }
+    ]
+  },
+  "lucky-pointing": {
+    "width": 1980,
+    "height": 1763,
+    "sources": [
+      {
+        "width": 280,
+        "height": 249,
+        "file": "lucky-pointing-280.webp",
+        "bytes": 27210
+      },
+      {
+        "width": 480,
+        "height": 427,
+        "file": "lucky-pointing-480.webp",
+        "bytes": 52094
+      },
+      {
+        "width": 720,
+        "height": 641,
+        "file": "lucky-pointing-720.webp",
+        "bytes": 83622
+      }
+    ]
+  },
+  "lucky-wink": {
+    "width": 1988,
+    "height": 1864,
+    "sources": [
+      {
+        "width": 280,
+        "height": 263,
+        "file": "lucky-wink-280.webp",
+        "bytes": 25438
+      },
+      {
+        "width": 480,
+        "height": 450,
+        "file": "lucky-wink-480.webp",
+        "bytes": 48802
+      },
+      {
+        "width": 720,
+        "height": 675,
+        "file": "lucky-wink-720.webp",
+        "bytes": 78412
+      }
+    ]
+  },
+  "lucky-jar-lift": {
+    "width": 1310,
+    "height": 1990,
+    "sources": [
+      {
+        "width": 240,
+        "height": 365,
+        "file": "lucky-jar-lift-240.webp",
+        "bytes": 28060
+      },
+      {
+        "width": 400,
+        "height": 608,
+        "file": "lucky-jar-lift-400.webp",
+        "bytes": 52724
+      },
+      {
+        "width": 640,
+        "height": 972,
+        "file": "lucky-jar-lift-640.webp",
+        "bytes": 90484
+      }
+    ]
+  },
+  "lucky-landing": {
+    "width": 1988,
+    "height": 1793,
+    "sources": [
+      {
+        "width": 280,
+        "height": 253,
+        "file": "lucky-landing-280.webp",
+        "bytes": 30408
+      },
+      {
+        "width": 480,
+        "height": 433,
+        "file": "lucky-landing-480.webp",
+        "bytes": 59834
+      },
+      {
+        "width": 720,
+        "height": 649,
+        "file": "lucky-landing-720.webp",
+        "bytes": 97748
+      }
+    ]
+  },
+  "sticker-sunglasses": {
+    "width": 796,
+    "height": 796,
+    "sources": [
+      {
+        "width": 128,
+        "height": 128,
+        "file": "sticker-sunglasses-128.webp",
+        "bytes": 6520
+      },
+      {
+        "width": 200,
+        "height": 200,
+        "file": "sticker-sunglasses-200.webp",
+        "bytes": 11720
+      },
+      {
+        "width": 320,
+        "height": 320,
+        "file": "sticker-sunglasses-320.webp",
+        "bytes": 20770
+      },
+      {
+        "width": 480,
+        "height": 480,
+        "file": "sticker-sunglasses-480.webp",
+        "bytes": 31416
+      }
+    ]
+  },
+  "sticker-heart": {
+    "width": 796,
+    "height": 796,
+    "sources": [
+      {
+        "width": 128,
+        "height": 128,
+        "file": "sticker-heart-128.webp",
+        "bytes": 6448
+      },
+      {
+        "width": 200,
+        "height": 200,
+        "file": "sticker-heart-200.webp",
+        "bytes": 11172
+      },
+      {
+        "width": 320,
+        "height": 320,
+        "file": "sticker-heart-320.webp",
+        "bytes": 19378
+      },
+      {
+        "width": 480,
+        "height": 480,
+        "file": "sticker-heart-480.webp",
+        "bytes": 28554
+      }
+    ]
+  },
+  "sticker-wordmark": {
+    "width": 796,
+    "height": 796,
+    "sources": [
+      {
+        "width": 128,
+        "height": 128,
+        "file": "sticker-wordmark-128.webp",
+        "bytes": 6232
+      },
+      {
+        "width": 200,
+        "height": 200,
+        "file": "sticker-wordmark-200.webp",
+        "bytes": 11104
+      },
+      {
+        "width": 320,
+        "height": 320,
+        "file": "sticker-wordmark-320.webp",
+        "bytes": 19852
+      },
+      {
+        "width": 480,
+        "height": 480,
+        "file": "sticker-wordmark-480.webp",
+        "bytes": 29838
+      }
+    ]
+  },
+  "sticker-lockup": {
+    "width": 796,
+    "height": 796,
+    "sources": [
+      {
+        "width": 128,
+        "height": 128,
+        "file": "sticker-lockup-128.webp",
+        "bytes": 9862
+      },
+      {
+        "width": 200,
+        "height": 200,
+        "file": "sticker-lockup-200.webp",
+        "bytes": 17150
+      },
+      {
+        "width": 320,
+        "height": 320,
+        "file": "sticker-lockup-320.webp",
+        "bytes": 29480
+      },
+      {
+        "width": 480,
+        "height": 480,
+        "file": "sticker-lockup-480.webp",
+        "bytes": 43778
+      }
+    ]
+  },
+  "sticker-face": {
+    "width": 796,
+    "height": 796,
+    "sources": [
+      {
+        "width": 128,
+        "height": 128,
+        "file": "sticker-face-128.webp",
+        "bytes": 7820
+      },
+      {
+        "width": 200,
+        "height": 200,
+        "file": "sticker-face-200.webp",
+        "bytes": 13312
+      },
+      {
+        "width": 320,
+        "height": 320,
+        "file": "sticker-face-320.webp",
+        "bytes": 22524
+      },
+      {
+        "width": 480,
+        "height": 480,
+        "file": "sticker-face-480.webp",
+        "bytes": 32718
+      }
+    ]
+  },
+  "sticker-hug": {
+    "width": 797,
+    "height": 796,
+    "sources": [
+      {
+        "width": 128,
+        "height": 128,
+        "file": "sticker-hug-128.webp",
+        "bytes": 6818
+      },
+      {
+        "width": 200,
+        "height": 200,
+        "file": "sticker-hug-200.webp",
+        "bytes": 12432
+      },
+      {
+        "width": 320,
+        "height": 320,
+        "file": "sticker-hug-320.webp",
+        "bytes": 22242
+      },
+      {
+        "width": 480,
+        "height": 479,
+        "file": "sticker-hug-480.webp",
+        "bytes": 32910
+      }
+    ]
+  },
+  "sticker-crew": {
+    "width": 797,
+    "height": 796,
+    "sources": [
+      {
+        "width": 128,
+        "height": 128,
+        "file": "sticker-crew-128.webp",
+        "bytes": 5826
+      },
+      {
+        "width": 200,
+        "height": 200,
+        "file": "sticker-crew-200.webp",
+        "bytes": 10114
+      },
+      {
+        "width": 320,
+        "height": 320,
+        "file": "sticker-crew-320.webp",
+        "bytes": 18146
+      },
+      {
+        "width": 480,
+        "height": 479,
+        "file": "sticker-crew-480.webp",
+        "bytes": 27156
+      }
+    ]
+  },
+  "sticker-big-dill": {
+    "width": 797,
+    "height": 796,
+    "sources": [
+      {
+        "width": 128,
+        "height": 128,
+        "file": "sticker-big-dill-128.webp",
+        "bytes": 5982
+      },
+      {
+        "width": 200,
+        "height": 200,
+        "file": "sticker-big-dill-200.webp",
+        "bytes": 10324
+      },
+      {
+        "width": 320,
+        "height": 320,
+        "file": "sticker-big-dill-320.webp",
+        "bytes": 17718
+      },
+      {
+        "width": 480,
+        "height": 479,
+        "file": "sticker-big-dill-480.webp",
+        "bytes": 26352
+      }
+    ]
+  }
+}

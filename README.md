@@ -1,76 +1,52 @@
-# HALF SOUR
+# Quick Pickle
 
-Next.js 16 (App Router) + React 19 + Tailwind CSS v4 storefront.
+The one-page shop for Quick Pickle: pickle juice shots, sold direct in New Zealand.
+
+Next.js 16 (App Router) · React 19 · Tailwind CSS v4 · TypeScript. No CMS and no
+third-party storefront: the catalogue, the jar and the checkout are all in this repository.
 
 ## Getting started
 
-Node 22 is required — it is pinned in `.nvmrc`, declared in `package.json`
-`engines`, used by every CI job and set as the Vercel project's Node version, so
-what is verified is what ships.
+Node 22 (pinned in `.nvmrc`).
 
 ```bash
-nvm use                      # reads .nvmrc
+nvm use
 npm install
-cp .env.example .env.local   # fill in values; never commit real ones
 npm run dev
 ```
 
+Nothing needs configuring to run it. With no environment variables set, the site builds,
+serves, takes test orders and charges nobody. See `.env.example` for the three that exist.
+
 ## Scripts
 
-| Script              | What it does                           |
-| ------------------- | -------------------------------------- |
-| `npm run dev`       | Dev server on http://localhost:3000    |
-| `npm run build`     | Production build                       |
-| `npm start`         | Serve the production build             |
-| `npm run typecheck` | `next typegen` + `tsc --noEmit`        |
-| `npm run lint`      | ESLint + Prettier check                |
-| `npm run test`      | Vitest unit tests                      |
-| `npm run test:e2e`  | Playwright end-to-end tests            |
-| `npm run lhci`      | Lighthouse CI: collect + assert budget |
+| Script                        | What it does                                             |
+| ----------------------------- | -------------------------------------------------------- |
+| `npm run dev`                 | Dev server on http://localhost:3000                      |
+| `npm run build`               | Production build. The real check that a change is sound. |
+| `npm start`                   | Serve the production build                               |
+| `npm run typecheck`           | `next typegen` + `tsc --noEmit`                          |
+| `npm run lint`                | ESLint + Prettier check                                  |
+| `npm run test`                | Vitest: money, jar, pricing, orders, brand tokens        |
+| `npm run test:e2e`            | Playwright: the purchase journey, no-JS, axe             |
+| `npm run audit:copy`          | Fails on a banned claim in anything a customer can read  |
+| `npm run audit:copy:selftest` | Proves the scanner still catches what it exists to catch |
+| `npm run prelaunch`           | Lists what still stands between this and taking money    |
+| `npm run lhci`                | Lighthouse budget                                        |
 
-## Layout
+## Where things are
 
 ```
-app/(site)/     public storefront routes
-app/(admin)/    password-gated admin routes
-lib/commerce/   Shopify clients, cart + checkout
-lib/agents/     Claude-powered agents and tools
-lib/brand/      brand tokens, voice, asset manifests
-components/3d/  React Three Fiber scenes
-inngest/        background + scheduled functions
-supabase/       database migrations
-e2e/            Playwright specs
-tests/          Vitest specs
+content/     every word and every price. Start here.
+app/         the page, /checkout, /order/thanks, the fine print, /backstage
+components/  brand art, page sections, the jar, the checkout form
+lib/brand/   design tokens, fonts, generated art data
+lib/shop/    money, jar, pricing, orders, payment and storage seams
+legal/       the copy rules and the scanner that enforces them
+scripts/     art, vector, video and go-live tooling
 ```
 
-## CI
+To change a price, a pack or a delivery rate: `content/offer.ts`.
+To change a line of copy: `content/site.ts`.
 
-`.github/workflows/ci.yml` runs three independent jobs on every push and pull
-request:
-
-| Job                               | What it gates                                                       |
-| --------------------------------- | ------------------------------------------------------------------- |
-| `typecheck / lint / test / build` | `next typegen` + `tsc`, ESLint + Prettier, Vitest, production build |
-| `e2e (Playwright)`                | the Playwright suite, run against `next start`, not `next dev`      |
-| `Lighthouse budget`               | `lighthouserc.json` assertions — a violation fails the build        |
-
-### Lighthouse budget
-
-`lighthouserc.json` is the performance contract, asserted against the
-production build (`npm run build && npm start`) on a mobile emulation profile.
-Breaching any of these fails CI:
-
-- Performance, Accessibility, Best Practices and SEO all >= 95
-- Cumulative Layout Shift <= 0.02
-- Resource budgets: script <= 400 kB, stylesheet <= 100 kB, image <= 600 kB,
-  total <= 1.6 MB (transfer size)
-
-Reports are uploaded as the `lighthouse-reports` build artefact. Add new routes
-to `ci.collect.url` as they land so the budget covers them too.
-
-## Deployments
-
-The Vercel project `half-sour` tracks this repository. Its production branch is
-the working branch, so every push deploys to production and updates
-<https://half-sour.vercel.app>. Preview deployments stay enabled: any other
-branch or pull request gets its own URL.
+`CLAUDE.md` has the rules of the road. `TODO.md` has the honest status.

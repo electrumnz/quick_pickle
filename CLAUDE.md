@@ -1,113 +1,130 @@
-# HALF SOUR
+# QUICK PICKLE
 
-Brand, storefront and AI-operated admin for a New Zealand pickle-brine company.
-One founder is the only human; the admin is where the rest of the company lives.
+A one-page shop for Quick Pickle: pickle juice shots, sold direct, in New Zealand.
+The juice is clear. There are no pickles in the bottle.
+
+The brand is Ashleigh Lennard's: the logo, Lucky the superhero cat, the three colours and
+the four fonts. "Brand Guide v2" (Grok's write-up of her files) is a starting point, not a
+rulebook. The version this build actually follows is the living guide at `/backstage/brand`,
+rendered from the same tokens and components as the site.
+
+The repository name is not a brand name. Everything a customer sees says Quick Pickle.
 
 ## Non-negotiables
 
-**No health claims. Anywhere. Ever.** Positioning is culinary — brine as a cocktail
-mixer and cooking acid. Not sports recovery, not gut health, not wellness. Health and
-nutrition claims on food are governed by the FSANZ Code and MPI, and a single stray word
-turns marketing copy into a regulated therapeutic claim.
+**No health claims. Anywhere. Ever.** Quick Pickle is a food. Under the Food Standards
+Code a food may not be advertised as preventing or easing a condition (Standard 1.2.7-8),
+and any other claim about what it does to a body needs approvals this product does not
+have (1.2.7-18). That rules out the line the concept deck is built around: "a pickle punch
+to cramps in 60 seconds flat". It also rules out the quieter ones: recovery, hydration,
+electrolytes, performance, "for the quads".
 
-`legal/COPY-RULES.md` is binding on every word this company publishes, including anything
-an AI agent drafts. It is machine-enforced:
+So the site sells what it can stand behind: **the taste, the tiny bottle, the ritual, and
+Lucky.** `legal/COPY-RULES.md` is binding on every word published, including anything an
+AI drafts, and it is machine-enforced:
 
 ```bash
-node legal/scripts/audit-copy.mjs <paths>   # exits non-zero on a banned term
+npm run audit:copy            # exits non-zero on a banned term
+npm run audit:copy:selftest   # proves the scanner still catches the deck's own lines
 ```
 
-Note "cure" and "cured" are CORRECT food vocabulary here — a half-sour is a cucumber
-_cured_ in brine rather than vinegar. That is the brand's own name rationale. Do not
-avoid the word; the scanner rule for it is scoped to the therapeutic sense.
+A wink is a claim too. "We can't tell you what it does" implies it does something.
 
-**Provenance must be literally true.** Fair Trading Act s 13(j) makes false place-of-origin
-claims an offence. Supplier stories are a deliberate content pillar, so any sourcing fact
-not yet verified is marked `TODO: verify with supplier` rather than written as fact.
+**Facts must be literally true.** Fair Trading Act s 9, 12A, 13. Nothing about the product
+is guessed: no ingredient, volume, origin, storage line or process word ("strained",
+"brewed") appears until Ashleigh confirms it. Unknown commercial facts carry a stand-in in
+`content/offer.ts` and are listed in `UNCONFIRMED` there. While that list is not empty the
+site shows a preview strip, tells crawlers to stay out, and `npm run prelaunch` fails.
 
-## The products
+**Never trust a price from the browser.** The jar holds SKUs and quantities. Every total
+is computed from `content/offer.ts` by `lib/shop/pricing.ts`, and computed again on the
+server when an order is placed. There is no price field on any form.
 
-| SKU       | Name            | Brine                              | Price | Job                             |
-| --------- | --------------- | ---------------------------------- | ----- | ------------------------------- |
-| HS-01-500 | No 01 HOUSE     | Dill, peppercorn, garlic, bay      | $18   | The everyday one                |
-| HS-02-500 | No 02 DIRTY     | Cornichon, green olive, lemon peel | $20   | The martini                     |
-| HS-03-500 | No 03 SMOKE     | Chipotle, manzano, manuka-smoked   | $22   | Mezcal, michelada, pork         |
-| HS-04-500 | No 04 WILD      | Kawakawa, kelp, lemon              | $26   | Seafood. Limited by leaf supply |
-| HS-SET-3  | The First Three | All three of 01–03                 | $54   |                                 |
+## How it is built
 
-All 500ml, NZD, live in Shopify. WILD carries the highest claim risk in the range because
-kawakawa has strong rongoā associations — keep its copy strictly culinary.
+Next.js 16 App Router · React 19 · TypeScript · Tailwind v4 · Vercel. No CMS, no Shopify,
+no database yet. Commerce is native: our catalogue, our jar, our checkout, our orders.
 
-## Stack
+```
+app/                 the page, /checkout, /order/thanks, the fine print, /backstage
+components/brand/    Lucky and the lockup (inline vector), raster art, icons, the bottle
+components/site/     the sections of the page
+components/cart/     the jar: provider, header button, sheet
+components/checkout/ the form and its Server Action
+content/             EVERY word and EVERY commercial fact. Edit copy and prices here.
+lib/brand/           tokens.css (the only file with a hex), fonts, generated art data
+lib/shop/            money, jar, pricing, orders, the payment seam, the store seam
+legal/               COPY-RULES.md and the scanner
+scripts/             build-art.mjs, build-vectors.py, build-media.mjs, prelaunch.mts
+tests/  e2e/         vitest and Playwright
+```
 
-Next.js App Router · TypeScript · Tailwind v4 · Vercel
-React Three Fiber + GSAP/ScrollTrigger + Lenis for the storefront
-Shopify (Storefront + Admin API) behind a provider adapter
-Supabase for everything Shopify cannot do — recipes, batches, agents, approvals, brand rules
-Vercel AI SDK + Inngest for the agent runtime
+### Commerce
 
-**Pinned versions, deliberately.** ESLint 9 not 10 (eslint-config-next bundles an
-eslint-plugin-react that calls the removed `context.getFilename()`). TypeScript 6 not 7
-(typescript-eslint hard-throws on TS 7). Playwright 1.56 to match the preinstalled
-Chromium build. Do not "upgrade" these without checking why they are held back.
+- `content/offer.ts` is the catalogue. Money is integer cents; never a float in a price path.
+- `lib/shop/payments` is where a processor plugs in. Today `PAYMENT_PROVIDER` is `test`:
+  the checkout records the order, charges nobody, and says so on every screen. An unknown
+  provider name throws rather than falling back to test mode.
+- `lib/shop/store` is where orders are written. `file` in development (`.data/`), `log` in
+  production. The log store keeps nothing, which is acceptable only while payments are test.
+- The "order's in" page reads a short-lived httpOnly receipt cookie. It is display only.
+
+### Design rules that came from measuring
+
+- **Mobile first.** The phone layout is the design; wider screens only add room. The button
+  is on the first screen at 390 wide, and a sticky buy bar follows the thumb after that.
+- **On the pink ground, sentences live on a cream card.** Cream on pink is 3.8:1 and navy
+  on pink is 3.4:1: large type only. `tests/brand/tokens.test.ts` computes every pair.
+- **Never a raw hex outside `lib/brand/`.** A test enforces it.
+- **Motion is transform and opacity only**, on the guide's durations, and everything
+  collapses under `prefers-reduced-motion`. Content is visible without JavaScript; scroll
+  reveal only hides blocks once its observer is actually running.
+- Tap targets are 44px or more. axe runs on every page at both sizes with no rule disabled.
+
+### Art
+
+Ashleigh's concept pages are true vector, so Lucky (running, and flying up) and the stacked
+QUICK / PICKLE lockup are drawn from her own paths: `scripts/build-vectors.py` extracts
+them, `components/brand/Vector.tsx` renders them. They are never redrawn or recoloured.
+Only the marks she drew as motion (burst lines, speed lines, dust) move.
+
+That vector art is her pink-ground "knockout" palette. On cream or navy use the full-colour
+raster art (`components/brand/Art.tsx`, built by `scripts/build-art.mjs`).
+
+Poses marked "proposed" in the pack were generated from her art and are pending her nod:
+celebrate (order placed) and sleeping (empty jar, 404) are in use and flagged in the guide.
+
+The asset pack itself (200 MB of print masters) is not in the repository. Both build
+scripts take its path as an argument.
+
+Video and reels go in the slots in `content/media.ts`, encoded by `scripts/build-media.mjs`.
 
 ## Conventions
 
-- **Never a raw hex colour outside `lib/brand/`.** Components consume the semantic token
-  layer (`--text-primary`, `--surface-raised`), never a pigment name. A test enforces it.
-- **Money is integer minor units.** Never a float in a price path. Shopify returns decimal
-  strings; conversion belongs in the adapter.
-- **`npm run typecheck` is not sufficient.** It has passed on trees where `npm run build`
-  failed on a real error. Verify with `npm run build`.
+- **`npm run typecheck` is not sufficient.** Verify with `npm run build`.
 - No `any`, no `@ts-ignore`, no unjustified `eslint-disable`.
-- Commerce is behind `lib/commerce/provider.ts`. A conformance suite written once runs
-  against both the mock and Shopify providers; `COMMERCE_PROVIDER` switches them.
-- **Take a private build directory.** Two `next build`s sharing `.next` do not fail
-  loudly — they interleave, and a running `next start` then serves HTML pointing at CSS
-  the other build deleted, which looks like a styling bug and is not one. Use
-  `NEXT_DIST_DIR=.scratch/next-<something>`. It also gets its own gitignored
-  `tsconfig.scratch.json`, so private builds cannot dirty the repo's.
-- **Next 16 allows one `next dev` per directory.** A crashed run leaves the server
-  holding the lock and every later run in that directory fails with "Another next dev
-  server is already running" — kill it by the PID the message gives you. A stale server
-  on port 3000 caused three wrong diagnoses in one session, because Playwright's
-  `reuseExistingServer` picks it up silently.
-- **Never `pkill -f` on a broad pattern.** It has killed servers belonging to other work,
-  and once killed the shell that ran it, because the pattern matched its own command
-  line. Kill by PID.
-
-## How it runs today
-
-`HALF_SOUR_DEMO=1` is set in production. The whole deployment is served from a PGlite
-image compiled into the build — **no Supabase, no database credential**. `SUPABASE_DB_URL`
-is answered by `pglite://half-sour-demo`, which nothing dials.
-
-Demo mode is opt-in and one variable. Unset it and everything reverts exactly: the proxy
-fails closed, `/admin` redirects to `/login`, and argon2id, the throttle, the lockout and
-the sealed cookie all behave as they always did. Tests assert both directions.
-
-Two things it changes, deliberately, because every row in that database is invented:
-
-- **The admin is open** — no password to look, and none to ask the team. Gated on
-  `demoOpensAdmin()`, not bare `isDemoMode()`: the latter is also true when
-  `HALF_SOUR_DEMO=1` sits beside a real `SUPABASE_DB_URL`, and Server Actions are
-  reachable by POST without rendering a page. Writes with nobody signed in are stamped
-  `actor_type = 'system'` against a row that says what it is, never against the founder.
-- **The approval gate still holds.** Deciding needs the password.
-
-The agents run on the Vercel AI Gateway via `AI_GATEWAY_API_KEY`. A deployment fixes its
-environment at build time, so a variable added after a deploy does not reach it until the
-next one — redeploy rather than debugging the code.
+- Copy lives in `content/`. A component that needs a new word gets it from there, so the
+  scanner reads the whole site by reading one folder.
+- **Take a private build directory** when more than one thing builds this tree:
+  `NEXT_DIST_DIR=.scratch/next-<something>`. Two builds sharing `.next` interleave silently.
+- **Next 16 allows one `next dev` per directory.** A crashed run leaves the lock held; kill
+  it by the PID the error message gives you.
+- **Never `pkill -f` on a broad pattern.** Kill by PID.
+- Playwright is pinned to the version whose Chromium is preinstalled in the cloud sandbox
+  (1.63). Do not run `playwright install` there.
+- ESLint 9 not 10, TypeScript 6 not 7: both held back on purpose by the Next toolchain.
+- User-facing writing: plain everyday New Zealand English, British spelling, no em dashes.
 
 ## Deploying
 
-Production is `half-sour.vercel.app`, and it tracks `main`. A push to `main` builds and
-publishes; nothing else does. `vercel.json` turns deployments off for the working branch,
-so pushing there is free — use it to park work that is not ready to be seen.
+The Vercel project tracks this repository. Production follows `main`; every other branch
+gets a preview URL. Never push a red build to `main`: Vercel keeps the last good deployment,
+so a failed build silently freezes production rather than breaking it.
 
-Never push a red build to main: Vercel keeps the last good deployment, so a failed build
-silently freezes production rather than breaking it, which is harder to notice.
+The site is not launched. See `TODO.md` for what stands between this and taking money.
 
-## Not done yet
+## History
 
-See `TODO.md`.
+Until 12 November 2026 this repository held a different, placeholder brand ("HALF SOUR")
+with a large AI-operated admin behind it. That code was removed for the Quick Pickle
+rebuild and is intact in git history at commit `9f2531f`.

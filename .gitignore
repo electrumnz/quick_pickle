@@ -1,14 +1,5 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
 
 # next.js
 /.next/
@@ -23,7 +14,7 @@
 /blob-report
 /playwright/.cache
 
-# env files — never commit real values; .env.example is the opt-in exception
+# env files: never commit real values; .env.example is the opt-in exception
 .env
 .env.*
 !.env.example
@@ -37,9 +28,6 @@
 
 # debug
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
 
 # vercel
 .vercel
@@ -48,35 +36,15 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# agent run evidence (large, machine-generated)
-.claude/god-of-war/runs/*/evidence/
-
-# agent scratch
-.tmpbench/
-
 # python bytecode
 __pycache__/
 *.pyc
 
-# stray orchestrator scratch
-_shot.mjs
-.shotcheck/
-.tune.mjs
-
-# agent scratch space
+# private build directories and scratch space
 .scratch/
-
-# generation working files
-.gen/
-
-# the marketing asset library's local storage (photos and video the founder
-# uploads; never committed, never inside public/)
-.assets/
-
-# the demo database image (`npm run demo:build-image`): 4.4 MB of gzipped
-# Postgres data directory, rebuilt from the migrations and seed that are in the
-# tree. A build artefact, not a source file.
-/lib/demo/generated/
 
 # Private tsconfig for a NEXT_DIST_DIR build; see next.config.ts.
 tsconfig.scratch.json
+
+# Local order log written by the file store in development (lib/shop/store).
+.data/
