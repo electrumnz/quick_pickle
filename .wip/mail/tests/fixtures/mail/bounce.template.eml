@@ -1,0 +1,50 @@
+Return-Path: <>
+Delivered-To: hello@quickpickle.example
+From: Mail Delivery Subsystem <MAILER-DAEMON@mx.example.com>
+To: hello@quickpickle.example
+Subject: Undelivered Mail Returned to Sender
+Date: Wed, 11 Nov 2026 12:00:00 +1300
+Message-ID: <{{BOUNCE_ID}}@mx.example.com>
+Auto-Submitted: auto-replied
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=delivery-status;
+	boundary="dsn-0001"
+
+--dsn-0001
+Content-Description: Notification
+Content-Type: text/plain; charset=us-ascii
+
+This is the mail system at host mx.example.com.
+
+I'm sorry to have to inform you that your message could not
+be delivered to one or more recipients.
+
+<{{RECIPIENT}}>: host mail.example.com said: 550 5.1.1
+    No such mailbox here
+
+--dsn-0001
+Content-Description: Delivery report
+Content-Type: message/delivery-status
+
+Reporting-MTA: dns; mx.example.com
+Arrival-Date: Wed, 11 Nov 2026 11:59:58 +1300
+
+Final-Recipient: rfc822; {{RECIPIENT}}
+Original-Recipient: rfc822;{{RECIPIENT}}
+Action: {{ACTION}}
+Status: {{STATUS}}
+Remote-MTA: dns; mail.example.com
+Diagnostic-Code: smtp; 550 5.1.1 No such mailbox here
+
+--dsn-0001
+Content-Description: Undelivered Message Headers
+Content-Type: text/rfc822-headers
+
+From: Quick Pickle <hello@quickpickle.example>
+To: {{RECIPIENT}}
+Subject: Re: Where is my order?
+Message-ID: {{MESSAGE_ID}}
+X-QP-Conversation: {{TOKEN}}
+Date: Wed, 11 Nov 2026 11:59:50 +1300
+
+--dsn-0001--

@@ -2,6 +2,7 @@
 .next/
 .scratch/
 .claude/
+.wip/
 out/
 build/
 coverage/

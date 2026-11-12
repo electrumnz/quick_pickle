@@ -1,0 +1,24 @@
+Return-Path: <>
+Delivered-To: orders@quickpickle.example
+From: Courier Support <case-48213-b@tickets.courier.example.com>
+To: orders@quickpickle.example
+Subject: Case 48213-B
+Date: Wed, 11 Nov 2026 10:05:00 +1300
+Message-ID: <case-48213-b-9@tickets.courier.example.com>
+List-Id: <cases.courier.example.com>
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<html>
+<head>
+<style>@import url("https://track.courier.example.com/mail.css"); p { color: red }</style>
+</head>
+<body>
+<table width="100%"><tr><td>
+<p style="color:#333333; font-size:14px">Your case has moved to a new queue.</p>
+<p>Sender reference: <strong>QP-SENT66</strong></p>
+<p><a href="https://track.courier.example.com/case/48213-B">See the case</a></p>
+</td></tr></table>
+<img src="https://track.courier.example.com/open.gif?case=48213-B" width="1" height="1" alt="">
+</body>
+</html>
