@@ -213,5 +213,13 @@ export const MIGRATIONS: readonly Migration[] = [
       "CREATE INDEX \"stock_batch_idx\" ON \"stock_movements\" USING btree (\"batch_id\",\"at\");",
       "CREATE INDEX \"stock_order_idx\" ON \"stock_movements\" USING btree (\"order_id\");"
     ]
+  },
+  {
+    "tag": "0002_file_blobs",
+    "hash": "0e9a2b1c267b0c32",
+    "statements": [
+      "CREATE TABLE \"file_blobs\" (\n\t\"key\" text PRIMARY KEY NOT NULL,\n\t\"bytes\" \"bytea\" NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"file_blobs\" ENABLE ROW LEVEL SECURITY;"
+    ]
   }
 ];

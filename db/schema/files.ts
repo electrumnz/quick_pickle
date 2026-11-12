@@ -7,6 +7,7 @@
 
 import { sql } from "drizzle-orm";
 import {
+  customType,
   index,
   integer,
   pgTable,
@@ -55,3 +56,19 @@ export const files = pgTable(
     index("files_kind_idx").on(t.kind, t.createdAt),
   ],
 ).enableRLS();
+
+/** Raw bytes. node-postgres hands back a Buffer, which is a Uint8Array. */
+const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
+  dataType: () => "bytea",
+});
+
+/**
+ * The bytes themselves, for files kept in the database (keys starting
+ * `db/`). Small things only: an email's original, an attachment, a document.
+ * Pictures and video for the public site do not belong here.
+ */
+export const fileBlobs = pgTable("file_blobs", {
+  key: text().primaryKey(),
+  bytes: bytea().notNull(),
+  createdAt: createdAt(),
+}).enableRLS();
