@@ -51,7 +51,7 @@ Before you start: clean, dry hands and a clear bench.
 ## Send it
 
 13. [ ] On the order, press **Mark as packed**.
-14. [ ] When the courier has it, enter the courier and the tracking number and press **Mark as shipped**. This cannot be undone, so check you are on the right order.
+14. [ ] When the courier has it, enter the courier and the tracking number and press **Mark as shipped**. This cannot be undone, so check you are on the right order. With more than a couple of orders, use the [Courier](${LINK.courier}) screen: it gives the courier's website every packed order as one file, and takes the tracking numbers back in one go.
 15. [ ] Put the slip in the box, or file it: ____.
 
 ## If something is not right
@@ -163,7 +163,7 @@ const damagedOrMissing: StarterDocument = {
 
 9. [ ] Offer what the Returns page promises: a replacement or the money back. The customer chooses.
 10. [ ] **A replacement.** There is no button for this yet. Pack the replacement by hand, and add a note on the original order saying what was sent and when.
-11. [ ] **Money back.** On the order, open **Record a refund** and enter the amount and the reason. Until a payment processor is connected this only writes it down, so send the money back by hand as well.
+11. [ ] **Money back.** On the order, open **Record a refund** and enter the amount and the reason. For an order paid by card through Stripe the money goes back to the card by itself, and the screen says so before you press. For any other order it is only written down, so send the money back by hand as well.
 12. [ ] Tell the customer what you have done and when to expect it.
 13. [ ] Do not ask for damaged bottles to be sent back. Ask the customer to throw them away. If you do need one back to look at a fault, you pay the postage.
 
@@ -235,6 +235,47 @@ const complaint: StarterDocument = {
 - "It is perfectly safe" or "that cannot have been us", before you know.
 - Blame: the courier, the customer, the supplier.
 - Promises you have not checked against the Returns page.`,
+};
+
+const cardDispute: StarterDocument = {
+  slug: "how-to-card-dispute",
+  title: "What to do when a card payment is disputed",
+  kind: "how-to",
+  summary:
+    "A customer's bank has taken a payment back and given the shop a date to answer by.",
+  sort: 45,
+  body: `**What this is:** the steps when a customer's bank disputes a card payment, sometimes called a chargeback. It is rare. It has a date on it, and missing the date loses the money, so it comes first on the day it arrives.
+
+*Starter draft. A dispute is answered in Stripe's own dashboard, not here. The back end tells you there is one, which order it is about and how it ended. The blanks (____) are for you to fill in.*
+
+## What has happened
+
+A cardholder has told their bank they should not have been charged: they do not recognise the payment, the order never came, or it was not what they expected. The bank takes the money back from the shop straight away, and Stripe charges a fee for the dispute (its price list says how much). You then have until a set date to show the bank the sale was fair. If the bank agrees, the money comes back. If it does not, or nobody answers by the date, the money stays with the cardholder.
+
+## The day it arrives
+
+1. [ ] [Today](${LINK.today}) shows it at the top: which order, how much, the bank's reason and the date to answer by. Open the order.
+2. [ ] Read the order's history. Was it packed and sent? Is there a tracking number? Has the customer been in touch?
+3. [ ] Do not refund the order while it is disputed. The bank has already taken the money back, and a refund on top could pay it twice.
+4. [ ] If it looks like a mix-up and you can reach the customer, write to them. A customer can tell their bank to drop a dispute. Still answer in Stripe by the date: do not wait on them.
+
+## Answer it, in Stripe
+
+5. [ ] Open the dispute in Stripe's dashboard. Who has the login: ____.
+6. [ ] Give the bank what shows the sale was fair. What helps depends on the reason:
+   - **They say it never arrived:** the tracking number, the courier's page showing it delivered, and the address it went to.
+   - **They do not recognise it, or say it was not them:** the order's details as the customer typed them (name, email, delivery address), and any emails with them.
+   - **They say it was not as described:** what the page said they were buying, and the returns promise shown on the site.
+   - **They say they were charged twice:** show there is one payment for one order. If there really are two, say so.
+7. [ ] If the customer is right, say so and accept the dispute in Stripe. It is quicker than losing it slowly.
+8. [ ] Send it before the date. An answer can only be sent once, so read it through first.
+
+## Afterwards
+
+9. [ ] Once it is answered, Today stops calling it urgent and says it is with the bank. How long the bank usually takes: ____.
+10. [ ] When the bank decides, the order's history says how it ended. Won: the money stays and nothing else changes. Lost: the amount is written on the order as given back, so the order and [For the books](${LINK.books}) are right. There is nothing more to do on the order.
+11. [ ] Add a note on the order: what you sent and what you learned.
+12. [ ] Two disputes close together for the same reason are worth a hard look. "Never arrived" twice points at the courier or the address form. "Do not recognise it" twice may mean the name on card statements is not one customers know: ask Stripe what it shows.`,
 };
 
 const recall: StarterDocument = {
@@ -367,10 +408,10 @@ const monthEnd: StarterDocument = {
 
 ## In the first week of each month
 
-1. [ ] **Sales.** From [Orders](${LINK.orders}), go through last month's paid orders: order number, date, total, delivery charged. Leave out test orders and cancelled ones. There is no export button yet. Until there is, Stripe's report in step 2 is the record of money received, and the Orders screen is the check against it.
+1. [ ] **Sales.** Open [For the books](${LINK.books}) and press **Last month**. It shows what customers were charged and what was given back, day by day, with test orders and unpaid ones left out. Download both files: by day, and by order. How your accountant wants sales entered in Xero: ____.
 2. [ ] **Money received.** From Stripe, download last month's payouts and fees. A payout is usually several sales in one lump, less Stripe's fees. How your accountant wants it entered: ____.
 3. [ ] **Match them.** Paid orders, less refunds, less Stripe's fees, should come to what Stripe paid out, allowing for payouts that straddle the end of the month. If it does not, find out why before going on.
-4. [ ] **Refunds.** List every refund recorded on an order last month, with its reason. Check each one really went back to the customer.
+4. [ ] **Refunds.** The same screen shows what was given back on each day, and the by-order file shows it against each order. A refund made in Stripe's own dashboard is in there too. Check each one against Stripe's list.
 5. [ ] **Bills.** Every supplier invoice and receipt for the month goes into Xero with the paperwork attached: juice or ingredients, bottles, caps, labels, cartons, courier, hosting, email, insurance, fees.
 6. [ ] **Courier.** Check the courier's invoice against the orders you sent. Query anything you did not send.
 7. [ ] **Bank.** Reconcile the bank account in Xero: every line matched to a sale, a bill or a transfer.
@@ -436,6 +477,7 @@ export const STARTER_HOW_TOS: readonly StarterDocument[] = [
   productionDay,
   damagedOrMissing,
   complaint,
+  cardDispute,
   recall,
   healthQuestion,
   monthEnd,

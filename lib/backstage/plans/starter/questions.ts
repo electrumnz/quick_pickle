@@ -231,6 +231,15 @@ const TOPICS: readonly Topic[] = [
         source: "How-to sheets",
         blocksLaunch: false,
       },
+      {
+        key: "box-weight",
+        question:
+          "What does a packed box weigh, for each pack size, and how big is it?",
+        why: "A courier charges by weight and size. The file the Courier screen makes for the courier's website leaves both out until they are known, so they are typed in on the courier's site each time.",
+        askOf: ASHLEIGH,
+        source: "Courier screen",
+        blocksLaunch: false,
+      },
     ],
   },
   {

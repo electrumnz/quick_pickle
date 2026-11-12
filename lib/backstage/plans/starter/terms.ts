@@ -28,12 +28,15 @@ export const HEALTH_QUESTION_SLUG = "how-to-answer-a-health-question";
 
 /** Where the starter drafts link to each other and to the other screens. */
 export const LINK = {
+  today: "/backstage",
   plans: "/backstage/plans",
   questions: "/backstage/plans/questions",
   tasks: "/backstage/plans/tasks",
   compliance: "/backstage/plans/compliance",
   budget: "/backstage/plans/budget",
   orders: "/backstage/orders",
+  courier: "/backstage/orders/courier",
+  books: "/backstage/numbers/books",
   customers: "/backstage/customers",
   brand: "/backstage/brand",
   goLive: "/backstage/settings/go-live",

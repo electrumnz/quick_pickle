@@ -20,5 +20,11 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     exclude: ["e2e/**", "node_modules/**", ".next/**"],
+    // Most files open their own Postgres in the process and run every
+    // migration on it before the first test. That takes a second or two on
+    // a quiet machine and well over the default ten on a busy one (a build
+    // running beside the tests, a slow CI runner), which showed as a whole
+    // file failing in its set-up for no reason of its own.
+    hookTimeout: 60_000,
   },
 });
