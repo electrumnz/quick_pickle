@@ -483,6 +483,13 @@ go-live list shows when it last ran and what is stuck.
   first paint, the estimate counts them as blocking it, and identical bytes scored 2.4 s or
   2.9 s for the largest paint depending on a 20 ms race. Measured properly it is the first
   paint: about 1.7 s on slow 4G.
+- **Lucky stays drawn into the page.** The home document is 266 kB before it is squeezed
+  (about 40 kB as Vercel sends it), and Lucky's drawing is 53 kB of that, twice over,
+  because React sends its own copy of everything the server drew. It is tempting to move
+  her to a separate image. Measured on 12 November 2026 and left alone: a drawing in the
+  page paints with the first paint and is not counted as the largest one (the headline
+  is), where a separate image arrives after it, becomes the largest paint, and lands
+  late on a first visit. Fewer bytes, a worse page.
 
 ### Art
 
