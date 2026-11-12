@@ -549,6 +549,19 @@ go-live list shows when it last ran and what is stuck.
   it is about) and only when it is true. They are transactional under the
   Unsolicited Electronic Messages Act 2007: **nothing promotional may ever be added to
   one**, which is also why they carry no unsubscribe link.
+- **The ship date is an order's email too, and the one a person sends**
+  (`lib/backstage/orders/ship-date.ts`). The site tells a pre-order's customer "we'll
+  email you the ship date" in four places, so somebody is owed that email: every paid
+  pre-order that is not cancelled, not on the courier and not a test, whose customer has
+  not been told the date that is set NOW. A receipt that said the date counts as telling
+  them (each email that says a date carries it in a note, `qp:ship-date`). An email that
+  was written down and never sent told nobody, and does not count. So a date that moves is
+  owed again to everybody, in words that say it moved. It is written once for each date by
+  `orders.emailCustomer` (`about: ship_date`), and never by itself: Today says who is
+  owed, and one press on Settings, The shop writes to them, for the date that was on the
+  screen. With email not connected the press writes nothing at all, because a message
+  written down and not sent would use up each customer's one email for that date. A date
+  that has gone by is told to nobody.
 - **A test order's customer is not emailed**, with one exception: a payment made in
   Stripe's test mode gets a receipt that says first that it was a test. The practice
   checkout gets none, because pressing its button costs nothing and would let anybody make
@@ -640,6 +653,11 @@ conversations, and is answered from there. `lib/backstage/mail/` is the area;
   wears it for its hidden radio. It never animates.
 - **Olive is an accent, never small type**, on any ground: the pickle, the badge, a rule, a
   sparkle. On navy, small labels are cream. Olive type starts at 1.2rem bold.
+- **The Varsity faces have a smallest size.** Varsity Senior (`.varsity`) is never set under
+  1.5rem and Summer Varsity (`.display`) never under 2rem: they are display cuts, and the
+  brand pack's fonts note (12 November 2026) gives those floors. A smaller line, a pack's
+  name in the jar say, is set in the label face. `tests/brand/type-floors.test.ts` reads
+  every class list and fails on one that is under.
 - **Nothing is cut off when a reader spaces the text out** (line height 1.5, letters 0.12em,
   words 0.16em, paragraphs 2em). `e2e/site.spec.ts` applies that and looks for clipped
   words, after proving it can see one. A box that is clipped on purpose says so with

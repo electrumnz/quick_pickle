@@ -23,6 +23,7 @@ import { defineOp } from "../core/op";
 import { mailNeeds } from "../mail/needs";
 import { marketingNeedsYou } from "../marketing/overview";
 import { disputeNeeds } from "../orders/disputes";
+import { shipDateNeeds } from "../orders/ship-date";
 import { shopNeeds } from "../shop/needs";
 import { plansNeeds } from "../plans/needs";
 import { stockNeeds } from "../stock/needs";
@@ -182,6 +183,10 @@ export const needsYou = defineOp({
     // The shop's own settings: shut, or a pre-order whose ship date has
     // gone by. Somebody chose each of those and could forget they did.
     for (const item of await shopNeeds(ctx.db, ctx.now)) needs.push(item);
+
+    // People with a pre-order who were promised an email with the ship
+    // date and have not had it.
+    for (const item of await shipDateNeeds(ctx.db, ctx.now)) needs.push(item);
 
     // Stock: at most a line each for orders that cannot be filled (urgent:
     // customers have paid and are waiting), shots past their date, stock

@@ -103,9 +103,12 @@ Updated 12 November 2026. Honest status, not a summary.
      and answer that reply from the phone: it joins the same conversation.
      `MAIL_INBOUND_SECRET` is not needed for any of this. It is for a mail forwarder of
      our own, if Resend's receiving is ever not used.
-- [ ] **Tell pre-order customers the ship date, by hand.** The delivery page and the
-      "order's in" page promise the ship date by email before anything is sent. Nothing sends
-      that by itself. When the date is set, somebody has to email the people with pre-orders.
+- [ ] **Tell pre-order customers the ship date.** The delivery page and the "order's in"
+      page promise the ship date by email before anything is sent. Once email is connected
+      it is one press: set the date in Settings, The shop, and the panel under it says who
+      has not been told and writes to them. Today shows it until it is done. Move the date
+      and they are owed the new one. Until email is connected, it is still by hand: the
+      panel lists whose orders they are.
 - [ ] **Vercel's free plan is not for a business taking money.** At launch: Vercel Pro
       (US$20 a month), or move hosting to Cloudflare. Decide then.
 - [ ] **A domain.**
