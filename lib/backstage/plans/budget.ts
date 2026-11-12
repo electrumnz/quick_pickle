@@ -53,8 +53,10 @@ export type CostTotals = {
 
 /** What the customer is charged for delivery, and when it is free. */
 export type DeliveryRule = {
+  /** The flat rate. Nothing means delivery is free for everybody. */
   readonly standardCents: number;
-  readonly freeOverCents: number;
+  /** The order value that earns free delivery, or null when none does. */
+  readonly freeOverCents: number | null;
 };
 
 export type PackInput = {
@@ -196,7 +198,9 @@ export function packEconomics(
   }
 
   const deliveryChargedCents =
-    priceCents >= delivery.freeOverCents ? 0 : delivery.standardCents;
+    delivery.freeOverCents !== null && priceCents >= delivery.freeOverCents
+      ? 0
+      : delivery.standardCents;
   const paidCents = priceCents + deliveryChargedCents;
 
   // 15% on top is 3/23 of the total. To the nearest cent, as the shop does.

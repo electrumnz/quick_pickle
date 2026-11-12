@@ -21,6 +21,7 @@ import type { PaymentProvider } from "@/lib/shop/payments";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
 import { nzDateKey, nzToInstant } from "@/lib/time";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 /**
  * Refunds made from Stripe's own dashboard, written back onto the order.
@@ -128,6 +129,7 @@ describe("refunds that were not started here", () => {
         lines: [{ sku: "QP-SHOT-24", qty: 1 }],
       },
       {
+        offer: FILE_OFFER,
         payments: elsewhere,
         store: getStore({ NODE_ENV: "test" }),
         returnUrls: {
@@ -470,6 +472,7 @@ describe("refunds that were not started here", () => {
           lines: [{ sku: "QP-SHOT-12", qty: 1 }],
         },
         {
+          offer: FILE_OFFER,
           payments: {
             name: "test",
             isTest: true,

@@ -21,9 +21,40 @@
  * has the detail and the scanner enforces it.
  */
 
-import { STORE } from "./offer";
+import type { Offer } from "@/lib/shop/offer";
 
-const preorder = STORE.launchMode === "preorder";
+/**
+ * What a few of these lines depend on: whether the shop is on pre-order or
+ * live, and what the batch on sale is called. Both can be changed from the
+ * back end with no deploy (lib/shop/offer.ts), so a line that depends on
+ * them is a function of them and not a string. Everything else is a string.
+ */
+export type OnSale = Pick<Offer, "launchMode" | "batchName">;
+
+const isPreorder = (sale: OnSale) => sale.launchMode === "preorder";
+
+/**
+ * When the shop itself changes: it has stopped taking orders for now (the
+ * back end's own switch, for a batch that has sold out or a week away), or
+ * something about an order changed while its buyer was at the checkout.
+ */
+export const SHOP = {
+  /** On the buy button, which cannot be pressed. Short: it has to fit. */
+  closedButton: "Not taking orders",
+  /** Under it, and in the jar. The Pickle Crew's own promise, said again. */
+  closedNote:
+    "We've stopped taking orders for the moment. Join the Pickle Crew for first dibs when we're back.",
+  /** The hero's and the last section's button while it is shut. */
+  closedCta: "Join the Pickle Crew",
+  /** With an order that arrived while the shop was shut. */
+  closed: "We're not taking orders right now, so nothing was charged.",
+  /**
+   * With an order whose page was drawn before a price, a delivery rate or
+   * the ship date's terms changed. The page redraws from the new ones.
+   */
+  moved:
+    "Something about your order changed while you were checking out: a price, the delivery, or when it ships. Have a look at it as it stands now, then place it again.",
+} as const;
 
 /** Lines from Ashleigh's own pages, word for word. Do not reword. */
 export const OFFICIAL = {
@@ -83,7 +114,8 @@ export const HERO = {
     { text: "good luck.", breakOn: null },
   ],
   body: "Everyone's got a game-day ritual. Ours comes in a tiny bottle. Sour, salty, clear as a whistle, and down in one.",
-  cta: preorder ? "Pre-order a pack" : "Grab a pack",
+  cta: (sale: OnSale) =>
+    isPreorder(sale) ? "Pre-order a pack" : "Grab a pack",
   points: ["No pickles, no bits", "Kit-bag sized", "Delivered NZ-wide"],
   packsFrom: "Packs from",
   luckyAlt:
@@ -91,7 +123,11 @@ export const HERO = {
 } as const;
 
 export const BUY = {
-  eyebrow: preorder ? `Pre-order ${STORE.batchName}` : "The line-up",
+  /** `open` false: the shop is shut for now, so nothing says pre-order. */
+  eyebrow: (sale: OnSale & { readonly open?: boolean }) =>
+    isPreorder(sale) && sale.open !== false
+      ? `Pre-order ${sale.batchName}`
+      : "The line-up",
   title: "Pick your pack.",
   body: "One juice, three sizes. Sour, salty, and not a pickle in sight.",
   packLegend: "Pack size",
@@ -103,12 +139,10 @@ export const BUY = {
   quantity: "How many packs",
   fewer: "One fewer pack",
   more: "One more pack",
-  add: preorder ? "Pre-order" : "Add to jar",
+  add: (sale: OnSale) => (isPreorder(sale) ? "Pre-order" : "Add to jar"),
   added: "In the jar!",
+  /** What delivery costs is said by content/delivery.ts: deliveryPromise. */
   reassure: {
-    delivery: "Delivered anywhere in New Zealand",
-    // copy-audit-approved: FTA-06 (the spend threshold is stated with it, from content/offer.ts)
-    freeOver: "Free delivery over",
     preorder: "Pre-order now, pay now, ships",
     shipDateTbc: "date to be confirmed",
     sorted: "Something not right? Email us and we'll sort it",
@@ -223,10 +257,12 @@ export const FINAL = {
   title: ["Lucky you've", "got us."],
   lockupAlt:
     "Quick Pickle. Lucky, a superhero cat with a pickle in his fist, runs through the logo.",
-  body: preorder
-    ? `Pickle juice shots. ${STORE.batchName} is open for pre-order.`
-    : "Pickle juice shots. Ready when your ritual is.",
-  cta: preorder ? "Pre-order a pack" : "Grab a pack",
+  body: (sale: OnSale) =>
+    isPreorder(sale)
+      ? `Pickle juice shots. ${sale.batchName} is open for pre-order.`
+      : "Pickle juice shots. Ready when your ritual is.",
+  cta: (sale: OnSale) =>
+    isPreorder(sale) ? "Pre-order a pack" : "Grab a pack",
 } as const;
 
 export const FOOTER = {
@@ -260,7 +296,7 @@ export const FOOTER = {
 
 export const BUYBAR = {
   label: "Quick add",
-  add: preorder ? "Pre-order" : "Add",
+  add: (sale: OnSale) => (isPreorder(sale) ? "Pre-order" : "Add"),
   added: "In the jar!",
 } as const;
 
@@ -288,9 +324,10 @@ export const JAR = {
   deliveryNote: "Delivery worked out at checkout",
   checkout: "Checkout",
   keepShopping: "Keep looking",
-  preorderNote: preorder
-    ? `${STORE.batchName} pre-order. You pay now and it ships when the batch is ready.`
-    : null,
+  preorderNote: (sale: OnSale) =>
+    isPreorder(sale)
+      ? `${sale.batchName} pre-order. You pay now and it ships when the batch is ready.`
+      : null,
 } as const;
 
 export const CHECKOUT = {
@@ -329,7 +366,6 @@ export const CHECKOUT = {
     regionPlaceholder: "Choose a region",
     postcode: "Postcode",
     rural: "This is a rural delivery address",
-    ruralHint: "Rural delivery costs the courier more, so it adds",
     notes: "Delivery notes (optional)",
     notesPlaceholder: "Gate code, where to leave it, that sort of thing",
     joinCrew: "Add me to the Pickle Crew for news on new batches",
@@ -480,13 +516,15 @@ export const THANKS = {
    * the server from lib/mail). Otherwise the page says `keepNumber`.
    */
   emailNote: "A receipt is on its way to",
-  preorderNote: `This is a ${STORE.batchName} pre-order. We'll email you the ship date, and again when it's on the courier.`,
+  preorderNote: (batchName: string) =>
+    `This is a ${batchName} pre-order. We'll email you the ship date, and again when it's on the courier.`,
   liveNote: "We'll email you again when it's on the courier.",
   /** When no receipt is being emailed: what is true instead. */
   keepNumber:
     "Keep a note of your order number. It's how we'll find your order if you get in touch.",
   /** After `keepNumber`, for a pre-order. */
-  preorderOnly: `This is a ${STORE.batchName} pre-order, so it ships when the batch is ready.`,
+  preorderOnly: (batchName: string) =>
+    `This is a ${batchName} pre-order, so it ships when the batch is ready.`,
   testNote:
     "This was a test order. Nothing was charged and nothing will be sent.",
   summary: "What you ordered",

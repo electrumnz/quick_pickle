@@ -10,6 +10,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { CHECKOUT, CODES, JAR, SPECIAL, THANKS } from "@/content/site";
 import { mailConnection } from "@/lib/mail";
 import { formatNzdExact } from "@/lib/shop/money";
+import { offerForPage } from "@/lib/shop/offer-now";
 import { checkoutMode } from "@/lib/shop/payments";
 import { settleOnReturn } from "@/lib/shop/payments/settle";
 import { parseReceipt, RECEIPT_COOKIE } from "@/lib/shop/receipt";
@@ -118,6 +119,10 @@ export default async function ThanksPage() {
       </>
     );
   }
+
+  // What the batch is called, for a pre-order's line. The order was placed
+  // moments ago, so the batch on sale now is the one it was placed for.
+  const { batchName } = await offerForPage();
 
   // The buyer was sent away to pay. Find out how that went before saying
   // anything: nothing is celebrated on the strength of a cookie.
@@ -364,13 +369,15 @@ export default async function ThanksPage() {
               <p className="mt-6 leading-relaxed" data-testid="receipt-note">
                 {THANKS.emailNote} <strong>{receipt.email}</strong>.{" "}
                 {receipt.mode === "preorder"
-                  ? THANKS.preorderNote
+                  ? THANKS.preorderNote(batchName)
                   : THANKS.liveNote}
               </p>
             ) : (
               <p className="mt-6 leading-relaxed" data-testid="keep-number">
                 {THANKS.keepNumber}
-                {receipt.mode === "preorder" ? ` ${THANKS.preorderOnly}` : null}
+                {receipt.mode === "preorder"
+                  ? ` ${THANKS.preorderOnly(batchName)}`
+                  : null}
               </p>
             )}
 

@@ -9,6 +9,7 @@ import {
   perShotCents,
   savingCents,
 } from "@/lib/shop/catalogue";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 /**
  * These hold for whatever the offer says, so they keep passing when the
@@ -34,7 +35,7 @@ describe("the offer", () => {
 
   it("has exactly one featured pack", () => {
     expect(PACKS.filter((pack) => pack.featured).length).toBe(1);
-    expect(featuredPack().featured).toBe(true);
+    expect(featuredPack(FILE_OFFER).featured).toBe(true);
   });
 
   it("never charges more per shot for a bigger pack", () => {
@@ -64,13 +65,13 @@ describe("the offer", () => {
 describe("catalogue helpers", () => {
   it("finds a pack by SKU and nothing for a stranger", () => {
     const first = PACKS[0]!;
-    expect(packBySku(first.sku)).toBe(first);
-    expect(packBySku("NOT-A-SKU")).toBeNull();
-    expect(packBySku("")).toBeNull();
+    expect(packBySku(FILE_OFFER, first.sku)).toBe(first);
+    expect(packBySku(FILE_OFFER, "NOT-A-SKU")).toBeNull();
+    expect(packBySku(FILE_OFFER, "")).toBeNull();
   });
 
   it("names the pack with the lowest price per shot as best value", () => {
-    const best = bestValuePack();
+    const best = bestValuePack(FILE_OFFER);
     for (const pack of PACKS) {
       expect(best.priceCents * pack.shots).toBeLessThanOrEqual(
         pack.priceCents * best.shots,
@@ -80,9 +81,9 @@ describe("catalogue helpers", () => {
 
   it("computes a saving against the smallest pack's rate, never negative", () => {
     const smallest = PACKS[0]!;
-    expect(savingCents(smallest)).toBe(0);
+    expect(savingCents(FILE_OFFER, smallest)).toBe(0);
     for (const pack of PACKS) {
-      const saving = savingCents(pack);
+      const saving = savingCents(FILE_OFFER, pack);
       expect(saving).toBeGreaterThanOrEqual(0);
       const atSmallestRate = Math.round(
         (pack.shots * smallest.priceCents) / smallest.shots,
@@ -99,7 +100,7 @@ describe("catalogue helpers", () => {
 
   it("walks up the sizes and stops at the top", () => {
     for (let i = 0; i < PACKS.length; i += 1) {
-      expect(nextSizeUp(PACKS[i]!)).toBe(PACKS[i + 1] ?? null);
+      expect(nextSizeUp(FILE_OFFER, PACKS[i]!)).toBe(PACKS[i + 1] ?? null);
     }
   });
 });

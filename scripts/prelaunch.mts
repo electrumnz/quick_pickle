@@ -7,7 +7,9 @@
  * Exits non-zero, and says exactly why, while anything stands between this
  * build and taking real money from real people:
  *
- *   - a commercial fact that is still a stand-in (content/offer.ts UNCONFIRMED)
+ *   - a commercial fact that is still a stand-in (content/offer.ts
+ *     UNCONFIRMED, less the ones an owner has confirmed on the back end's
+ *     go-live list, which are read from the database when one is set)
  *   - payments in test mode, or a processor on its own test key
  *   - orders with nowhere durable to be written
  *   - no clock, so nothing is retried and nothing unpaid is closed
@@ -20,6 +22,47 @@
  */
 
 import { UNCONFIRMED } from "../content/offer.ts";
+
+/**
+ * The facts an owner has confirmed in the back end. They are kept in the
+ * database, in the one row the shop's settings live in
+ * (lib/backstage/shop/ops.ts: SHOP_OFFER_KEY, and `confirmed` in
+ * lib/shop/offer-changes.ts). With no database to ask, or no answer, none
+ * are counted as confirmed: this gate fails closed.
+ */
+async function confirmedInBackEnd(
+  url: string,
+): Promise<{ keys: Set<string>; asked: boolean }> {
+  if (url === "") return { keys: new Set(), asked: false };
+  try {
+    const { default: pg } = await import("pg");
+    const client = new pg.Client({ connectionString: url });
+    await client.connect();
+    try {
+      const found = await client.query(
+        "select value from settings where key = $1",
+        ["shop.offer"],
+      );
+      const value: unknown = found.rows[0]?.value;
+      const confirmed =
+        typeof value === "object" && value !== null
+          ? (value as { confirmed?: unknown }).confirmed
+          : undefined;
+      return {
+        keys: new Set(
+          typeof confirmed === "object" && confirmed !== null
+            ? Object.keys(confirmed)
+            : [],
+        ),
+        asked: true,
+      };
+    } finally {
+      await client.end();
+    }
+  } catch {
+    return { keys: new Set(), asked: false };
+  }
+}
 
 type Check = {
   readonly ok: boolean;
@@ -36,12 +79,17 @@ const mailReady =
   (env.RESEND_API_KEY ?? "").trim() !== "" &&
   /^[^\s@<>]+@[a-z0-9-]+(?:\.[a-z0-9-]+)+$/i.test((env.MAIL_FROM ?? "").trim());
 
+const databaseUrl = (env.DATABASE_URL ?? env.POSTGRES_URL ?? "").trim();
+const confirmed = await confirmedInBackEnd(databaseUrl);
+
 const checks: Check[] = [
-  ...UNCONFIRMED.map((item) => ({
-    ok: false,
-    label: `Not confirmed: ${item.what}`,
-    fix: `Ask ${item.ask}. Put the real value in content/offer.ts, then delete "${item.key}" from UNCONFIRMED.`,
-  })),
+  ...UNCONFIRMED.filter((item) => !confirmed.keys.has(item.key)).map(
+    (item) => ({
+      ok: false,
+      label: `Not confirmed: ${item.what}`,
+      fix: `Ask ${item.ask}. Prices, delivery, the ship date and the contact address are set in the back end (Settings, The shop) and confirmed by an owner on its go-live list. Anything else goes into content/offer.ts, and "${item.key}" comes off UNCONFIRMED.${confirmed.asked ? "" : " (No database was asked, so nothing confirmed in the back end is counted here.)"}`,
+    }),
+  ),
   {
     ok: paymentProvider !== "test" && paymentProvider !== "",
     label: "Payments are in test mode",

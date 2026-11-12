@@ -27,6 +27,7 @@ import { newId } from "@/lib/db/id";
 import type { PaymentProvider } from "@/lib/shop/payments";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 /**
  * Landing pages: the one page with other words at the top. The words are
@@ -419,7 +420,11 @@ describe("landing pages", () => {
           lines: [{ sku: "QP-SHOT-12", qty: 1 }],
           source,
         },
-        { payments: provider, store: getStore({ NODE_ENV: "test" }) },
+        {
+          offer: FILE_OFFER,
+          payments: provider,
+          store: getStore({ NODE_ENV: "test" }),
+        },
       );
       if (!result.ok) throw new Error(JSON.stringify(result));
       return (await execute(getOrder, { number: result.order.number }, viewer))
@@ -552,6 +557,7 @@ describe("a landing page's headline", () => {
     const { Hero } = await import("@/components/site/Hero");
     const html = renderToStaticMarkup(
       Hero({
+        offer: FILE_OFFER,
         words: {
           eyebrow: "For the whole team",
           headline: "One box.\nWhole team, bench too.",
@@ -575,7 +581,10 @@ describe("a landing page's headline", () => {
   it("is never set bigger than the standard one, however short", async () => {
     const { Hero } = await import("@/components/site/Hero");
     const html = renderToStaticMarkup(
-      Hero({ words: { eyebrow: "", headline: "Oi.", lead: "" } }),
+      Hero({
+        offer: FILE_OFFER,
+        words: { eyebrow: "", headline: "Oi.", lead: "" },
+      }),
     );
     expect(html).toContain("--hero-phone:22.38vw");
     expect(html).toContain("--hero-wide:10.40vw");
@@ -583,7 +592,7 @@ describe("a landing page's headline", () => {
 
   it("leaves the standard page exactly as it was", async () => {
     const { Hero } = await import("@/components/site/Hero");
-    const html = renderToStaticMarkup(Hero({}));
+    const html = renderToStaticMarkup(Hero({ offer: FILE_OFFER }));
     expect(html).toContain("good luck.");
     expect(html).not.toContain("--hero-phone");
   });

@@ -21,6 +21,7 @@ import { emailAboutOrder } from "./orders/emails";
 import { closePaymentPage } from "./orders/listeners";
 import { sendRefund } from "./orders/refunds";
 import { refreshPublicPage } from "./pages/listeners";
+import { showShopChange } from "./shop/listeners";
 
 let registered = false;
 
@@ -64,4 +65,5 @@ export function registerHandlers(): void {
     "stop saying a special that is used up",
     stopSayingUsedUpSpecial(),
   );
+  on("shop.changed", "show the new prices at once", showShopChange());
 }

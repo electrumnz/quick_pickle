@@ -1,16 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { PACKS, SHIPPING, STORE, UNCONFIRMED } from "@/content/offer";
+import { FILE_OFFER, isPreview, offerVersion } from "@/lib/shop/offer";
 import {
   asOfferChanges,
-  FILE_OFFER,
-  isPreview,
   LEAST_PRICE_CENTS,
   MOST_PRICE_CENTS,
   offerChangesSchema,
-  offerVersion,
   offerWith,
-} from "@/lib/shop/offer";
+} from "@/lib/shop/offer-changes";
 
 /**
  * The offer as one value: the file's own, with the back end's changes laid

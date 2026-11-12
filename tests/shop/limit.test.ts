@@ -48,7 +48,8 @@ import {
 } from "@/components/checkout/actions";
 import { checkoutProblem, crewProblem } from "@/components/checkout/problem";
 import { joinCrew } from "@/components/site/actions";
-import { POLICIES } from "@/content/policies";
+import { policies } from "@/content/policies";
+import { FILE_OFFER } from "@/lib/shop/offer";
 import { CHECKOUT, CODES, CREW } from "@/content/site";
 import { crewMembers, orders, rateHits } from "@/db/schema";
 import { tick } from "@/lib/backstage/clock/tick";
@@ -155,7 +156,9 @@ describe("the ceilings", () => {
     for (const said of [CODES.slowDown, CHECKOUT.slowDown, CREW.slowDown]) {
       expect(said).toContain("Give it ten minutes");
     }
-    const privacy = POLICIES.find((policy) => policy.slug === "privacy");
+    const privacy = policies(FILE_OFFER).find(
+      (policy) => policy.slug === "privacy",
+    );
     const safe = privacy?.sections.find(
       (section) => section.heading === "Keeping the checkout safe",
     );

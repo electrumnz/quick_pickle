@@ -31,12 +31,12 @@ import {
   type OrderStatus,
   type PaymentStatus,
 } from "@/db/schema";
-import { SHIPPING } from "@/content/offer";
-import { CODES } from "@/content/site";
+import { CODES, SHOP } from "@/content/site";
 import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
 import { formatNzd } from "@/lib/shop/money";
 import { NZ_REGIONS, ORDER_NUMBER_PATTERN } from "@/lib/shop/order";
+import { standardDeliveryCents } from "@/lib/shop/pricing";
 
 import { conflict, OpError } from "../core/errors";
 import { defineOp } from "../core/op";
@@ -51,6 +51,7 @@ import {
   usedByCustomer,
   type Promo,
 } from "../marketing/promo";
+import { readShop } from "../shop/ops";
 import { batchCodeSchema, packedBatchesSchema } from "../stock/inputs";
 import { putBackOrderStock, takeOrderStock } from "../stock/order-moves";
 import { loadOrder } from "./load";
@@ -128,6 +129,12 @@ const placedOrderSchema = z.object({
    * belongs to is still credited with the order.
    */
   creditCode: z.string().trim().min(1).max(40).optional(),
+  /**
+   * The word for the offer the checkout priced this order from
+   * (lib/shop/offer.ts: `version`). If the offer has another word by the
+   * time the order is saved, a price moved in between and it is refused.
+   */
+  offerVersion: z.string().trim().max(20).optional(),
   payment: z.object({
     provider: z.string().min(1).max(40),
     status: z.enum(["test", "paid", "pending"]),
@@ -221,15 +228,27 @@ export const recordOrder = defineOp({
       });
     }
 
+    // The offer, read once more inside the transaction that saves the
+    // order. The checkout priced this from the offer it read a moment ago
+    // and says which one by its word. If the back end has changed a price
+    // or shut the shop in between, the order is refused here, not saved
+    // at prices that no longer stand. (An order with no word is one the
+    // back end made for itself: its demo data, a test.)
+    const { offer } = await readShop(ctx.db);
+    if (input.offerVersion !== undefined) {
+      if (!offer.open) throw conflict(SHOP.closed);
+      if (input.offerVersion !== offer.version) throw conflict(SHOP.moved);
+    }
+
     // A code is worked out again here, from its own terms, inside the same
     // transaction that counts its use. What the checkout sent is only ever
     // compared with that; it is never what is charged on trust.
     let used: Promo | null = null;
     if (input.promo !== null) {
-      const standardDelivery =
-        input.subtotalCents >= SHIPPING.freeOverCents
-          ? 0
-          : SHIPPING.standardCents;
+      const standardDelivery = standardDeliveryCents(
+        offer.shipping,
+        input.subtotalCents,
+      );
       const promo = await findPromo(ctx.db, input.promo.code);
       const worth = evaluatePromo(promo, {
         subtotalCents: input.subtotalCents,

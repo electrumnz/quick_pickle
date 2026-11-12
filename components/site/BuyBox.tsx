@@ -14,15 +14,10 @@ import {
 import { CarriedCodeNote } from "@/components/cart/CarriedCodeNote";
 import { useCart } from "@/components/cart/CartProvider";
 import { LoopVideo } from "@/components/ui/LoopVideo";
+import { deliveryPromise } from "@/content/delivery";
 import type { Media } from "@/content/media";
-import {
-  MAX_PACKS_PER_LINE,
-  PACKS,
-  PRODUCT,
-  SHIPPING,
-  STORE,
-} from "@/content/offer";
-import { BUY } from "@/content/site";
+import { MAX_PACKS_PER_LINE, PRODUCT } from "@/content/offer";
+import { BUY, SHOP } from "@/content/site";
 import {
   bestValuePack,
   featuredPack,
@@ -43,7 +38,8 @@ import { formatNzd } from "@/lib/shop/money";
  * jar opens, with the total and the checkout button in it.
  *
  * Every figure here (per-shot price, saving, "best value") is computed from
- * the offer on each render. None of it is typed in.
+ * the offer on each render. None of it is typed in. The offer is the jar's
+ * (components/cart/CartProvider), so the button and the jar always agree.
  */
 type Props = {
   /** "14 February 2027" once the ship date is locked in, else null. */
@@ -56,7 +52,7 @@ type Props = {
 
 export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
   const lucky = luckyOnPage ? "page" : "file";
-  const { add, open, selectedSku, select, ready } = useCart();
+  const { offer, add, open, selectedSku, select, ready } = useCart();
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -70,10 +66,10 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
     const picked = packs.current?.querySelector<HTMLInputElement>(
       'input[name="pack"]:checked',
     )?.value;
-    if (picked !== undefined && packBySku(picked) !== undefined) {
+    if (picked !== undefined && packBySku(offer, picked) !== null) {
       select(picked);
     }
-  }, [select]);
+  }, [offer, select]);
 
   useEffect(() => {
     const pending = timers.current;
@@ -82,13 +78,15 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
     };
   }, []);
 
-  const pack = packBySku(selectedSku) ?? featuredPack();
-  const best = bestValuePack();
-  const pick = featuredPack();
+  const pack = packBySku(offer, selectedSku) ?? featuredPack(offer);
+  const best = bestValuePack(offer);
+  const pick = featuredPack(offer);
   const totalCents = pack.priceCents * qty;
-  const preorder = STORE.launchMode === "preorder";
+  const preorder = offer.launchMode === "preorder";
+  const delivery = deliveryPromise(offer.shipping);
 
   function handleAdd() {
+    if (!offer.open) return;
     add(pack.sku, qty);
     setJustAdded(true);
     for (const timer of timers.current) clearTimeout(timer);
@@ -150,7 +148,7 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
         <fieldset ref={packs}>
           <legend className="label text-[1.25rem]">{BUY.packLegend}</legend>
           <div className="mt-3 flex flex-col gap-3.5">
-            {PACKS.map((option) => {
+            {offer.packs.map((option) => {
               const selected = option.sku === pack.sku;
               // Which card looks chosen is the radio's own doing (the
               // has-checked styles), so it is right on the first paint and
@@ -158,7 +156,7 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
               // alive the same look is also set from here, for the few
               // browsers that cannot style a card by what is inside it.
               const lit = ready && selected;
-              const saving = savingCents(option);
+              const saving = savingCents(offer, option);
               const tag =
                 option.sku === pick.sku
                   ? BUY.luckysPick
@@ -252,50 +250,57 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
         </fieldset>
 
         <div className="mt-6 flex flex-wrap items-stretch gap-3">
-          <div
-            role="group"
-            aria-label={BUY.quantity}
-            className="border-navy bg-paper flex min-h-[3.75rem] shrink-0 items-center rounded-[12px] border-[3px]"
-          >
-            <button
-              type="button"
-              aria-label={BUY.fewer}
-              disabled={qty <= 1}
-              onClick={() => setQty((value) => Math.max(1, value - 1))}
-              className="grid h-full w-12 place-items-center rounded-l-[9px] active:scale-90 disabled:opacity-30"
+          {/* Shut for now: there is nothing to count, so the button takes
+              the whole row and its words fit. */}
+          {offer.open ? (
+            <div
+              role="group"
+              aria-label={BUY.quantity}
+              className="border-navy bg-paper flex min-h-[3.75rem] shrink-0 items-center rounded-[12px] border-[3px]"
             >
-              <MinusIcon className="size-5" />
-            </button>
-            <output
-              aria-live="polite"
-              className="label w-7 text-center text-[1.5rem] leading-none"
-            >
-              {qty}
-            </output>
-            <button
-              type="button"
-              aria-label={BUY.more}
-              disabled={qty >= MAX_PACKS_PER_LINE}
-              onClick={() =>
-                setQty((value) => Math.min(MAX_PACKS_PER_LINE, value + 1))
-              }
-              className="grid h-full w-12 place-items-center rounded-r-[9px] active:scale-90 disabled:opacity-30"
-            >
-              <PlusIcon className="size-5" />
-            </button>
-          </div>
+              <button
+                type="button"
+                aria-label={BUY.fewer}
+                disabled={qty <= 1}
+                onClick={() => setQty((value) => Math.max(1, value - 1))}
+                className="grid h-full w-12 place-items-center rounded-l-[9px] active:scale-90 disabled:opacity-30"
+              >
+                <MinusIcon className="size-5" />
+              </button>
+              <output
+                aria-live="polite"
+                className="label w-7 text-center text-[1.5rem] leading-none"
+              >
+                {qty}
+              </output>
+              <button
+                type="button"
+                aria-label={BUY.more}
+                disabled={qty >= MAX_PACKS_PER_LINE}
+                onClick={() =>
+                  setQty((value) => Math.min(MAX_PACKS_PER_LINE, value + 1))
+                }
+                className="grid h-full w-12 place-items-center rounded-r-[9px] active:scale-90 disabled:opacity-30"
+              >
+                <PlusIcon className="size-5" />
+              </button>
+            </div>
+          ) : null}
 
           <div className="relative min-w-[13.5rem] flex-1">
             <button
               type="button"
               onClick={handleAdd}
+              disabled={!offer.open}
               data-testid="add-to-jar"
-              className={`btn btn-lg btn-block ${justAdded ? "btn-olive" : ""}`}
+              className={`btn btn-lg btn-block disabled:cursor-not-allowed disabled:opacity-60 ${justAdded ? "btn-olive" : ""}`}
             >
               <span className="cap-trim" aria-live="polite">
-                {justAdded
-                  ? BUY.added
-                  : `${BUY.add} · ${formatNzd(totalCents)}`}
+                {!offer.open
+                  ? SHOP.closedButton
+                  : justAdded
+                    ? BUY.added
+                    : `${BUY.add(offer)} · ${formatNzd(totalCents)}`}
               </span>
             </button>
             {/* The pickle punch: burst lines off the button, once per add. */}
@@ -305,10 +310,20 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
           </div>
         </div>
 
+        {/* Shut for now: say so, and point at the one thing there is to do. */}
+        {offer.open ? null : (
+          <div data-testid="shop-closed" className="card-flat mt-5 p-4">
+            <p className="text-[0.9688rem] leading-snug">{SHOP.closedNote}</p>
+            <a href="#crew" className="btn btn-sm mt-3">
+              <span className="cap-trim">{SHOP.closedCta}</span>
+            </a>
+          </div>
+        )}
+
         <CarriedCodeNote className="mt-5" />
 
         <ul className="mt-6 flex flex-col gap-2.5 text-[0.9375rem] leading-snug">
-          {preorder ? (
+          {preorder && offer.open ? (
             <li className="flex items-start gap-3">
               <CalendarIcon className="mt-0.5 size-6 shrink-0" />
               <span>
@@ -320,10 +335,13 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
           <li className="flex items-start gap-3">
             <TruckIcon className="mt-0.5 size-6 shrink-0" />
             <span>
-              {BUY.reassure.delivery} for {formatNzd(SHIPPING.standardCents)}.{" "}
-              <strong>
-                {BUY.reassure.freeOver} {formatNzd(SHIPPING.freeOverCents)}.
-              </strong>
+              {delivery.lead}
+              {delivery.strong === null ? null : (
+                <>
+                  {" "}
+                  <strong>{delivery.strong}</strong>
+                </>
+              )}
             </span>
           </li>
           <li className="flex items-start gap-3">

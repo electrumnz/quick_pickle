@@ -7,8 +7,8 @@
  *
  * The order of work matters:
  *   1. validate every field, including each jar line against the offer;
- *   2. price the jar from the offer, here, ignoring anything the browser
- *      thought it cost;
+ *   2. price the jar from the offer (the server's own copy, handed in as
+ *      `deps.offer`), here, ignoring anything the browser thought it cost;
  *   3. take payment for exactly that amount;
  *   4. only then write the order down.
  * A failure at any step leaves nothing behind.
@@ -20,11 +20,11 @@
  * order is closed again, unpaid, and says why.
  */
 
-import { STORE } from "@/content/offer";
-import { CODES, SPECIAL } from "@/content/site";
+import { CODES, SHOP, SPECIAL } from "@/content/site";
 
 import { normaliseCart } from "./cart";
 import { normalisePromoCode } from "./code";
+import { forPage, type Offer, type OfferOnPage } from "./offer";
 import {
   checkoutSchema,
   fieldErrors,
@@ -78,12 +78,29 @@ export type PlaceOrderResult =
       readonly ok: false;
       readonly reason: "invalid";
       readonly errors: FieldErrors;
+      /**
+       * Set when the order was handed back because the shop itself had
+       * changed (`errors.offer` says how): the offer as it stands, for the
+       * page to draw the new total from.
+       */
+      readonly offer?: OfferOnPage;
     }
   | { readonly ok: false; readonly reason: "failed" };
 
 export type RawCheckout = Readonly<Record<string, unknown>>;
 
 export type PlaceOrderDeps = {
+  /**
+   * What is on sale, for how much: the server's own copy, read as the order
+   * is placed. Every price on the order comes from here.
+   */
+  readonly offer: Offer;
+  /**
+   * The same question asked again, after a save was refused: has the offer
+   * moved since? Left out, a refused save is only ever "something went
+   * wrong".
+   */
+  readonly offerAgain?: () => Promise<Offer>;
   readonly payments: PaymentProvider;
   readonly store: OrderSink;
   readonly now?: () => Date;
@@ -106,9 +123,28 @@ export async function placeOrder(
   }
   const input = parsed.data;
 
+  const { offer } = deps;
+  /** Handed back, with the offer as it stands, for the page to redraw from. */
+  const shopChanged = (message: string, now: Offer): PlaceOrderResult => ({
+    ok: false,
+    reason: "invalid",
+    errors: { offer: message },
+    offer: forPage(now),
+  });
+  // Shut for now (the back end's own switch): no order is taken.
+  if (!offer.open) return shopChanged(SHOP.closed, offer);
+  // The page says which offer it was drawn from, by its word. If that is
+  // not the offer any more, a price, a delivery rate or pre-order-or-live
+  // has changed since, and the total on the button is not the total now.
+  // The buyer is shown the new one before anything else happens.
+  const drawnFrom = (input.offer ?? "").trim();
+  if (drawnFrom !== "" && drawnFrom !== offer.version) {
+    return shopChanged(SHOP.moved, offer);
+  }
+
   // Price it here, from the offer. Duplicate lines merge, quantities clamp.
-  const cart = normaliseCart({ lines: input.lines });
-  const before = quote(cart, { rural: input.rural });
+  const cart = normaliseCart(offer, { lines: input.lines });
+  const before = quote(offer, cart, { rural: input.rural });
   if (before.lines.length === 0) {
     return {
       ok: false,
@@ -189,7 +225,7 @@ export async function placeOrder(
           discountCents: applied.discountCents,
           deliveryDiscountCents: applied.deliveryDiscountCents,
         };
-  const priced = quote(cart, { rural: input.rural }, saving);
+  const priced = quote(offer, cart, { rural: input.rural }, saving);
   if (applied !== null && priced.totalCents < LEAST_TOTAL_CENTS) {
     return bySpecial ? specialGone : noCode(CODES.wouldBeFree);
   }
@@ -242,7 +278,7 @@ export async function placeOrder(
   const orderWith = (payment: PaymentRecord): Order => ({
     number,
     placedAt,
-    mode: STORE.launchMode,
+    mode: offer.launchMode,
     customer: {
       email: input.email,
       phone: emptyToNull(input.phone),
@@ -275,14 +311,25 @@ export async function placeOrder(
     promo,
     payment,
     joinCrew: input.joinCrew,
+    offerVersion: offer.version,
     ...(creditCode === null ? {} : { creditCode }),
     ...(input.source === undefined ? {} : { source: input.source }),
   });
 
   // Saving can refuse a code or a special that was fine a moment ago
-  // (somebody else took its last use, or it was switched off). Ask once
+  // (somebody else took its last use, or it was switched off), and it
+  // refuses an order priced from an offer that has moved since. Ask once
   // more, so the buyer is told that and not just that something went wrong.
   const refusedCode = async (): Promise<PlaceOrderResult | null> => {
+    if (deps.offerAgain !== undefined) {
+      try {
+        const now = await deps.offerAgain();
+        if (!now.open) return shopChanged(SHOP.closed, now);
+        if (now.version !== offer.version) return shopChanged(SHOP.moved, now);
+      } catch {
+        // Not knowing is not a reason to say the shop changed.
+      }
+    }
     if (applied === null) return null;
     if (bySpecial) {
       const again = await readSpecial();

@@ -3,9 +3,9 @@ import { ArrowIcon, CheckIcon } from "@/components/brand/Icons";
 import { LuckyRun } from "@/components/brand/Vector";
 import { LoopVideo } from "@/components/ui/LoopVideo";
 import { MEDIA } from "@/content/media";
-import { PACKS } from "@/content/offer";
-import { HERO } from "@/content/site";
+import { HERO, SHOP } from "@/content/site";
 import { formatNzd } from "@/lib/shop/money";
+import type { OfferOnPage } from "@/lib/shop/offer";
 
 /**
  * The hero.
@@ -48,8 +48,20 @@ function fitFor(lines: readonly string[]): React.CSSProperties {
   } as React.CSSProperties;
 }
 
-export function Hero({ words }: { readonly words?: HeroWords }) {
-  const from = PACKS[0];
+export function Hero({
+  offer,
+  words,
+}: {
+  /** What is on sale: the button's word and the "packs from" price. */
+  readonly offer: OfferOnPage;
+  readonly words?: HeroWords;
+}) {
+  const from = offer.packs[0];
+  // Shut for now: the button leads to the Pickle Crew, not to a buy box
+  // that cannot be used.
+  const cta = offer.open
+    ? { label: HERO.cta(offer), href: "#shop" }
+    : { label: SHOP.closedCta, href: "#crew" };
   const lines =
     words === undefined
       ? null
@@ -111,6 +123,7 @@ export function Hero({ words }: { readonly words?: HeroWords }) {
 
           <div className="hidden md:block">
             <HeroPitch
+              cta={cta}
               fromCents={from?.priceCents ?? null}
               lead={words?.lead}
             />
@@ -158,7 +171,11 @@ export function Hero({ words }: { readonly words?: HeroWords }) {
         </div>
 
         <div className="relative z-10 mt-4 md:hidden">
-          <HeroPitch fromCents={from?.priceCents ?? null} lead={words?.lead} />
+          <HeroPitch
+            cta={cta}
+            fromCents={from?.priceCents ?? null}
+            lead={words?.lead}
+          />
         </div>
       </div>
     </section>
@@ -166,9 +183,12 @@ export function Hero({ words }: { readonly words?: HeroWords }) {
 }
 
 function HeroPitch({
+  cta,
   fromCents,
   lead,
 }: {
+  /** What the button says and where it leads: pre-order, buy, or the crew. */
+  readonly cta: { readonly label: string; readonly href: string };
   readonly fromCents: number | null;
   /** A landing page's own sentence, in place of the standard one. */
   readonly lead?: string;
@@ -176,10 +196,10 @@ function HeroPitch({
   return (
     <div className="md:mt-9">
       <a
-        href="#shop"
+        href={cta.href}
         className="btn btn-lg btn-on-pink btn-block md:inline-flex md:w-auto"
       >
-        <span className="cap-trim">{HERO.cta}</span>
+        <span className="cap-trim">{cta.label}</span>
         <ArrowIcon className="size-6" />
       </a>
 

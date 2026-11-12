@@ -11,14 +11,15 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { PACKS, SHIPPING } from "@/content/offer";
 import { costItems } from "@/db/schema";
 import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
 import { formatNzdExact } from "@/lib/shop/money";
+import type { Offer } from "@/lib/shop/offer";
 
 import { notFound, OpError } from "../core/errors";
 import { defineOp } from "../core/op";
+import { readShop } from "../shop/ops";
 import {
   breakEven,
   evenMix,
@@ -282,23 +283,32 @@ export type Budget = {
   }[];
 };
 
-/** Work the whole budget out from the cost lines and the offer. */
+/**
+ * Work the whole budget out from the cost lines and the offer: the prices
+ * and delivery rates the shop is selling at right now, as the back end has
+ * them (lib/backstage/shop/ops.ts), not as the catalogue file started them.
+ */
 export function buildBudget(
   costs: readonly CostRow[],
-  options: { readonly gstRegistered: boolean; readonly mix?: Mix },
+  options: {
+    readonly offer: Pick<Offer, "packs" | "shipping">;
+    readonly gstRegistered: boolean;
+    readonly mix?: Mix;
+  },
 ): Budget {
+  const { packs: onSale, shipping } = options.offer;
   const totals = totalCosts(costs);
-  const packs = PACKS.map((pack) =>
-    packEconomics(pack, totals, SHIPPING, {
+  const packs = onSale.map((pack) =>
+    packEconomics(pack, totals, shipping, {
       gstRegistered: options.gstRegistered,
     }),
   );
   const asked = options.mix ?? {};
   const chosen: Record<string, number> = {};
-  for (const pack of PACKS) chosen[pack.sku] = asked[pack.sku] ?? 0;
+  for (const pack of onSale) chosen[pack.sku] = asked[pack.sku] ?? 0;
   const mix = Object.values(chosen).some((weight) => weight > 0)
     ? chosen
-    : evenMix(PACKS);
+    : evenMix(onSale);
   return {
     costs,
     totals,
@@ -325,7 +335,8 @@ export const getBudget = defineOp({
     mix: z.record(z.string(), z.number().int().min(0).max(1000)).optional(),
   }),
   async run(ctx, input): Promise<Budget> {
-    return buildBudget(await readCosts(ctx.db), input);
+    const { offer } = await readShop(ctx.db);
+    return buildBudget(await readCosts(ctx.db), { ...input, offer });
   },
 });
 

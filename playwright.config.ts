@@ -31,6 +31,14 @@ const NO_MAIL = {
   MAIL_TOKEN_SECRET: "",
 };
 
+/**
+ * Both servers run from one build folder, each with its own records. A page
+ * a server draws again is kept in that server's memory, never written into
+ * the folder they share: otherwise a page drawn by one (its shop's prices
+ * changed, or shut) could be served by the other. See next.config.ts.
+ */
+const OWN_PAGES = { QP_KEPT_PAGES: "memory" };
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -70,6 +78,7 @@ export default defineConfig({
         NEXT_PUBLIC_SITE_URL: baseURL,
         QP_EMBEDDED_DB: "memory",
         ...NO_MAIL,
+        ...OWN_PAGES,
       },
       reuseExistingServer: !isCI,
       timeout: 120_000,
@@ -87,6 +96,7 @@ export default defineConfig({
         BACKSTAGE_AUTH: "required",
         BACKSTAGE_SETUP_CODE: SETUP_CODE,
         ...NO_MAIL,
+        ...OWN_PAGES,
       },
       reuseExistingServer: !isCI,
       timeout: 120_000,

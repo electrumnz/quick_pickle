@@ -12,8 +12,10 @@ Updated 12 November 2026. Honest status, not a summary.
       site is built without it. "Performance with pickles" and "for the quads" are softer
       but lean the same way and are held back too. If anyone wants them back, that is a
       conversation with a food lawyer or MPI first. `legal/COPY-RULES.md` has the detail.
-- [ ] **Pack sizes, names and prices.** 6 / 12 / 24 at $27 / $48 / $84 are stand-ins, and
-      so are the names (The Trial, The Starter, The Squad). `content/offer.ts`.
+- [ ] **Pack sizes, names and prices.** 6 / 12 / 24 at $27 / $48 / $84 started as
+      stand-ins, and so did the names (The Trial, The Starter, The Squad). Prices are set in
+      the back end (Settings, The shop) with no deploy; an owner then says they are right on
+      the go-live list. A pack's name and how many shots are in it are in `content/offer.ts`.
 - [ ] **Clean shots of the real bottle.** It is confirmed as a 100 ml food-grade plastic
       bottle with a white cap, and the page shows a drawing of it. One straight-on photo on
       plain card, once the real labels are printed, replaces the drawing.
@@ -21,14 +23,19 @@ Updated 12 November 2026. Honest status, not a summary.
       the page says nothing about what is in it. Also: where it is made, and how it should
       be stored. None of that is guessed.
 - [ ] **The ship date for Batch 001**, if this launches as a pre-order. A pre-order with no
-      date is not something to take money for.
-- [ ] **Delivery rates from a courier.** $7 flat, $4.50 rural, free over $60 are stand-ins,
-      and so is "anywhere in New Zealand".
+      date is not something to take money for. Set it in Settings, The shop, then confirm
+      it on the go-live list.
+- [ ] **Delivery rates from a courier.** $7 flat, $4.50 rural, free over $60 started as
+      stand-ins, and so is "anywhere in New Zealand". The three rates are set in Settings,
+      The shop (free delivery can be switched off altogether, or made free for everybody),
+      then confirmed on the go-live list.
 - [ ] **Read the fine print and agree to it.** The delivery, returns, terms and privacy pages
       make promises on the business's behalf: a replacement or refund if an order arrives
       damaged, and a full refund on a pre-order cancelled before it ships. They are sensible
-      and in line with the Consumer Guarantees Act, but they are yours to make.
-- [ ] **A customer email address.** The policies and FAQ leave a gap where it goes.
+      and in line with the Consumer Guarantees Act, but they are yours to make. An owner
+      says so on the go-live list.
+- [ ] **A customer email address.** The policies and FAQ leave a gap where it goes. Set it
+      in Settings, The shop.
 - [ ] **The legal entity, NZBN and GST status.** The terms of sale name no company yet, and
       receipts cannot show GST until the registration is confirmed.
 - [ ] **Finish Stripe's own sign-up.** The account exists and the live site runs on its
@@ -102,8 +109,11 @@ Updated 12 November 2026. Honest status, not a summary.
 - [ ] **Vercel's free plan is not for a business taking money.** At launch: Vercel Pro
       (US$20 a month), or move hosting to Cloudflare. Decide then.
 - [ ] **A domain.**
-- [ ] **Open the site to search at launch.** It happens on its own when `UNCONFIRMED` in
-      `content/offer.ts` is empty. At the same time, set `categories:seo` in
+- [ ] **Open the site to search at launch.** It happens on its own when the last open fact
+      is confirmed: an owner does that on the go-live list for prices, delivery, the ship
+      date, the contact address and the fine print, and the two that need words written
+      into the site first (the ingredients, the legal entity) come off `UNCONFIRMED` in
+      `content/offer.ts`. At the same time, set `categories:seo` in
       `lighthouserc.json` back from `warn` to `error`: it is a warning today only because a
       site that says noindex on purpose cannot pass it.
 - [ ] **Ashleigh's nod on the two proposed Lucky poses in use**: celebrating (order placed)
@@ -196,8 +206,18 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 - [x] **Plans.** The plan, the budget and what a pack costs to make and send, how-to
       sheets, a to-do list, the open questions for Ashleigh, and a light checklist of what a
       food business has to have in place.
-- [ ] **Run the shop from the back end.** Prices, ship date, launch mode, delivery rates
-      and the announcement, without a deploy.
+- [x] **Run the shop from the back end.** Settings, The shop: what each pack costs, the
+      three delivery rates, the ship date, pre-order or live, the batch's name, the address
+      customers write to, and a switch to stop taking orders, all with no deploy. A change
+      is read back in plain sentences before it is made, shows on the site within a minute,
+      and anybody part-way through the checkout is shown the new total before they can pay.
+      An owner confirms each open fact on the go-live list. A shut shop and a ship date
+      that has gone by are on Today.
+- [ ] **The rest of the shop from the back end.** The line across the top, the video
+      slots (`content/media.ts`), the ingredients, the storage line and the legal entity
+      are still in the files. Words a customer reads need the copy rules and a draft
+      before they are published, the way a landing page has them, and a video needs
+      somewhere to be kept.
 - [x] **Numbers.** Sales, visits and how far they get (our own count, no cookies, nobody
       identified), where visits came from with the sales from each, phones against
       desktops, and how the crew list is moving.

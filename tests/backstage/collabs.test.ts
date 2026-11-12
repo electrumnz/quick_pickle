@@ -55,6 +55,7 @@ import { newId } from "@/lib/db/id";
 import type { PaymentProvider } from "@/lib/shop/payments";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 /**
  * Collabs: a promo code or a short link that belongs to a club or a creator,
@@ -229,6 +230,7 @@ describe("collabs, from a code at the checkout to what came back", () => {
     pay: "test" | "paid" = "paid",
   ) => {
     const result = await placeOrder(form(over), {
+      offer: FILE_OFFER,
       payments: provider(pay),
       store: getStore({ NODE_ENV: "test" }),
     });
@@ -689,7 +691,11 @@ describe("collabs, from a code at the checkout to what came back", () => {
     // The same person, however they type their address.
     const again = await placeOrder(
       form({ email: " Once@Example.co.nz ", promoCode: "welcome" }),
-      { payments: provider("paid"), store: getStore({ NODE_ENV: "test" }) },
+      {
+        offer: FILE_OFFER,
+        payments: provider("paid"),
+        store: getStore({ NODE_ENV: "test" }),
+      },
     );
     expect(again).toMatchObject({
       ok: false,

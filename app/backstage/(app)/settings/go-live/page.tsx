@@ -2,11 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CheckIcon } from "@/components/brand/Icons";
-import { PACKS, PRODUCT, SHIPPING, STORE, UNCONFIRMED } from "@/content/offer";
-import { requireStaff } from "@/lib/backstage/auth/current";
+import { ShopLink } from "@/components/backstage/ShopLink";
+import { SubmitButton } from "@/components/backstage/SubmitButton";
+import { Notice } from "@/components/backstage/ui";
+import { PRODUCT } from "@/content/offer";
+import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { lastTick } from "@/lib/backstage/clock/tick";
 import { listStuckEvents } from "@/lib/backstage/core/events";
+import { execute } from "@/lib/backstage/core/op";
 import { resendWebhookSecretState } from "@/lib/backstage/mail/config";
+import { canConfirm, factNow, shopOffer } from "@/lib/backstage/shop/ops";
+import { formatDateKey } from "@/lib/backstage/stock/dates";
 import { getDb } from "@/lib/db/client";
 import { mailConnection } from "@/lib/mail";
 import { limitsState } from "@/lib/shop/caller";
@@ -16,15 +22,46 @@ import { checkoutMode, getPaymentProvider } from "@/lib/shop/payments";
 import { getStore } from "@/lib/shop/store";
 import { formatNzDateTime, formatNzRelative, minutesSince } from "@/lib/time";
 
+import { confirmFactAction } from "../shop/actions";
+
 export const metadata: Metadata = { title: "Go-live list" };
+
+/** The pages whose promises an owner agrees to. */
+const FINE_PRINT = [
+  { href: "/returns", label: "Returns" },
+  { href: "/delivery", label: "Delivery" },
+  { href: "/terms", label: "Terms" },
+] as const;
 
 /**
  * The go-live list: everything between this build and taking real money,
  * read from the same modules the site runs on, so it cannot be out of date.
  * `npm run prelaunch` checks the same things from the command line.
+ *
+ * The facts about the offer are confirmed here, by an owner, once the
+ * figures are right (they are set in Settings, The shop). Confirming the
+ * last one opens the site to search engines.
  */
-export default async function GoLivePage() {
-  await requireStaff("/backstage/settings/go-live");
+export default async function GoLivePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string; tone?: string }>;
+}) {
+  const staff = await requireStaff("/backstage/settings/go-live");
+  const params = await searchParams;
+  const shop = await execute(shopOffer, {}, await staffCaller());
+  const { offer } = shop;
+  const isOwner = staff.role === "owner";
+  // Every fact the catalogue file lists as open, and where each stands now.
+  const facts = shop.file.unconfirmed.map((item) => {
+    const said = shop.changes.confirmed?.[item.key];
+    return {
+      ...item,
+      confirmed: said ?? null,
+      now: factNow(item.key, offer),
+      cannot: canConfirm(item.key, offer),
+    };
+  });
   const payments = (() => {
     try {
       const provider = getPaymentProvider();
@@ -133,7 +170,8 @@ export default async function GoLivePage() {
           : "Not counting: there is no database, so no real records to protect.",
   });
 
-  const open = UNCONFIRMED.length + systems.filter((item) => !item.ok).length;
+  const open =
+    offer.unconfirmed.length + systems.filter((item) => !item.ok).length;
 
   return (
     <div>
@@ -144,6 +182,13 @@ export default async function GoLivePage() {
         <span className="cap-trim">&larr; Settings</span>
       </Link>
       <h1 className="bk-h1">Go-live list</h1>
+      {params.notice ? (
+        <div className="mt-4">
+          <Notice tone={params.tone === "bad" ? "bad" : "good"}>
+            {params.notice}
+          </Notice>
+        </div>
+      ) : null}
       <p className="mt-4 max-w-[40rem] text-[1.0625rem] leading-relaxed">
         {open === 0
           ? "Everything is confirmed. The site is ready to take real orders."
@@ -155,23 +200,96 @@ export default async function GoLivePage() {
           <h2 id="facts-title" className="varsity text-[1.75rem] leading-none">
             Facts to confirm
           </h2>
-          <p className="text-navy-muted mt-2 text-[0.9375rem]">
-            Each one has a stand-in on the site. Put the real value in{" "}
-            <code>content/offer.ts</code> and delete its line from{" "}
-            <code>UNCONFIRMED</code>.
+          <p className="text-navy-muted mt-2 text-[0.9375rem] leading-snug">
+            Each one started as a stand-in. Set the prices, delivery, the ship
+            date and the contact address in{" "}
+            <Link
+              href="/backstage/settings/shop"
+              className="underline decoration-2 underline-offset-4"
+            >
+              The shop
+            </Link>
+            , then say here that each is right.{" "}
+            {isOwner
+              ? "Only say so when you know it is true: your name goes beside it."
+              : "An owner does that."}
           </p>
           <ul className="mt-5 flex flex-col gap-3">
-            {UNCONFIRMED.map((item) => (
-              <li key={item.key} className="card-flat flex gap-4 p-4">
-                <span
-                  aria-hidden="true"
-                  className="border-navy mt-0.5 size-6 shrink-0 rounded-md border-[3px]"
-                />
-                <div>
+            {facts.map((item) => (
+              <li
+                key={item.key}
+                data-testid={`fact-${item.key}`}
+                className="card-flat flex gap-4 p-4"
+              >
+                {item.confirmed !== null ? (
+                  <CheckIcon className="text-olive-deep mt-0.5 size-6 shrink-0" />
+                ) : (
+                  <span
+                    aria-hidden="true"
+                    className="border-navy mt-0.5 size-6 shrink-0 rounded-md border-[3px]"
+                  />
+                )}
+                <div className="min-w-0 flex-1">
                   <p className="leading-snug font-semibold">{item.what}</p>
-                  <p className="text-navy-muted mt-1 text-[0.9375rem]">
-                    Ask: {item.ask}
-                  </p>
+                  {item.now === null ? null : (
+                    <p className="mt-1 text-[0.9375rem] leading-snug">
+                      Now: {item.now}.
+                    </p>
+                  )}
+                  {/* Not a figure: the pages themselves are what is being
+                      agreed to, so they are one press away. */}
+                  {item.key === "returns-promises" ? (
+                    <p className="mt-1 flex flex-wrap gap-x-4 text-[0.9375rem]">
+                      Read them:
+                      {FINE_PRINT.map((page) => (
+                        <ShopLink
+                          key={page.href}
+                          href={page.href}
+                          className="underline decoration-2 underline-offset-4"
+                        >
+                          {page.label}
+                        </ShopLink>
+                      ))}
+                    </p>
+                  ) : null}
+                  {item.confirmed !== null ? (
+                    <p className="text-navy-muted mt-1 text-[0.9375rem]">
+                      Confirmed by {item.confirmed.by},{" "}
+                      {formatNzDateTime(new Date(item.confirmed.at))}.
+                    </p>
+                  ) : (
+                    <p className="text-navy-muted mt-1 text-[0.9375rem]">
+                      Ask: {item.ask}
+                    </p>
+                  )}
+                  {item.confirmed === null && item.cannot !== null ? (
+                    <p className="text-navy-muted mt-1 text-[0.9375rem]">
+                      {item.cannot}
+                    </p>
+                  ) : null}
+                  {isOwner &&
+                  (item.confirmed !== null || item.cannot === null) ? (
+                    <form action={confirmFactAction} className="mt-3">
+                      <input type="hidden" name="key" value={item.key} />
+                      <input
+                        type="hidden"
+                        name="confirmed"
+                        value={item.confirmed === null ? "yes" : "no"}
+                      />
+                      <SubmitButton
+                        pending="Saving"
+                        className={
+                          item.confirmed === null
+                            ? "bk-btn"
+                            : "bk-btn bk-btn-quiet"
+                        }
+                      >
+                        {item.confirmed === null
+                          ? "This is right"
+                          : "Not right after all"}
+                      </SubmitButton>
+                    </form>
+                  ) : null}
                 </div>
               </li>
             ))}
@@ -200,23 +318,36 @@ export default async function GoLivePage() {
           <h2 id="offer-title" className="varsity text-[1.75rem] leading-none">
             What the site is selling
           </h2>
+          <p className="text-navy-muted mt-2 text-[0.9375rem]">
+            <Link
+              href="/backstage/settings/shop"
+              className="underline decoration-2 underline-offset-4"
+            >
+              Change it in The shop
+            </Link>
+          </p>
           <div className="card mt-5 p-5">
             <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-2.5 text-[0.9688rem]">
               <dt className="label text-[1.05rem]">Mode</dt>
               <dd>
-                {STORE.launchMode === "preorder"
-                  ? `Pre-order (${STORE.batchName})`
+                {offer.launchMode === "preorder"
+                  ? `Pre-order (${offer.batchName})`
                   : "Live, in stock"}
+                {offer.open ? "" : ". Not taking orders right now"}
               </dd>
               <dt className="label text-[1.05rem]">Ships</dt>
-              <dd>{STORE.preorderShipsFrom ?? "Date not set"}</dd>
+              <dd>
+                {offer.preorderShipsFrom === null
+                  ? "Date not set"
+                  : formatDateKey(offer.preorderShipsFrom)}
+              </dd>
               <dt className="label text-[1.05rem]">Bottle</dt>
               <dd>
                 {PRODUCT.shotVolumeMl === null
                   ? "Volume not set"
                   : `${String(PRODUCT.shotVolumeMl)} ml`}
               </dd>
-              {PACKS.map((pack) => (
+              {offer.packs.map((pack) => (
                 <div key={pack.sku} className="contents">
                   <dt className="label text-[1.05rem]">{pack.name}</dt>
                   <dd>
@@ -226,13 +357,9 @@ export default async function GoLivePage() {
                 </div>
               ))}
               <dt className="label text-[1.05rem]">Delivery</dt>
-              <dd>
-                {formatNzd(SHIPPING.standardCents)}, free over{" "}
-                {formatNzd(SHIPPING.freeOverCents)}, rural +
-                {formatNzd(SHIPPING.ruralSurchargeCents)}
-              </dd>
+              <dd>{factNow("shipping-rates", offer)}</dd>
               <dt className="label text-[1.05rem]">Email</dt>
-              <dd>{STORE.contactEmail ?? "Not set"}</dd>
+              <dd>{offer.contactEmail ?? "Not set"}</dd>
             </dl>
           </div>
         </section>

@@ -54,10 +54,20 @@ export const ORDER_EMAILS = {
     /** The order number follows. */
     subject: `Your ${STORE.name} order`,
     lead: "Thanks for your order. We've got it, and your payment has come through.",
-    /** For a pre-order with no ship date set yet. */
-    preorder: `This is a ${STORE.batchName} pre-order, so it ships when the batch is ready.`,
+    /**
+     * For a pre-order with no ship date set yet. The batch's name is typed
+     * in the back end; with null (a name that would not pass the copy rules
+     * as they stand today) the line is said without it.
+     */
+    preorder: (batch: string | null) =>
+      batch === null
+        ? "This is a pre-order, so it ships when the batch is ready."
+        : `This is a ${batch} pre-order, so it ships when the batch is ready.`,
     /** For a pre-order with one. The date and a full stop follow. */
-    preorderFrom: `This is a ${STORE.batchName} pre-order. It ships from`,
+    preorderFrom: (batch: string | null) =>
+      batch === null
+        ? "This is a pre-order. It ships from"
+        : `This is a ${batch} pre-order. It ships from`,
     next: "We'll email you again when it's on the courier.",
   },
 

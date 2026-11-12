@@ -10,6 +10,7 @@ import { listActivity } from "@/lib/backstage/activity/ops";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
+import { shopOffer } from "@/lib/backstage/shop/ops";
 import { formatDateKey } from "@/lib/backstage/stock/dates";
 import {
   getPurchaseOrder,
@@ -256,14 +257,17 @@ export default async function PurchaseOrderPage({
   const canWrite = staff.role !== "viewer";
   const draft = order.status === "draft";
   const editable = canWrite && draft;
-  const [history, materials] = await Promise.all([
+  const [history, materials, shop] = await Promise.all([
     execute(
       listActivity,
       { entityType: "purchase_order", entityId: order.id, limit: 50 },
       caller,
     ),
     editable ? execute(listMaterials, { limit: 500 }, caller) : [],
+    execute(shopOffer, {}, caller),
   ]);
+  // The address the business is written to, as the shop's settings have it.
+  const { contactEmail } = shop.offer;
   // What this supplier sells first, then everything else.
   const choices = [
     ...materials.filter((material) => material.supplierId === order.supplierId),
@@ -347,9 +351,9 @@ export default async function PurchaseOrderPage({
             </h2>
             <p className="mt-2 leading-snug">
               <span className="font-semibold">{STORE.name}</span>
-              {STORE.contactEmail ? (
+              {contactEmail ? (
                 <span className="block [overflow-wrap:anywhere]">
-                  {STORE.contactEmail}
+                  {contactEmail}
                 </span>
               ) : null}
             </p>

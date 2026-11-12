@@ -13,8 +13,14 @@ import { HEADER } from "@/content/site";
  */
 export function SiteHeader({
   minimal = false,
+  jar = true,
 }: {
   readonly minimal?: boolean;
+  /**
+   * False where there is no jar to open: the 404, which sits outside the
+   * shop's layout and so outside the jar.
+   */
+  readonly jar?: boolean;
 }) {
   return (
     <header className="on-navy bg-navy border-navy-deep sticky top-0 z-40 border-b-[3px]">
@@ -47,9 +53,11 @@ export function SiteHeader({
 
         {/* The jar button draws a cream disc so the navy-outlined icon reads
             on the navy bar. */}
-        <div className="bg-cream border-navy-deep -mr-1 rounded-full border-2">
-          <JarButton />
-        </div>
+        {jar ? (
+          <div className="bg-cream border-navy-deep -mr-1 rounded-full border-2">
+            <JarButton />
+          </div>
+        ) : null}
       </div>
     </header>
   );

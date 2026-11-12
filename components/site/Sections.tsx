@@ -24,11 +24,14 @@ import {
   OFFICIAL,
   REELS,
   RITUAL,
+  SHOP,
   SPECIAL,
   TICKER,
   TRUTHS,
+  type OnSale,
 } from "@/content/site";
 
+import type { Offer } from "@/lib/shop/offer";
 import { specialLine } from "@/lib/shop/special-now";
 import type { SpecialNow } from "@/lib/shop/store";
 
@@ -86,8 +89,11 @@ export function Band() {
 }
 
 export function Shop({
+  offer,
   special = null,
 }: {
+  /** What is on sale: the line over the packs and the ship date. */
+  readonly offer: Offer;
   readonly special?: SpecialNow | null;
 }) {
   return (
@@ -98,7 +104,9 @@ export function Shop({
     >
       <div className="max-w-page mx-auto">
         <div data-reveal>
-          <p className="label text-pink-deep text-[1.2rem]">{BUY.eyebrow}</p>
+          <p className="label text-pink-deep text-[1.2rem]">
+            {BUY.eyebrow(offer)}
+          </p>
           <h2
             id="shop-title"
             className="varsity mt-2 text-[clamp(2.6rem,13vw,4.75rem)] leading-[0.95]"
@@ -111,7 +119,7 @@ export function Shop({
           <SpecialTicket special={special} className="mt-6" />
         )}
         <BuyBox
-          shipDate={shipDateText()}
+          shipDate={shipDateText(offer)}
           productLoop={MEDIA.productLoop}
           luckyOnPage={MEDIA.heroLoop === null}
         />
@@ -363,8 +371,9 @@ export function ReelsSection() {
 export function Crew() {
   return (
     <section
+      id="crew"
       aria-labelledby="crew-title"
-      className="on-navy bg-navy text-cream px-gutter relative overflow-hidden py-16 md:py-20"
+      className="on-navy bg-navy text-cream px-gutter relative scroll-mt-16 overflow-hidden py-16 md:py-20"
     >
       <div className="max-w-page mx-auto grid items-center gap-8 md:grid-cols-2 md:gap-14">
         <div data-reveal>
@@ -407,8 +416,8 @@ export function Crew() {
   );
 }
 
-export function Faq() {
-  const items = faqs();
+export function Faq({ offer }: { readonly offer: Offer }) {
+  const items = faqs(offer);
   return (
     <section
       id="faq"
@@ -454,7 +463,11 @@ export function Faq() {
   );
 }
 
-export function FinalCta() {
+export function FinalCta({
+  offer,
+}: {
+  readonly offer: OnSale & Pick<Offer, "open">;
+}) {
   return (
     <section
       aria-labelledby="final-title"
@@ -489,10 +502,15 @@ export function FinalCta() {
           ))}
         </h2>
         <p className="label text-navy mx-auto mt-5 max-w-[22rem] text-[1.35rem] leading-tight md:max-w-none md:text-[1.6rem]">
-          {FINAL.body}
+          {offer.open ? FINAL.body(offer) : SHOP.closedNote}
         </p>
-        <a href="#shop" className="btn btn-lg btn-on-pink mt-8">
-          <span className="cap-trim">{FINAL.cta}</span>
+        <a
+          href={offer.open ? "#shop" : "#crew"}
+          className="btn btn-lg btn-on-pink mt-8"
+        >
+          <span className="cap-trim">
+            {offer.open ? FINAL.cta(offer) : SHOP.closedCta}
+          </span>
           <ArrowIcon className="size-6" />
         </a>
       </div>

@@ -1,14 +1,16 @@
 /**
  * Questions, and straight answers.
  *
- * Anything with a number or a date in it is built from content/offer.ts, so a
- * price or a rate is stated in exactly one place. Where a fact is not settled
- * yet the answer says so plainly rather than guessing.
+ * Anything with a number or a date in it is built from the offer it is handed
+ * (lib/shop/offer.ts), so a price or a rate is stated in exactly one place
+ * and moves when the back end moves it. Where a fact is not settled yet the
+ * answer says so plainly rather than guessing.
  */
 
-import { formatNzd } from "@/lib/shop/money";
+import type { Offer } from "@/lib/shop/offer";
 
-import { PACKS, PRODUCT, SHIPPING, STORE } from "./offer";
+import { deliveryAnswer } from "./delivery";
+import { PRODUCT } from "./offer";
 
 export type Faq = { readonly q: string; readonly a: readonly string[] };
 
@@ -20,30 +22,33 @@ const DATE_FORMAT = new Intl.DateTimeFormat("en-NZ", {
 });
 
 /** "14 February 2027", or null while the date is not locked in. */
-export function shipDateText(): string | null {
-  if (STORE.preorderShipsFrom === null) return null;
-  const date = new Date(`${STORE.preorderShipsFrom}T12:00:00+13:00`);
+export function shipDateText(
+  offer: Pick<Offer, "preorderShipsFrom">,
+): string | null {
+  if (offer.preorderShipsFrom === null) return null;
+  const date = new Date(`${offer.preorderShipsFrom}T12:00:00+13:00`);
   return Number.isNaN(date.getTime()) ? null : DATE_FORMAT.format(date);
 }
 
-function shippingAnswer(): readonly string[] {
+function shippingAnswer({ shipping }: Offer): readonly string[] {
+  const [rate, rural] = deliveryAnswer(shipping);
   return [
-    `All over New Zealand. Delivery is ${formatNzd(SHIPPING.standardCents)}, or free when your order is ${formatNzd(SHIPPING.freeOverCents)} or more.`,
-    `Rural addresses cost the courier more to reach, so they add ${formatNzd(SHIPPING.ruralSurchargeCents)}. We don't send overseas yet.`,
+    `All over New Zealand. ${rate}`,
+    `${rural} We don't send overseas yet.`,
   ];
 }
 
-function preorderAnswer(): readonly string[] {
-  const date = shipDateText();
+function preorderAnswer(offer: Offer): readonly string[] {
+  const date = shipDateText(offer);
   if (date === null) {
     return [
-      `We're locking in the ship date for ${STORE.batchName} now. You'll get it by email before anything leaves the building.`,
+      `We're locking in the ship date for ${offer.batchName} now. You'll get it by email before anything leaves the building.`,
       // copy-audit-approved: R-19 (this is the returns and refunds policy itself; keep in step with content/policies.ts)
       "Changed your mind before it ships? Tell us and we'll refund you in full.",
     ];
   }
   return [
-    `${STORE.batchName} ships from ${date}. We'll email you the moment yours is on the courier.`,
+    `${offer.batchName} ships from ${date}. We'll email you the moment yours is on the courier.`,
     // copy-audit-approved: R-19 (this is the returns and refunds policy itself; keep in step with content/policies.ts)
     "Changed your mind before it ships? Tell us and we'll refund you in full.",
   ];
@@ -59,8 +64,8 @@ function ingredientsAnswer(): readonly string[] {
   return [`${PRODUCT.ingredients.join(", ")}.`];
 }
 
-function sizeAnswer(): readonly string[] {
-  const sizes = PACKS.map((pack) => String(pack.shots));
+function sizeAnswer(offer: Offer): readonly string[] {
+  const sizes = offer.packs.map((pack) => String(pack.shots));
   const list =
     sizes.length > 1
       ? `${sizes.slice(0, -1).join(", ")} or ${sizes[sizes.length - 1]}`
@@ -74,11 +79,11 @@ function sizeAnswer(): readonly string[] {
   ];
 }
 
-function helpAnswer(): readonly string[] {
+function helpAnswer(offer: Offer): readonly string[] {
   const contact =
-    STORE.contactEmail === null
+    offer.contactEmail === null
       ? "Get in touch and we'll sort it."
-      : `Email ${STORE.contactEmail} and we'll sort it.`;
+      : `Email ${offer.contactEmail} and we'll sort it.`;
   return [
     // copy-audit-approved: R-19 (this is the returns and refunds policy itself; keep in step with content/policies.ts)
     `${contact} If something arrives damaged or isn't what you ordered, you'll get a replacement or your money back.`,
@@ -87,7 +92,7 @@ function helpAnswer(): readonly string[] {
   ];
 }
 
-export function faqs(): readonly Faq[] {
+export function faqs(offer: Offer): readonly Faq[] {
   const list: Faq[] = [
     {
       q: "What actually is it?",
@@ -117,17 +122,20 @@ export function faqs(): readonly Faq[] {
         "No. It's pickle juice, which makes it food. We're not going to tell you it does anything except taste like pickles.",
       ],
     },
-    { q: "How big are the packs?", a: sizeAnswer() },
+    { q: "How big are the packs?", a: sizeAnswer(offer) },
     { q: "What's in it?", a: ingredientsAnswer() },
   ];
 
-  if (STORE.launchMode === "preorder") {
-    list.push({ q: "When will my pre-order ship?", a: preorderAnswer() });
+  if (offer.launchMode === "preorder") {
+    list.push({ q: "When will my pre-order ship?", a: preorderAnswer(offer) });
   }
 
   list.push(
-    { q: "Where do you deliver, and what does it cost?", a: shippingAnswer() },
-    { q: "Something's wrong with my order. Now what?", a: helpAnswer() },
+    {
+      q: "Where do you deliver, and what does it cost?",
+      a: shippingAnswer(offer),
+    },
+    { q: "Something's wrong with my order. Now what?", a: helpAnswer(offer) },
   );
 
   return list;

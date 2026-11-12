@@ -1,9 +1,11 @@
 /**
  * The offer: what Quick Pickle sells, for how much, and how it gets there.
  *
- * This is the one file to edit when a commercial fact changes. Every price on
- * the site, in the jar and on an order is read from here, on the server, at
- * the moment it is needed; nothing a browser sends is ever trusted for a
+ * This is where every commercial fact starts, and what the shop sells with
+ * no database at all. The back end can lay a short, closed list of changes
+ * over it (a price, a delivery rate, the ship date, pre-order or live:
+ * lib/shop/offer.ts), so the shop's code never reads this file for a price:
+ * it asks for the offer. Nothing a browser sends is ever trusted for a
  * price (see lib/shop/pricing.ts).
  *
  * ## Facts that are still placeholders
@@ -13,8 +15,8 @@
  * holes in the page, each of those carries a sensible stand-in below and is
  * listed in {@link UNCONFIRMED}. While that list is not empty:
  *
- *   - the site tells search engines to stay away (app/robots.ts,
- *     app/layout.tsx) and the back end stays open (lib/backstage.ts),
+ *   - the site tells search engines to stay away (app/robots.ts and the
+ *     shop's layout),
  *   - the checkout says plainly that it is in test mode,
  *   - `npm run prelaunch` exits non-zero and names what is missing.
  *
@@ -22,8 +24,12 @@
  * Test mode is explained once, on the checkout, where a visitor would
  * otherwise expect a card field.
  *
- * To confirm a fact: put the real value in, then delete its line from
- * UNCONFIRMED. When the list is empty the gate opens.
+ * To confirm a fact: prices, delivery rates, the ship date and the contact
+ * address are set and confirmed in the back end (Settings, The shop, and
+ * the go-live list), with no deploy: lib/shop/offer.ts lays those changes
+ * over this file. A fact that needs words written into the site first (the
+ * ingredients, the legal entity) is put in here, and its line deleted from
+ * UNCONFIRMED. When nothing is left open the gate opens.
  *
  * Money is integer cents, always. Never a float in a price path.
  */
@@ -137,7 +143,7 @@ export type Unconfirmed = {
 export const UNCONFIRMED: readonly Unconfirmed[] = [
   {
     key: "packs",
-    what: "Pack sizes, names and prices (The Trial, The Starter and The Squad: 6 / 12 / 24 at $27 / $48 / $84 are stand-ins)",
+    what: "Pack sizes, names and prices (The Trial, The Starter and The Squad, in 6, 12 and 24, started as stand-ins)",
     ask: "Ashleigh",
   },
   {
@@ -148,12 +154,12 @@ export const UNCONFIRMED: readonly Unconfirmed[] = [
   },
   {
     key: "ship-date",
-    what: "The date Batch 001 pre-orders ship from",
+    what: "The date pre-orders ship from",
     ask: "Ashleigh",
   },
   {
     key: "shipping-rates",
-    what: "Where we deliver and what it costs (NZ-wide, $7 flat, $4.50 rural, free over $60 are stand-ins)",
+    what: "Where we deliver and what it costs (New Zealand only, and all three delivery rates, started as stand-ins)",
     ask: "a courier, for a quote",
   },
   {
@@ -173,6 +179,3 @@ export const UNCONFIRMED: readonly Unconfirmed[] = [
     ask: "whoever runs the business side",
   },
 ];
-
-/** True while any fact above is a stand-in. */
-export const IS_PREVIEW = UNCONFIRMED.length > 0;

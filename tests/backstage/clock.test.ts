@@ -24,6 +24,7 @@ import type { PaymentProvider } from "@/lib/shop/payments";
 import type { Settlement } from "@/lib/shop/payments/settle";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 const shop = systemCaller("The shop", "storefront");
 
@@ -92,6 +93,7 @@ describe("the clock", () => {
   /** An order sent off to pay, placed at `at`. */
   const sentToPay = async (email: string, at: Date) => {
     const result = await placeOrder(form(email), {
+      offer: FILE_OFFER,
       payments: elsewhere,
       store: getStore({ NODE_ENV: "test" }),
       returnUrls: URLS,
@@ -110,6 +112,7 @@ describe("the clock", () => {
   const orphan = async (email: string, at: Date) => {
     const store = getStore({ NODE_ENV: "test" });
     await placeOrder(form(email), {
+      offer: FILE_OFFER,
       payments: {
         ...elsewhere,
         async begin() {

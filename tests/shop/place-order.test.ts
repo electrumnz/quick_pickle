@@ -10,6 +10,7 @@ import type { ChargeRequest, PaymentProvider } from "@/lib/shop/payments";
 import { getPaymentProvider, paymentsAreTest } from "@/lib/shop/payments";
 import { placeOrder, type OrderSink } from "@/lib/shop/place-order";
 import { parseReceipt, receiptFor } from "@/lib/shop/receipt";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 const small = PACKS[0]!;
 const big = PACKS[PACKS.length - 1]!;
@@ -62,7 +63,12 @@ function harness() {
       signups.push(signup.email);
     },
   };
-  return { charges, orders, signups, deps: { payments, store } };
+  return {
+    charges,
+    orders,
+    signups,
+    deps: { offer: FILE_OFFER, payments, store },
+  };
 }
 
 describe("placing an order", () => {

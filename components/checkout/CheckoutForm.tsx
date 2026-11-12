@@ -12,8 +12,8 @@ import {
 import { Art } from "@/components/brand/Art";
 import { ChevronIcon, LockIcon } from "@/components/brand/Icons";
 import { useCart } from "@/components/cart/CartProvider";
-import { SHIPPING } from "@/content/offer";
-import { CHECKOUT, CODES, JAR, SPECIAL } from "@/content/site";
+import { ruralHint } from "@/content/delivery";
+import { CHECKOUT, CODES, JAR, SHOP, SPECIAL } from "@/content/site";
 import { formatNzd, formatNzdExact } from "@/lib/shop/money";
 import { NZ_REGIONS, type FieldErrors } from "@/lib/shop/order";
 import { quote } from "@/lib/shop/pricing";
@@ -166,7 +166,15 @@ export function CheckoutForm({
    */
   readonly emails?: boolean;
 }) {
-  const { cart, ready, carriedCode, forgetCarriedCode, source } = useCart();
+  const {
+    offer,
+    adoptOffer,
+    cart,
+    ready,
+    carriedCode,
+    forgetCarriedCode,
+    source,
+  } = useCart();
   const [state, action, pending] = useActionState(submitCheckout, INITIAL);
   const [rural, setRural] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -207,6 +215,25 @@ export function CheckoutForm({
     readonly rural: boolean;
   } | null>(null);
   const [specialAsked, setSpecialAsked] = useState(0);
+
+  // An order can be handed back because the shop itself changed while the
+  // buyer was here: a price or a delivery rate moved, or it stopped taking
+  // orders. The reply carries the offer as it stands, and the whole page
+  // (the jar included) is drawn from that from now on.
+  useEffect(() => {
+    if (state.offer !== undefined) adoptOffer(state.offer);
+  }, [state.offer, adoptOffer]);
+
+  // What a code or a special takes off was worked out on the prices the
+  // page had. When those change, the answers are dropped and the special is
+  // asked for again, so the total on the button is the true one.
+  const [pricedFrom, setPricedFrom] = useState(offer.version);
+  if (pricedFrom !== offer.version) {
+    setPricedFrom(offer.version);
+    setCode(null);
+    setSpecial(null);
+    setSpecialAsked((count) => count + 1);
+  }
 
   // The server can refuse a code with the order itself (somebody took its
   // last use, or this customer has had it before). What was applied a
@@ -331,6 +358,7 @@ export function CheckoutForm({
         ? `${CODES.codeLine} ${applied.code}`
         : "";
   const priced = quote(
+    offer,
     cart,
     { rural },
     saving === null
@@ -527,6 +555,10 @@ export function CheckoutForm({
           }}
         >
           <input type="hidden" name="lines" value={jar} readOnly />
+          {/* The word for the offer this page is drawn from. Never a price:
+              the server prices the order from its own copy, and hands it
+              back with the new total if that copy has moved on. */}
+          <input type="hidden" name="offer" value={offer.version} readOnly />
           {/* The special the buyer is being shown, by its word. If it is no
               longer what comes off, the server says so before any money
               moves, so nobody pays more than the total on the button. */}
@@ -672,6 +704,10 @@ export function CheckoutForm({
                     name="region"
                     autoComplete="address-level1"
                     required
+                    // A form that is handed back keeps what was picked. A
+                    // text box takes a new starting value as it comes; a
+                    // select only reads its own once, so it is made afresh.
+                    key={`region-${values.region ?? ""}`}
                     defaultValue={values.region ?? ""}
                     aria-invalid={errors.region ? true : undefined}
                     aria-describedby={
@@ -708,24 +744,27 @@ export function CheckoutForm({
               />
             </div>
 
-            <label className="card-flat flex cursor-pointer items-start gap-3 p-4">
-              <input
-                type="checkbox"
-                name="rural"
-                checked={rural}
-                onChange={(event) => setRural(event.target.checked)}
-                className="accent-navy mt-0.5 size-6 shrink-0"
-              />
-              <span>
-                <span className="block font-semibold">
-                  {CHECKOUT.fields.rural}
+            {/* Only asked while a rural address costs extra. With no extra
+                there is nothing the answer would change. */}
+            {offer.shipping.ruralSurchargeCents > 0 ? (
+              <label className="card-flat flex cursor-pointer items-start gap-3 p-4">
+                <input
+                  type="checkbox"
+                  name="rural"
+                  checked={rural}
+                  onChange={(event) => setRural(event.target.checked)}
+                  className="accent-navy mt-0.5 size-6 shrink-0"
+                />
+                <span>
+                  <span className="block font-semibold">
+                    {CHECKOUT.fields.rural}
+                  </span>
+                  <span className="text-navy-muted mt-0.5 block text-[0.9375rem] leading-snug">
+                    {ruralHint(offer.shipping)}
+                  </span>
                 </span>
-                <span className="text-navy-muted mt-0.5 block text-[0.9375rem] leading-snug">
-                  {CHECKOUT.fields.ruralHint}{" "}
-                  {formatNzd(SHIPPING.ruralSurchargeCents)}.
-                </span>
-              </span>
-            </label>
+              </label>
+            ) : null}
 
             <div>
               <label htmlFor="co-notes" className="field-label">
@@ -889,16 +928,29 @@ export function CheckoutForm({
                 {errors.special}
               </p>
             ) : null}
+            {/* Shut for now: the server would only say no, so the button
+                says it first. */}
+            {offer.open ? null : (
+              <p
+                role="status"
+                data-testid="checkout-closed"
+                className="border-navy bg-olive-wash rounded-[14px] border-2 p-3 text-[0.9375rem] leading-snug"
+              >
+                {SHOP.closedNote}
+              </p>
+            )}
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || !offer.open}
               data-testid="place-order"
-              className="btn btn-lg btn-block mt-1"
+              className="btn btn-lg btn-block mt-1 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <span className="cap-trim">
-                {pending
-                  ? CHECKOUT.placing
-                  : `${placeLabel} · ${formatNzdExact(priced.totalCents)}`}
+                {!offer.open
+                  ? SHOP.closedButton
+                  : pending
+                    ? CHECKOUT.placing
+                    : `${placeLabel} · ${formatNzdExact(priced.totalCents)}`}
               </span>
             </button>
             <p className="text-navy-muted text-center text-[0.875rem] leading-snug">

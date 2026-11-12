@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
+import { FreshOffer } from "@/components/checkout/FreshOffer";
 import { CHECKOUT, HEADER } from "@/content/site";
 import { mailConnection } from "@/lib/mail";
+import { forPage } from "@/lib/shop/offer";
+import { offerForPage } from "@/lib/shop/offer-now";
 import { checkoutMode } from "@/lib/shop/payments";
 
 export const metadata: Metadata = {
@@ -25,8 +28,11 @@ export default async function CheckoutPage({
 }) {
   // Back from the payment page without paying.
   const cancelled = (await searchParams).payment === "cancelled";
+  // This page is drawn for each visit, so this is the offer as it stands.
+  const offer = forPage(await offerForPage());
   return (
     <>
+      <FreshOffer offer={offer} />
       <header className="on-navy bg-navy border-navy-deep border-b-[3px]">
         <div className="max-w-page px-gutter mx-auto flex h-14 items-center justify-between gap-4 md:h-16">
           <Link

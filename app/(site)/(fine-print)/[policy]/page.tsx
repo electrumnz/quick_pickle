@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 
 import { SiteFooter } from "@/components/site/Sections";
 import { SiteHeader } from "@/components/site/SiteHeader";
-import { POLICIES, policyBySlug } from "@/content/policies";
+import { policies, POLICY_SLUGS, policyBySlug } from "@/content/policies";
+import { offerForPage } from "@/lib/shop/offer-now";
 
 type Params = { readonly policy: string };
 
@@ -12,7 +13,7 @@ type Params = { readonly policy: string };
 export const dynamicParams = false;
 
 export function generateStaticParams(): Params[] {
-  return POLICIES.map((policy) => ({ policy: policy.slug }));
+  return POLICY_SLUGS.map((policy) => ({ policy }));
 }
 
 export async function generateMetadata({
@@ -20,7 +21,7 @@ export async function generateMetadata({
 }: {
   params: Promise<Params>;
 }): Promise<Metadata> {
-  const policy = policyBySlug((await params).policy);
+  const policy = policyBySlug(await offerForPage(), (await params).policy);
   if (policy === null) return {};
   return { title: policy.title, description: policy.intro };
 }
@@ -34,7 +35,8 @@ export default async function PolicyPage({
 }: {
   params: Promise<Params>;
 }) {
-  const policy = policyBySlug((await params).policy);
+  const offer = await offerForPage();
+  const policy = policyBySlug(offer, (await params).policy);
   if (policy === null) notFound();
 
   return (
@@ -69,15 +71,15 @@ export default async function PolicyPage({
             className="border-navy mt-14 border-t-[3px] pt-6"
           >
             <ul className="flex flex-wrap gap-x-6 gap-y-1">
-              {POLICIES.filter((other) => other.slug !== policy.slug).map(
-                (other) => (
+              {policies(offer)
+                .filter((other) => other.slug !== policy.slug)
+                .map((other) => (
                   <li key={other.slug}>
                     <Link href={`/${other.slug}`} className="link">
                       {other.title}
                     </Link>
                   </li>
-                ),
-              )}
+                ))}
             </ul>
           </nav>
         </article>

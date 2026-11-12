@@ -325,6 +325,18 @@ async function supabaseStatus() {
         `  staff logins ${String(first.users)}, orders ${String(first.orders)}, customers ${String(first.customers)}`,
       );
     }
+    // The shop's own settings: which kinds of thing have been changed from
+    // the catalogue file, and which open facts an owner has confirmed.
+    // Names only, never a figure or an address.
+    const shop = await readOnlyQuery(
+      "select value from public.settings where key = 'shop.offer'",
+    );
+    const kept = Array.isArray(shop) ? shop[0]?.value : null;
+    const settings = typeof kept === "string" ? JSON.parse(kept) : (kept ?? {});
+    const changed = Object.keys(settings).filter((key) => key !== "confirmed");
+    console.log(
+      `  the shop: ${settings.open === false ? "NOT taking orders" : "taking orders"}; changed from the catalogue: ${changed.length === 0 ? "nothing" : changed.join(", ")}; facts confirmed: ${Object.keys(settings.confirmed ?? {}).join(", ") || "none"}`,
+    );
     // Counts only, by state. Never a name, an address or an order number.
     const byState = await readOnlyQuery(
       "select status, payment_status, is_test, count(*)::int as n from public.orders group by 1, 2, 3 order by 1, 2, 3",
