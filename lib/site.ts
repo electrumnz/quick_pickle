@@ -1,13 +1,11 @@
 /**
- * Canonical public origin for the site.
+ * Canonical public origin for the site, without a trailing slash.
  *
  * Resolution order:
- *  1. `NEXT_PUBLIC_SITE_URL` — an explicit override (custom domain, local dev).
- *  2. The Vercel production domain, when running a production deployment.
- *  3. The per-deployment Vercel URL, so previews self-reference correctly.
- *  4. localhost, for `next dev` and CI without any Vercel context.
- *
- * Always returned without a trailing slash so callers can concatenate paths.
+ *  1. `NEXT_PUBLIC_SITE_URL`, an explicit override (custom domain, local dev).
+ *  2. The Vercel production domain, on a production deployment.
+ *  3. The per-deployment Vercel URL, so previews reference themselves.
+ *  4. localhost, for `next dev` and CI.
  */
 export function siteUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();

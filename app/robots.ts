@@ -1,37 +1,25 @@
 import type { MetadataRoute } from "next";
 
-import { isDemoMode } from "@/lib/demo/mode";
+import { IS_PREVIEW } from "@/content/offer";
 import { siteUrl } from "@/lib/site";
 
-/** Served at /robots.txt. Keeps the admin surface out of search indexes. */
+/**
+ * While any commercial fact is a stand-in the whole site is closed to
+ * crawlers. Once the offer is confirmed, everything is open except the
+ * pages that are nobody's landing page.
+ */
 export default function robots(): MetadataRoute.Robots {
-  const base = siteUrl();
-
-  // A demonstration must never enter an index — not the admin, not the shop,
-  // not the storefront copy. Invented prices and invented stock indexed against
-  // this brand's name would be a misrepresentation about goods offered for
-  // sale, which is exactly what the Fair Trading Act is about. The sitemap goes
-  // with it: there is nothing here we want a crawler to find.
-  if (isDemoMode()) {
-    return {
-      rules: [{ userAgent: "*", disallow: "/" }],
-      host: base,
-    };
+  if (IS_PREVIEW) {
+    return { rules: [{ userAgent: "*", disallow: "/" }] };
   }
-
   return {
     rules: [
       {
         userAgent: "*",
         allow: "/",
-        // `/checkout` is the simulated checkout the mock provider advertises.
-        // It is a 404 on a Shopify deployment, and where it does exist its URL
-        // carries a cart's bearer token in the query string — neither is
-        // anything a crawler should be following or an index should be holding.
-        disallow: ["/admin", "/admin/", "/api/", "/checkout", "/checkout/"],
+        disallow: ["/checkout", "/order/", "/backstage"],
       },
     ],
-    sitemap: `${base}/sitemap.xml`,
-    host: base,
+    sitemap: `${siteUrl()}/sitemap.xml`,
   };
 }

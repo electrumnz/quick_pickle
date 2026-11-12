@@ -1,12 +1,22 @@
 import type { ReactNode } from "react";
 
+import { CartDrawer } from "@/components/cart/CartDrawer";
+import { CartProvider } from "@/components/cart/CartProvider";
+import { Reveal } from "@/components/ui/Reveal";
+
 /**
- * Layout for the public storefront route group.
- *
- * Deliberately bare. The masthead and footer are composed by each page from
- * components/product/StoreChrome — one header and one footer for the whole
- * storefront — so /lab/* and the checkout can choose not to carry them.
+ * Everything a customer can reach: the page, the checkout, the order page and
+ * the fine print. The jar lives here, not in the root, so the back end never
+ * carries its script.
  */
 export default function SiteLayout({ children }: { children: ReactNode }) {
-  return <div className="flex min-h-full flex-col">{children}</div>;
+  return (
+    <>
+      <CartProvider>
+        {children}
+        <CartDrawer />
+      </CartProvider>
+      <Reveal />
+    </>
+  );
 }

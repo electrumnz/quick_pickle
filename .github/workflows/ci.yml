@@ -7,9 +7,6 @@ on:
   workflow_dispatch:
 
 concurrency:
-  # A manually dispatched run is an evidence run — give it a group of its own
-  # so a push landing mid-run cannot cancel it. Automatic runs still supersede
-  # their own predecessors on the same ref.
   group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || 'auto' }}
   cancel-in-progress: true
 
@@ -17,14 +14,13 @@ permissions:
   contents: read
 
 # Every job reads its Node major from .nvmrc, which matches package.json
-# `engines.node` and the Vercel project's Node version — one runtime, verified
-# and shipped.
+# `engines.node` and the Vercel project's Node version.
 env:
   NEXT_TELEMETRY_DISABLED: "1"
 
 jobs:
   verify:
-    name: typecheck / lint / test / build
+    name: typecheck / lint / copy / test / build
     # A same-repo pull request is already covered by the push event on its
     # branch, so only run the pull_request event for forks, which push misses.
     if: >-
@@ -51,6 +47,14 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # The legal gate. A banned claim anywhere a customer can read it fails
+      # the build; legal/COPY-RULES.md says why. The self-test proves the
+      # scanner still catches what it exists to catch.
+      - name: Copy rules
+        run: |
+          npm run audit:copy:selftest
+          npm run audit:copy
+
       - name: Unit tests
         run: npm run test
 
@@ -59,42 +63,11 @@ jobs:
 
   e2e:
     name: e2e (Playwright) + axe
-    # A same-repo pull request is already covered by the push event on its
-    # branch, so only run the pull_request event for forks, which push misses.
     if: >-
       github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
-    # The suite buys something and then looks for the order in the admin, so it
-    # needs the two things a real deployment has: a database for the mock
-    # commerce provider and the revocable session store, and a password on the
-    # front door. Both are thrown away with the runner.
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      NEXT_PUBLIC_SITE_URL: http://localhost:3000
-      NEXT_PUBLIC_STORE_CURRENCY: NZD
-      COMMERCE_PROVIDER: mock
-      SUPABASE_DB_URL: postgresql://postgres:postgres@localhost:5432/half_sour_ci
-      # The runner reaches Postgres directly, so there is no proxy rewriting
-      # X-Forwarded-For and no reason to believe it.
-      ADMIN_TRUST_PROXY_HEADERS: "false"
-
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -108,30 +81,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Create and seed the database
-        env:
-          PGHOST: localhost
-          PGPORT: "5432"
-          PGUSER: postgres
-          PGPASSWORD: postgres
-          DB: half_sour_ci
-        run: supabase/tests/run_local.sh
-
-      # Minted per run and never committed. `ADMIN_PASSWORD_HASH` is not set
-      # here on purpose: the suite puts its own hash on the servers it starts,
-      # in `e2e/support/admin.ts`, so the password it types is the password the
-      # gate is holding and neither is a repository secret.
-      - name: Mint a session secret for this run
-        run: |
-          echo "ADMIN_SESSION_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
-
       - name: Resolve Playwright version
         id: pw
         run: |
           echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
-        id: pw-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
@@ -143,24 +98,10 @@ jobs:
       - name: Build
         run: npm run build
 
-      # A new accessibility violation fails the build, in a step of its own so
-      # that it is obvious from the checks list which gate went red — the same
-      # arrangement as the Lighthouse budget below. axe runs over every public
-      # route and every admin route, at two widths, in both colour schemes,
-      # with the disclosure and the command palette opened. Nothing is excluded
-      # and no rule is disabled; `tests/a11y/coverage.test.ts` keeps it that
-      # way, and fails if a route ships without being added to the pass.
-      - name: Accessibility (axe)
-        env:
-          # The a11y pass reads pages; it does not need a second server on a
-          # provider that cannot serve a catalogue.
-          E2E_COMMERCE_PROVIDERS: mock
-        run: npm run test:a11y
-
-      # Purchase against both commerce providers, the same journey by keyboard
-      # alone, and the whole public site with JavaScript switched off.
+      # The purchase journey, the page with JavaScript off, and axe over every
+      # page at phone and desktop size. Runs against `next start`.
       - name: Run e2e suite
-        run: npm run test:e2e
+        run: npm run test:e2e -- --trace off
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
@@ -173,8 +114,6 @@ jobs:
 
   lighthouse:
     name: Lighthouse budget
-    # A same-repo pull request is already covered by the push event on its
-    # branch, so only run the pull_request event for forks, which push misses.
     if: >-
       github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name != github.repository
@@ -204,11 +143,9 @@ jobs:
             CHROME_BIN="$(node -p "require('@playwright/test').chromium.executablePath()")"
           fi
           echo "Using Chrome at $CHROME_BIN"
-          "$CHROME_BIN" --version || true
           echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
 
-      # Lighthouse measures the production build served by `next start`,
-      # never `next dev` — dev ships unminified bundles and a HMR client.
+      # Lighthouse measures the production build served by `next start`.
       - name: Build
         run: npm run build
 
@@ -223,6 +160,4 @@ jobs:
           path: .lighthouseci/
           retention-days: 14
           if-no-files-found: ignore
-          # .lighthouseci is a dot directory; without this the upload finds
-          # nothing and the reports are silently lost.
           include-hidden-files: true

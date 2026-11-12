@@ -11,10 +11,6 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,
-    // Node 22 runs .mts/.ts directly by stripping types, and an ESM
-    // specifier must carry its real extension. `npm run demo:build-image`
-    // is such a script and imports `../mode.ts`; without this tsc rejects
-    // the one spelling Node accepts. Safe with `noEmit`, which is set.
     "allowImportingTsExtensions": true,
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -37,24 +33,7 @@
     "**/*.tsx",
     "**/*.mts",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    ".scratch/next-home/types/**/*.ts",
-    ".scratch/next-home/dev/types/**/*.ts",
-    ".scratch/next-audit/types/**/*.ts",
-    ".scratch/next-audit/dev/types/**/*.ts",
-    ".scratch/next-a11y/types/**/*.ts",
-    ".scratch/next-a11y/dev/types/**/*.ts",
-    ".scratch/next-demo/types/**/*.ts",
-    ".scratch/next-demo/dev/types/**/*.ts",
-    ".next/dev/dev/types/**/*.ts",
-    ".scratch/next-devaudit/types/**/*.ts",
-    ".scratch/next-devaudit/dev/types/**/*.ts",
-    ".scratch/next-copyaudit/types/**/*.ts",
-    ".scratch/next-copyaudit/dev/types/**/*.ts",
-    ".scratch/next-visual/types/**/*.ts",
-    ".scratch/next-visual/dev/types/**/*.ts",
-    ".scratch/next-hero/types/**/*.ts",
-    ".scratch/next-hero/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".next", "out"]
+  "exclude": ["node_modules", ".next", ".scratch", "out"]
 }

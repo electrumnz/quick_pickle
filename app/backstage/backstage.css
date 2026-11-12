@@ -1,0 +1,529 @@
+/* The back end's stylesheet. Loaded by app/backstage/layout.tsx and nothing
+   else, so no customer ever downloads it.
+
+   Same tokens and the same brand base as the shop (lib/brand), its own copy
+   of Tailwind, and it scans only the back end's own folders. */
+@import "tailwindcss" source(none);
+@import "../../lib/brand/tokens.css";
+@import "../../lib/brand/base.css";
+
+@source "../layout.tsx";
+@source "./";
+@source "../../components/backstage";
+@source "../../components/brand";
+
+/* =========================================================================
+   The back end's own parts
+   =========================================================================
+   Same brand, turned down. The shop is a poster; this is a workbench: calmer,
+   denser, and built for a thumb first, because the business gets run from a
+   phone on the sideline as often as from a desk.
+
+   Phone: a slim top bar, the page, and a tab bar under the thumb.
+   Desk (64rem and up): a navy rail down the left with every destination.
+   ========================================================================= */
+
+@layer components {
+  .bk-shell {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-block-size: 100dvh;
+    background-color: var(--color-cream);
+  }
+
+  /* ---- the rail (desk) ------------------------------------------------ */
+
+  .bk-side {
+    display: none;
+  }
+
+  /* ---- the top bar (phone) -------------------------------------------- */
+
+  .bk-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-block-size: 3.25rem;
+    padding-inline: 1rem;
+    background-color: var(--color-navy);
+    color: var(--color-cream);
+    border-block-end: var(--qp-rule) solid var(--color-navy-deep);
+  }
+
+  .bk-wordmark {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--qp-target);
+    font-family: var(--font-varsity);
+    font-size: 1.35rem;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--color-cream);
+    text-shadow: 2px 2px 0 var(--color-pink);
+  }
+
+  .bk-wordmark-tag {
+    margin-inline-start: 0.6rem;
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    color: var(--color-olive);
+    text-shadow: none;
+  }
+
+  /* ---- the tab bar (phone) -------------------------------------------- */
+
+  .bk-tabs {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: 40;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    padding-block-end: env(safe-area-inset-bottom, 0px);
+    background-color: var(--color-navy);
+    border-block-start: var(--qp-rule) solid var(--color-navy-deep);
+  }
+
+  .bk-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: 3.5rem;
+    padding-inline: 0.25rem;
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-cream);
+    border-block-start: 4px solid transparent;
+  }
+
+  .bk-tab[aria-current="page"] {
+    color: var(--color-olive);
+    border-block-start-color: var(--color-olive);
+  }
+
+  .bk-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-inline-size: 0;
+    /* Room for the tab bar, so the last row is never under it. */
+    padding-block-end: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .bk-main {
+    flex: 1;
+    inline-size: 100%;
+    max-inline-size: 76rem;
+    margin-inline: auto;
+    padding: 1.25rem 1rem 2.5rem;
+  }
+
+  /* A page that runs edge to edge (the brand guide's poster) undoes the
+     padding above. Keep the two in step. */
+  .bk-bleed {
+    margin: -1.25rem -1rem -2.5rem;
+  }
+
+  /* ---- demo strip: only ever inside the back end ---------------------- */
+
+  .bk-demo {
+    padding: 0.55rem 1rem;
+    background-color: var(--color-olive);
+    color: var(--color-navy);
+    font-size: 0.9375rem;
+    line-height: 1.35;
+    text-align: center;
+    border-block-end: 2px solid var(--color-navy);
+  }
+
+  @media (min-width: 64rem) {
+    .bk-shell {
+      flex-direction: row;
+    }
+
+    .bk-top,
+    .bk-tabs {
+      display: none;
+    }
+
+    .bk-side {
+      position: sticky;
+      inset-block-start: 0;
+      display: flex;
+      flex-direction: column;
+      flex: none;
+      inline-size: 15rem;
+      block-size: 100dvh;
+      overflow-y: auto;
+      padding: 1rem 0.75rem;
+      background-color: var(--color-navy);
+      color: var(--color-cream);
+      border-inline-end: var(--qp-rule) solid var(--color-navy-deep);
+    }
+
+    .bk-body {
+      padding-block-end: 0;
+    }
+
+    .bk-main {
+      padding: 2rem 2.5rem 4rem;
+    }
+
+    .bk-bleed {
+      margin: -2rem -2.5rem -4rem;
+    }
+  }
+
+  .bk-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    margin-block-start: 1.25rem;
+  }
+
+  .bk-nav-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-block-size: 2.75rem;
+    padding-inline: 0.75rem;
+    border-radius: 10px;
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-cream);
+  }
+
+  .bk-nav-link[aria-current="page"] {
+    background-color: var(--color-cream);
+    color: var(--color-navy);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .bk-nav-link:not([aria-current="page"]):hover {
+      background-color: var(--color-navy-soft);
+    }
+  }
+
+  .bk-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 1.6rem;
+    block-size: 1.6rem;
+    padding-inline: 0.4rem;
+    border-radius: 9999px;
+    background-color: var(--color-pink);
+    color: var(--color-white);
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .bk-user {
+    margin-block-start: auto;
+    padding: 0.75rem;
+    border-block-start: 2px solid var(--color-navy-soft);
+    font-size: 0.9375rem;
+    line-height: 1.35;
+  }
+
+  /* ---- page furniture -------------------------------------------------- */
+
+  .bk-h1 {
+    font-family: var(--font-varsity);
+    font-size: clamp(1.9rem, 7vw, 2.6rem);
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .bk-h2 {
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: 1.3rem;
+    line-height: 1.1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .bk-muted {
+    color: var(--color-navy-muted);
+  }
+
+  .bk-panel {
+    background-color: var(--color-paper);
+    border: 2px solid var(--color-navy);
+    border-radius: 14px;
+  }
+
+  .bk-panel-pad {
+    padding: 1rem;
+  }
+
+  @media (min-width: 48rem) {
+    .bk-panel-pad {
+      padding: 1.25rem 1.5rem;
+    }
+  }
+
+  /* A list of things you can open: orders, customers, conversations. */
+  .bk-rows {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bk-row {
+    display: grid;
+    gap: 0.25rem 1rem;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    border-block-end: 1px solid var(--color-navy-line);
+    color: inherit;
+  }
+
+  .bk-rows > :last-child {
+    border-block-end: 0;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    a.bk-row:hover {
+      background-color: var(--color-olive-wash);
+    }
+  }
+
+  /* ---- buttons: the shop's, a size down -------------------------------- */
+
+  .bk-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-block-size: var(--qp-target);
+    padding: 0.2rem 1rem;
+    border: 2px solid var(--color-navy);
+    border-radius: 10px;
+    background-color: var(--color-navy);
+    color: var(--color-cream);
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: 1.1rem;
+    line-height: 1;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform var(--qp-instant) var(--ease-qp);
+  }
+
+  .bk-btn:active {
+    transform: translateY(1px);
+  }
+
+  .bk-btn[disabled],
+  .bk-btn[aria-disabled="true"] {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .bk-btn-quiet {
+    background-color: transparent;
+    color: var(--color-navy);
+  }
+
+  .bk-btn-pink {
+    background-color: var(--color-pink-deep);
+    border-color: var(--color-pink-deep);
+    color: var(--color-white);
+  }
+
+  .bk-btn-olive {
+    background-color: var(--color-olive);
+    color: var(--color-navy);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .bk-btn-quiet:hover {
+      background-color: var(--color-mist);
+    }
+  }
+
+  /* A select keeps the browser's own arrow: the shared field style removes
+     it, and in a form with six of them a box with no arrow reads as text. */
+  select.field {
+    appearance: auto;
+  }
+
+  /* ---- status pills ---------------------------------------------------- */
+
+  .bk-pill {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 1.6rem;
+    padding: 0.1rem 0.6rem;
+    border: 2px solid var(--color-navy);
+    border-radius: 9999px;
+    background-color: var(--color-paper);
+    color: var(--color-navy);
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .bk-pill-todo {
+    background-color: var(--color-pink-deep);
+    border-color: var(--color-pink-deep);
+    color: var(--color-white);
+  }
+
+  .bk-pill-doing {
+    background-color: var(--color-olive);
+  }
+
+  .bk-pill-done {
+    background-color: var(--color-navy);
+    color: var(--color-cream);
+  }
+
+  .bk-pill-off {
+    background-color: var(--color-mist);
+    border-color: var(--color-navy-muted);
+    color: var(--color-navy-muted);
+  }
+
+  /* ---- messages -------------------------------------------------------- */
+
+  .bk-notice {
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--color-navy);
+    border-radius: 12px;
+    background-color: var(--color-olive-wash);
+    line-height: 1.4;
+  }
+
+  .bk-notice-bad {
+    border-color: var(--color-pink-deep);
+    background-color: var(--color-blush);
+  }
+
+  /* ---- facts in two columns: label, value ------------------------------ */
+
+  .bk-kv {
+    display: grid;
+    grid-template-columns: minmax(6.5rem, auto) 1fr;
+    gap: 0.5rem 1rem;
+    align-items: baseline;
+  }
+
+  .bk-kv dt {
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--color-navy-muted);
+  }
+
+  .bk-kv dd {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* A table that scrolls inside its own box, never the page. */
+  .bk-table-wrap {
+    overflow-x: auto;
+  }
+
+  .bk-table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: 0.9688rem;
+  }
+
+  .bk-table th {
+    padding: 0.6rem 0.75rem;
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.07em;
+    text-align: start;
+    text-transform: uppercase;
+    color: var(--color-navy-muted);
+    white-space: nowrap;
+    border-block-end: 2px solid var(--color-navy);
+  }
+
+  .bk-table td {
+    padding: 0.65rem 0.75rem;
+    vertical-align: top;
+    border-block-end: 1px solid var(--color-navy-line);
+  }
+
+  .bk-table tr:last-child td {
+    border-block-end: 0;
+  }
+
+  .bk-num {
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+    white-space: nowrap;
+  }
+
+  /* The sign-in pages: one card in the middle of a pink poster. */
+  .bk-door {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-block-size: 100dvh;
+    padding: 2rem 1rem;
+    background-color: var(--color-pink);
+  }
+}
+
+/* On paper there is no navigation and no demo strip: just the page. */
+@media print {
+  .bk-side,
+  .bk-top,
+  .bk-tabs,
+  .bk-demo,
+  .bk-noprint {
+    display: none !important;
+  }
+
+  .bk-shell,
+  .bk-body {
+    display: block;
+    min-block-size: 0;
+    padding: 0;
+    background: none;
+  }
+
+  .bk-main {
+    max-inline-size: none;
+    padding: 0;
+  }
+
+  .bk-panel {
+    border: 0;
+  }
+}

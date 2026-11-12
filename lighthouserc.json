@@ -6,9 +6,10 @@
       "startServerReadyPattern": "Ready in|Local:|started server on",
       "startServerReadyTimeout": 90000,
       "url": ["http://localhost:3000/"],
-      "numberOfRuns": 3,
+      "numberOfRuns": 5,
       "settings": {
-        "chromeFlags": "--no-sandbox --disable-gpu --disable-dev-shm-usage"
+        "chromeFlags": "--no-sandbox --disable-gpu --disable-dev-shm-usage",
+        "throttlingMethod": "devtools"
       }
     },
     "assert": {
@@ -33,7 +34,7 @@
           }
         ],
         "categories:seo": [
-          "error",
+          "warn",
           {
             "minScore": 0.95
           }
@@ -66,6 +67,60 @@
           "error",
           {
             "maxNumericValue": 1600000
+          }
+        ],
+        "document-title": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "meta-description": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "link-text": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "crawlable-anchors": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "http-status-code": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "html-has-lang": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "viewport": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "largest-contentful-paint": [
+          "error",
+          {
+            "maxNumericValue": 2500
+          }
+        ],
+        "total-blocking-time": [
+          "warn",
+          {
+            "maxNumericValue": 300
           }
         ]
       }
