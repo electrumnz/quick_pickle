@@ -28,7 +28,9 @@ export function ActivityList({
   return (
     <ul className="bk-rows">
       {lines.map((line) => {
-        const via = VIA_LABEL[line.via] ?? line.via;
+        // The system's name already says which door it was ("The shop").
+        const via =
+          line.actorType === "system" ? "" : (VIA_LABEL[line.via] ?? line.via);
         return (
           <li
             key={line.id}

@@ -5,9 +5,37 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { MIGRATIONS } from "@/db/migrations.generated";
 import { customers, orders } from "@/db/schema";
-import { openEmbedded, type DbHandle } from "@/lib/db/client";
+import { databaseUrl, openEmbedded, type DbHandle } from "@/lib/db/client";
 import { newId } from "@/lib/db/id";
 import { applyMigrations } from "@/lib/db/migrate";
+
+describe("which database a deployment may use", () => {
+  const url = "postgres://u:p@db.example.com:6543/postgres";
+
+  it("uses DATABASE_URL, or what the Vercel integration writes", () => {
+    expect(databaseUrl({ DATABASE_URL: url })).toBe(url);
+    expect(databaseUrl({ POSTGRES_URL: url })).toBe(url);
+    expect(databaseUrl({ DATABASE_URL: url, POSTGRES_URL: "other" })).toBe(url);
+    expect(databaseUrl({})).toBeNull();
+    expect(databaseUrl({ DATABASE_URL: "  " })).toBeNull();
+  });
+
+  it("keeps a preview deployment off the real database", () => {
+    expect(
+      databaseUrl({ VERCEL_ENV: "preview", POSTGRES_URL: url }),
+    ).toBeNull();
+    expect(databaseUrl({ VERCEL_ENV: "production", POSTGRES_URL: url })).toBe(
+      url,
+    );
+    expect(
+      databaseUrl({
+        VERCEL_ENV: "preview",
+        POSTGRES_URL: url,
+        QP_PREVIEW_DATABASE: "1",
+      }),
+    ).toBe(url);
+  });
+});
 
 describe("the database", () => {
   let handle: DbHandle;

@@ -499,3 +499,31 @@
     background-color: var(--color-pink);
   }
 }
+
+/* On paper there is no navigation and no demo strip: just the page. */
+@media print {
+  .bk-side,
+  .bk-top,
+  .bk-tabs,
+  .bk-demo,
+  .bk-noprint {
+    display: none !important;
+  }
+
+  .bk-shell,
+  .bk-body {
+    display: block;
+    min-block-size: 0;
+    padding: 0;
+    background: none;
+  }
+
+  .bk-main {
+    max-inline-size: none;
+    padding: 0;
+  }
+
+  .bk-panel {
+    border: 0;
+  }
+}

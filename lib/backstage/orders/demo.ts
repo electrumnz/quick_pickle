@@ -1,0 +1,277 @@
+/**
+ * Invented orders for a deployment with no database, so the Orders and
+ * Customers screens have something to show. The people are made up and the
+ * addresses end in example.co.nz. They go in through the same operations a
+ * real order does, at pretend times over the last ten days, so the history
+ * on each one reads the way a real one would.
+ */
+
+import { PACKS } from "@/content/offer";
+import type { Db } from "@/lib/db/types";
+import type { NzRegion } from "@/lib/shop/order";
+
+import { systemCaller } from "../core/actor";
+import { execute } from "../core/op";
+import {
+  addOrderNote,
+  cancelOrder,
+  markDelivered,
+  markPacked,
+  markShipped,
+  recordOrder,
+} from "./ops";
+
+type DemoOrder = {
+  readonly number: string;
+  readonly hoursAgo: number;
+  readonly first: string;
+  readonly last: string;
+  readonly city: string;
+  readonly region: NzRegion;
+  readonly postcode: string;
+  readonly line1: string;
+  readonly rural?: boolean;
+  readonly packs: readonly (readonly [sku: string, qty: number])[];
+  readonly crew?: boolean;
+  readonly payment?: "paid" | "pending" | "test";
+  readonly then?: "packed" | "shipped" | "delivered" | "cancelled";
+  readonly note?: string;
+};
+
+const DEMO: readonly DemoOrder[] = [
+  {
+    number: "QP-HERE77",
+    hoursAgo: 230,
+    first: "Priya",
+    last: "Nair",
+    city: "Auckland",
+    region: "Auckland",
+    postcode: "1024",
+    line1: "8 Halftime Lane",
+    packs: [["QP-SHOT-06", 2]],
+    crew: true,
+    then: "delivered",
+  },
+  {
+    number: "QP-SENT66",
+    hoursAgo: 96,
+    first: "Liam",
+    last: "Carter",
+    city: "Christchurch",
+    region: "Canterbury",
+    postcode: "8011",
+    line1: "41 Touchline Street",
+    packs: [["QP-SHOT-24", 2]],
+    then: "shipped",
+    note: "Buying for the whole club. Asked about a standing order.",
+  },
+  {
+    number: "QP-NAHH88",
+    hoursAgo: 80,
+    first: "Ben",
+    last: "Tuilagi",
+    city: "Hamilton",
+    region: "Waikato",
+    postcode: "3204",
+    line1: "3 Extra Time Road",
+    packs: [["QP-SHOT-12", 1]],
+    then: "cancelled",
+  },
+  {
+    number: "QP-BAGD55",
+    hoursAgo: 30,
+    first: "Jess",
+    last: "Okafor",
+    city: "Wellington",
+    region: "Wellington",
+    postcode: "6011",
+    line1: "17 Sideline Terrace",
+    packs: [["QP-SHOT-12", 1]],
+    crew: true,
+    then: "packed",
+  },
+  {
+    number: "QP-PACK44",
+    hoursAgo: 21,
+    first: "Aroha",
+    last: "Ngata",
+    city: "Kerikeri",
+    region: "Northland",
+    postcode: "0293",
+    line1: "220 Paddock Road",
+    rural: true,
+    packs: [["QP-SHOT-06", 1]],
+    crew: true,
+  },
+  {
+    number: "QP-PACK33",
+    hoursAgo: 9,
+    first: "Tom",
+    last: "Ellery",
+    city: "Dunedin",
+    region: "Otago",
+    postcode: "9016",
+    line1: "5 Kit Bag Close",
+    packs: [["QP-SHOT-12", 2]],
+  },
+  {
+    number: "QP-WAYT99",
+    hoursAgo: 3,
+    first: "Sione",
+    last: "Faleolo",
+    city: "Porirua",
+    region: "Wellington",
+    postcode: "5022",
+    line1: "12 Warm Up Way",
+    packs: [["QP-SHOT-24", 1]],
+    payment: "pending",
+  },
+  {
+    number: "QP-TEST22",
+    hoursAgo: 2,
+    first: "Sam",
+    last: "Tester",
+    city: "Ōtaki",
+    region: "Wellington",
+    postcode: "5512",
+    line1: "12 Sideline Road",
+    rural: true,
+    packs: [["QP-SHOT-24", 1]],
+    payment: "test",
+  },
+  {
+    number: "QP-PACK22",
+    hoursAgo: 1,
+    first: "Mere",
+    last: "Tāwhiri",
+    city: "Rotorua",
+    region: "Bay of Plenty",
+    postcode: "3010",
+    line1: "64 Whistle Street",
+    packs: [
+      ["QP-SHOT-24", 1],
+      ["QP-SHOT-06", 1],
+    ],
+    crew: true,
+  },
+];
+
+const HOUR = 60 * 60_000;
+
+export async function seedDemoOrders(db: Db, now: Date): Promise<void> {
+  const demo = systemCaller("Demo data", "script");
+  const shop = systemCaller("The shop", "storefront");
+
+  for (const order of DEMO) {
+    const placedAt = new Date(now.getTime() - order.hoursAgo * HOUR);
+    const at = (hoursLater: number) => ({
+      db,
+      now: new Date(
+        Math.min(
+          placedAt.getTime() + hoursLater * HOUR,
+          now.getTime() - 60_000,
+        ),
+      ),
+    });
+
+    const lines = order.packs.flatMap(([sku, qty]) => {
+      const pack = PACKS.find((item) => item.sku === sku);
+      return pack === undefined
+        ? []
+        : [
+            {
+              sku,
+              name: pack.name,
+              shots: pack.shots,
+              qty,
+              unitCents: pack.priceCents,
+              lineCents: pack.priceCents * qty,
+            },
+          ];
+    });
+    const subtotalCents = lines.reduce((sum, line) => sum + line.lineCents, 0);
+    // The same rule as lib/shop/pricing, written out so the demo does not
+    // depend on the jar's types.
+    const shippingCents =
+      (subtotalCents >= 6000 ? 0 : 700) + (order.rural ? 450 : 0);
+    const payment = order.payment ?? "paid";
+
+    await execute(
+      recordOrder,
+      {
+        number: order.number,
+        placedAt,
+        mode: "preorder",
+        customer: {
+          email: `${order.first}.${order.last}`
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[^a-z.]/g, "")
+            .concat("@example.co.nz"),
+          phone: null,
+          firstName: order.first,
+          lastName: order.last,
+        },
+        delivery: {
+          line1: order.line1,
+          line2: null,
+          suburb: null,
+          city: order.city,
+          region: order.region,
+          postcode: order.postcode,
+          rural: order.rural ?? false,
+          notes: order.rural ? "Leave at the gate, the dog is friendly." : null,
+        },
+        lines,
+        subtotalCents,
+        shippingCents,
+        totalCents: subtotalCents + shippingCents,
+        currency: "NZD",
+        payment: {
+          provider: payment === "test" ? "test" : "demo",
+          status: payment,
+          reference: `DEMO-${order.number}`,
+        },
+        joinCrew: order.crew ?? false,
+      },
+      shop,
+      at(0),
+    );
+
+    if (order.note !== undefined) {
+      await execute(
+        addOrderNote,
+        { number: order.number, note: order.note },
+        demo,
+        at(2),
+      );
+    }
+    if (order.then === "cancelled") {
+      await execute(
+        cancelOrder,
+        { number: order.number, reason: "Ordered twice by mistake" },
+        demo,
+        at(4),
+      );
+      continue;
+    }
+    if (order.then === undefined) continue;
+
+    await execute(markPacked, { number: order.number }, demo, at(18));
+    if (order.then === "packed") continue;
+
+    await execute(
+      markShipped,
+      {
+        number: order.number,
+        carrier: "NZ Post",
+        trackingNumber: `LZ${order.postcode}55${order.postcode}NZ`,
+      },
+      demo,
+      at(26),
+    );
+    if (order.then === "shipped") continue;
+
+    await execute(markDelivered, { number: order.number }, demo, at(70));
+  }
+}

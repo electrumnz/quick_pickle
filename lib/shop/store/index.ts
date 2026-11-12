@@ -1,24 +1,29 @@
 /**
  * Where orders and Pickle Crew sign-ups are kept, behind a seam.
  *
- * There is no database connected yet, so there are two stand-ins:
+ *   db     the default. The back end's database (lib/db), through the same
+ *          operations the back end itself uses, so an order placed in the
+ *          shop is on the Orders screen the moment it is placed. It is
+ *          durable exactly when the database is: with DATABASE_URL set, yes;
+ *          on the in-process database of a deployment without one, no, and
+ *          the back end says so.
+ *   file   appends JSON lines under `.data/`. A way to capture orders with
+ *          no database at all.
+ *   log    one structured line per record to the server log, and nothing
+ *          kept. A last resort.
  *
- *   file   development and tests. Appends JSON lines under `.data/`, which is
- *          gitignored. Survives a restart, which makes local testing honest.
- *   log    anywhere without a writable disk (a serverless deployment). Writes
- *          one structured line per record to the server log and keeps nothing.
- *          That is acceptable ONLY while payments are in test mode: a real
- *          order must land somewhere durable, and `npm run prelaunch` will not
- *          pass until a real store is configured.
- *
- * A real store (Postgres, Supabase) is one object with these two methods and
- * one line in `resolve` below.
+ * Whatever is chosen, `npm run prelaunch` will not pass until orders land
+ * somewhere durable.
  */
 
 import "server-only";
 
 import { appendFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
+
+import { systemCaller } from "@/lib/backstage/core/actor";
+import { execute } from "@/lib/backstage/core/op";
+import { databaseUrl } from "@/lib/db/client";
 
 import type { Order } from "../order";
 
@@ -74,17 +79,44 @@ const logStore: Store = {
   },
 };
 
+function dbStore(env: Record<string, string | undefined>): Store {
+  return {
+    name: "db",
+    // In-process databases are not durable on a deployment (memory), and are
+    // on a developer's machine (a folder). Close enough to the truth to gate
+    // a launch on: the launch check also asks for DATABASE_URL itself.
+    durable: databaseUrl(env) !== null || env.NODE_ENV !== "production",
+    async saveOrder(order) {
+      const { recordOrder } = await import("@/lib/backstage/orders/ops");
+      await execute(
+        recordOrder,
+        {
+          ...order,
+          placedAt: new Date(order.placedAt),
+          lines: order.lines.map((line) => ({ ...line })),
+        },
+        systemCaller("The shop", "storefront"),
+      );
+    },
+    async saveSignup(signup) {
+      const { joinCrew } = await import("@/lib/backstage/crew/ops");
+      await execute(
+        joinCrew,
+        { email: signup.email, source: signup.source },
+        systemCaller("The shop", "storefront"),
+      );
+    },
+  };
+}
+
 function resolve(env: Record<string, string | undefined>): Store {
   const choice = (env.ORDER_STORE ?? "").trim().toLowerCase();
   if (choice === "file") return fileStore;
   if (choice === "log") return logStore;
-  if (choice !== "") {
-    throw new Error(
-      `ORDER_STORE is "${choice}", which is not a store. Valid: file, log.`,
-    );
-  }
-  // Unset: a writable disk in development, the log everywhere else.
-  return env.NODE_ENV === "production" ? logStore : fileStore;
+  if (choice === "" || choice === "db") return dbStore(env);
+  throw new Error(
+    `ORDER_STORE is "${choice}", which is not a store. Valid: db, file, log.`,
+  );
 }
 
 export function getStore(

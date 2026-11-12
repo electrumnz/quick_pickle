@@ -18,6 +18,12 @@ const PAGES = [
   // The back end, in demo mode (this server has no database).
   "/backstage",
   "/backstage/more",
+  "/backstage/orders",
+  "/backstage/orders?status=all",
+  "/backstage/orders/QP-PACK22",
+  "/backstage/orders/QP-SENT66",
+  "/backstage/orders/QP-PACK22/slip",
+  "/backstage/customers",
   "/backstage/brand",
   "/backstage/settings",
   "/backstage/settings/staff",

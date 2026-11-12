@@ -39,7 +39,19 @@ export type DbHandle = {
 
 type Env = Record<string, string | undefined>;
 
+/**
+ * The connection string, if this deployment is allowed to use one.
+ *
+ * `DATABASE_URL` wins; `POSTGRES_URL` is what the Vercel and Supabase
+ * integration writes. A Vercel PREVIEW deployment ignores both unless
+ * `QP_PREVIEW_DATABASE=1`: a preview runs unmerged code and takes test
+ * orders, and neither belongs in the real database, however the integration
+ * was ticked. Previews run on the in-process demo database instead.
+ */
 export function databaseUrl(env: Env = process.env): string | null {
+  if (env.VERCEL_ENV === "preview" && env.QP_PREVIEW_DATABASE !== "1") {
+    return null;
+  }
   const url = (env.DATABASE_URL ?? env.POSTGRES_URL ?? "").trim();
   return url === "" ? null : url;
 }
@@ -57,7 +69,12 @@ async function openPostgres(url: string, env: Env): Promise<DbHandle> {
   // With DATABASE_CA_CERT set (the provider's CA, PEM) the server is verified
   // properly. Without it the link is encrypted but the server is not proven.
   const parsed = new URL(url);
-  parsed.searchParams.delete("sslmode");
+  // `sslmode` is replaced by the explicit setting below. The others are hints
+  // for other clients that hosted providers append; node-postgres has no use
+  // for them.
+  for (const key of ["sslmode", "pgbouncer", "supa", "connection_limit"]) {
+    parsed.searchParams.delete(key);
+  }
   const ca = (env.DATABASE_CA_CERT ?? "").trim();
   const ssl = isLocal(parsed.hostname)
     ? false

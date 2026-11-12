@@ -23,6 +23,18 @@ export const DESTINATIONS: readonly Destination[] = [
     tab: true,
   },
   {
+    href: "/backstage/orders",
+    label: "Orders",
+    blurb: "Pack them, ship them, find them.",
+    tab: true,
+  },
+  {
+    href: "/backstage/customers",
+    label: "Customers",
+    blurb: "Everyone who has ordered, and the Pickle Crew list.",
+    tab: true,
+  },
+  {
     href: "/backstage/brand",
     label: "Brand",
     blurb: "The living brand guide: voice, colours, type, Lucky.",

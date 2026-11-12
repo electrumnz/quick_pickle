@@ -66,6 +66,58 @@ test("buys a pack, start to finish", async ({ page }) => {
   await expect
     .poll(() => page.evaluate(() => window.localStorage.getItem("qp-jar-v1")))
     .toBe("");
+
+  // And the order is waiting in the back end, to be packed and sent. (This
+  // server has no database, so its back end is open and runs on demo data.)
+  const number = await page.getByTestId("order-number").innerText();
+  await page.goto(`/backstage/orders?q=${number}`);
+  const row = page.getByRole("link", { name: new RegExp(number) });
+  await expect(row).toContainText("Sam Tester");
+  await expect(row).toContainText("1 × The Squad");
+  await expect(row).toContainText("$88.50");
+  await row.click();
+
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(number);
+  await expect(page.getByText("Test, not charged")).toBeVisible();
+  await expect(page.getByText("12 Sideline Road")).toBeVisible();
+  await expect(
+    page.getByText(`New test order ${number}: 1 × The Squad, $88.50`),
+  ).toBeVisible();
+
+  const reply = () =>
+    page.waitForResponse((response) => response.request().method() === "POST");
+  await Promise.all([
+    reply(),
+    page.getByRole("button", { name: "Mark as packed" }).click(),
+  ]);
+  await expect(page.locator("main [role=status]").first()).toHaveText(
+    "Packed.",
+  );
+
+  await page.getByLabel("Courier", { exact: true }).fill("NZ Post");
+  await page.getByLabel("Tracking number").fill("LZ123456789NZ");
+  await Promise.all([
+    reply(),
+    page.getByRole("button", { name: "Mark as shipped" }).click(),
+  ]);
+  await expect(page.locator("main [role=status]").first()).toHaveText(
+    "Shipped.",
+  );
+  await expect(
+    page.getByText(`Shipped ${number} with NZ Post, tracking LZ123456789NZ`),
+  ).toBeVisible();
+  // Once it has gone, the only thing left to do is say it arrived.
+  await expect(
+    page.getByRole("button", { name: "Mark as delivered" }),
+  ).toBeVisible();
+  await expect(page.getByText("Cancel this order")).toHaveCount(0);
+
+  // The packing slip has the address and the count, and no prices.
+  await page.goto(`/backstage/orders/${number}/slip`);
+  await expect(
+    page.getByText("24 shots", { exact: false }).first(),
+  ).toBeVisible();
+  await expect(page.getByText("$88.50")).toHaveCount(0);
 });
 
 test("an empty jar cannot check out", async ({ page }) => {

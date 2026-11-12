@@ -4,8 +4,10 @@ import type { ReactNode } from "react";
 import { DESTINATIONS } from "@/components/backstage/nav";
 import { ShopLink } from "@/components/backstage/ShopLink";
 import { RailNav, TabNav } from "@/components/backstage/NavLinks";
-import { requireStaff } from "@/lib/backstage/auth/current";
+import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
+import { execute } from "@/lib/backstage/core/op";
 import { backstageMode } from "@/lib/backstage/mode";
+import { countOrders } from "@/lib/backstage/orders/ops";
 
 import { signOutAction } from "../(door)/actions";
 
@@ -23,9 +25,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const staff = await requireStaff();
   const demo = backstageMode() === "demo";
   const isOwner = staff.role === "owner";
-  // Per-destination "waiting on you" counts. Filled in as each area lands.
+  // Per-destination "waiting on you" counts. Each area adds its own.
   const counts: Record<string, number> = {};
   for (const item of DESTINATIONS) counts[item.href] = 0;
+  const orders = await execute(countOrders, {}, await staffCaller());
+  counts["/backstage/orders"] = orders.paid;
 
   return (
     <div className="bk-shell">

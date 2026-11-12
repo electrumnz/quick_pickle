@@ -5,8 +5,9 @@ import { defineConfig, devices } from "@playwright/test";
  * one that has to pass, `desktop` checks the layout that is layered on top.
  *
  * CI runs the production build (`next start`), which is what Vercel serves.
- * Locally `next dev` keeps the loop fast. Orders go to the file store under
- * `.data/`, and payments stay on the test provider.
+ * Locally `next dev` keeps the loop fast. Neither server has a database, so
+ * both run on the in-process one, in memory, and payments stay on the test
+ * provider.
  */
 
 import { AUTH_URL, SETUP_CODE } from "./e2e/auth-server";
@@ -47,7 +48,9 @@ export default defineConfig({
         : `npx next dev --port ${String(port)}`,
       url: baseURL,
       env: {
-        ORDER_STORE: "file",
+        // Orders go to the database (the default), which here is the
+        // in-process one, so an order placed in the shop can be found in the
+        // back end by the same test.
         PAYMENT_PROVIDER: "test",
         NEXT_PUBLIC_SITE_URL: baseURL,
         QP_EMBEDDED_DB: "memory",
@@ -62,7 +65,6 @@ export default defineConfig({
       command: `npx next start --port ${String(port + 1)}`,
       url: `${AUTH_URL}/backstage/sign-in`,
       env: {
-        ORDER_STORE: "log",
         PAYMENT_PROVIDER: "test",
         NEXT_PUBLIC_SITE_URL: AUTH_URL,
         QP_EMBEDDED_DB: "memory",
