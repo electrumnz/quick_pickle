@@ -154,8 +154,15 @@ test("the books add up, and come as a file", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "For the books",
   );
-  await page.getByRole("link", { name: "Since 1 April" }).click();
+  const sinceApril = page.getByRole("link", { name: "Since 1 April" });
+  await sinceApril.click();
+  // Wait for the page to be the one asked for before reading anything off
+  // it: this month has sales too, and its figures and its download button
+  // are still on screen for a moment after the press.
+  await expect(page).toHaveURL(/from=\d{4}-04-01&to=\d{4}-\d{2}-\d{2}$/);
+  await expect(sinceApril).toHaveAttribute("aria-current", "page");
   const said = page.getByTestId("books-said");
+  await expect(said).toContainText(/^From 1 Apr \d{4} to /);
   await expect(said).toContainText(/charged across \d+ orders?/);
 
   // The table's foot is the same figures as the sentence above it.
