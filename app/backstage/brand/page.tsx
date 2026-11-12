@@ -20,16 +20,21 @@ import {
 } from "@/components/brand/Icons";
 import {
   CHANGES,
+  CHECKS,
   COLOUR_RULES,
   IDEA,
   LAYOUT,
   LOGO,
   MASCOT,
   MOTION,
+  NAMES,
   NEVER,
   PILLARS,
+  SOURCES,
+  TONE,
   TYPE,
   VOICE,
+  WORDS,
 } from "@/content/brand-guide";
 import { hexOf, PAIRS, PALETTE } from "@/lib/brand/colours";
 import { contrastRatio, thresholdFor } from "@/lib/brand/contrast";
@@ -47,7 +52,9 @@ export const metadata: Metadata = { title: "Brand guide" };
 
 const SECTIONS = [
   { id: "idea", label: "The idea" },
+  { id: "checks", label: "Six checks" },
   { id: "voice", label: "Voice" },
+  { id: "words", label: "Names and words" },
   { id: "never", label: "Never say" },
   { id: "logo", label: "Logo" },
   { id: "lucky", label: "Lucky" },
@@ -56,6 +63,7 @@ const SECTIONS = [
   { id: "parts", label: "Parts" },
   { id: "motion", label: "Motion" },
   { id: "layout", label: "Layout" },
+  { id: "sources", label: "Sources" },
   { id: "changes", label: "What changed" },
 ] as const;
 
@@ -231,6 +239,39 @@ export default function BrandGuidePage() {
           </div>
         </Section>
 
+        <Section
+          id="checks"
+          title="Six checks"
+          lead="Ask these of anything before it goes out: a page, a post, a label, an email. Yes or no to each. Two noes and it goes back."
+        >
+          <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 [&>*]:min-w-0">
+            {CHECKS.map((check, index) => (
+              <li key={check.name} className="card-flat flex flex-col p-5">
+                <p className="label text-pink-deep text-[1.05rem] leading-none">
+                  Check {index + 1}
+                </p>
+                <h3 className="varsity mt-2 text-[1.6rem] leading-none">
+                  {check.name}
+                </h3>
+                <p className="mt-3 leading-snug font-semibold">{check.ask}</p>
+                <p className="mt-3 flex gap-2.5 text-[0.9688rem] leading-snug">
+                  <CheckIcon className="text-olive-deep mt-0.5 size-5 shrink-0" />
+                  <span>{check.yes}</span>
+                </p>
+                <p className="mt-2 flex gap-2.5 text-[0.9688rem] leading-snug">
+                  <span
+                    aria-hidden="true"
+                    className="text-pink-deep label mt-0.5 w-5 shrink-0 text-center text-[1.1rem] leading-none"
+                  >
+                    ✕
+                  </span>
+                  <span>{check.no}</span>
+                </p>
+              </li>
+            ))}
+          </ol>
+        </Section>
+
         <Section id="voice" title="Voice" lead={VOICE.summary}>
           <div className="grid gap-6 md:grid-cols-2">
             <div className="card-flat bg-olive-wash p-5">
@@ -279,6 +320,21 @@ export default function BrandGuidePage() {
                   </li>
                 ))}
               </ul>
+              <h3 className="label mt-6 flex items-center gap-2 text-[1.25rem]">
+                Hers, cut down <Tag tone="proposed">Adapted</Tag>
+              </h3>
+              <ul className="mt-3 flex flex-col gap-3">
+                {VOICE.adapted.map((item) => (
+                  <li key={item.line}>
+                    <p className="varsity text-[1.3rem] leading-tight">
+                      {item.line}
+                    </p>
+                    <p className="text-navy-muted mt-1 text-[0.9375rem] leading-snug">
+                      She wrote: &ldquo;{item.from}&rdquo; {item.note}
+                    </p>
+                  </li>
+                ))}
+              </ul>
             </div>
             <div>
               <h3 className="label flex items-center gap-2 text-[1.25rem]">
@@ -309,6 +365,77 @@ export default function BrandGuidePage() {
               </dl>
             </div>
           </div>
+        </Section>
+
+        <Section
+          id="words"
+          title="Names and words"
+          lead="How the names are written, the words to reach for, and how loud to be in each place."
+        >
+          <h3 className="label text-[1.25rem]">Names</h3>
+          <ul className="mt-3 grid gap-3 md:grid-cols-2 [&>*]:min-w-0">
+            {NAMES.map((item) => (
+              <li key={item.name} className="card-flat p-4">
+                <p className="leading-none font-semibold">{item.name}</p>
+                <p className="mt-2 flex gap-2.5 text-[0.9688rem] leading-snug">
+                  <CheckIcon className="text-olive-deep mt-0.5 size-5 shrink-0" />
+                  <span>{item.always}</span>
+                </p>
+                <p className="mt-1.5 flex gap-2.5 text-[0.9688rem] leading-snug">
+                  <span
+                    aria-hidden="true"
+                    className="text-pink-deep label mt-0.5 w-5 shrink-0 text-center text-[1.1rem] leading-none"
+                  >
+                    ✕
+                  </span>
+                  <span>{item.never}</span>
+                </p>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-2 [&>*]:min-w-0">
+            <div className="card-flat bg-olive-wash p-5">
+              <h3 className="label text-[1.25rem]">Reach for</h3>
+              <ul className="mt-3 flex flex-col gap-2">
+                {WORDS.use.map((line) => (
+                  <li key={line} className="flex gap-2.5 leading-snug">
+                    <CheckIcon className="text-olive-deep mt-0.5 size-5 shrink-0" />
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="card-flat bg-blush p-5">
+              <h3 className="label text-pink-deep text-[1.25rem]">Refuse</h3>
+              <ul className="mt-3 flex flex-col gap-3">
+                {WORDS.refuse.map((item) => (
+                  <li key={item.words} className="leading-snug">
+                    <p className="font-semibold line-through decoration-2">
+                      {item.words}
+                    </p>
+                    <p className="text-[0.9375rem]">{item.why}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <h3 className="label mt-10 text-[1.25rem]">How loud, where</h3>
+          <ul className="mt-3 flex flex-col gap-3">
+            {TONE.map((item) => (
+              <li
+                key={item.place}
+                className="card-flat grid gap-1.5 p-4 md:grid-cols-[16rem_9rem_1fr] md:items-start md:gap-5"
+              >
+                <p className="leading-snug font-semibold">{item.place}</p>
+                <p className="label text-pink-deep text-[1.05rem] leading-tight">
+                  Cheek: {item.cheek}
+                </p>
+                <p className="text-[0.9688rem] leading-snug">{item.rule}</p>
+              </li>
+            ))}
+          </ul>
         </Section>
 
         <Section id="never" title="Never say" lead={NEVER.intro}>
@@ -728,6 +855,65 @@ export default function BrandGuidePage() {
 
         <Section id="layout" title="Layout">
           <Rules items={LAYOUT} />
+        </Section>
+
+        <Section
+          id="sources"
+          title="Sources"
+          lead="Whose word counts, in what order, and where this guide goes its own way."
+        >
+          <div className="grid gap-6 md:grid-cols-2 [&>*]:min-w-0">
+            <div className="card-flat p-5">
+              <h3 className="label flex items-center gap-2 text-[1.25rem]">
+                Ashleigh&apos;s files <Tag tone="official">First</Tag>
+              </h3>
+              <p className="mt-3 leading-relaxed">{SOURCES.hers}</p>
+            </div>
+            <div className="card-flat p-5">
+              <h3 className="label flex items-center gap-2 text-[1.25rem]">
+                Grok&apos;s write-ups <Tag tone="proposed">Drafts</Tag>
+              </h3>
+              <p className="mt-3 leading-relaxed">{SOURCES.groks}</p>
+            </div>
+          </div>
+
+          <h3 className="label mt-10 text-[1.25rem]">
+            Taken from the 12 November drafts
+          </h3>
+          <div className="mt-3">
+            <Rules items={SOURCES.taken} />
+          </div>
+
+          <h3 className="label mt-10 text-[1.25rem]">
+            Where this guide goes its own way
+          </h3>
+          <ul className="mt-3 flex flex-col gap-4">
+            {SOURCES.differs.map((item) => (
+              <li
+                key={item.theirs}
+                className="card-flat grid gap-3 p-5 md:grid-cols-3 md:gap-6"
+              >
+                <div>
+                  <p className="label text-navy-muted text-[1rem]">Theirs</p>
+                  <p className="text-navy-muted mt-1 text-[0.9688rem] leading-snug">
+                    {item.theirs}
+                  </p>
+                </div>
+                <div>
+                  <p className="label text-pink-deep text-[1rem]">Ours</p>
+                  <p className="mt-1 text-[0.9688rem] leading-snug font-semibold">
+                    {item.ours}
+                  </p>
+                </div>
+                <div>
+                  <p className="label text-[1rem]">Because</p>
+                  <p className="mt-1 text-[0.9688rem] leading-snug">
+                    {item.why}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </Section>
 
         <Section

@@ -25,12 +25,21 @@ import { STORE } from "./offer";
 
 const preorder = STORE.launchMode === "preorder";
 
-/** Lines from Ashleigh's own pages. Do not reword. */
+/** Lines from Ashleigh's own pages, word for word. Do not reword. */
 export const OFFICIAL = {
   neverFear: "Never fear, Lucky is here.",
   luckyYouveGotUs: "Lucky you've got us.",
   tinyPackage: "Tiny package, big dill.",
   pickleCrew: "Pickle Crew",
+} as const;
+
+/**
+ * Ours, cut from hers. Her Meet Lucky page says "Our little shot of good luck
+ * for the quads," and runs straight on into the sentence the law will not let
+ * a food say. This keeps her best six words and stops there. It is not a
+ * word-for-word quote, so it does not sit in OFFICIAL.
+ */
+export const ADAPTED = {
   goodLuck: "A little shot of good luck.",
 } as const;
 
@@ -64,8 +73,8 @@ export const HEADER = {
 export const HERO = {
   eyebrow: "Pickle juice shots",
   /**
-   * OFFICIAL, from "Our little shot of good luck". `breakOn` says where the
-   * line turns: two lines on a phone, three on a wide screen.
+   * ADAPTED.goodLuck, split into words. `breakOn` says where the line turns:
+   * two lines on a phone, three on a wide screen.
    */
   title: [
     { text: "A little", breakOn: "wide" },
@@ -129,9 +138,9 @@ export const TRUTHS = {
       body: "Sour up front, salty at the back, and a face you can't help pulling. Everyone pulls the face.",
     },
     {
-      icon: "check",
-      title: "No fancy talk",
-      body: "It's pickle juice. We're not going to dress it up as anything else. Try one and see.",
+      icon: "heart",
+      title: "Made to hand round",
+      body: "A pack's for sharing. One for you, one for the mate who forgot their boots, the rest for the sheds.",
     },
   ],
 } as const;
@@ -181,7 +190,7 @@ export const LUCKY = {
   stats: [
     { label: "Name", value: "Lucky" },
     { label: "Position", value: "Superhero cat" },
-    { label: "Special move", value: "The pickle punch" },
+    { label: "Special move", value: "Turning up. Every game." },
     { label: "Cape", value: "Always" },
     { label: "Weakness", value: "A sunny windowsill" },
     { label: "Ritual", value: "One shot, down in one, one very sour face" },
@@ -210,7 +219,7 @@ export const FINAL = {
   /** OFFICIAL. */
   title: ["Lucky you've", "got us."],
   lockupAlt:
-    "Quick Pickle. Lucky the cat runs through the logo, pickle raised.",
+    "Quick Pickle. Lucky, the superhero cat, runs through the logo with his pickle raised.",
   body: preorder
     ? `Pickle juice shots. ${STORE.batchName} is open for pre-order.`
     : "Pickle juice shots. Ready when your ritual is.",

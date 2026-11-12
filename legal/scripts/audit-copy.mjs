@@ -478,6 +478,22 @@ const RULES = [
     "The set-up lines around the deck's claim. Each one frames the product as the answer to a body letting you down.",
     "FSC Std 1.2.7-18; Std 1.1.2-2 (implied claims)",
   ),
+  r(
+    "QP-05",
+    BANNED,
+    CONSUMER_ONLY,
+    /\bpickle[\s-]+punch(?:es|ed|ing)?\b/i,
+    "Half of the deck's banned sentence. On its own it still points at the other half, so it stays off anything a customer reads.",
+    "FSC Std 1.2.7-8(a); Std 1.1.2-2 (implied claims)",
+  ),
+  r(
+    "QP-06",
+    RESTRICTED,
+    CONSUMER_ONLY,
+    /\bpickle[\s-]+power(?:ed|s)?\b/i,
+    'The end of Lucky\'s full title in the mascot file. "Power" next to a food can read as a claim about what it gives you. Use "Lucky, the superhero cat" until there is advice and a recorded decision.',
+    "FSC Std 1.2.7-18; Std 1.1.2-2 (implied claims)",
+  ),
 
   // ---- Group D: nutrition content claims --------------------------------
   r(

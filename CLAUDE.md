@@ -8,7 +8,10 @@ the four fonts. "Brand Guide v2" (Grok's write-up of her files) is a starting po
 rulebook. The version this build actually follows is the living guide at `/backstage/brand`,
 rendered from the same tokens and components as the site.
 
-The repository name is not a brand name. Everything a customer sees says Quick Pickle.
+Everything a customer sees says Quick Pickle. "Pickled Jews" (the repository name) is the
+umbrella the project sits under. Whether it ever shows on the pack or the site, and in what
+words, is Ashleigh's call and is not made yet, so until then it appears nowhere a customer
+can see.
 
 ## Non-negotiables
 

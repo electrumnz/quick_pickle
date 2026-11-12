@@ -112,10 +112,17 @@ because everyone on the project has read them.
 | QP-04 | "the **physical barriers** that stop us in our tracks", "**mental strength**", "your **physical game** can keep up with your **mental one**", "play our best game" | **Banned.** The set-up for the claim. Each frames the product as the answer to a body letting you down.                     |
 | QP-02 | "**Performance** with pickles"                                                                                                                                     | **Restricted.** Reads as a physical-performance claim next to a food. Not published without advice and a recorded decision. |
 | QP-03 | "good luck **for the quads**"                                                                                                                                      | **Restricted.** Naming a muscle next to the product implies it does something for it.                                       |
+| QP-05 | "the **pickle punch**"                                                                                                                                             | **Banned on anything a customer reads.** It is half of the banned sentence, and it only ever meant a punch to one thing.    |
+| QP-06 | "Superhero Cat with **Pickle Power**" (Lucky's full title)                                                                                                         | **Restricted.** "Power" next to a food can read as a claim. Use "Lucky, the superhero cat" until there is advice on it.     |
 
 What survives from her pages, word for word, and is used: **"Never fear, Lucky is here."
-"Lucky you've got us." "Tiny package, big dill." "Pickle Crew." "A little shot of good
-luck."** and the idea underneath all of it: **we all have our rituals, our lucky charms.**
+"Lucky you've got us." "Tiny package, big dill." "Pickle Crew."** and the idea underneath
+all of it: **we all have our rituals, our lucky charms.**
+
+The hero line, **"A little shot of good luck."**, is ours, cut from hers. She wrote "Our
+little shot of good luck for the quads," and ran straight on into the banned sentence. The
+site keeps her best six words and stops there. It is not a quote and is never presented as
+one.
 
 That last idea is the whole platform. A lucky charm is, by definition, not a physiological
 claim. Nobody thinks luck is a nutrient.
@@ -180,13 +187,19 @@ one is describing an occasion. Saying **why**, or what happens next, is a claim.
 
 ### Lucky
 
-Part cat, all cape. Special move: the pickle punch. Lucky as a character can be as heroic as
-we like. The product he carries stays a food.
+Part cat, all cape. Special move: turning up, every game. Lucky as a character can be as
+heroic as we like. The product he carries stays a food.
+
+Call him Lucky, and he is a he. In a sentence he is "Lucky, the superhero cat" the first
+time and "Lucky" after that. His full title in Ashleigh's file ends in "with Pickle Power",
+which is held back (QP-06). His old special move, the pickle punch, is out (QP-05): it is
+the front half of the one sentence this brand can never publish.
 
 ### Straight talk that carries no legal weight
 
-"It's pickle juice. We're not going to dress it up as anything else." Saying what we will
-not claim is fine. Hinting at what we would claim if we could is not.
+"It's pickle juice." Saying what it is, is fine. So is saying it is a food and not a
+medicine. Hinting at what we would claim if we could is not, and that includes "we're not
+going to dress it up" and "try one and see": both leave the reader to fill in an effect.
 
 ---
 

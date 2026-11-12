@@ -29,6 +29,8 @@ export function Deck() {
       </p>
       <p>So your physical game can keep up with your mental one.</p>
       <p>Fast-acting relief when you need it.</p>
+      <p>Special move: the pickle punch.</p>
+      <p>Lucky, the Superhero Cat with Pickle Power.</p>
     </section>
   );
 }

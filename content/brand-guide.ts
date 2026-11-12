@@ -10,6 +10,11 @@
  * It is shown at /backstage/brand, rendered with the site's own tokens, fonts
  * and components, so what the guide says and what the site does cannot drift.
  *
+ * On 12 November 2026 Grok added a strategy proposal, a tone-of-voice proposal
+ * and a list of thirty questions for Ashleigh to the shared Drive. They are
+ * drafts waiting on her. What this guide takes from them, and where it goes
+ * its own way, is set out in SOURCES at the bottom.
+ *
  * This file is on the scanner's internal surface: it is never shown to a
  * customer. It has to quote the lines we never publish in order to rule them
  * out, and those quotes sit between ignore markers.
@@ -70,7 +75,14 @@ export const VOICE = {
     "Lucky you've got us.",
     "Tiny package, big dill.",
     "Pickle Crew.",
-    "A little shot of good luck.",
+  ],
+  /** Hers, cut down. Not a quote, and never shown as one. */
+  adapted: [
+    {
+      line: "A little shot of good luck.",
+      from: "Our little shot of good luck for the quads,",
+      note: "Her sentence runs straight on into the one we can never publish. The site keeps her best six words and stops there.",
+    },
   ],
   ours: [
     "Clear as a whistle.",
@@ -78,6 +90,8 @@ export const VOICE = {
     "No pickles. No bits. Just the juice.",
     "Everyone's got a thing. This is ours.",
     "Down in one. Pull the face. Go play.",
+    "Made to hand round.",
+    "Turning up. Every game.",
   ],
   vocabulary: [
     { use: "the jar", for: "the cart" },
@@ -118,11 +132,196 @@ export const NEVER = {
       status: "Held back",
       why: "Naming a muscle implies the product does something for it. The site uses the line without the last three words.",
     },
+    {
+      line: "the pickle punch",
+      status: "Never",
+      why: "The front half of the banned sentence. On its own it still points at the back half. Lucky's special move is turning up.",
+    },
+    {
+      line: "Superhero Cat with Pickle Power",
+      status: "Held back",
+      why: "His full title in the mascot file. Power next to a food can read as a claim. He is Lucky, the superhero cat, until there is advice on it.",
+    },
   ],
   alsoAvoid:
     "Recovery, hydration, electrolytes, endurance, energy, athlete, workout, muscle. And any wink at them: saying we are not allowed to tell you what it does is itself a claim.",
 } as const;
 /* copy-audit-ignore-end */
+
+/* copy-audit-ignore-start: the checks and word lists quote what we refuse in order to refuse it. */
+/**
+ * Six checks, asked of anything before it goes out: a page, a post, a label,
+ * an email. Yes or no to each. Two noes and it goes back.
+ *
+ * The names are from Grok's strategy proposal (12 November 2026) and are kept
+ * so everyone uses the same six words. The examples are ours.
+ */
+export const CHECKS = [
+  {
+    name: "Lucky leads",
+    ask: "Is Lucky in it, or speaking for it, and doing something?",
+    yes: "Lucky running flat out across the top of the page, pickle up, cape whole.",
+    no: "Lucky shrunk to a corner badge. His cape, tail or pickle cropped off.",
+  },
+  {
+    name: "Ritual, not remedy",
+    ask: "Is it about the moment before the game, and never about a body?",
+    yes: "Socks on. Playlist on. Lucky's here.",
+    no: "Anything it stops, eases, boosts or speeds up. Any number of seconds.",
+  },
+  {
+    name: "One punch per line",
+    ask: "One idea, and at most one pun?",
+    yes: "Tiny package, big dill. Then stop.",
+    no: "Dill, brine and jar jokes stacked in one line, or a second gag in the line underneath.",
+  },
+  {
+    name: "Loud letters, calm words",
+    ask: "Is the type doing the shouting, so the words do not have to?",
+    yes: "A headline in Summer Varsity, one calm sentence under it, a DIN label on the button.",
+    no: "Sentences in capitals. Exclamation marks to add energy. More than three type styles on one screen.",
+  },
+  {
+    name: "Flat, bold, outlined",
+    ask: "Thick navy outline, flat colour, hard offsets?",
+    yes: "Navy, cream, hot pink and olive in the jobs this guide gives them.",
+    no: "Gradients, soft shadows, glows, a photo behind the logo, lab-white layouts.",
+  },
+  {
+    name: "On the player's side",
+    ask: "Cheeky with the player, never at their expense?",
+    yes: "Same socks as last week? Respect.",
+    no: "Jokes about anyone's body, size, skill or result. Talking down.",
+  },
+] as const;
+
+/** How the names are written. */
+export const NAMES = [
+  {
+    name: "Quick Pickle",
+    always: "Two words, capital Q and P. Quick Pickle's.",
+    never:
+      "QuickPickle, Quick-Pickle, quick pickle, the Quick Pickle, QP in a sentence.",
+  },
+  {
+    name: "QUICK PICKLE",
+    always:
+      "Capitals only when set in one of the varsity faces or a DIN label.",
+    never: "Capitals in a Poppins sentence.",
+  },
+  {
+    name: "QP",
+    always: "The badge on Lucky's chest, and the front of an order number.",
+    never: "Grab a QP.",
+  },
+  {
+    name: "Lucky",
+    always:
+      "Capital L. He, him. Lucky, the superhero cat, the first time; Lucky after that.",
+    never: "It. The mascot. Lucky the cat. A second Lucky.",
+  },
+  {
+    name: "Pickle Crew",
+    always: "Two words, both capitals. It means people.",
+    never: "Pickle crew, PickleCrew, a product called Pickle Crew.",
+  },
+  {
+    name: "Pickled Jews",
+    always:
+      "The umbrella name the project sits under. Nowhere a customer can see until Ashleigh says whether it shows, and in what words.",
+    never: "Shortened, punned on, or put inside the logo.",
+  },
+  {
+    name: "lucky",
+    always:
+      "Small l is the ordinary word. Her line Lucky you've got us uses the capital on purpose so it reads both ways.",
+    never: "Fixing her capital.",
+  },
+] as const;
+
+/** Reach for the left column. The right column is why the scanner exists. */
+export const WORDS = {
+  use: [
+    "ritual, routine, lucky, charm",
+    "game day, the whistle, the half, the sideline, the sheds",
+    "kit bag, boots, socks, strapping tape, the oranges",
+    "team, crew, the side, hand one round, shout the team",
+    "shot, little, tiny, down in one, the face",
+    "sour, salty, clear, dill, pickle, jar",
+    "cape, superhero, turns up, here",
+  ],
+  refuse: [
+    {
+      words: "cramp, relief, stop, prevent, ease",
+      why: "Names or hints at a condition. Never, for a food.",
+    },
+    {
+      words: "hydrate, electrolytes, sodium as a benefit, minerals",
+      why: "Nutrition and health claims need approvals this product does not have.",
+    },
+    {
+      words: "recovery, hangover, gut, immune, antioxidant, detox",
+      why: "Health claims.",
+    },
+    {
+      words: "healthy, good for you, clean, natural goodness, superfood",
+      why: "Implied health claims.",
+    },
+    {
+      words: "clinically, proven, science-backed, formula, works in",
+      why: "Lab talk, and unproven.",
+    },
+    {
+      words: "boost, fuel, power up, energise, performance as a result",
+      why: "Says it does something to a body.",
+    },
+    {
+      words:
+        "secret weapon, game changer, elite, trusted by the best, knockout",
+      why: "Not a legal problem. Every other pickle shot already says it, and we are not them.",
+    },
+    {
+      words: "guaranteed, best, number one, world's first",
+      why: "Cannot be backed up.",
+    },
+  ],
+} as const;
+/* copy-audit-ignore-end */
+
+/** The voice never changes. How loud it is does. */
+export const TONE = [
+  {
+    place: "Hero, section titles, stickers",
+    cheek: "Most",
+    rule: "Three to seven words. One pun at most. Lucky up front.",
+  },
+  {
+    place: "Section sentences, pack blurbs",
+    cheek: "Some",
+    rule: "Short, second person, sideline words. Calm.",
+  },
+  {
+    place: "Buttons, prices, labels",
+    cheek: "None",
+    rule: "A verb or a fact. Pre-order. Add to jar. No puns on a price.",
+  },
+  {
+    place: "Checkout, errors, order emails",
+    cheek: "None, then a little",
+    rule: "Say what happened and what to do next first. Lucky only signs off good news.",
+  },
+  {
+    place: "Replies to customers",
+    cheek: "None",
+    // copy-audit-ignore: an instruction to staff on what NOT to engage with.
+    rule: "Plain sentences, fix it first. If someone mentions their health, good or bad, do not agree or disagree: thank them, say we cannot give health advice, and pass it on.",
+  },
+  {
+    place: "Fine print, delivery, returns, privacy",
+    cheek: "None",
+    rule: "No voice, no Lucky, no adjectives. As plain as it can be said.",
+  },
+] as const;
 
 export const LOGO = {
   rules: [
@@ -299,8 +498,59 @@ export const CHANGES = [
     why: "It is one page. Four links to places you can scroll to are a tap spent on nothing; the buy button is not.",
   },
   {
+    from: "Lucky's special move on his player card: the pickle punch.",
+    to: "Turning up. Every game.",
+    why: "The punch is the front half of the one sentence this brand can never publish. Turning up is the promise we can keep, and it is funnier.",
+  },
+  {
+    from: "A card that said we would not dress the juice up, try one and see.",
+    to: "Made to hand round: a pack is for sharing.",
+    why: "Try one and see leaves the reader to fill in an effect, which is a wink, which is a claim. The new card gives a reason to buy the bigger pack instead.",
+  },
+  {
     from: "One cream.",
     to: "Two: the UI cream sampled from the raster logo, and the art cream her vector pages are drawn in.",
     why: "Her own files use both. Recolouring her art to match would be redrawing it.",
   },
 ] as const;
+
+/**
+ * Where this guide comes from, and where it differs from Grok's drafts.
+ * Ashleigh's own files outrank everything here.
+ */
+export const SOURCES = {
+  hers: "The logo, Lucky, the three colours, the four fonts, the sticker sheet and her Meet Lucky page. Used as they are. Never redrawn, recoloured or reworded.",
+  groks:
+    "Brand Guide v2, the spec and tokens, and (12 November 2026) a strategy proposal, a tone-of-voice proposal and thirty questions for Ashleigh. All drafts waiting on her.",
+  taken: [
+    "The six checks, by name.",
+    "The naming rules for Quick Pickle, Lucky and the Pickle Crew.",
+    "Ritual words in, body words out. This guide already said it; theirs lists it better.",
+    "Their finding that her exact words are Our little shot of good luck for the quads, so the hero line is ours, cut from hers, and is labelled that way.",
+    "Holding back the pickle punch and Pickle Power.",
+  ],
+  differs: [
+    {
+      theirs: "Never fear, Lucky is here leads the home page.",
+      ours: "A little shot of good luck leads. Never fear signs off Meet Lucky and runs in the ticker.",
+      why: "The first screen has to say what is for sale. Never fear only lands once you have met Lucky.",
+    },
+    {
+      theirs:
+        // copy-audit-ignore: names the two deck sentences in order to rule them out.
+        "The two sentences about physical barriers and the physical game stay in her story, pending legal advice.",
+      ours: "Out entirely, and the scanner blocks them.",
+      why: "On a page that sells the product they are the set-up for a claim, with or without the punchline.",
+    },
+    {
+      theirs: "Format, size, market and checkout are open questions.",
+      ours: "A 100 ml clear plastic bottle, sold direct in New Zealand, through our own checkout.",
+      why: "Confirmed to this build on 12 November 2026, with photos of the bottle.",
+    },
+    {
+      theirs: "Call him Lucky, never the cat.",
+      ours: "He is Lucky everywhere, with one exception: the 404 page, where he is asleep and the joke is a napping cat.",
+      why: "It is funnier, and it is one line.",
+    },
+  ],
+} as const;

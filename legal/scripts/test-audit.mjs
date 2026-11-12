@@ -318,7 +318,15 @@ check(
   conceptDeck.code === 1,
   conceptDeck.out,
 );
-for (const id of ["TH-04", "QP-01", "QP-02", "QP-03", "QP-04"]) {
+for (const id of [
+  "TH-04",
+  "QP-01",
+  "QP-02",
+  "QP-03",
+  "QP-04",
+  "QP-05",
+  "QP-06",
+]) {
   check(`concept-deck fixture trips ${id}`, ids(conceptDeck.json).has(id));
 }
 check(
@@ -332,6 +340,21 @@ check(
   '"Performance with pickles" cannot be published without a recorded decision',
   (conceptDeck.json?.findings ?? []).some(
     (f) => f.id === "QP-02" && f.severity === "restricted",
+  ),
+  conceptDeck.out,
+);
+
+check(
+  '"the pickle punch" is banned even with the rest of the sentence cut off',
+  (conceptDeck.json?.findings ?? []).some(
+    (f) => f.id === "QP-05" && f.severity === "banned",
+  ),
+  conceptDeck.out,
+);
+check(
+  '"Pickle Power" is held back until there is a recorded decision',
+  (conceptDeck.json?.findings ?? []).some(
+    (f) => f.id === "QP-06" && f.severity === "restricted",
   ),
   conceptDeck.out,
 );

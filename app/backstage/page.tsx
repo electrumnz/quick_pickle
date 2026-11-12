@@ -63,7 +63,7 @@ export default function BackstagePage() {
       <p className="mt-4 max-w-[40rem] text-[1.0625rem] leading-relaxed">
         {open === 0
           ? "Everything is confirmed. The site is ready to take real orders."
-          : `${String(open)} thing${open === 1 ? "" : "s"} to sort before this takes real money. Until then the public site shows a preview strip, stays out of search, and the checkout is in test mode.`}
+          : `${String(open)} thing${open === 1 ? "" : "s"} to sort before this takes real money. Until then the public site stays out of search and the checkout is in test mode.`}
       </p>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1.2fr_0.8fr]">

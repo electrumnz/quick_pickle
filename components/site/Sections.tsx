@@ -7,8 +7,8 @@ import {
   ChevronIcon,
   DropIcon,
   FaceIcon,
+  HeartIcon,
   Sparkle,
-  StraightIcon,
 } from "@/components/brand/Icons";
 import { LoopVideo } from "@/components/ui/LoopVideo";
 import { Ticker } from "@/components/ui/Ticker";
@@ -100,7 +100,7 @@ const TRUTH_ICON = {
   drop: DropIcon,
   bottle: BottleIcon,
   face: FaceIcon,
-  check: StraightIcon,
+  heart: HeartIcon,
 } as const;
 
 export function Truths() {
