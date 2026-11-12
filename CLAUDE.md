@@ -173,12 +173,12 @@ A link from the back end to the shop is `ShopLink` (a plain anchor, full page lo
   collapses under `prefers-reduced-motion`. Content is visible without JavaScript; scroll
   reveal only hides blocks once its observer is actually running.
 - Tap targets are 44px or more. axe runs on every page at both sizes with no rule disabled.
-- **Lighthouse runs with the slow connection applied for real** (`throttlingMethod:
-  "devtools"`), five runs, median. Its default is to load the page at full speed and then
-  estimate. Served from the same machine, the scripts land before the first paint, the
-  estimate counts them as blocking it, and identical bytes scored 2.4 s or 2.9 s for the
-  largest paint depending on a 20 ms race. Measured properly it is the first paint: about
-  1.7 s on slow 4G.
+- **Lighthouse runs with the slow connection applied for real**, five runs, median
+  (`throttlingMethod: "devtools"` in `lighthouserc.json`). Its default is to load the page
+  at full speed and then estimate. Served from the same machine, the scripts land before the
+  first paint, the estimate counts them as blocking it, and identical bytes scored 2.4 s or
+  2.9 s for the largest paint depending on a 20 ms race. Measured properly it is the first
+  paint: about 1.7 s on slow 4G.
 
 ### Art
 
