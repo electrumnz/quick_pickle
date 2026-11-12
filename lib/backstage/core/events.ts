@@ -19,7 +19,7 @@ import "server-only";
 import { and, asc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 
 import { events } from "@/db/schema";
-import type { Db } from "@/lib/db/types";
+import type { Db, DbOrTx } from "@/lib/db/types";
 
 export type EventRecord = {
   readonly id: string;
@@ -212,11 +212,14 @@ export type StuckEvent = {
   readonly attempts: number;
   readonly lastError: string | null;
   readonly gaveUp: boolean;
+  /** When it will next be tried by itself, if it will be. */
+  readonly nextTry: Date | null;
+  readonly payload: Record<string, unknown>;
 };
 
 /** Events that have failed at least once and are not done. For a screen. */
 export async function listStuckEvents(
-  db: Db,
+  db: DbOrTx,
   limit = 50,
 ): Promise<readonly StuckEvent[]> {
   const rows = await db
@@ -236,11 +239,31 @@ export async function listStuckEvents(
     attempts: row.attempts,
     lastError: row.lastError,
     gaveUp: row.attempts >= MAX_ATTEMPTS,
+    nextTry: row.attempts >= MAX_ATTEMPTS ? null : row.notBefore,
+    payload: row.payload,
   }));
 }
 
+/**
+ * Stop trying an event for good, and say why. It stays in the table, marked
+ * as dealt with, with the reason where the error was.
+ */
+export async function dropEvent(
+  db: DbOrTx,
+  id: string,
+  why: string,
+  now: Date,
+): Promise<boolean> {
+  const rows = await db
+    .update(events)
+    .set({ processedAt: now, notBefore: null, lastError: why.slice(0, 500) })
+    .where(and(eq(events.id, id), isNull(events.processedAt)))
+    .returning({ id: events.id });
+  return rows.length === 1;
+}
+
 /** Give an event that ran out of tries a fresh set. */
-export async function retryEvent(db: Db, id: string): Promise<boolean> {
+export async function retryEvent(db: DbOrTx, id: string): Promise<boolean> {
   const rows = await db
     .update(events)
     .set({ attempts: 0, notBefore: null })

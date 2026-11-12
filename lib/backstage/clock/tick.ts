@@ -24,7 +24,7 @@ import { and, asc, eq, lt } from "drizzle-orm";
 
 import { orders, settings } from "@/db/schema";
 import { getDb } from "@/lib/db/client";
-import type { Db } from "@/lib/db/types";
+import type { Db, DbOrTx } from "@/lib/db/types";
 import { settleOnReturn, type Settlement } from "@/lib/shop/payments/settle";
 
 import { systemCaller } from "../core/actor";
@@ -161,7 +161,7 @@ export async function tick(options: TickOptions = {}): Promise<TickSummary> {
 }
 
 /** The last tick, or null if the clock has never run. For a screen. */
-export async function lastTick(db: Db): Promise<TickSummary | null> {
+export async function lastTick(db: DbOrTx): Promise<TickSummary | null> {
   const [row] = await db
     .select({ value: settings.value })
     .from(settings)

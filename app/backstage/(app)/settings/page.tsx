@@ -21,6 +21,13 @@ const SECTIONS = [
     ownerOnly: false,
   },
   {
+    href: "/backstage/settings/clock",
+    label: "Clock and failed steps",
+    blurb:
+      "Whether the timer that retries things is running, and anything that failed and needs a person.",
+    ownerOnly: false,
+  },
+  {
     href: "/backstage/settings/go-live",
     label: "Go-live list",
     blurb: "What still stands between this site and taking real money.",
