@@ -7,6 +7,7 @@ import {
   Empty,
   PageHeader,
   Panel,
+  Pill,
   Stat,
   When,
 } from "@/components/backstage/ui";
@@ -16,6 +17,7 @@ import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { execute } from "@/lib/backstage/core/op";
 import { countCrew } from "@/lib/backstage/crew/ops";
 import { countOrders, listOrders } from "@/lib/backstage/orders/ops";
+import { needsYou } from "@/lib/backstage/today/ops";
 import { nzParts } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Today" };
@@ -36,11 +38,12 @@ export default async function TodayPage() {
   const staff = await requireStaff("/backstage");
   const now = new Date();
   const caller = await staffCaller();
-  const [lines, counts, toPack, crew] = await Promise.all([
+  const [lines, counts, toPack, crew, needs] = await Promise.all([
     execute(listActivity, { limit: 12 }, caller),
     execute(countOrders, {}, caller),
     execute(listOrders, { status: "paid", limit: 8 }, caller),
     execute(countCrew, {}, caller),
+    execute(needsYou, {}, caller),
   ]);
   const firstName = staff.name.split(" ")[0] ?? staff.name;
 
@@ -73,6 +76,30 @@ export default async function TodayPage() {
           note="On the mailing list"
         />
       </div>
+
+      {/* Only there when something is: the things that will not sort
+          themselves out. Packing, the ordinary work, has its own block. */}
+      {needs.length > 0 ? (
+        <div className="mb-6">
+          <Panel title="Needs you" flush>
+            <ul className="bk-rows">
+              {needs.map((need) => (
+                <li key={need.key}>
+                  <Link href={need.href} className="bk-row grid-cols-1">
+                    <span className="flex flex-wrap items-center gap-2 font-semibold">
+                      {need.title}
+                      {need.urgent ? <Pill tone="todo">Now</Pill> : null}
+                    </span>
+                    <span className="bk-muted text-[0.9375rem] leading-snug">
+                      {need.detail}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        </div>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr] [&>*]:min-w-0">
         <div className="flex flex-col gap-6">
