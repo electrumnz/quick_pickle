@@ -22,13 +22,19 @@ export type IdPrefix =
   | "bat" // batch
   | "stk" // stock movement
   | "sup" // supplier
+  | "mat" // material (bottles, caps, labels)
   | "pur" // purchase order
+  | "pol" // purchase order line
+  | "mbx" // mailbox (an address of ours)
+  | "con" // email contact
+  | "mlk" // link from a conversation to an order, customer and so on
   | "msg" // email message
   | "cnv" // email conversation
   | "att" // email attachment
   | "tpl" // saved reply or template
   | "out" // outbound email
   | "cmp" // campaign
+  | "snd" // one campaign email to one person
   | "pst" // social post
   | "lnk" // tracked link
   | "rev" // review
@@ -38,6 +44,8 @@ export type IdPrefix =
   | "ver" // document version
   | "tsk" // task
   | "qst" // open question
+  | "cpl" // compliance register item
+  | "cst" // cost item, for the budget
   | "aut" // automation
   | "run" // automation or routine run
   | "apr" // approval request
