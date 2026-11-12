@@ -1,8 +1,6 @@
 import Link from "next/link";
 
 import { Art } from "@/components/brand/Art";
-import { CartDrawer } from "@/components/cart/CartDrawer";
-import { CartProvider } from "@/components/cart/CartProvider";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { NOT_FOUND } from "@/content/site";
 
@@ -14,13 +12,15 @@ import { NOT_FOUND } from "@/content/site";
  * `eager` image on this page becomes a preload on EVERY page, which is how the
  * sleeping cat (40 kB) came to be the first image the home page downloaded.
  *
- * It sits above the shop's layout, so it brings the jar (the header's jar
- * button needs one) in for itself.
+ * It sits above the shop's layout, and so outside the jar. It does not bring
+ * one of its own: a jar draws prices, prices come from the offer, and this
+ * page is carried inside every other page, the back end's included. So the
+ * header here has no jar button. The way back to the shop is the button.
  */
 export default function NotFound() {
   return (
-    <CartProvider>
-      <SiteHeader minimal />
+    <>
+      <SiteHeader minimal jar={false} />
       <main
         id="main"
         className="on-pink bg-pink px-gutter flex flex-1 flex-col items-center justify-center py-16 text-center"
@@ -45,7 +45,6 @@ export default function NotFound() {
           <span className="cap-trim">{NOT_FOUND.cta}</span>
         </Link>
       </main>
-      <CartDrawer />
-    </CartProvider>
+    </>
   );
 }

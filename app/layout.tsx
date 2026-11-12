@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
-import { IS_PREVIEW } from "@/content/offer";
 import { META } from "@/content/site";
 import { THEME_COLOUR } from "@/lib/brand/colours";
 import { fontVariables } from "@/lib/brand/fonts";
@@ -44,11 +43,10 @@ export const metadata: Metadata = {
     title: META.title,
     description: META.description,
   },
-  // A preview build (stand-in prices, test checkout) must never be indexed.
-  // app/robots.ts says the same thing to crawlers that read robots.txt.
-  robots: IS_PREVIEW
-    ? { index: false, follow: false, nocache: true }
-    : { index: true, follow: true },
+  // Closed to search engines unless a layout further in says otherwise. The
+  // shop's own layout (app/(site)/layout.tsx) opens its pages once every
+  // fact about the offer is confirmed; nothing else is ever a page to find.
+  robots: { index: false, follow: false, nocache: true },
 };
 
 export const viewport: Viewport = {

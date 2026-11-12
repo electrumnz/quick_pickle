@@ -28,6 +28,7 @@ import type { PaymentProvider } from "@/lib/shop/payments";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
 import { nzToInstant } from "@/lib/time";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 /**
  * Numbers: the shop's own visit counter, and what the back end makes of it.
@@ -211,6 +212,7 @@ describe("the numbers", () => {
     pay: "test" | "paid" = "paid",
   ) => {
     const result = await placeOrder(form(over), {
+      offer: FILE_OFFER,
       payments: provider(pay),
       store: getStore({ NODE_ENV: "test" }),
       now: () => when,
@@ -305,7 +307,11 @@ describe("the numbers", () => {
     const visit = visitId();
     const refused = await placeOrder(
       form({ promoCode: "NOSUCHCODE", source: { visit } }),
-      { payments: provider("paid"), store: getStore({ NODE_ENV: "test" }) },
+      {
+        offer: FILE_OFFER,
+        payments: provider("paid"),
+        store: getStore({ NODE_ENV: "test" }),
+      },
     );
     expect(refused.ok).toBe(false);
     expect(await handle.db.select().from(pageEvents)).toEqual([]);

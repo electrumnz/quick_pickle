@@ -14,6 +14,7 @@ import {
 } from "@/components/site/Sections";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { StickyBuyBar } from "@/components/site/StickyBuyBar";
+import { offerForPage } from "@/lib/shop/offer-now";
 import { specialForPage } from "@/lib/shop/special-now";
 
 /**
@@ -51,6 +52,10 @@ export async function ShopPage({
   /** A member of staff looking at a draft. The visit counter stays quiet. */
   readonly preview?: boolean;
 }) {
+  // What is on sale, for how much. Asked for once and handed down, so every
+  // price and every word about delivery on the page is from one offer (the
+  // jar's own copy comes from the layout, which asks the same place).
+  const offer = await offerForPage();
   // A special that is on is said twice: first in the line across the top,
   // and again where the packs are picked. Usually there is none.
   const special = await specialForPage();
@@ -64,21 +69,23 @@ export async function ShopPage({
         data-preview={preview ? "" : undefined}
         className="flex-1"
       >
-        <Hero words={words} />
+        <Hero offer={offer} words={words} />
         <Band />
-        <Shop special={special} />
+        <Shop offer={offer} special={special} />
         <Truths />
         <Ritual />
         <ReelsSection />
         <MeetLucky />
         <Crew />
-        <Faq />
-        <FinalCta />
+        <Faq offer={offer} />
+        <FinalCta offer={offer} />
       </main>
       <SiteFooter />
       {/* Reserves the sticky bar's height on phones so it never covers the
-          last line of the footer. */}
-      <div aria-hidden="true" className="bg-navy h-[76px] md:hidden" />
+          last line of the footer. With the shop shut there is no bar. */}
+      {offer.open ? (
+        <div aria-hidden="true" className="bg-navy h-[76px] md:hidden" />
+      ) : null}
       <StickyBuyBar />
     </>
   );

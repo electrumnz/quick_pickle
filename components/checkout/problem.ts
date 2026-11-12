@@ -11,14 +11,18 @@ import type { CheckoutState } from "./actions";
 
 export function checkoutProblem(state: CheckoutState): string | null {
   if (state.status === "idle") return null;
+  // The shop itself changed (a price moved, or it shut): that is the whole
+  // story, ahead of anything about a field.
   const said =
-    state.errors.special !== undefined
-      ? state.errors.special
-      : state.status === "invalid"
-        ? CHECKOUT.problem
-        : state.status === "slow"
-          ? CHECKOUT.slowDown
-          : CHECKOUT.failed;
+    state.errors.offer !== undefined
+      ? state.errors.offer
+      : state.errors.special !== undefined
+        ? state.errors.special
+        : state.status === "invalid"
+          ? CHECKOUT.problem
+          : state.status === "slow"
+            ? CHECKOUT.slowDown
+            : CHECKOUT.failed;
   return state.errors.lines ? `${said} ${state.errors.lines}.` : said;
 }
 

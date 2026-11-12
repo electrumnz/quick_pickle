@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import { SubmitButton } from "@/components/backstage/SubmitButton";
 import { Empty, PageHeader, Panel, Pill } from "@/components/backstage/ui";
-import { PACKS, SHIPPING, STORE, UNCONFIRMED } from "@/content/offer";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { execute } from "@/lib/backstage/core/op";
 import {
@@ -28,7 +27,8 @@ import {
   type CostRow,
 } from "@/lib/backstage/plans/ops";
 import { countOf } from "@/lib/backstage/plans/shared";
-import { formatNzd, formatNzdExact } from "@/lib/shop/money";
+import { factNow, shopOffer } from "@/lib/backstage/shop/ops";
+import { formatNzdExact } from "@/lib/shop/money";
 
 import {
   addCostAction,
@@ -157,14 +157,16 @@ export default async function BudgetPage({
   };
 
   const costs = await execute(listCosts, {}, caller);
+  // The prices and delivery rates the shop is selling at right now.
+  const { offer } = await execute(shopOffer, {}, caller);
 
   const mix: Record<string, number> = {};
-  for (const pack of PACKS) {
+  for (const pack of offer.packs) {
     const raw = text(`m-${pack.sku}`);
     if (raw !== undefined && /^\d{1,3}$/.test(raw)) mix[pack.sku] = Number(raw);
   }
-  const plain = buildBudget(costs, { gstRegistered: false, mix });
-  const withGst = buildBudget(costs, { gstRegistered: true, mix });
+  const plain = buildBudget(costs, { offer, gstRegistered: false, mix });
+  const withGst = buildBudget(costs, { offer, gstRegistered: true, mix });
   const { totals } = plain;
 
   const editId = text("edit");
@@ -172,12 +174,12 @@ export default async function BudgetPage({
     canWrite && editId !== undefined
       ? (costs.find((cost) => cost.id === editId) ?? null)
       : null;
-  const standInPrices = UNCONFIRMED.some(
+  const standInPrices = offer.unconfirmed.some(
     (item) => item.key === "packs" || item.key === "shipping-rates",
   );
-  const mixSaid = PACKS.map(
-    (pack) => `${String(plain.mix[pack.sku] ?? 0)} of ${pack.name}`,
-  ).join(", ");
+  const mixSaid = offer.packs
+    .map((pack) => `${String(plain.mix[pack.sku] ?? 0)} of ${pack.name}`)
+    .join(", ");
 
   return (
     <>
@@ -495,16 +497,22 @@ export default async function BudgetPage({
             registered for GST in New Zealand. <strong>With GST</strong> is how
             it works out if it is: 3/23 of everything the customer pays is GST
             to pass on.{" "}
-            {STORE.gstRegistered === null
+            {offer.gstRegistered === null
               ? "Which one applies is not settled yet, so both are shown and neither is assumed."
-              : STORE.gstRegistered
-                ? "The site is set as registered, so the With GST column is the one that applies."
-                : "The site is set as not registered, so the No GST column is the one that applies."}
+              : offer.gstRegistered
+                ? "The shop is set as registered, so the With GST column is the one that applies."
+                : "The shop is set as not registered, so the No GST column is the one that applies."}
           </p>
           <p className="bk-muted mt-2 text-[0.9375rem] leading-snug">
-            Delivery is {formatNzd(SHIPPING.standardCents)} to the customer, and
-            free on orders of {formatNzd(SHIPPING.freeOverCents)} or more. Both
-            figures come straight from the site.
+            {factNow("shipping-rates", offer)}. The prices and the delivery
+            rates come straight from{" "}
+            <Link
+              href="/backstage/settings/shop"
+              className="underline decoration-2 underline-offset-4"
+            >
+              the shop&apos;s settings
+            </Link>
+            .
           </p>
           <div className="mt-4 flex flex-col gap-6">
             {plain.packs.map((pack, index) => {
@@ -542,7 +550,7 @@ export default async function BudgetPage({
                   Out of the packs you sell, how many are each size
                 </legend>
                 <div className="grid grid-cols-3 gap-3">
-                  {PACKS.map((pack) => (
+                  {offer.packs.map((pack) => (
                     <div key={pack.sku}>
                       <label
                         htmlFor={`m-${pack.sku}`}

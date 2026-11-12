@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
-import { IS_PREVIEW } from "@/content/offer";
+import { isPreview } from "@/lib/shop/offer";
+import { offerForPage } from "@/lib/shop/offer-now";
 import { siteUrl } from "@/lib/site";
 
 /**
@@ -8,8 +9,8 @@ import { siteUrl } from "@/lib/site";
  * crawlers. Once the offer is confirmed, everything is open except the
  * pages that are nobody's landing page.
  */
-export default function robots(): MetadataRoute.Robots {
-  if (IS_PREVIEW) {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  if (isPreview(await offerForPage())) {
     return { rules: [{ userAgent: "*", disallow: "/" }] };
   }
   return {

@@ -68,6 +68,7 @@ import { newId } from "@/lib/db/id";
 import type { PaymentProvider } from "@/lib/shop/payments";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 const staff = systemCaller("Test", "script");
 
@@ -435,7 +436,7 @@ describe("the courier, with orders", () => {
         lines: [{ sku: "QP-SHOT-12", qty: 1 }],
         ...over,
       },
-      { payments: provider(status), store: getStore() },
+      { offer: FILE_OFFER, payments: provider(status), store: getStore() },
     );
     if (!result.ok)
       throw new Error(`The order was not placed: ${result.reason}`);

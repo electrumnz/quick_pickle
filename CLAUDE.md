@@ -52,8 +52,10 @@ recorded that they checked it; a bot cannot. Em dashes are refused there too.
 **Facts must be literally true.** Fair Trading Act s 9, 12A, 13. Nothing about the product
 is guessed: no ingredient, volume, origin, storage line or process word ("strained",
 "brewed") appears until Ashleigh confirms it. Unknown commercial facts carry a stand-in in
-`content/offer.ts` and are listed in `UNCONFIRMED` there. While that list is not empty the
-site tells crawlers to stay out and `npm run prelaunch` fails.
+`content/offer.ts` and are listed in `UNCONFIRMED` there. An owner says each one is right
+on the back end's go-live list, once its figure is (`shop.confirm`); a fact that needs words
+written into the site first is settled in the file. While any is still open the site tells
+crawlers to stay out and `npm run prelaunch` fails.
 
 **No demo or preview banner on public pages.** Test mode is explained once, on the
 checkout, where a visitor would otherwise expect a card field. (A staff preview of a
@@ -64,8 +66,10 @@ customer can never reach it.)
 reads them as machine-written. Code comments are not copy.
 
 **Never trust a price from the browser.** The jar holds SKUs and quantities. Every total
-is computed from `content/offer.ts` by `lib/shop/pricing.ts`, and computed again on the
-server when an order is placed. There is no price field on any form.
+is computed from the offer (`lib/shop/offer.ts`: the catalogue file with the back end's
+changes laid over it) by `lib/shop/pricing.ts`, and computed again on the server, from the
+server's own copy of the offer, when an order is placed. There is no price field on any
+form: what a form sends about prices is a word for "the prices I was shown", never a number.
 
 **Every change in the back end goes through an operation.** `lib/backstage/core/op.ts` is
 the one path: it checks the input, checks the role, runs the change in a transaction with
@@ -258,6 +262,62 @@ go-live list shows when it last ran and what is stuck.
 ### Commerce
 
 - `content/offer.ts` is the catalogue. Money is integer cents; never a float in a price path.
+- **The offer is a value, not a constant.** `content/offer.ts` is where every commercial
+  fact starts, and with no database it is the whole story. The back end lays a short, closed
+  list of changes over it with no deploy (Settings, The shop): a pack's price, the delivery
+  rates, the ship date, pre-order or live, the batch's name, the contact address, and whether
+  orders are being taken. It can never add a pack, a size or a currency.
+  `lib/shop/offer.ts` is the type and the browser-safe part; `lib/shop/offer-changes.ts` is
+  what may change and how it is laid over the file (zod, server only);
+  `lib/backstage/shop/ops.ts` is the operations. Only what differs from the file is stored
+  (one `settings` row), so a figure set back to the file's is forgotten.
+  - **Everything that reads a price is handed the offer**, first: `quote(offer, cart)`,
+    `normaliseCart(offer, input)`, `packBySku(offer, sku)`, `faqs(offer)`, `policies(offer)`.
+    Nothing in the shop imports `PACKS`, `SHIPPING` or `STORE` for something a customer
+    reads. In the back end an operation asks `readShop(ctx.db)`.
+  - **Two ways to ask, for two jobs** (`lib/shop/offer-now.ts`). `offerForPage()` draws a
+    page: it never asks the database while the site is being built, and with no answer it
+    gives the last one it had, then the file's, so it is never why a page fails.
+    `offerNow()` prices an order: read fresh, no fallback.
+  - **A page can be a little behind, and that is safe.** The form sends the offer's
+    `version`, a word that changes when anything that moves a total does (a price, a
+    delivery rate, pre-order or live, open or shut) and not otherwise. If the server's
+    offer has another word, the order is handed back with the new total first
+    (`SHOP.moved`) and the page redraws from the offer that came back with it. A price
+    that went DOWN is handed back too: a word cannot say which way. `orders.record` reads
+    the offer once more inside its own transaction, so a change that lands in the instant
+    between is caught as well. Nobody is charged a total other than the one on the button.
+  - **The browser is handed `forPage(offer)` and nothing more:** prices, delivery, the
+    batch's name. The notes on what is still to confirm are for the people running the
+    shop and never reach a page's source. The jar (`CartProvider`) holds it; the checkout,
+    which is never a kept copy, hands the jar its own fresher one (`FreshOffer`).
+  - **Kept pages.** `shop.changed` throws away every page under the shop's layout at once.
+    The layout's `revalidate = 60` catches everything else, above all a fresh deployment,
+    whose pages were built from the file alone.
+  - **Changing the shop is two presses** (`shop.checkChange`, then `shop.change`, which is
+    outward and needs a yes). The first saves nothing and reads the change back in
+    sentences; the second makes exactly that change to exactly the shop that was shown.
+    It refuses a price under a dollar, a bigger pack that costs no more than a smaller
+    one, and a batch name that fails the copy rules. **Changing a figure never confirms
+    it:** `shop.confirm` is a separate act, for an owner, with their name beside it.
+  - **Every sentence that reads a rate is written for every way it can be set**
+    (`content/delivery.ts`): standard delivery free for everybody, a flat rate, or a flat
+    rate waived from a stated spend; a rural extra, or none. `freeOverCents` null means no
+    order earns it. Free for everybody is said one way only, by a flat rate of nothing,
+    and where a rural address still pays an extra the sentence says "standard delivery
+    is free", so "free" never stands without its one condition. Add a sentence that
+    reads the offer and write it for all of these: `tests/shop/offer-words.test.ts`.
+  - **Shut** (`open: false`, for a batch that has sold out or a week away): the buy button
+    cannot be pressed and says so, the sticky bar goes, the hero's button leads to the
+    Pickle Crew, the jar has no way through to the checkout, and the checkout takes
+    nothing. Today carries a line for as long as it is off, so nobody forgets.
+  - The 404 has no jar. It sits outside the shop's layout and is carried inside every
+    other page, the back end's included, so a jar there would mean an offer there.
+  - **Never change the shop from a browser test on the first server:** every other test's
+    total would move. `e2e/backstage-auth.spec.ts` does it on the sign-in server, whose
+    shop nothing else buys from. Both test servers keep the pages they draw again in
+    memory (`QP_KEPT_PAGES=memory`), because they share one build folder and a page
+    drawn by one would otherwise be served by the other, or by the next run.
 - `lib/shop/payments` is where a processor plugs in, named by `PAYMENT_PROVIDER`. An
   unknown name throws rather than falling back to test mode.
   - `test` (the default): the checkout records the order, charges nobody, and says so.
@@ -654,6 +714,13 @@ Video and reels go in the slots in `content/media.ts`, encoded by `scripts/build
   `e2e/backstage-auth.spec.ts`).
 - `getByRole("alert")` also matches Next's route announcer after a client-side navigation.
   Scope it: `page.locator("main [role=alert]")`.
+- A form that is handed back keeps what was typed through `defaultValue`. A `<select>` only
+  reads its starting value once, so it also needs a `key` made from that value, or it comes
+  back empty (the checkout's region did, until a browser test picked a region first).
+- A local run of the browser tests that starts its own servers has to give them what the
+  Playwright config gives the ones it starts: no mail settings, and `QP_KEPT_PAGES=memory`.
+  A machine's own environment can hold mail keys, and a server left over from an earlier
+  run answers in place of a fresh one, with the last run's records in it.
 - With several agents in the tree: each owns its folders, nobody runs `git stash`, `git
 checkout -- <path>`, `git add -A` or `db:generate` but the one integrating, and every
   build takes a private `NEXT_DIST_DIR`.

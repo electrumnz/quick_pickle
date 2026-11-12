@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { PACKS, SHIPPING } from "@/content/offer";
 import { addToCart, EMPTY_CART, type Cart } from "@/lib/shop/cart";
+import { FILE_OFFER } from "@/lib/shop/offer";
 import { quote } from "@/lib/shop/pricing";
 
 const small = PACKS[0]!;
@@ -13,7 +14,7 @@ function jarOf(qty: number): Cart {
 
 describe("pricing", () => {
   it("prices an empty jar at nothing, with no delivery", () => {
-    const priced = quote(EMPTY_CART);
+    const priced = quote(FILE_OFFER, EMPTY_CART);
     expect(priced).toMatchObject({
       subtotalCents: 0,
       shippingCents: 0,
@@ -22,12 +23,15 @@ describe("pricing", () => {
       freeDeliveryGapCents: 0,
       shots: 0,
     });
-    expect(quote(EMPTY_CART, { rural: true }).totalCents).toBe(0);
+    expect(quote(FILE_OFFER, EMPTY_CART, { rural: true }).totalCents).toBe(0);
   });
 
   it("reads every price from the offer", () => {
     for (const pack of PACKS) {
-      const priced = quote(addToCart(EMPTY_CART, pack.sku, 2));
+      const priced = quote(
+        FILE_OFFER,
+        addToCart(FILE_OFFER, EMPTY_CART, pack.sku, 2),
+      );
       expect(priced.subtotalCents).toBe(pack.priceCents * 2);
       expect(priced.lines[0]?.unitCents).toBe(pack.priceCents);
       expect(priced.shots).toBe(pack.shots * 2);
@@ -35,7 +39,7 @@ describe("pricing", () => {
   });
 
   it("charges standard delivery under the free-delivery line", () => {
-    const priced = quote(jarOf(1));
+    const priced = quote(FILE_OFFER, jarOf(1));
     if (small.priceCents < SHIPPING.freeOverCents) {
       expect(priced.freeDelivery).toBe(false);
       expect(priced.deliveryCents).toBe(SHIPPING.standardCents);
@@ -49,8 +53,8 @@ describe("pricing", () => {
   it("waives standard delivery at or over the line, to the cent", () => {
     // Find the first quantity that reaches the line.
     const needed = Math.ceil(SHIPPING.freeOverCents / small.priceCents);
-    const under = quote(jarOf(needed - 1));
-    const over = quote(jarOf(needed));
+    const under = quote(FILE_OFFER, jarOf(needed - 1));
+    const over = quote(FILE_OFFER, jarOf(needed));
     if (needed > 1) expect(under.freeDelivery).toBe(false);
     expect(over.freeDelivery).toBe(true);
     expect(over.deliveryCents).toBe(0);
@@ -60,14 +64,14 @@ describe("pricing", () => {
 
   it("adds the rural surcharge on its own, even when delivery is free", () => {
     const needed = Math.ceil(SHIPPING.freeOverCents / small.priceCents);
-    const free = quote(jarOf(needed), { rural: true });
+    const free = quote(FILE_OFFER, jarOf(needed), { rural: true });
     expect(free.deliveryCents).toBe(0);
     expect(free.ruralCents).toBe(SHIPPING.ruralSurchargeCents);
     expect(free.totalCents).toBe(
       free.subtotalCents + SHIPPING.ruralSurchargeCents,
     );
 
-    const paid = quote(jarOf(1), { rural: true });
+    const paid = quote(FILE_OFFER, jarOf(1), { rural: true });
     expect(paid.shippingCents).toBe(paid.deliveryCents + paid.ruralCents);
   });
 
@@ -75,7 +79,11 @@ describe("pricing", () => {
     for (const pack of PACKS) {
       for (const qty of [1, 2, 3, 7]) {
         for (const rural of [false, true]) {
-          const priced = quote(addToCart(EMPTY_CART, pack.sku, qty), { rural });
+          const priced = quote(
+            FILE_OFFER,
+            addToCart(FILE_OFFER, EMPTY_CART, pack.sku, qty),
+            { rural },
+          );
           expect(priced.totalCents).toBe(
             priced.subtotalCents + priced.shippingCents,
           );
@@ -97,11 +105,11 @@ describe("pricing", () => {
     const tampered = {
       lines: [{ sku: small.sku, qty: 1, priceCents: 1, unitCents: 1 }],
     } as unknown as Cart;
-    expect(quote(tampered).subtotalCents).toBe(small.priceCents);
+    expect(quote(FILE_OFFER, tampered).subtotalCents).toBe(small.priceCents);
   });
 
   it("prices only what is on the shelf", () => {
     const stranger = { lines: [{ sku: "MADE-UP", qty: 5 }] };
-    expect(quote(stranger).totalCents).toBe(0);
+    expect(quote(FILE_OFFER, stranger).totalCents).toBe(0);
   });
 });

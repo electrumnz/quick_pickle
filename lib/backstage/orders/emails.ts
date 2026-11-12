@@ -54,7 +54,6 @@ import { z } from "zod";
 
 import { ORDER_EMAILS as W } from "@/content/emails";
 import { shipDateText } from "@/content/faq";
-import { STORE } from "@/content/offer";
 import { disputes, mailMessages, orderLines, refunds } from "@/db/schema";
 import { ID_ALPHABET } from "@/lib/db/id";
 import {
@@ -68,6 +67,7 @@ import {
   type Row,
 } from "@/lib/mail/compose";
 import { formatNzdExact } from "@/lib/shop/money";
+import type { Offer } from "@/lib/shop/offer";
 import { ORDER_NUMBER_PATTERN } from "@/lib/shop/order";
 import { formatNzDate } from "@/lib/time";
 
@@ -78,6 +78,7 @@ import type { Handler } from "../core/events";
 import { defineOp, execute } from "../core/op";
 import { writeOutbound } from "../mail/outbound";
 import { findPromo } from "../marketing/promo";
+import { readShop } from "../shop/ops";
 import { loadOrder, type OrderRow } from "./load";
 
 export const ORDER_EMAIL_KINDS = [
@@ -215,10 +216,16 @@ const greeting = (order: OrderRow): Block => ({
   lines: [[`${W.hi} `, theirs(order.firstName), ","]],
 });
 
-function closing(): Block[] {
+/**
+ * What an email reads off the offer: the batch's name, the ship date and the
+ * address customers write to. All three can be changed from the back end.
+ */
+type Shop = Pick<Offer, "batchName" | "preorderShipsFrom" | "contactEmail">;
+
+function closing(shop: Shop): Block[] {
   const reach: Line[] = [[W.reply]];
-  if (STORE.contactEmail !== null) {
-    reach.push([`${W.orWrite} `, data(STORE.contactEmail), "."]);
+  if (shop.contactEmail !== null) {
+    reach.push([`${W.orWrite} `, data(shop.contactEmail), "."]);
   }
   return [
     { kind: "text", lines: reach },
@@ -259,6 +266,8 @@ function receiptDoc(
   order: OrderRow,
   lines: readonly LineRow[],
   saving: Saving | null,
+  shop: Shop,
+  left: string[],
 ): EmailDoc {
   // A payment made in the processor's test mode: say so before anything.
   const test = order.isTest;
@@ -295,7 +304,14 @@ function receiptDoc(
     },
   );
 
-  const shipDate = shipDateText();
+  const shipDate = shipDateText(shop);
+  // The batch's name is typed in the back end. It was read by the copy rules
+  // when it was saved; if the rules have moved since and it would not pass
+  // today, the line is said without it, so the receipt still goes.
+  const batch = passes(shop.batchName) ? shop.batchName : null;
+  if (batch === null && order.mode === "preorder" && !test) {
+    left.push("the batch's name");
+  }
   const after: Block[] = test
     ? []
     : [
@@ -305,8 +321,8 @@ function receiptDoc(
             ...(order.mode !== "preorder"
               ? []
               : shipDate === null
-                ? [[W.receipt.preorder]]
-                : [[`${W.receipt.preorderFrom} `, data(shipDate), "."]]),
+                ? [[W.receipt.preorder(batch)]]
+                : [[`${W.receipt.preorderFrom(batch)} `, data(shipDate), "."]]),
             [W.receipt.next],
           ],
         },
@@ -351,12 +367,12 @@ function receiptDoc(
       { kind: "rows", rows: totals },
       goingTo(order),
       ...after,
-      ...closing(),
+      ...closing(shop),
     ],
   };
 }
 
-function shippedDoc(order: OrderRow, left: string[]): EmailDoc {
+function shippedDoc(order: OrderRow, left: string[], shop: Shop): EmailDoc {
   const lead: Line[] = [[W.shipped.lead]];
   const carrier = (order.carrier ?? "").replace(/\s+/g, " ").trim();
   if (carrier !== "") {
@@ -387,12 +403,12 @@ function shippedDoc(order: OrderRow, left: string[]): EmailDoc {
         ? []
         : [{ kind: "link" as const, label: [W.shipped.track], href: link }]),
       goingTo(order),
-      ...closing(),
+      ...closing(shop),
     ],
   };
 }
 
-function cancelledDoc(order: OrderRow): EmailDoc {
+function cancelledDoc(order: OrderRow, shop: Shop): EmailDoc {
   const lines: Line[] = [[W.cancelled.lead]];
   // What is true of the money, as it stands. Where money came in and does
   // not match the order, a person is sorting it out and nothing is said.
@@ -407,12 +423,12 @@ function cancelledDoc(order: OrderRow): EmailDoc {
       greeting(order),
       { kind: "text", lines },
       { kind: "rows", rows: [numbered(order)] },
-      ...closing(),
+      ...closing(shop),
     ],
   };
 }
 
-function refundedDoc(order: OrderRow, refund: RefundRow): EmailDoc {
+function refundedDoc(order: OrderRow, refund: RefundRow, shop: Shop): EmailDoc {
   const amount = formatNzdExact(refund.amountCents);
   return {
     subject: [
@@ -435,7 +451,7 @@ function refundedDoc(order: OrderRow, refund: RefundRow): EmailDoc {
           [W.paidBack.how],
         ],
       },
-      ...closing(),
+      ...closing(shop),
     ],
   };
 }
@@ -547,6 +563,9 @@ export const emailCustomer = defineOp({
     }
 
     const left: string[] = [];
+    // The batch's name, the ship date and the contact address as the back
+    // end has them now.
+    const shop: Shop = (await readShop(ctx.db)).offer;
     let doc: EmailDoc;
     if (about === "receipt") {
       const lines = await ctx.db
@@ -564,15 +583,15 @@ export const emailCustomer = defineOp({
         if (!special && !shown) left.push("the code's own word");
         saving = { code: shown ? order.promoCode : null, special };
       }
-      doc = receiptDoc(order, lines, saving);
+      doc = receiptDoc(order, lines, saving, shop, left);
     } else if (about === "shipped") {
-      doc = shippedDoc(order, left);
+      doc = shippedDoc(order, left, shop);
     } else if (about === "cancelled") {
-      doc = cancelledDoc(order);
+      doc = cancelledDoc(order, shop);
     } else {
       // `notDue` has already refused a refund that is not there.
       if (refund === undefined) throw new Error("The refund has gone.");
-      doc = refundedDoc(order, refund);
+      doc = refundedDoc(order, refund, shop);
     }
 
     // The last look, on the finished email, by the rules everything that

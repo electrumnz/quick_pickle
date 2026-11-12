@@ -40,5 +40,6 @@ export const LINK = {
   customers: "/backstage/customers",
   brand: "/backstage/brand",
   goLive: "/backstage/settings/go-live",
+  shop: "/backstage/settings/shop",
   doc: (slug: string) => `/backstage/plans/docs/${slug}`,
 } as const;

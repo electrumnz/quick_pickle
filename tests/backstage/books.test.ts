@@ -24,6 +24,7 @@ import type { PaymentProvider } from "@/lib/shop/payments";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
 import { nzToInstant } from "@/lib/time";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 /**
  * Sales for the books. The figures are for a ledger, so what matters is
@@ -111,7 +112,7 @@ describe("sales for the books", () => {
         lines: [{ sku: "QP-SHOT-12", qty: 1 }],
         ...over,
       },
-      { payments: provider(status), store: getStore() },
+      { offer: FILE_OFFER, payments: provider(status), store: getStore() },
     );
     if (!result.ok) throw new Error(`Not placed: ${result.reason}`);
     await handle.db

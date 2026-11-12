@@ -29,7 +29,8 @@ import {
   swapPack,
   type Cart,
 } from "@/lib/shop/cart";
-import { featuredPack } from "@/lib/shop/catalogue";
+import { featuredPack, type Shelf } from "@/lib/shop/catalogue";
+import type { OfferOnPage } from "@/lib/shop/offer";
 import { quote, type Quote } from "@/lib/shop/pricing";
 import { seen } from "@/lib/shop/seen";
 
@@ -41,6 +42,12 @@ import { seen } from "@/lib/shop/seen";
  * place an order. It holds SKUs and quantities and nothing else: every price
  * on screen is worked out from the offer, and worked out again on the server
  * when the order is placed.
+ *
+ * The offer is kept here too, for every part of the page that draws a price.
+ * It is the one the page was drawn with on the server. A page that knows
+ * better hands over a fresher one (`adoptOffer`): the checkout, which is
+ * never a kept copy, and an order that was refused because a price had
+ * moved. The server never takes the browser's word for any of it.
  *
  * `useSyncExternalStore` is what keeps two tabs in step and what keeps the
  * server render and the first client render identical (both see an empty
@@ -124,10 +131,10 @@ function subscribe(listener: Listener): () => void {
   };
 }
 
-function parse(raw: string): Cart {
+function parse(shelf: Shelf, raw: string): Cart {
   if (raw === "") return EMPTY_CART;
   try {
-    return normaliseCart(JSON.parse(raw));
+    return normaliseCart(shelf, JSON.parse(raw));
   } catch {
     return EMPTY_CART;
   }
@@ -137,8 +144,8 @@ function parse(raw: string): Cart {
  * Apply a change to the stored jar. It reads the freshest stored value, not
  * one captured at render, so two quick taps both land.
  */
-function mutate(change: (cart: Cart) => Cart): void {
-  writeRaw(JSON.stringify(change(parse(readRaw()))));
+function mutate(shelf: Shelf, change: (cart: Cart) => Cart): void {
+  writeRaw(JSON.stringify(change(parse(shelf, readRaw()))));
 }
 
 /** False on the server and for the first client render, true after. */
@@ -151,6 +158,10 @@ function useHydrated(): boolean {
 }
 
 type CartContextValue = {
+  /** What is on sale, for how much: what every price on the page is from. */
+  readonly offer: OfferOnPage;
+  /** Take a fresher offer than the one the page was drawn with. */
+  readonly adoptOffer: (offer: OfferOnPage) => void;
   readonly cart: Cart;
   readonly quote: Quote;
   /** Packs in the jar. */
@@ -189,35 +200,75 @@ const NO_SOURCE: Readonly<Record<string, string>> = {};
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-export function CartProvider({ children }: { readonly children: ReactNode }) {
+export function CartProvider({
+  offer: drawnWith,
+  children,
+}: {
+  /** The offer the server drew this page with. */
+  readonly offer: OfferOnPage;
+  readonly children: ReactNode;
+}) {
+  // A fresher offer that was handed over stands until the server draws the
+  // layout again, which is the server saying what the offer is now.
+  const [adopted, setAdopted] = useState<{
+    readonly over: OfferOnPage;
+    readonly offer: OfferOnPage;
+  } | null>(null);
+  const offer =
+    adopted !== null && adopted.over === drawnWith ? adopted.offer : drawnWith;
+  const adoptOffer = useCallback(
+    (next: OfferOnPage) => {
+      setAdopted((was) => {
+        const now =
+          was !== null && was.over === drawnWith ? was.offer : drawnWith;
+        return JSON.stringify(now) === JSON.stringify(next)
+          ? was
+          : { over: drawnWith, offer: next };
+      });
+    },
+    [drawnWith],
+  );
+
   const raw = useSyncExternalStore(subscribe, readRaw, () => "");
   const arrivalRaw = useSyncExternalStore(subscribe, readArrival, () => "");
   const ready = useHydrated();
-  const cart = useMemo(() => parse(raw), [raw]);
+  const cart = useMemo(() => parse(offer, raw), [offer, raw]);
   const arrival = useMemo(() => unpackArrival(arrivalRaw), [arrivalRaw]);
 
   const [isOpen, setOpen] = useState(false);
   const [pulse, setPulse] = useState(0);
-  const [selectedSku, select] = useState(() => featuredPack().sku);
+  const [selectedSku, select] = useState(() => featuredPack(drawnWith).sku);
 
-  const add = useCallback((sku: string, qty = 1) => {
-    mutate((current) => addToCart(current, sku, qty));
-    setPulse((value) => value + 1);
-    seen("add", unpackArrival(readArrival())?.source ?? NO_SOURCE);
-  }, []);
+  const add = useCallback(
+    (sku: string, qty = 1) => {
+      mutate(offer, (current) => addToCart(offer, current, sku, qty));
+      setPulse((value) => value + 1);
+      seen("add", unpackArrival(readArrival())?.source ?? NO_SOURCE);
+    },
+    [offer],
+  );
 
-  const setQty = useCallback((sku: string, qty: number) => {
-    mutate((current) => setQuantity(current, sku, qty));
-  }, []);
+  const setQty = useCallback(
+    (sku: string, qty: number) => {
+      mutate(offer, (current) => setQuantity(offer, current, sku, qty));
+    },
+    [offer],
+  );
 
-  const remove = useCallback((sku: string) => {
-    mutate((current) => removeFromCart(current, sku));
-  }, []);
+  const remove = useCallback(
+    (sku: string) => {
+      mutate(offer, (current) => removeFromCart(current, sku));
+    },
+    [offer],
+  );
 
-  const swap = useCallback((fromSku: string, toSku: string) => {
-    mutate((current) => swapPack(current, fromSku, toSku));
-    setPulse((value) => value + 1);
-  }, []);
+  const swap = useCallback(
+    (fromSku: string, toSku: string) => {
+      mutate(offer, (current) => swapPack(offer, current, fromSku, toSku));
+      setPulse((value) => value + 1);
+    },
+    [offer],
+  );
 
   const clear = useCallback(() => {
     writeRaw("");
@@ -251,8 +302,10 @@ export function CartProvider({ children }: { readonly children: ReactNode }) {
 
   const value = useMemo<CartContextValue>(
     () => ({
+      offer,
+      adoptOffer,
       cart,
-      quote: quote(cart),
+      quote: quote(offer, cart),
       count: packCount(cart),
       ready,
       add,
@@ -272,6 +325,8 @@ export function CartProvider({ children }: { readonly children: ReactNode }) {
       source: arrival?.source ?? NO_SOURCE,
     }),
     [
+      offer,
+      adoptOffer,
       cart,
       ready,
       add,

@@ -41,6 +41,7 @@ import { newId } from "@/lib/db/id";
 import type { PaymentProvider } from "@/lib/shop/payments";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 /**
  * Who sees which page: the rules, the test, and "see it as". The thing to
@@ -596,7 +597,11 @@ describe("who sees which page", () => {
           lines: [{ sku: "QP-SHOT-12", qty: 1 }],
           source,
         },
-        { payments: provider, store: getStore({ NODE_ENV: "test" }) },
+        {
+          offer: FILE_OFFER,
+          payments: provider,
+          store: getStore({ NODE_ENV: "test" }),
+        },
       );
       if (!result.ok) throw new Error(JSON.stringify(result));
     };

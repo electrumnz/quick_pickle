@@ -38,6 +38,7 @@ import type { PaymentProvider } from "@/lib/shop/payments";
 import { placeOrder } from "@/lib/shop/place-order";
 import { receiptFor } from "@/lib/shop/receipt";
 import { getStore } from "@/lib/shop/store";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 /**
  * Specials: a saving that comes off by itself. What matters most is what
@@ -134,7 +135,11 @@ describe("specials", () => {
         lines,
         ...over,
       },
-      { payments: paysAtOnce, store: getStore({ NODE_ENV: "test" }) },
+      {
+        offer: FILE_OFFER,
+        payments: paysAtOnce,
+        store: getStore({ NODE_ENV: "test" }),
+      },
     );
   const bought = async (...args: Parameters<typeof buy>) => {
     const result = await buy(...args);

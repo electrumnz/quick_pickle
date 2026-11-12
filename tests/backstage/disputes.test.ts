@@ -25,6 +25,7 @@ import type { PaymentProvider } from "@/lib/shop/payments";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
 import { nzDateKey, nzToInstant } from "@/lib/time";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 /**
  * Card disputes. Rare, and each one has a date, so what matters is that it
@@ -168,6 +169,7 @@ describe("card disputes", () => {
         lines: [{ sku: "QP-SHOT-24", qty: 1 }],
       },
       {
+        offer: FILE_OFFER,
         payments: elsewhere,
         store: getStore({ NODE_ENV: "test" }),
         returnUrls: {

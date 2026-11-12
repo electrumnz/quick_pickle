@@ -29,6 +29,7 @@ import { sendRefund } from "@/lib/backstage/orders/refunds";
 import { settleOnReturn } from "@/lib/shop/payments/settle";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 const shop = systemCaller("The shop", "storefront");
 const stripe = systemCaller("Stripe", "webhook");
@@ -90,6 +91,7 @@ describe("an order that is paid for somewhere else", () => {
 
   const begin = async (over: Record<string, unknown> = {}) => {
     const result = await placeOrder(form(over), {
+      offer: FILE_OFFER,
       payments: elsewhere(),
       store: getStore({ NODE_ENV: "test" }),
       returnUrls: URLS,
@@ -331,6 +333,7 @@ describe("an order that is paid for somewhere else", () => {
   it("closes the order again if the payment page cannot be made", async () => {
     const before = await handle.db.select({ id: orders.id }).from(orders);
     const result = await placeOrder(form({ email: "down@example.co.nz" }), {
+      offer: FILE_OFFER,
       payments: elsewhere({ fail: true }),
       store: getStore({ NODE_ENV: "test" }),
       returnUrls: URLS,
@@ -353,6 +356,7 @@ describe("an order that is paid for somewhere else", () => {
 
   it("will not start without somewhere to send the buyer back to", async () => {
     const result = await placeOrder(form({ email: "nowhere@example.co.nz" }), {
+      offer: FILE_OFFER,
       payments: elsewhere(),
       store: getStore({ NODE_ENV: "test" }),
     });
@@ -367,6 +371,7 @@ describe("an order that is paid for somewhere else", () => {
   it("will not start with a store that cannot find the order again", async () => {
     const savedOrders: string[] = [];
     const result = await placeOrder(form(), {
+      offer: FILE_OFFER,
       payments: elsewhere(),
       store: {
         async saveOrder(order) {
@@ -674,6 +679,7 @@ describe("giving money back on an order paid through Stripe", () => {
   /** An order sent to Stripe and paid there. */
   const paidOrder = async (email: string) => {
     const result = await placeOrder(form({ email }), {
+      offer: FILE_OFFER,
       payments: elsewhere(),
       store: getStore({ NODE_ENV: "test" }),
       returnUrls: URLS,
@@ -967,7 +973,12 @@ describe("a promo code at the checkout", () => {
   };
 
   const buy = (over: Record<string, unknown>, payments = practice) =>
-    placeOrder(form(over), { payments, store: store(), returnUrls: URLS });
+    placeOrder(form(over), {
+      offer: FILE_OFFER,
+      payments,
+      store: store(),
+      returnUrls: URLS,
+    });
 
   const uses = async (code: string) => {
     const [row] = await handle.db

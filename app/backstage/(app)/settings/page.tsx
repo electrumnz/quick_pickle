@@ -8,6 +8,13 @@ export const metadata: Metadata = { title: "Settings" };
 
 const SECTIONS = [
   {
+    href: "/backstage/settings/shop",
+    label: "The shop",
+    blurb:
+      "Prices, delivery, the ship date, pre-order or live, and whether orders are being taken.",
+    ownerOnly: false,
+  },
+  {
     href: "/backstage/settings/staff",
     label: "Staff",
     blurb:

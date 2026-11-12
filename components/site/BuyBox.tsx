@@ -14,15 +14,10 @@ import {
 import { CarriedCodeNote } from "@/components/cart/CarriedCodeNote";
 import { useCart } from "@/components/cart/CartProvider";
 import { LoopVideo } from "@/components/ui/LoopVideo";
+import { deliveryPromise } from "@/content/delivery";
 import type { Media } from "@/content/media";
-import {
-  MAX_PACKS_PER_LINE,
-  PACKS,
-  PRODUCT,
-  SHIPPING,
-  STORE,
-} from "@/content/offer";
-import { BUY } from "@/content/site";
+import { MAX_PACKS_PER_LINE, PRODUCT } from "@/content/offer";
+import { BUY, SHOP } from "@/content/site";
 import {
   bestValuePack,
   featuredPack,
@@ -43,7 +38,8 @@ import { formatNzd } from "@/lib/shop/money";
  * jar opens, with the total and the checkout button in it.
  *
  * Every figure here (per-shot price, saving, "best value") is computed from
- * the offer on each render. None of it is typed in.
+ * the offer on each render. None of it is typed in. The offer is the jar's
+ * (components/cart/CartProvider), so the button and the jar always agree.
  */
 type Props = {
   /** "14 February 2027" once the ship date is locked in, else null. */
@@ -56,7 +52,7 @@ type Props = {
 
 export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
   const lucky = luckyOnPage ? "page" : "file";
-  const { add, open, selectedSku, select, ready } = useCart();
+  const { offer, add, open, selectedSku, select, ready } = useCart();
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -70,10 +66,10 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
     const picked = packs.current?.querySelector<HTMLInputElement>(
       'input[name="pack"]:checked',
     )?.value;
-    if (picked !== undefined && packBySku(picked) !== undefined) {
+    if (picked !== undefined && packBySku(offer, picked) !== null) {
       select(picked);
     }
-  }, [select]);
+  }, [offer, select]);
 
   useEffect(() => {
     const pending = timers.current;
@@ -82,13 +78,15 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
     };
   }, []);
 
-  const pack = packBySku(selectedSku) ?? featuredPack();
-  const best = bestValuePack();
-  const pick = featuredPack();
+  const pack = packBySku(offer, selectedSku) ?? featuredPack(offer);
+  const best = bestValuePack(offer);
+  const pick = featuredPack(offer);
   const totalCents = pack.priceCents * qty;
-  const preorder = STORE.launchMode === "preorder";
+  const preorder = offer.launchMode === "preorder";
+  const delivery = deliveryPromise(offer.shipping);
 
   function handleAdd() {
+    if (!offer.open) return;
     add(pack.sku, qty);
     setJustAdded(true);
     for (const timer of timers.current) clearTimeout(timer);
@@ -150,7 +148,7 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
         <fieldset ref={packs}>
           <legend className="label text-[1.25rem]">{BUY.packLegend}</legend>
           <div className="mt-3 flex flex-col gap-3.5">
-            {PACKS.map((option) => {
+            {offer.packs.map((option) => {
               const selected = option.sku === pack.sku;
               // Which card looks chosen is the radio's own doing (the
               // has-checked styles), so it is right on the first paint and
@@ -158,7 +156,7 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
               // alive the same look is also set from here, for the few
               // browsers that cannot style a card by what is inside it.
               const lit = ready && selected;
-              const saving = savingCents(option);
+              const saving = savingCents(offer, option);
               const tag =
                 option.sku === pick.sku
                   ? BUY.luckysPick
@@ -289,13 +287,16 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
             <button
               type="button"
               onClick={handleAdd}
+              disabled={!offer.open}
               data-testid="add-to-jar"
-              className={`btn btn-lg btn-block ${justAdded ? "btn-olive" : ""}`}
+              className={`btn btn-lg btn-block disabled:cursor-not-allowed disabled:opacity-60 ${justAdded ? "btn-olive" : ""}`}
             >
               <span className="cap-trim" aria-live="polite">
-                {justAdded
-                  ? BUY.added
-                  : `${BUY.add} · ${formatNzd(totalCents)}`}
+                {!offer.open
+                  ? SHOP.closedButton
+                  : justAdded
+                    ? BUY.added
+                    : `${BUY.add(offer)} · ${formatNzd(totalCents)}`}
               </span>
             </button>
             {/* The pickle punch: burst lines off the button, once per add. */}
@@ -305,10 +306,24 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
           </div>
         </div>
 
+        {/* Shut for now: say so, and point at the one thing there is to do. */}
+        {offer.open ? null : (
+          <p
+            data-testid="shop-closed"
+            className="card-flat mt-5 p-4 text-[0.9688rem] leading-snug"
+          >
+            {SHOP.closedNote}{" "}
+            <a href="#crew" className="link font-semibold">
+              {SHOP.closedCta}
+            </a>
+            .
+          </p>
+        )}
+
         <CarriedCodeNote className="mt-5" />
 
         <ul className="mt-6 flex flex-col gap-2.5 text-[0.9375rem] leading-snug">
-          {preorder ? (
+          {preorder && offer.open ? (
             <li className="flex items-start gap-3">
               <CalendarIcon className="mt-0.5 size-6 shrink-0" />
               <span>
@@ -320,10 +335,13 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
           <li className="flex items-start gap-3">
             <TruckIcon className="mt-0.5 size-6 shrink-0" />
             <span>
-              {BUY.reassure.delivery} for {formatNzd(SHIPPING.standardCents)}.{" "}
-              <strong>
-                {BUY.reassure.freeOver} {formatNzd(SHIPPING.freeOverCents)}.
-              </strong>
+              {delivery.lead}
+              {delivery.strong === null ? null : (
+                <>
+                  {" "}
+                  <strong>{delivery.strong}</strong>
+                </>
+              )}
             </span>
           </li>
           <li className="flex items-start gap-3">

@@ -11,13 +11,13 @@ import {
   Stat,
   When,
 } from "@/components/backstage/ui";
-import { UNCONFIRMED } from "@/content/offer";
 import { listActivity } from "@/lib/backstage/activity/ops";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { execute } from "@/lib/backstage/core/op";
 import { countCrew } from "@/lib/backstage/crew/ops";
 import { numbersToday, type DayNumbers } from "@/lib/backstage/numbers/ops";
 import { countOrders, listOrders } from "@/lib/backstage/orders/ops";
+import { shopOffer } from "@/lib/backstage/shop/ops";
 import { needsYou } from "@/lib/backstage/today/ops";
 import { formatNzdExact } from "@/lib/shop/money";
 import { nzParts } from "@/lib/time";
@@ -59,14 +59,16 @@ export default async function TodayPage() {
   const staff = await requireStaff("/backstage");
   const now = new Date();
   const caller = await staffCaller();
-  const [lines, counts, toPack, crew, needs, soFar] = await Promise.all([
+  const [lines, counts, toPack, crew, needs, soFar, shop] = await Promise.all([
     execute(listActivity, { limit: 12 }, caller),
     execute(countOrders, {}, caller),
     execute(listOrders, { status: "paid", limit: 8 }, caller),
     execute(countCrew, {}, caller),
     execute(needsYou, {}, caller),
     execute(numbersToday, {}, caller),
+    execute(shopOffer, {}, caller),
   ]);
+  const openFacts = shop.offer.unconfirmed.length;
   const countVisits = !soFar.noVisitsYet;
   const firstName = staff.name.split(" ")[0] ?? staff.name;
 
@@ -200,9 +202,9 @@ export default async function TodayPage() {
 
         <Panel title="Before launch">
           <p className="leading-snug">
-            {UNCONFIRMED.length === 0
+            {openFacts === 0
               ? "Every fact on the site is confirmed."
-              : `${String(UNCONFIRMED.length)} fact${UNCONFIRMED.length === 1 ? "" : "s"} on the site ${UNCONFIRMED.length === 1 ? "is" : "are"} still a stand-in. Until they are confirmed the shop stays out of search.`}
+              : `${String(openFacts)} fact${openFacts === 1 ? "" : "s"} on the site ${openFacts === 1 ? "is" : "are"} still a stand-in. Until they are confirmed the shop stays out of search.`}
           </p>
           <p className="mt-4">
             <Link

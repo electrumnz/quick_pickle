@@ -62,6 +62,63 @@ Before you start: clean, dry hands and a clear bench.
 - **Anything else.** Add a note on the order, so the next person knows.`,
 };
 
+const runTheShop: StarterDocument = {
+  slug: "how-to-change-the-shop",
+  title:
+    "How to change a price, a date or delivery, and how to stop taking orders",
+  kind: "how-to",
+  summary:
+    "What a pack costs, what delivery costs, when a pre-order ships, and the switch that stops orders. All changed in one place, with nobody else needed.",
+  sort: 15,
+  body: `**What this is:** how to change what the shop sells for, without waiting on anybody. It all lives on one screen: [The shop](${LINK.shop}), under Settings.
+
+*Starter draft. The steps are how the screen works today. The blanks (____) are yours to fill in.*
+
+## Before you change anything
+
+1. [ ] Know the new figure. A price is what a customer pays for the whole pack. Delivery is for one order.
+2. [ ] If it is a price, look at the [budget](${LINK.budget}) first. It shows what is left of each pack at the price you have in mind.
+
+## Change it
+
+3. [ ] Open [The shop](${LINK.shop}) and type the new figure in its box. Leave everything else alone.
+4. [ ] Press **See what changes**. Nothing is saved yet. The screen reads the change back in plain words, like "The Trial from $27 to $30".
+5. [ ] Read it. If a digit slipped, this is where you catch it. Fix the box and press **Check again**.
+6. [ ] Press **Change the shop**. It is live for every customer from that moment, and the site shows it within a minute.
+7. [ ] Open the shop and look. The link is at the bottom of the screen.
+
+## What each thing does
+
+- **Prices.** The savings and the price for each shot on the page are worked out from them, so there is nothing else to update. A bigger pack has to cost more than a smaller one.
+- **Standard delivery.** One rate for an order, anywhere in New Zealand. Set it to 0 and delivery is free for everybody.
+- **Extra for a rural address.** Added on top. Set it to 0 and the checkout stops asking whether an address is rural.
+- **Free delivery on orders of.** The order value that earns free delivery. Leave it empty and no order gets it.
+- **Pre-orders ship from.** Leave it empty until the date is certain. The site says the date is to be confirmed and never guesses one.
+- **Pre-order or live.** Pre-order means people pay now and it ships when the batch is ready. Switch to live when it is on the shelf and going out as it is ordered.
+- **What this batch is called.** Shown on the page and on receipts while it is a pre-order.
+- **The address customers write to.** Shown in the questions, the fine print and on order emails.
+
+## If somebody is paying while you change a price
+
+Nobody is charged a price they were not shown. If a customer is part-way through the checkout when a price or a delivery rate changes, their order is handed back to them with the new total, and they press the button again if they still want it.
+
+## Stop taking orders
+
+8. [ ] On [The shop](${LINK.shop}), choose **No, stop for now**, then check and change as above. Use it when a batch has sold out, or you are away and cannot send anything.
+9. [ ] The page says the shop is not taking orders and points people to the Pickle Crew. The checkout takes nothing.
+10. [ ] [Today](${LINK.today}) carries a line for as long as it is off, so it is not forgotten.
+11. [ ] To start again, choose **Yes, taking orders**. Then tell the Pickle Crew: they were promised first dibs.
+
+## When a pre-order's ship date changes
+
+12. [ ] Set the new date on [The shop](${LINK.shop}).
+13. [ ] Email everybody with a pre-order that has not shipped. The site promises they will hear from you, and nothing sends that by itself. Who does it: ____.
+
+## Saying a figure is right
+
+Changing a figure does not confirm it. While any fact about the shop is still a stand-in, the site stays out of search engines. When the prices, the delivery rates, the ship date and the contact address are the real ones, an owner says so on the [go-live list](${LINK.goLive}), one at a time. Their name goes beside each.`,
+};
+
 const productionDay: StarterDocument = {
   slug: "how-to-production-day",
   title: "How to run a production day",
@@ -474,6 +531,7 @@ const weeklyCheck: StarterDocument = {
 
 export const STARTER_HOW_TOS: readonly StarterDocument[] = [
   packAnOrder,
+  runTheShop,
   productionDay,
   damagedOrMissing,
   complaint,

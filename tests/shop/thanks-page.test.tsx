@@ -40,6 +40,7 @@ vi.mock("@/lib/mail", () => ({
 
 import ThanksPage from "@/app/(site)/order/thanks/page";
 import { THANKS } from "@/content/site";
+import { FILE_OFFER } from "@/lib/shop/offer";
 import type { Order } from "@/lib/shop/order";
 import { parseReceipt, receiptFor } from "@/lib/shop/receipt";
 
@@ -132,7 +133,7 @@ describe("what the order's-in page says about email", () => {
     expect(said).not.toContain(THANKS.keepNumber);
     // A pre-order is told what a pre-order is told.
     const preorder = await page(order("paid", "preorder"), { emails: true });
-    expect(preorder).toContain(THANKS.preorderNote);
+    expect(preorder).toContain(THANKS.preorderNote(FILE_OFFER.batchName));
   });
 
   it("says nothing about a receipt when none is being sent, and says what is true instead", async () => {
@@ -142,7 +143,9 @@ describe("what the order's-in page says about email", () => {
       expect(said.toLowerCase()).not.toContain("receipt");
       expect(said.toLowerCase()).not.toContain("email");
       expect(said).toContain(THANKS.keepNumber);
-      expect(said.includes(THANKS.preorderOnly)).toBe(mode === "preorder");
+      expect(said.includes(THANKS.preorderOnly(FILE_OFFER.batchName))).toBe(
+        mode === "preorder",
+      );
     }
   });
 

@@ -13,9 +13,10 @@ import {
   PlusIcon,
   TruckIcon,
 } from "@/components/brand/Icons";
-import { MAX_PACKS_PER_LINE, SHIPPING } from "@/content/offer";
-import { JAR } from "@/content/site";
+import { MAX_PACKS_PER_LINE } from "@/content/offer";
+import { JAR, SHOP } from "@/content/site";
 import { nextSizeUp, perShotCents } from "@/lib/shop/catalogue";
+import { freeDeliveryFrom } from "@/lib/shop/pricing";
 import { formatNzd } from "@/lib/shop/money";
 
 import { CarriedCodeNote } from "./CarriedCodeNote";
@@ -35,8 +36,18 @@ import { useCart } from "./CartProvider";
  * on the checkout button.
  */
 export function CartDrawer() {
-  const { cart, quote, count, isOpen, close, setQty, remove, swap, ready } =
-    useCart();
+  const {
+    offer,
+    cart,
+    quote,
+    count,
+    isOpen,
+    close,
+    setQty,
+    remove,
+    swap,
+    ready,
+  } = useCart();
   const ref = useRef<HTMLDialogElement>(null);
 
   // Nothing inside the sheet is rendered until it has been opened once: a
@@ -58,7 +69,7 @@ export function CartDrawer() {
   // The smallest line that has a bigger, cheaper-per-shot size above it.
   const upgrade = (() => {
     for (const line of quote.lines) {
-      const bigger = nextSizeUp(line.pack);
+      const bigger = nextSizeUp(offer, line.pack);
       if (bigger === null) continue;
       if (perShotCents(bigger) >= perShotCents(line.pack)) continue;
       // Only offer the swap when the bigger size is not already in the jar.
@@ -72,9 +83,15 @@ export function CartDrawer() {
     return null;
   })();
 
-  const progress = quote.freeDelivery
-    ? 1
-    : Math.min(1, quote.subtotalCents / SHIPPING.freeOverCents);
+  // The spend that earns free delivery, or null when there is none to earn
+  // (delivery is free for everybody, or is never waived). With none, the
+  // card that counts towards it is not drawn.
+  const freeFrom = freeDeliveryFrom(offer.shipping);
+  const progress =
+    quote.freeDelivery || freeFrom === null
+      ? 1
+      : Math.min(1, quote.subtotalCents / freeFrom);
+  const preorderNote = JAR.preorderNote(offer);
 
   return (
     <dialog
@@ -129,35 +146,40 @@ export function CartDrawer() {
           ) : (
             <>
               <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-5">
-                {/* Free delivery: how far, or done. */}
-                <div className="card-flat bg-olive-wash p-4">
-                  <p className="label flex items-center gap-2 text-[1.1rem] leading-tight">
-                    {quote.freeDelivery ? (
-                      <>
-                        <CheckIcon className="text-olive-deep size-5 shrink-0" />
-                        <span className="cap-trim">{JAR.unlocked}</span>
-                      </>
-                    ) : (
-                      <>
-                        <TruckIcon className="size-6 shrink-0" />
-                        <span className="cap-trim">
-                          {formatNzd(quote.freeDeliveryGapCents)} {JAR.gap}
-                        </span>
-                      </>
-                    )}
-                  </p>
-                  <div
-                    className="bg-paper border-navy mt-3 h-3.5 overflow-hidden rounded-full border-2"
-                    aria-hidden="true"
-                  >
+                {/* Free delivery: how far, or done. Only when there is
+                    a spend that earns it. */}
+                {freeFrom === null ? null : (
+                  <div className="card-flat bg-olive-wash p-4">
+                    <p className="label flex items-center gap-2 text-[1.1rem] leading-tight">
+                      {quote.freeDelivery ? (
+                        <>
+                          <CheckIcon className="text-olive-deep size-5 shrink-0" />
+                          <span className="cap-trim">{JAR.unlocked}</span>
+                        </>
+                      ) : (
+                        <>
+                          <TruckIcon className="size-6 shrink-0" />
+                          <span className="cap-trim">
+                            {formatNzd(quote.freeDeliveryGapCents)} {JAR.gap}
+                          </span>
+                        </>
+                      )}
+                    </p>
                     <div
-                      className="bg-olive ease-qp-out h-full origin-left transition-transform duration-[400ms]"
-                      style={{ transform: `scaleX(${String(progress)})` }}
-                    />
+                      className="bg-paper border-navy mt-3 h-3.5 overflow-hidden rounded-full border-2"
+                      aria-hidden="true"
+                    >
+                      <div
+                        className="bg-olive ease-qp-out h-full origin-left transition-transform duration-[400ms]"
+                        style={{ transform: `scaleX(${String(progress)})` }}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <ul className="mt-5 flex flex-col gap-4">
+                <ul
+                  className={`flex flex-col gap-4 ${freeFrom === null ? "" : "mt-5"}`}
+                >
                   {quote.lines.map((line) => (
                     <li key={line.sku} className="card-flat flex gap-3 p-3">
                       <div className="bg-cream border-navy grid w-16 shrink-0 place-items-center rounded-xl border-2 py-2">
@@ -242,11 +264,11 @@ export function CartDrawer() {
               </div>
 
               <div className="border-navy bg-paper safe-bottom border-t-[3px] px-5 pt-4">
-                {JAR.preorderNote ? (
+                {preorderNote === null ? null : (
                   <p className="text-navy-muted text-small mb-3 leading-snug">
-                    {JAR.preorderNote}
+                    {preorderNote}
                   </p>
-                ) : null}
+                )}
                 <CarriedCodeNote className="mb-3" />
                 <SpecialNote open={isOpen} className="mb-3" />
                 <div className="flex items-baseline justify-between">
@@ -258,14 +280,25 @@ export function CartDrawer() {
                 <p className="text-navy-muted text-small mt-1">
                   {JAR.deliveryNote}
                 </p>
-                <Link
-                  href="/checkout"
-                  onClick={close}
-                  className="btn btn-lg btn-block mt-4"
-                >
-                  <span className="cap-trim">{JAR.checkout}</span>
-                  <ArrowIcon className="size-6" />
-                </Link>
+                {offer.open ? (
+                  <Link
+                    href="/checkout"
+                    onClick={close}
+                    className="btn btn-lg btn-block mt-4"
+                  >
+                    <span className="cap-trim">{JAR.checkout}</span>
+                    <ArrowIcon className="size-6" />
+                  </Link>
+                ) : (
+                  // Shut for now: what is in the jar stays, and there is no
+                  // way through to a checkout that would only say no.
+                  <p
+                    data-testid="jar-closed"
+                    className="card-flat mt-4 p-3 text-[0.9375rem] leading-snug"
+                  >
+                    {SHOP.closedNote}
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={close}

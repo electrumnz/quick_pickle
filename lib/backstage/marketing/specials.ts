@@ -28,17 +28,19 @@
 import { and, asc, desc, eq, gt, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 
-import { SHIPPING } from "@/content/offer";
 import { CODES, SPECIAL } from "@/content/site";
 import { promoCodes, type CopyCheck } from "@/db/schema";
 import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
 import { normalisePromoCode, PROMO_CODE_PATTERN } from "@/lib/shop/code";
 import { formatNzd } from "@/lib/shop/money";
+import type { Offer } from "@/lib/shop/offer";
+import { freeDeliveryFrom } from "@/lib/shop/pricing";
 import { formatNzDayLong } from "@/lib/time";
 
 import { refuseUnsendable } from "../core/copy";
 import { conflict, notFound, OpError } from "../core/errors";
+import { readShop } from "../shop/ops";
 import { defineOp } from "../core/op";
 import { copyVerdict, type CopyVerdict } from "./copy-check";
 import {
@@ -309,8 +311,12 @@ type Terms = {
   readonly endsAt: Date | null;
 };
 
-/** The parts of a special that have to make sense together. */
-function checkTerms(terms: Terms): Terms {
+/**
+ * The parts of a special that have to make sense together, and with what
+ * delivery costs right now (`shipping`, from the offer as the back end has
+ * it: lib/backstage/shop/ops.ts).
+ */
+function checkTerms(terms: Terms, shipping: Offer["shipping"]): Terms {
   const fields: Record<string, string> = {};
   if (terms.kind === "percent" && (terms.value < 1 || terms.value > 90)) {
     // A code may go to 100. A special is offered to everybody at once, so a
@@ -325,11 +331,19 @@ function checkTerms(terms: Terms): Terms {
     fields.minSubtotalCents =
       "Money off needs a smallest order that is more than the money coming off";
   }
-  if (
+  // The spend that already earns free delivery, or null when there is none
+  // to earn. With delivery free for everybody a delivery special gives
+  // nothing at all.
+  const freeFrom = freeDeliveryFrom(shipping);
+  if (terms.kind === "delivery" && shipping.standardCents === 0) {
+    fields.kind =
+      "Standard delivery is already free on every order, so that would give nothing";
+  } else if (
     terms.kind === "delivery" &&
-    terms.minSubtotalCents >= SHIPPING.freeOverCents
+    freeFrom !== null &&
+    terms.minSubtotalCents >= freeFrom
   ) {
-    fields.minSubtotalCents = `Standard delivery is already free from ${formatNzd(SHIPPING.freeOverCents)}, so that would give nothing`;
+    fields.minSubtotalCents = `Standard delivery is already free from ${formatNzd(freeFrom)}, so that would give nothing`;
   }
   if (
     terms.startsAt !== null &&
@@ -411,7 +425,8 @@ export const createSpecial = defineOp({
     note: noteField.default(""),
   }),
   async run(ctx, input): Promise<{ id: string; code: string }> {
-    const terms = checkTerms(input);
+    const { shipping } = (await readShop(ctx.db)).offer;
+    const terms = checkTerms(input, shipping);
     const id = newId("pro");
     const made = await ctx.db
       .insert(promoCodes)
@@ -477,13 +492,18 @@ export const updateSpecial = defineOp({
     ) {
       throw conflict(usedAlready);
     }
-    const terms = checkTerms({
-      kind: input.kind ?? promo.kind,
-      value: input.value ?? promo.value,
-      minSubtotalCents: input.minSubtotalCents ?? promo.minSubtotalCents,
-      startsAt: input.startsAt === undefined ? promo.startsAt : input.startsAt,
-      endsAt: input.endsAt === undefined ? promo.endsAt : input.endsAt,
-    });
+    const { shipping } = (await readShop(ctx.db)).offer;
+    const terms = checkTerms(
+      {
+        kind: input.kind ?? promo.kind,
+        value: input.value ?? promo.value,
+        minSubtotalCents: input.minSubtotalCents ?? promo.minSubtotalCents,
+        startsAt:
+          input.startsAt === undefined ? promo.startsAt : input.startsAt,
+        endsAt: input.endsAt === undefined ? promo.endsAt : input.endsAt,
+      },
+      shipping,
+    );
     const next = {
       ...terms,
       maxUses: input.maxUses === undefined ? promo.maxUses : input.maxUses,
@@ -568,7 +588,7 @@ export const switchSpecialOn = defineOp({
     }
     // The terms are checked again as they stand: the free-delivery line or
     // the rules may have moved since it was set up.
-    checkTerms(promo);
+    checkTerms(promo, (await readShop(ctx.db)).offer.shipping);
 
     const others = (await specialsSwitchedOn(ctx.db, ctx.now)).filter(
       (other) =>

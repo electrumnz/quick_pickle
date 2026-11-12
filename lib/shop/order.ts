@@ -11,6 +11,7 @@ import { z } from "zod";
 import { MAX_PACKS_PER_LINE } from "@/content/offer";
 
 import { isKnownSku } from "./catalogue";
+import { FILE_OFFER } from "./offer";
 
 /** New Zealand's regions, as a courier would write them. */
 export const NZ_REGIONS = [
@@ -39,8 +40,18 @@ const trimmed = (max: number) => z.string().trim().max(max);
 const required = (label: string, max: number) =>
   trimmed(max).min(1, `${label} is needed`);
 
+/**
+ * Which packs exist is the catalogue file's to say. The back end can move a
+ * pack's price, never add or take away a pack, so the file's own shelf is
+ * the whole list of SKUs whatever the prices are today.
+ */
 export const cartLineSchema = z.object({
-  sku: z.string().refine(isKnownSku, "That pack is not on the shelf"),
+  sku: z
+    .string()
+    .refine(
+      (sku) => isKnownSku(FILE_OFFER, sku),
+      "That pack is not on the shelf",
+    ),
   qty: z.number().int().min(1).max(MAX_PACKS_PER_LINE),
 });
 
@@ -78,6 +89,15 @@ export const checkoutSchema = z.object({
    * nobody pays more than the total they pressed the button on.
    */
   special: trimmed(40).optional().or(z.literal("")),
+  /**
+   * The word for the offer the page was drawn from (lib/shop/offer.ts:
+   * `version`). Never a price. The server prices the order from its own
+   * copy, and if that copy has another word (a price, a delivery rate or
+   * pre-order-or-live has changed since the page was drawn) the order is
+   * handed back with the new total first, so nobody pays more than the
+   * button said.
+   */
+  offer: trimmed(20).optional().or(z.literal("")),
   /**
    * Where the visit came from, as the buyer's browser remembers it: the
    * short link it followed and any utm labels. A label for the order and
@@ -172,6 +192,12 @@ export type Order = {
    * order in, so the back end credits them.
    */
   readonly creditCode?: string;
+  /**
+   * The word for the offer this order was priced from. Where the order is
+   * saved the offer is read once more, and if it has moved in between the
+   * order is refused, not saved at prices that no longer stand.
+   */
+  readonly offerVersion?: string;
   readonly payment: PaymentRecord;
   readonly joinCrew: boolean;
   /** The link and labels the visit came with, when the browser said. */

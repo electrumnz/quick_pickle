@@ -40,6 +40,7 @@ import { newId } from "@/lib/db/id";
 import type { PaymentProvider } from "@/lib/shop/payments";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
+import { FILE_OFFER } from "@/lib/shop/offer";
 
 const shop = systemCaller("The shop", "storefront");
 
@@ -107,6 +108,7 @@ describe("orders, from the checkout to the doorstep", () => {
     pay: "test" | "paid" = "paid",
   ) => {
     const result = await placeOrder(form(over), {
+      offer: FILE_OFFER,
       payments: provider(pay),
       store: getStore({ NODE_ENV: "test" }),
     });

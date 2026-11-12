@@ -25,6 +25,7 @@ import { systemCaller } from "@/lib/backstage/core/actor";
 import { execute } from "@/lib/backstage/core/op";
 import { databaseUrl } from "@/lib/db/client";
 
+import type { Offer } from "../offer";
 import type { Order } from "../order";
 
 export type CrewSignup = {
@@ -145,6 +146,12 @@ export type Store = {
   }): Promise<SpecialCheck>;
   /** The special to tell visitors about right now, or null. */
   currentSpecial?(): Promise<SpecialNow | null>;
+  /**
+   * What is on sale right now, for how much: the catalogue file with the
+   * back end's changes laid over it. Only the database store has changes to
+   * lay; any other store sells exactly what the file says.
+   */
+  currentOffer?(): Promise<Offer>;
   /**
    * The code somebody is given for joining the Pickle Crew, if one is set
    * up and could be used right now.
@@ -297,6 +304,15 @@ function dbStore(env: Record<string, string | undefined>): Store {
         {},
         systemCaller("The shop", "storefront"),
       );
+    },
+    async currentOffer() {
+      const { shopOffer } = await import("@/lib/backstage/shop/ops");
+      const shop = await execute(
+        shopOffer,
+        {},
+        systemCaller("The shop", "storefront"),
+      );
+      return shop.offer;
     },
     async welcomeCode() {
       const { crewWelcomeCode } =

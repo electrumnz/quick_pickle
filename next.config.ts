@@ -72,6 +72,22 @@ const nextConfig: NextConfig = {
     ? {}
     : { typescript: { tsconfigPath: scratchTsconfig } }),
 
+  /**
+   * Where a page that has been drawn again is kept. In the build folder, so
+   * it outlasts a restart, unless QP_KEPT_PAGES is "memory".
+   *
+   * The browser tests ask for memory. They start two servers from ONE build
+   * folder, each with its own records, and a kept page says what its own
+   * server's shop is selling. Written into the folder they share, a page
+   * drawn by one (a price changed, the shop shut) could be served by the
+   * other, or by the next run. In memory, each server only ever shows its
+   * own. (A deployment keeps its pages wherever its host keeps them, and
+   * never sets this.)
+   */
+  ...(process.env.QP_KEPT_PAGES === "memory"
+    ? { experimental: { isrFlushToDisk: false } }
+    : {}),
+
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

@@ -240,3 +240,261 @@ test("an owner can switch an account off, and it stays out", async ({
   ]);
   await expect(page.locator("main [role=alert]")).toHaveText(/no owner/i);
 });
+
+/* ------------------------------------------------------------------------
+   The shop's settings.
+
+   These change what the shop charges, so they run here, on the server
+   whose shop no other test buys from: on the first server a moved price
+   would move every other test's total.
+   --------------------------------------------------------------------- */
+
+/** Change the shop: set the form, read the change back, then make it. */
+async function changeTheShop(
+  page: Page,
+  set: (page: Page) => Promise<void>,
+  says: RegExp,
+) {
+  await page.goto(`${AUTH_URL}/backstage/settings/shop`);
+  await set(page);
+  await press(page, /see what changes/i);
+  await expect(page.getByTestId("shop-checked")).toContainText(says);
+  await press(page, /change the shop/i);
+  await expect(page.getByTestId("shop-done")).toContainText(says);
+}
+
+/** A customer with The Trial in the jar, at the checkout, form filled in. */
+async function atCheckoutWithTheTrial(customer: Page) {
+  await customer.goto(`${AUTH_URL}/`);
+  await customer.locator("#shop").scrollIntoViewIfNeeded();
+  await customer.getByText("The Trial", { exact: true }).click();
+  await customer.getByTestId("add-to-jar").click();
+  const jar = customer.getByRole("dialog");
+  await jar.getByRole("link", { name: /checkout/i }).click();
+  await expect(customer).toHaveURL(/\/checkout$/);
+  await customer.fill("#co-email", "mere@example.co.nz");
+  await customer.fill("#co-firstName", "Mere");
+  await customer.fill("#co-lastName", "Tane");
+  await customer.fill("#co-line1", "4 Halfway Line");
+  await customer.fill("#co-city", "Levin");
+  await customer.selectOption("#co-region", "Manawatū-Whanganui");
+  await customer.fill("#co-postcode", "5510");
+}
+
+test("the shop's settings read a change back before making it, and the shop follows", async ({
+  page,
+  browser,
+}) => {
+  await signIn(page, OWNER.email, OWNER.password);
+  const price = "The Trial (6 shots)";
+
+  // The first press saves nothing.
+  await page.goto(`${AUTH_URL}/backstage/settings/shop`);
+  await expect(page.getByLabel(price)).toHaveValue("27.00");
+  await page.getByLabel(price).fill("30");
+  await press(page, /see what changes/i);
+  await expect(page.getByTestId("shop-checked")).toContainText(
+    "The Trial from $27 to $30",
+  );
+  const other = await browser.newContext();
+  const customer = await other.newPage();
+  await customer.goto(`${AUTH_URL}/`);
+  await customer.getByText("The Trial", { exact: true }).click();
+  await expect(customer.getByTestId("add-to-jar")).toContainText("$27");
+
+  // The second makes exactly that change.
+  await press(page, /change the shop/i);
+  await expect(page.getByTestId("shop-done")).toContainText(
+    "The Trial from $27 to $30",
+  );
+  await page.reload();
+  await expect(page.getByLabel(price)).toHaveValue("30.00");
+  await expect(page.getByTestId("shop-moved")).toContainText(
+    "The Trial from $27 to $30",
+  );
+
+  // The kept page was thrown away: the next visitor is shown the new price,
+  // and is charged it.
+  await expect(async () => {
+    await customer.goto(`${AUTH_URL}/`);
+    await customer.getByText("The Trial", { exact: true }).click();
+    await expect(customer.getByTestId("add-to-jar")).toContainText("$30", {
+      timeout: 2000,
+    });
+  }).toPass({ timeout: 20_000 });
+  await atCheckoutWithTheTrial(customer);
+  const place = customer.getByTestId("place-order");
+  await expect(place).toContainText("$37.00");
+  await place.click();
+  await expect(customer).toHaveURL(/\/order\/thanks$/);
+  await expect(customer.getByText("$37.00")).toBeVisible();
+  await other.close();
+
+  // A slip is refused in words, with nothing saved.
+  await page.getByLabel(price).fill("0.50");
+  await press(page, /see what changes/i);
+  await expect(page.locator("main [role=alert]")).toContainText(
+    /a pack costs between \$1 and \$1,000/i,
+  );
+  await page.getByLabel(price).fill("60");
+  await press(page, /see what changes/i);
+  await expect(page.locator("main [role=alert]")).toContainText(
+    /would cost no more than the trial/i,
+  );
+});
+
+test("a buyer part-way through the checkout is shown the new total before they can pay", async ({
+  page,
+  browser,
+}) => {
+  const other = await browser.newContext();
+  const customer = await other.newPage();
+  await atCheckoutWithTheTrial(customer);
+  const place = customer.getByTestId("place-order");
+  await expect(place).toContainText("$37.00");
+
+  // The price moves while their page still says $37.
+  await signIn(page, OWNER.email, OWNER.password);
+  await changeTheShop(
+    page,
+    (shop) => shop.getByLabel("The Trial (6 shots)").fill("32"),
+    /The Trial from \$30 to \$32/,
+  );
+
+  // Pressing the button places nothing. They are told, and shown $39.
+  await place.click();
+  await expect(customer.locator("main [role=alert]")).toContainText(
+    /changed while you were checking out/i,
+  );
+  await expect(customer).toHaveURL(/\/checkout$/);
+  await expect(place).toContainText("$39.00");
+  // What they had typed is still there, the region they picked included.
+  await expect(customer.locator("#co-email")).toHaveValue("mere@example.co.nz");
+  await expect(customer.locator("#co-region")).toHaveValue(
+    "Manawatū-Whanganui",
+  );
+
+  // Pressing again, on the total they can now see, goes through at it.
+  await place.click();
+  await expect(customer).toHaveURL(/\/order\/thanks$/);
+  await expect(customer.getByText("$39.00")).toBeVisible();
+  await other.close();
+});
+
+test("the shop can be stopped, says so everywhere, and can be started again", async ({
+  page,
+  browser,
+}) => {
+  // Somebody already at the checkout when it stops.
+  const other = await browser.newContext();
+  const customer = await other.newPage();
+  await atCheckoutWithTheTrial(customer);
+
+  await signIn(page, OWNER.email, OWNER.password);
+  await changeTheShop(
+    page,
+    (shop) => shop.getByRole("radio", { name: /no, stop for now/i }).check(),
+    /not taking orders/,
+  );
+  // Today says so, so nobody forgets it is off.
+  await page.goto(`${AUTH_URL}/backstage`);
+  await expect(
+    page.getByText("The shop is not taking orders").first(),
+  ).toBeVisible();
+
+  // Their order is not taken, and nothing is charged.
+  await customer.getByTestId("place-order").click();
+  await expect(customer.locator("main [role=alert]")).toContainText(
+    /not taking orders right now, so nothing was charged/i,
+  );
+  await expect(customer.getByTestId("place-order")).toBeDisabled();
+  await expect(customer.getByTestId("checkout-closed")).toBeVisible();
+
+  // The page says it too, and points at the Pickle Crew.
+  await expect(async () => {
+    await customer.goto(`${AUTH_URL}/`);
+    await expect(customer.getByTestId("shop-closed")).toBeVisible({
+      timeout: 2000,
+    });
+  }).toPass({ timeout: 20_000 });
+  await expect(customer.getByTestId("add-to-jar")).toBeDisabled();
+  await expect(customer.getByTestId("add-to-jar")).toContainText(
+    /not taking orders right now/i,
+  );
+  await expect(
+    customer.getByRole("link", { name: /join the pickle crew/i }).first(),
+  ).toHaveAttribute("href", "#crew");
+  // Nothing on a shut shop fails the accessibility rules. (Scanned once the
+  // page has finished fading in, like every other page: e2e/a11y.spec.ts.)
+  await customer.waitForTimeout(900);
+  const results = await new AxeBuilder({ page: customer })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(
+    results.violations.map(
+      (v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`,
+    ),
+  ).toEqual([]);
+
+  // Started again, at the catalogue's own price, for whoever runs next.
+  await changeTheShop(
+    page,
+    async (shop) => {
+      await shop.getByRole("radio", { name: /yes, taking orders/i }).check();
+      await shop.getByLabel("The Trial (6 shots)").fill("27");
+    },
+    /taking orders again/,
+  );
+  await expect(async () => {
+    await customer.goto(`${AUTH_URL}/`);
+    await customer.getByText("The Trial", { exact: true }).click();
+    await expect(customer.getByTestId("add-to-jar")).toContainText("$27", {
+      timeout: 2000,
+    });
+  }).toPass({ timeout: 20_000 });
+  await other.close();
+});
+
+test("an owner says a fact is right on the go-live list, and can take it back", async ({
+  page,
+}) => {
+  await signIn(page, OWNER.email, OWNER.password);
+  await page.goto(`${AUTH_URL}/backstage/settings/go-live`);
+  const packs = page.getByTestId("fact-packs");
+  // What is being confirmed is spelled out beside the button.
+  await expect(packs).toContainText("The Trial: 6 shots, $27");
+  await Promise.all([
+    page.waitForResponse((response) => response.request().method() === "POST"),
+    packs.getByRole("button", { name: /this is right/i }).click(),
+  ]);
+  await expect(page.locator("main [role=status]").first()).toHaveText(
+    /confirmed/i,
+  );
+  await expect(packs).toContainText(`Confirmed by ${OWNER.name}`);
+
+  // A fact that needs words on the site first cannot be settled here.
+  const ingredients = page.getByTestId("fact-ingredients");
+  await expect(ingredients).toContainText(/written into the site first/i);
+  await expect(ingredients.getByRole("button")).toHaveCount(0);
+  // And one that needs its figure first says so.
+  await expect(page.getByTestId("fact-ship-date")).toContainText(
+    /set the ship date first/i,
+  );
+
+  // Others are still open, so the shop is still closed to search engines.
+  await page.goto(`${AUTH_URL}/`);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    /noindex/,
+  );
+
+  await page.goto(`${AUTH_URL}/backstage/settings/go-live`);
+  await Promise.all([
+    page.waitForResponse((response) => response.request().method() === "POST"),
+    page
+      .getByTestId("fact-packs")
+      .getByRole("button", { name: /not right after all/i })
+      .click(),
+  ]);
+  await expect(page.getByTestId("fact-packs")).toContainText("Ask:");
+});

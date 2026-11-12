@@ -19,7 +19,7 @@ import { formatNzd } from "@/lib/shop/money";
  * never covers the last line, and it moves with transform only.
  */
 export function StickyBuyBar() {
-  const { add, open, selectedSku } = useCart();
+  const { offer, add, open, selectedSku } = useCart();
   const [visible, setVisible] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -62,7 +62,9 @@ export function StickyBuyBar() {
     };
   }, []);
 
-  const pack = packBySku(selectedSku) ?? featuredPack();
+  const pack = packBySku(offer, selectedSku) ?? featuredPack(offer);
+  // Shut for now: there is nothing to add, so there is no bar.
+  if (!offer.open) return null;
 
   function handleAdd() {
     add(pack.sku, 1);
@@ -100,7 +102,7 @@ export function StickyBuyBar() {
             className={`btn shrink-0 ${justAdded ? "btn-olive" : "btn-on-navy"}`}
           >
             <span className="cap-trim" aria-live="polite">
-              {justAdded ? BUYBAR.added : BUYBAR.add}
+              {justAdded ? BUYBAR.added : BUYBAR.add(offer)}
             </span>
           </button>
         </div>

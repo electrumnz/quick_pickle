@@ -23,6 +23,7 @@ import { defineOp } from "../core/op";
 import { mailNeeds } from "../mail/needs";
 import { marketingNeedsYou } from "../marketing/overview";
 import { disputeNeeds } from "../orders/disputes";
+import { shopNeeds } from "../shop/needs";
 import { plansNeeds } from "../plans/needs";
 import { stockNeeds } from "../stock/needs";
 
@@ -177,6 +178,10 @@ export const needsYou = defineOp({
     // A card dispute that is not decided yet. Rare, and it has a date: the
     // one being waited on by the bank is urgent until it is answered.
     for (const item of await disputeNeeds(ctx.db, ctx.now)) needs.push(item);
+
+    // The shop's own settings: shut, or a pre-order whose ship date has
+    // gone by. Somebody chose each of those and could forget they did.
+    for (const item of await shopNeeds(ctx.db, ctx.now)) needs.push(item);
 
     // Stock: at most a line each for orders that cannot be filled (urgent:
     // customers have paid and are waiting), shots past their date, stock

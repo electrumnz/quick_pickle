@@ -10,6 +10,8 @@ import { mailConnection } from "@/lib/mail";
 import { countAsk } from "@/lib/shop/caller";
 import { normaliseCart } from "@/lib/shop/cart";
 import { asPromoCode } from "@/lib/shop/code";
+import type { OfferOnPage } from "@/lib/shop/offer";
+import { offerNow } from "@/lib/shop/offer-now";
 import { cartLineSchema, type FieldErrors } from "@/lib/shop/order";
 import { getPaymentProvider } from "@/lib/shop/payments";
 import { placeOrder, type RawCheckout } from "@/lib/shop/place-order";
@@ -38,6 +40,12 @@ export type CheckoutState = {
   readonly errors: FieldErrors;
   /** What the buyer typed, handed back so a failed submit loses nothing. */
   readonly values: Readonly<Record<string, string>>;
+  /**
+   * Set when the order was handed back because the shop itself had changed
+   * (a price moved, or it stopped taking orders): the offer as it stands,
+   * so the page can draw the new total before the buyer presses again.
+   */
+  readonly offer?: OfferOnPage;
 };
 
 /** What the checkout is told about a code, to show before the order is placed. */
@@ -99,8 +107,10 @@ async function codeAnswer(
   } catch {
     return { ok: false, reason: CODES.emptyJar };
   }
-  const priced = quote(normaliseCart({ lines }), { rural: rural === true });
   try {
+    const offer = await offerNow();
+    const cart = normaliseCart(offer, { lines });
+    const priced = quote(offer, cart, { rural: rural === true });
     const store = getStore();
     if (store.checkCode === undefined) {
       return { ok: false, reason: CODES.unavailable };
@@ -111,11 +121,7 @@ async function codeAnswer(
       ...(who === undefined ? {} : { email: who }),
     });
     if (!answer.ok) return answer;
-    const after = quote(
-      normaliseCart({ lines }),
-      { rural: rural === true },
-      answer,
-    );
+    const after = quote(offer, cart, { rural: rural === true }, answer);
     if (after.totalCents < 100) {
       // Still an answer about them, if it was one: it says they could use it.
       return {
@@ -185,8 +191,11 @@ export async function specialFor(
   } catch {
     return { ok: false };
   }
-  const priced = quote(normaliseCart({ lines }), { rural: rural === true });
   try {
+    const offer = await offerNow();
+    const priced = quote(offer, normaliseCart(offer, { lines }), {
+      rural: rural === true,
+    });
     const store = getStore();
     if (store.special === undefined) return { ok: false };
     return await store.special({
@@ -226,6 +235,7 @@ const TEXT_FIELDS = [
   "notes",
   "promoCode",
   "special",
+  "offer",
 ] as const;
 
 function text(form: FormData, key: string): string {
@@ -284,6 +294,8 @@ export async function submitCheckout(
   try {
     const base = siteUrl();
     result = await placeOrder(raw, {
+      offer: await offerNow(),
+      offerAgain: offerNow,
       payments: getPaymentProvider(),
       store: getStore(),
       returnUrls: {
@@ -303,7 +315,12 @@ export async function submitCheckout(
     // counts for nothing. One that was told something about a code stays
     // counted: that answer is what somebody guessing is after.
     if (result.errors.promoCode === undefined) await counted.forget();
-    return { status: "invalid", errors: result.errors, values };
+    return {
+      status: "invalid",
+      errors: result.errors,
+      values,
+      ...(result.offer === undefined ? {} : { offer: result.offer }),
+    };
   }
 
   // Whether a receipt will really be emailed is decided here, on the server,

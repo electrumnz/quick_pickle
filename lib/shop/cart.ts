@@ -5,11 +5,13 @@
  *
  * A line is a SKU and a quantity. There is no price in here, at any level, on
  * purpose: a price the client can name is a price the client can change.
+ *
+ * Anything that has to know what is on the shelf takes the offer first.
  */
 
 import { MAX_PACKS_PER_LINE } from "@/content/offer";
 
-import { isKnownSku, packBySku } from "./catalogue";
+import { isKnownSku, packBySku, type Shelf } from "./catalogue";
 
 export type CartLine = { readonly sku: string; readonly qty: number };
 export type Cart = { readonly lines: readonly CartLine[] };
@@ -27,7 +29,7 @@ function clampQty(qty: number): number {
  * This is what stands between localStorage (or a hand-built request) and
  * everything else.
  */
-export function normaliseCart(input: unknown): Cart {
+export function normaliseCart(offer: Shelf, input: unknown): Cart {
   if (typeof input !== "object" || input === null) return EMPTY_CART;
   const rawLines = (input as { lines?: unknown }).lines;
   if (!Array.isArray(rawLines)) return EMPTY_CART;
@@ -36,7 +38,7 @@ export function normaliseCart(input: unknown): Cart {
   for (const raw of rawLines) {
     if (typeof raw !== "object" || raw === null) continue;
     const { sku, qty } = raw as { sku?: unknown; qty?: unknown };
-    if (typeof sku !== "string" || !isKnownSku(sku)) continue;
+    if (typeof sku !== "string" || !isKnownSku(offer, sku)) continue;
     if (typeof qty !== "number") continue;
     merged.set(sku, (merged.get(sku) ?? 0) + clampQty(qty));
   }
@@ -47,20 +49,34 @@ export function normaliseCart(input: unknown): Cart {
     if (clamped > 0) lines.push({ sku, qty: clamped });
   }
   lines.sort(
-    (a, b) => (packBySku(a.sku)?.shots ?? 0) - (packBySku(b.sku)?.shots ?? 0),
+    (a, b) =>
+      (packBySku(offer, a.sku)?.shots ?? 0) -
+      (packBySku(offer, b.sku)?.shots ?? 0),
   );
   return { lines };
 }
 
-export function addToCart(cart: Cart, sku: string, qty = 1): Cart {
-  if (!isKnownSku(sku)) return cart;
-  return normaliseCart({ lines: [...cart.lines, { sku, qty }] });
+export function addToCart(
+  offer: Shelf,
+  cart: Cart,
+  sku: string,
+  qty = 1,
+): Cart {
+  if (!isKnownSku(offer, sku)) return cart;
+  return normaliseCart(offer, { lines: [...cart.lines, { sku, qty }] });
 }
 
 /** Set a line's quantity outright. Zero removes it. */
-export function setQuantity(cart: Cart, sku: string, qty: number): Cart {
+export function setQuantity(
+  offer: Shelf,
+  cart: Cart,
+  sku: string,
+  qty: number,
+): Cart {
   const others = cart.lines.filter((line) => line.sku !== sku);
-  return normaliseCart({ lines: [...others, { sku, qty: clampQty(qty) }] });
+  return normaliseCart(offer, {
+    lines: [...others, { sku, qty: clampQty(qty) }],
+  });
 }
 
 export function removeFromCart(cart: Cart, sku: string): Cart {
@@ -68,10 +84,15 @@ export function removeFromCart(cart: Cart, sku: string): Cart {
 }
 
 /** Swap every pack of one size for the same number of another. */
-export function swapPack(cart: Cart, fromSku: string, toSku: string): Cart {
+export function swapPack(
+  offer: Shelf,
+  cart: Cart,
+  fromSku: string,
+  toSku: string,
+): Cart {
   const from = cart.lines.find((line) => line.sku === fromSku);
-  if (from === undefined || !isKnownSku(toSku)) return cart;
-  return addToCart(removeFromCart(cart, fromSku), toSku, from.qty);
+  if (from === undefined || !isKnownSku(offer, toSku)) return cart;
+  return addToCart(offer, removeFromCart(cart, fromSku), toSku, from.qty);
 }
 
 /** Packs in the jar: what the badge on the jar button counts. */
@@ -80,9 +101,10 @@ export function packCount(cart: Cart): number {
 }
 
 /** Individual shots in the jar. */
-export function shotCount(cart: Cart): number {
+export function shotCount(offer: Shelf, cart: Cart): number {
   return cart.lines.reduce(
-    (total, line) => total + line.qty * (packBySku(line.sku)?.shots ?? 0),
+    (total, line) =>
+      total + line.qty * (packBySku(offer, line.sku)?.shots ?? 0),
     0,
   );
 }
