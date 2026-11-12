@@ -119,4 +119,19 @@ test.describe("the page", () => {
     expect(missing?.status()).toBe(404);
     await expect(page.getByText(/napping cat/i)).toBeVisible();
   });
+
+  // The shop's stylesheet only scans the folders it names (app/globals.css).
+  // A file left off that list loses its utility classes without any error:
+  // the first time, it was the class that stretches the page to the bottom of
+  // the screen, and a short page ended in a band of bare navy.
+  test("fills the screen on pages shorter than it", async ({ page }) => {
+    for (const path of ["/checkout", "/not-a-page", "/order/thanks"]) {
+      await page.goto(path);
+      const gap = await page.evaluate(() => {
+        const body = document.body.getBoundingClientRect();
+        return Math.round(window.innerHeight - body.bottom);
+      });
+      expect(gap, `${path} leaves a gap under the page`).toBeLessThanOrEqual(0);
+    }
+  });
 });

@@ -25,3 +25,7 @@ public/brand/*.svg
 
 # Deliberately-bad copy the scanner's self-test must catch, kept verbatim.
 legal/test-fixtures/
+
+# Generated from db/schema by `npm run db:generate`. Never edited by hand.
+db/migrations/
+db/migrations.generated.ts

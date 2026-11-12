@@ -1,16 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
-import { CartDrawer } from "@/components/cart/CartDrawer";
-import { CartProvider } from "@/components/cart/CartProvider";
-import { Reveal } from "@/components/ui/Reveal";
 import { IS_PREVIEW } from "@/content/offer";
 import { META } from "@/content/site";
 import { THEME_COLOUR } from "@/lib/brand/colours";
 import { fontVariables } from "@/lib/brand/fonts";
 import { siteUrl } from "@/lib/site";
 
-import "./globals.css";
+/**
+ * The root: the document, the fonts and the metadata every route shares.
+ *
+ * It deliberately loads no stylesheet and no script of its own. The shop and
+ * the back end each bring theirs one level down (app/(site)/layout.tsx and
+ * app/backstage/layout.tsx), so neither ever downloads the other's.
+ */
 
 export const metadata: Metadata = {
   // Absolute base for canonical and Open Graph URLs.
@@ -53,13 +56,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en-NZ" className={fontVariables}>
-      <body className="flex min-h-dvh flex-col">
-        <CartProvider>
-          {children}
-          <CartDrawer />
-        </CartProvider>
-        <Reveal />
-      </body>
+      <body className="flex min-h-dvh flex-col">{children}</body>
     </html>
   );
 }

@@ -47,6 +47,15 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   /**
+   * PGlite is Postgres compiled to WebAssembly: the database a test, a laptop
+   * and a deployment with no DATABASE_URL run on (lib/db/client.ts). It loads
+   * its own `.wasm` and `.data` from its package folder at run time, which a
+   * bundled copy cannot do, so it is left in node_modules and required from
+   * there. With a real database connected nothing imports it at all.
+   */
+  serverExternalPackages: ["@electric-sql/pglite"],
+
+  /**
    * Where the build lands. `.next` unless something asks for somewhere else.
    *
    * Two `next build`s sharing `.next` do not fail loudly: they interleave, and

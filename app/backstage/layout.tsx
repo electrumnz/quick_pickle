@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 
 import { backstageIsOpen } from "@/lib/backstage";
 
+import "./backstage.css";
+
 export const metadata: Metadata = {
   title: { default: "Backstage", template: "%s | Quick Pickle backstage" },
   robots: { index: false, follow: false, nocache: true },

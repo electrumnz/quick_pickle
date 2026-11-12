@@ -1,0 +1,13 @@
+/* The back end's stylesheet. Loaded by app/backstage/layout.tsx and nothing
+   else, so no customer ever downloads it.
+
+   Same tokens and the same brand base as the shop (lib/brand), its own copy
+   of Tailwind, and it scans only the back end's own folders. */
+@import "tailwindcss" source(none);
+@import "../../lib/brand/tokens.css";
+@import "../../lib/brand/base.css";
+
+@source "../layout.tsx";
+@source "./";
+@source "../../components/backstage";
+@source "../../components/brand";

@@ -1,8 +1,12 @@
 import Link from "next/link";
 
 import { Art } from "@/components/brand/Art";
+import { CartDrawer } from "@/components/cart/CartDrawer";
+import { CartProvider } from "@/components/cart/CartProvider";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { NOT_FOUND } from "@/content/site";
+
+import "./globals.css";
 
 /**
  * The 404.
@@ -11,10 +15,13 @@ import { NOT_FOUND } from "@/content/site";
  * out not to exist. So nothing here may ask for a high-priority fetch: an
  * `eager` image on this page becomes a preload on EVERY page, which is how the
  * sleeping cat (40 kB) came to be the first image the home page downloaded.
+ *
+ * It sits above the shop's layout, so it brings the shop's stylesheet and the
+ * jar (the header's jar button needs one) in for itself.
  */
 export default function NotFound() {
   return (
-    <>
+    <CartProvider>
       <SiteHeader minimal />
       <main
         id="main"
@@ -40,6 +47,7 @@ export default function NotFound() {
           <span className="cap-trim">{NOT_FOUND.cta}</span>
         </Link>
       </main>
-    </>
+      <CartDrawer />
+    </CartProvider>
   );
 }
