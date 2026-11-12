@@ -8,7 +8,8 @@
       "url": ["http://localhost:3000/"],
       "numberOfRuns": 5,
       "settings": {
-        "chromeFlags": "--no-sandbox --disable-gpu --disable-dev-shm-usage"
+        "chromeFlags": "--no-sandbox --disable-gpu --disable-dev-shm-usage",
+        "throttlingMethod": "devtools"
       }
     },
     "assert": {
@@ -111,9 +112,15 @@
           }
         ],
         "largest-contentful-paint": [
-          "warn",
+          "error",
           {
             "maxNumericValue": 2500
+          }
+        ],
+        "total-blocking-time": [
+          "warn",
+          {
+            "maxNumericValue": 300
           }
         ]
       }
