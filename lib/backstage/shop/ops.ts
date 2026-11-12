@@ -582,6 +582,91 @@ function proposed(
   return { after, changed: whatChanged(before, after), labelConfirmed };
 }
 
+/**
+ * What a change asks for, in words, from what was handed over alone: money
+ * in dollars, never cents. It is what a person reads before saying yes to a
+ * change somebody else asked for, so every figure in it has to be one they
+ * cannot misread. (What it would move FROM needs the shop as it stands:
+ * that is `shop.checkChange`.)
+ */
+function askedFor(input: ChangeInput): string[] {
+  const money = (cents: number) =>
+    Number.isInteger(cents) && cents >= 0 ? formatNzd(cents) : String(cents);
+  const words = (name: string, value: string | null | undefined) => {
+    if (value === undefined) return;
+    const one = tidy(value);
+    said.push(one === null ? `${name} taken off` : `${name} to "${one}"`);
+  };
+  const said: string[] = [];
+  for (const [sku, cents] of Object.entries(input.prices ?? {})) {
+    const pack = FILE_OFFER.packs.find((each) => each.sku === sku);
+    said.push(`${pack?.name ?? sku} to ${money(cents)}`);
+  }
+  const { standardCents, ruralSurchargeCents, freeOverCents } =
+    input.shipping ?? {};
+  if (standardCents !== undefined) {
+    said.push(
+      `standard delivery to ${standardCents === 0 ? "free" : money(standardCents)}`,
+    );
+  }
+  if (ruralSurchargeCents !== undefined) {
+    said.push(
+      `the rural extra to ${ruralSurchargeCents === 0 ? "nothing" : money(ruralSurchargeCents)}`,
+    );
+  }
+  if (freeOverCents !== undefined) {
+    said.push(
+      freeOverCents === null
+        ? "no more free delivery"
+        : `free delivery on orders of ${money(freeOverCents)} or more`,
+    );
+  }
+  if (input.preorderShipsFrom !== undefined) {
+    const date = tidy(input.preorderShipsFrom);
+    said.push(
+      date === null ? "the ship date taken off" : `the ship date to ${date}`,
+    );
+  }
+  if (input.launchMode !== undefined) {
+    said.push(
+      input.launchMode === "live"
+        ? "the shop to live"
+        : "the shop to pre-order",
+    );
+  }
+  if (input.batchName !== undefined) {
+    said.push(`the batch's name to "${input.batchName}"`);
+  }
+  if (input.open !== undefined) {
+    said.push(input.open ? "taking orders" : "not taking orders");
+  }
+  if (input.contactEmail !== undefined) {
+    const address = tidy(input.contactEmail);
+    said.push(
+      address === null
+        ? "the contact address taken off"
+        : `the contact address to ${address}`,
+    );
+  }
+  if (input.gstRegistered !== undefined) {
+    said.push(
+      input.gstRegistered === null
+        ? "GST back to not known"
+        : input.gstRegistered
+          ? "registered for GST"
+          : "not registered for GST",
+    );
+  }
+  words("the ingredients list", input.label?.ingredients);
+  words("the allergen line", input.label?.contains);
+  words("the storage line", input.label?.storage);
+  words("the legal name", input.company?.legalName);
+  words("the NZBN", input.company?.nzbn);
+  words("the business address", input.company?.address);
+  words("the GST number", input.company?.gstNumber);
+  return said;
+}
+
 export const checkShopChange = defineOp({
   name: "shop.checkChange",
   title: "See what a change to the shop would do, without making it",
@@ -606,8 +691,12 @@ export const changeShop = defineOp({
   access: "write",
   effect: "outward",
   input: changeInput,
-  explain: () =>
-    "This changes what every customer sees and is charged from now on.",
+  explain: (input) => {
+    const asked = askedFor(input);
+    return asked.length === 0
+      ? "This changes what every customer sees and is charged from now on."
+      : `This changes what every customer sees and is charged from now on: ${asked.join("; ")}.`;
+  },
   async run(ctx, input): Promise<{ offer: Offer; changed: string[] }> {
     // One change at a time: the row is held until this is done.
     await ctx.db

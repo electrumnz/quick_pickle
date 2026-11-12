@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { createdAt, instant, updatedAt } from "./_shared";
+import { connections } from "./connect";
 import { events, users } from "./core";
 
 /** One step: an operation to run, and what to hand it. */
@@ -131,8 +132,25 @@ export const approvals = pgTable(
     input: jsonb().$type<Record<string, unknown>>().notNull().default({}),
     /** What it would do, said plainly. Shown to the person deciding. */
     explain: text().notNull(),
+    /**
+     *   waiting    nobody has decided
+     *   running    a person said yes, and it is being done
+     *   done       it was done; `result` says what came back
+     *   failed     a person said yes and it could not be done; `result` says why
+     *   declined   a person said no
+     *   expired    nobody decided in time
+     *   approved   kept for rows written before `running` existed
+     */
     status: text()
-      .$type<"waiting" | "approved" | "declined" | "expired" | "failed">()
+      .$type<
+        | "waiting"
+        | "approved"
+        | "running"
+        | "done"
+        | "declined"
+        | "expired"
+        | "failed"
+      >()
       .notNull()
       .default("waiting"),
     decidedBy: text().references(() => users.id, { onDelete: "set null" }),
@@ -140,6 +158,10 @@ export const approvals = pgTable(
     /** What came back when it ran, or why it failed. */
     result: jsonb().$type<Record<string, unknown>>(),
     runId: text().references(() => automationRuns.id, { onDelete: "set null" }),
+    /** The connection that asked, when a bot did. */
+    connectionId: text().references(() => connections.id, {
+      onDelete: "set null",
+    }),
     expiresAt: instant("expires_at"),
   },
   (t) => [index("approvals_waiting_idx").on(t.status, t.requestedAt)],

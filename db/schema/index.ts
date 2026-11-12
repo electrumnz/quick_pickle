@@ -5,6 +5,7 @@
 export * from "./analytics";
 export * from "./automation";
 export * from "./commerce";
+export * from "./connect";
 export * from "./core";
 export * from "./files";
 export * from "./mail";

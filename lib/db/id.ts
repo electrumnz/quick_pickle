@@ -56,6 +56,8 @@ export type IdPrefix =
   | "aut" // automation
   | "run" // automation or routine run
   | "apr" // approval request
+  | "cli" // an app registered to ask for a connection
+  | "cxn" // a connection: one person's Claude, let in
   | "fil" // stored file
   | "tok"; // api or oauth token
 

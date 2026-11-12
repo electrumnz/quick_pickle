@@ -322,5 +322,29 @@ export const MIGRATIONS: readonly Migration[] = [
       "CREATE INDEX \"payment_disputes_order_idx\" ON \"payment_disputes\" USING btree (\"order_id\");",
       "CREATE INDEX \"payment_disputes_status_idx\" ON \"payment_disputes\" USING btree (\"status\");"
     ]
+  },
+  {
+    "tag": "0011_connections",
+    "hash": "a234a911f0801538",
+    "statements": [
+      "CREATE TABLE \"connections\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"user_id\" text NOT NULL,\n\t\"bot_user_id\" text NOT NULL,\n\t\"client_id\" text,\n\t\"client_name\" text NOT NULL,\n\t\"role\" text NOT NULL,\n\t\"resource\" text NOT NULL,\n\t\"access_hash\" text NOT NULL,\n\t\"access_expires_at\" timestamp with time zone NOT NULL,\n\t\"refresh_hash\" text NOT NULL,\n\t\"prev_refresh_hash\" text,\n\t\"rotated_at\" timestamp with time zone,\n\t\"refresh_expires_at\" timestamp with time zone NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"last_used_at\" timestamp with time zone,\n\t\"revoked_at\" timestamp with time zone,\n\t\"revoked_why\" text\n);",
+      "ALTER TABLE \"connections\" ENABLE ROW LEVEL SECURITY;",
+      "CREATE TABLE \"oauth_clients\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"name\" text NOT NULL,\n\t\"redirect_uris\" jsonb NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"last_used_at\" timestamp with time zone\n);",
+      "ALTER TABLE \"oauth_clients\" ENABLE ROW LEVEL SECURITY;",
+      "CREATE TABLE \"oauth_codes\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"client_id\" text NOT NULL,\n\t\"user_id\" text NOT NULL,\n\t\"role\" text NOT NULL,\n\t\"redirect_uri\" text NOT NULL,\n\t\"code_challenge\" text NOT NULL,\n\t\"resource\" text NOT NULL,\n\t\"expires_at\" timestamp with time zone NOT NULL,\n\t\"used_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"oauth_codes\" ENABLE ROW LEVEL SECURITY;",
+      "ALTER TABLE \"approvals\" ADD COLUMN \"connection_id\" text;",
+      "ALTER TABLE \"connections\" ADD CONSTRAINT \"connections_user_id_users_id_fk\" FOREIGN KEY (\"user_id\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"connections\" ADD CONSTRAINT \"connections_bot_user_id_users_id_fk\" FOREIGN KEY (\"bot_user_id\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"connections\" ADD CONSTRAINT \"connections_client_id_oauth_clients_id_fk\" FOREIGN KEY (\"client_id\") REFERENCES \"public\".\"oauth_clients\"(\"id\") ON DELETE set null ON UPDATE no action;",
+      "ALTER TABLE \"oauth_codes\" ADD CONSTRAINT \"oauth_codes_client_id_oauth_clients_id_fk\" FOREIGN KEY (\"client_id\") REFERENCES \"public\".\"oauth_clients\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"oauth_codes\" ADD CONSTRAINT \"oauth_codes_user_id_users_id_fk\" FOREIGN KEY (\"user_id\") REFERENCES \"public\".\"users\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "CREATE UNIQUE INDEX \"connections_access_key\" ON \"connections\" USING btree (\"access_hash\");",
+      "CREATE UNIQUE INDEX \"connections_refresh_key\" ON \"connections\" USING btree (\"refresh_hash\");",
+      "CREATE INDEX \"connections_prev_refresh_idx\" ON \"connections\" USING btree (\"prev_refresh_hash\");",
+      "CREATE INDEX \"connections_user_idx\" ON \"connections\" USING btree (\"user_id\");",
+      "CREATE INDEX \"oauth_codes_expires_idx\" ON \"oauth_codes\" USING btree (\"expires_at\");",
+      "ALTER TABLE \"approvals\" ADD CONSTRAINT \"approvals_connection_id_connections_id_fk\" FOREIGN KEY (\"connection_id\") REFERENCES \"public\".\"connections\"(\"id\") ON DELETE set null ON UPDATE no action;"
+    ]
   }
 ];

@@ -14,6 +14,8 @@
  *     so its first and last day show on the page within minutes.
  *   - the morning email is written, once a New Zealand morning, if somebody
  *     has switched it on.
+ *   - a request for a person's yes that has waited a week lapses, and what
+ *     is left over from connecting Claude is cleared away.
  *
  * Everything here is safe to do twice, and two ticks at once do not trip
  * over each other: events are claimed with a lease, and every change to an
@@ -156,6 +158,16 @@ export async function tick(options: TickOptions = {}): Promise<TickSummary> {
   // round, so a first day arriving or a last day passing shows within
   // minutes. Housekeeping too: never a reason to fail the tick.
   await keepSpecialsFresh(db, now).catch(() => false);
+  // Requests for a yes that waited too long lapse, and the leftovers of
+  // connecting Claude (used codes, apps that were never let in) are cleared.
+  // Housekeeping too. (Asked for here, not at the top: the connection's
+  // operations know Today, and Today reads the clock.)
+  await (async () => {
+    const { expireApprovals } = await import("../connect/approvals");
+    const { tidyConnections } = await import("../connect/oauth");
+    await expireApprovals(db, now);
+    await tidyConnections(db, now);
+  })().catch(() => null);
 
   const summary: TickSummary = {
     at: now.toISOString(),
