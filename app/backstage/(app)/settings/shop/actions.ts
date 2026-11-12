@@ -7,13 +7,21 @@ import { revalidatePath } from "next/cache";
 import { staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
+import { emailCustomer } from "@/lib/backstage/orders/emails";
+import { shipDateStanding } from "@/lib/backstage/orders/ship-date";
 import {
   changeShop,
   checkShopChange,
   confirmFact,
   shopOffer,
 } from "@/lib/backstage/shop/ops";
-import { formCents, formText, submit } from "@/lib/backstage/ui/submit";
+import {
+  formCents,
+  formText,
+  sayAndGo,
+  submit,
+} from "@/lib/backstage/ui/submit";
+import { mailConnection } from "@/lib/mail";
 
 /**
  * Changing the shop: prices, delivery, the ship date, pre-order or live,
@@ -235,4 +243,71 @@ export async function confirmFactAction(form: FormData): Promise<void> {
           : "Marked as not confirmed.",
     },
   );
+}
+
+/**
+ * Email everybody with a pre-order who has not been told the ship date.
+ *
+ * One press, one email each, and only for the date the person pressing was
+ * shown: if the date has been changed since their page was drawn, nothing
+ * is sent and they look again. Somebody already told that date gets nothing
+ * (the operation writes one email for each date, however often it is asked).
+ */
+export async function tellShipDateAction(form: FormData): Promise<void> {
+  const back = "/backstage/settings/shop#pre-orders";
+  const caller = await staffCaller();
+  // With no way to send, writing these down would use up each customer's
+  // one email for this date and tell nobody.
+  const mail = mailConnection();
+  if (!mail.delivers) {
+    sayAndGo(
+      back,
+      "Order emails are not connected, so nobody was told. Nothing was written down.",
+      "bad",
+    );
+  }
+  const standing = await execute(shipDateStanding, {}, caller);
+  if (standing.cannot !== null) sayAndGo(back, standing.cannot, "bad");
+  if (standing.date !== formText(form, "date")) {
+    sayAndGo(
+      back,
+      "The ship date has changed since this page was drawn. Have another look, then tell them.",
+      "bad",
+    );
+  }
+
+  let told = 0;
+  const refused: string[] = [];
+  for (const one of standing.owed) {
+    // On the do-not-email list: nothing may go to them. They are named on
+    // the screen, to be told another way.
+    if (one.blocked) continue;
+    try {
+      const done = await execute(
+        emailCustomer,
+        { number: one.number, about: "ship_date" },
+        caller,
+      );
+      if (done.written && !done.already) told += 1;
+    } catch (error) {
+      if (!(error instanceof OpError)) throw error;
+      refused.push(one.number);
+    }
+  }
+  const blocked = standing.owed.filter((one) => one.blocked).length;
+  const said = [
+    told === 0
+      ? "Nobody was emailed."
+      : `Wrote to ${String(told)} ${told === 1 ? "person" : "people"}: it ships from ${standing.dateSaid ?? standing.date ?? ""}.`,
+    ...(refused.length === 0
+      ? []
+      : [`Could not write to ${refused.join(", ")}.`]),
+    ...(blocked === 0
+      ? []
+      : [
+          `${String(blocked)} cannot be emailed and ${blocked === 1 ? "is" : "are"} still to be told another way.`,
+        ]),
+    ...(standing.more ? ["There are more: press it again."] : []),
+  ].join(" ");
+  sayAndGo(back, said, refused.length > 0 || told === 0 ? "bad" : "good");
 }

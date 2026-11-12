@@ -112,7 +112,8 @@ Nobody is charged a price they were not shown. If a customer is part-way through
 ## When a pre-order's ship date changes
 
 12. [ ] Set the new date on [The shop](${LINK.shop}).
-13. [ ] Email everybody with a pre-order that has not shipped. The site promises they will hear from you, and nothing sends that by itself. Who does it: ____.
+13. [ ] Tell everybody with a pre-order that has not shipped. The site promises they will hear from you. Under the form on [The shop](${LINK.shop}) a panel says how many have not been told the new date. Press **Email them** and each gets one email with it. [Today](${LINK.today}) shows it until it is done.
+14. [ ] If order emails are not connected yet, the panel lists whose orders they are. Write to each yourself. Who does it: ____.
 
 ## Saying a figure is right
 

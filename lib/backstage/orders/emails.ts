@@ -5,6 +5,8 @@
  *   shipped    when it is marked as on the courier, with tracking if any
  *   cancelled  when a person cancels it
  *   refunded   when a payment is on its way back through the processor
+ *   ship_date  the date a pre-order ships from, when a person says to tell
+ *              the people waiting on it (./ship-date.ts)
  *
  * Each is one operation, `orders.emailCustomer`, set off by a listener after
  * the change that caused it has been saved (lib/backstage/handlers.ts). It
@@ -49,13 +51,14 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { ORDER_EMAILS as W } from "@/content/emails";
 import { shipDateText } from "@/content/faq";
 import { disputes, mailMessages, orderLines, refunds } from "@/db/schema";
 import { ID_ALPHABET } from "@/lib/db/id";
+import type { DbOrTx } from "@/lib/db/types";
 import {
   compose,
   data,
@@ -79,6 +82,7 @@ import { defineOp, execute } from "../core/op";
 import { writeOutbound } from "../mail/outbound";
 import { findPromo } from "../marketing/promo";
 import { readShop } from "../shop/ops";
+import { todayKey } from "../stock/dates";
 import { loadOrder, type OrderRow } from "./load";
 
 export const ORDER_EMAIL_KINDS = [
@@ -86,6 +90,7 @@ export const ORDER_EMAIL_KINDS = [
   "shipped",
   "cancelled",
   "refunded",
+  "ship_date",
 ] as const;
 
 export type OrderEmailKind = (typeof ORDER_EMAIL_KINDS)[number];
@@ -96,6 +101,7 @@ export const ORDER_EMAIL_LABEL: Readonly<Record<OrderEmailKind, string>> = {
   shipped: "On the courier",
   cancelled: "Cancelled",
   refunded: "Payment on its way back",
+  ship_date: "Ship date",
 };
 
 /** And in a sentence in the activity log. */
@@ -104,6 +110,7 @@ const SAID_AS: Readonly<Record<OrderEmailKind, string>> = {
   shipped: "the on-the-courier email",
   cancelled: "the cancelled email",
   refunded: "the email about a payment on its way back",
+  ship_date: "the ship-date email",
 };
 
 type LineRow = typeof orderLines.$inferSelect;
@@ -130,11 +137,33 @@ export function orderEmailId(orderId: string, key: string): string {
    Is it true yet, and may it go
    --------------------------------------------------------------------- */
 
+/**
+ * Is a pre-order still waiting to be sent: paid for, not cancelled, not on
+ * the courier yet? Only these are told a ship date. (./ship-date.ts asks the
+ * database the same question for all of them at once.)
+ */
+export function awaitsShipping(
+  order: Pick<
+    OrderRow,
+    "mode" | "status" | "paidAt" | "paymentStatus" | "isTest"
+  >,
+): boolean {
+  return (
+    order.mode === "preorder" &&
+    order.paidAt !== null &&
+    (order.paymentStatus === "paid" ||
+      order.paymentStatus === "part_refunded") &&
+    (order.status === "paid" || order.status === "packed")
+  );
+}
+
 /** Why an email is not due, in a sentence, or null if it is. */
 function notDue(
   order: OrderRow,
   about: OrderEmailKind,
   refund: RefundRow | undefined,
+  shop: Shop,
+  today: string,
 ): string | null {
   switch (about) {
     case "receipt": {
@@ -176,6 +205,20 @@ function notDue(
       return refund.status === "done"
         ? null
         : `That refund on ${order.number} has not gone through.`;
+    case "ship_date":
+      if (order.mode !== "preorder") {
+        return `${order.number} is not a pre-order, so there is no ship date to tell.`;
+      }
+      if (!awaitsShipping(order)) {
+        return `${order.number} is not a paid pre-order that is still waiting to be sent.`;
+      }
+      if (shop.preorderShipsFrom === null) {
+        return "No ship date is set. Set it in the shop's settings first.";
+      }
+      // A date that has gone by is not news to send anybody.
+      return shop.preorderShipsFrom < today
+        ? "The ship date that is set has gone by. Set the new one first."
+        : null;
   }
 }
 
@@ -408,6 +451,41 @@ function shippedDoc(order: OrderRow, left: string[], shop: Shop): EmailDoc {
   };
 }
 
+/**
+ * The date a pre-order ships from. `changed`: this customer has been told a
+ * different date before, so this one says that it has moved.
+ */
+function shipDateDoc(
+  order: OrderRow,
+  shop: Shop,
+  date: string,
+  changed: boolean,
+): EmailDoc {
+  return {
+    subject: subjectFor(
+      order,
+      changed ? W.shipDate.subjectTailChanged : W.shipDate.subjectTail,
+    ),
+    blocks: [
+      greeting(order),
+      {
+        kind: "text",
+        lines: [
+          [
+            `${changed ? W.shipDate.leadChanged : W.shipDate.lead} `,
+            data(date),
+            ".",
+          ],
+          [W.shipDate.next],
+          [W.shipDate.notSuit],
+        ],
+      },
+      { kind: "rows", rows: [numbered(order)] },
+      ...closing(shop),
+    ],
+  };
+}
+
 function cancelledDoc(order: OrderRow, shop: Shop): EmailDoc {
   const lines: Line[] = [[W.cancelled.lead]];
   // What is true of the money, as it stands. Where money came in and does
@@ -454,6 +532,55 @@ function refundedDoc(order: OrderRow, refund: RefundRow, shop: Shop): EmailDoc {
       ...closing(shop),
     ],
   };
+}
+
+/* ------------------------------------------------------------------------
+   What a customer has been told about the ship date
+   --------------------------------------------------------------------- */
+
+export type ShipDateSaid = {
+  readonly id: string;
+  /** A receipt that stated the date, or an email written to say it. */
+  readonly kind: "receipt" | "ship_date";
+  /** The date it said: "2026-12-01". */
+  readonly date: string;
+  readonly status: (typeof mailMessages.$inferSelect)["status"];
+  /** It went, or is going. Anything else has not told the customer. */
+  readonly told: boolean;
+};
+
+/**
+ * Every email of an order's that said a ship date, oldest first. Each one
+ * carries the date it said in a note of ours (`qp:ship-date`), which is
+ * never sent.
+ */
+export async function shipDatesSaid(
+  db: DbOrTx,
+  orderId: string,
+): Promise<ShipDateSaid[]> {
+  const rows = await db
+    .select({
+      id: mailMessages.id,
+      status: mailMessages.status,
+      headers: mailMessages.headers,
+    })
+    .from(mailMessages)
+    .where(
+      and(
+        sql`${mailMessages.headers}->>'qp:order' = ${orderId}`,
+        sql`${mailMessages.headers}->>'qp:ship-date' is not null`,
+      ),
+    )
+    .orderBy(asc(mailMessages.createdAt));
+  return rows.map((row) => ({
+    id: row.id,
+    kind: (row.headers["qp:order-email"] ?? "").startsWith("ship-date:")
+      ? "ship_date"
+      : "receipt",
+    date: row.headers["qp:ship-date"] ?? "",
+    status: row.status,
+    told: row.status === "queued" || row.status === "sent",
+  }));
 }
 
 /* ------------------------------------------------------------------------
@@ -518,7 +645,10 @@ export const emailCustomer = defineOp({
               ),
             );
 
-    let why = notDue(order, about, refund);
+    // The batch's name, the ship date and the contact address as the back
+    // end has them now.
+    const shop: Shop = (await readShop(ctx.db)).offer;
+    let why = notDue(order, about, refund, shop, todayKey(ctx.now));
     if (why === null && refund !== undefined) {
       // Money a bank took back in a card dispute is written down as given
       // back, so the order and the books are true. It is not a refund on
@@ -546,7 +676,46 @@ export const emailCustomer = defineOp({
       return { written: false, why };
     }
 
-    const key = refund === undefined ? about : `${about}:${refund.id}`;
+    // What this customer has been told about a ship date so far: by an
+    // email like this one, or by a receipt that said it.
+    const dated = about === "ship_date" ? shop.preorderShipsFrom : null;
+    const said = dated === null ? [] : await shipDatesSaid(ctx.db, order.id);
+    let key = refund === undefined ? about : `${about}:${refund.id}`;
+    if (dated !== null) {
+      // One email for each date. An earlier one for this date that went, or
+      // is going, or was tried and failed (which has its own way to be
+      // tried again) is the one: nothing more is written. One that was
+      // written down and never sent, because email was not connected, is
+      // not the customer being told, so another may be written after it.
+      const forDate = said.filter(
+        (one) => one.kind === "ship_date" && one.date === dated,
+      );
+      const stands = forDate.find((one) => one.status !== "not_sent");
+      if (stands !== undefined) {
+        ctx.nothingChanged();
+        return {
+          written: true,
+          messageId: stands.id,
+          status: stands.status,
+          already: true,
+        };
+      }
+      if (
+        said.some(
+          (one) => one.kind === "receipt" && one.date === dated && one.told,
+        )
+      ) {
+        ctx.nothingChanged();
+        return {
+          written: false,
+          why: `${order.number}'s receipt already said it ships from ${shipDateText(shop) ?? dated}.`,
+        };
+      }
+      key =
+        forDate.length === 0
+          ? `ship-date:${dated}`
+          : `ship-date:${dated}:${String(forDate.length + 1)}`;
+    }
     const id = orderEmailId(order.id, key);
     const [before] = await ctx.db
       .select({ status: mailMessages.status })
@@ -563,9 +732,6 @@ export const emailCustomer = defineOp({
     }
 
     const left: string[] = [];
-    // The batch's name, the ship date and the contact address as the back
-    // end has them now.
-    const shop: Shop = (await readShop(ctx.db)).offer;
     let doc: EmailDoc;
     if (about === "receipt") {
       const lines = await ctx.db
@@ -588,11 +754,30 @@ export const emailCustomer = defineOp({
       doc = shippedDoc(order, left, shop);
     } else if (about === "cancelled") {
       doc = cancelledDoc(order, shop);
+    } else if (about === "ship_date") {
+      // `notDue` has already refused a shop with no date.
+      const date = shipDateText(shop);
+      if (dated === null || date === null) throw new Error("No ship date.");
+      doc = shipDateDoc(
+        order,
+        shop,
+        date,
+        said.some((one) => one.told && one.date !== dated),
+      );
     } else {
       // `notDue` has already refused a refund that is not there.
       if (refund === undefined) throw new Error("The refund has gone.");
       doc = refundedDoc(order, refund, shop);
     }
+
+    // The ship date this email says, if it says one: a pre-order's real
+    // receipt once a date is set, and the email written to say it.
+    const statedShipDate =
+      about === "ship_date"
+        ? dated
+        : about === "receipt" && order.mode === "preorder" && !order.isTest
+          ? shop.preorderShipsFrom
+          : null;
 
     // The last look, on the finished email, by the rules everything that
     // leaves is held to. The customer's own name and address are theirs and
@@ -611,7 +796,13 @@ export const emailCustomer = defineOp({
       html: email.html,
       kind: "transactional",
       links: [{ entityType: "order", entityId: order.id }],
-      notes: { "qp:order": order.id, "qp:order-email": key },
+      notes: {
+        "qp:order": order.id,
+        "qp:order-email": key,
+        // A receipt that says the ship date has told the customer it. The
+        // note is how anything asking "who has not been told?" knows.
+        ...(statedShipDate === null ? {} : { "qp:ship-date": statedShipDate }),
+      },
       notSent: heldBack(order, about, refund),
     });
 
@@ -698,6 +889,10 @@ export const listOrderEmails = defineOp({
           ],
       ),
     ]);
+    // One for each date that has been told, and found by what they said.
+    for (const one of await shipDatesSaid(ctx.db, order.id)) {
+      if (one.kind === "ship_date") wanted.set(one.id, "ship_date");
+    }
     const rows = await ctx.db
       .select({
         id: mailMessages.id,

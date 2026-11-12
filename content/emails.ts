@@ -14,7 +14,7 @@
  *
  * Each names who it is from (the shop's own name) and how to reach us (reply
  * to it). The customer email address is added the day it is confirmed
- * (STORE.contactEmail). The legal entity and GST are not confirmed either
+ * (the shop's settings). The legal entity and GST are not confirmed either
  * (content/offer.ts UNCONFIRMED), so neither is stated: nothing here is
  * guessed.
  */
@@ -81,6 +81,26 @@ export const ORDER_EMAILS = {
     subjectTail: "nothing was charged",
     lead: THANKS.sandboxNote,
     after: "This is how the receipt for a real order reads.",
+  },
+
+  /**
+   * The date a pre-order ships from: the email the page promises ("we'll
+   * email you the ship date"). One for each date, so a date that moves is
+   * told again, in other words. It says the date and how to answer, and
+   * nothing else: what happens to a pre-order nobody wants any more is the
+   * returns page's to say, not an email's.
+   */
+  shipDate: {
+    /** After the receipt's subject and the order number. */
+    subjectTail: "has a ship date",
+    subjectTailChanged: "has a new ship date",
+    /** The date and a full stop follow. */
+    lead: "Your pre-order has a ship date. It ships from",
+    leadChanged:
+      "The ship date for your pre-order has changed. It now ships from",
+    next: "We'll email you again when it's on the courier.",
+    notSuit:
+      "If that date doesn't suit, reply to this email and we'll sort it with you.",
   },
 
   shipped: {
