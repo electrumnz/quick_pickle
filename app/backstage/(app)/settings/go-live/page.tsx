@@ -3,10 +3,14 @@ import Link from "next/link";
 
 import { CheckIcon } from "@/components/brand/Icons";
 import { PACKS, PRODUCT, SHIPPING, STORE, UNCONFIRMED } from "@/content/offer";
-import { formatNzd } from "@/lib/shop/money";
-import { getPaymentProvider } from "@/lib/shop/payments";
-import { getStore } from "@/lib/shop/store";
 import { requireStaff } from "@/lib/backstage/auth/current";
+import { lastTick } from "@/lib/backstage/clock/tick";
+import { listStuckEvents } from "@/lib/backstage/core/events";
+import { getDb } from "@/lib/db/client";
+import { formatNzd } from "@/lib/shop/money";
+import { checkoutMode, getPaymentProvider } from "@/lib/shop/payments";
+import { getStore } from "@/lib/shop/store";
+import { formatNzDateTime, formatNzRelative, minutesSince } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Go-live list" };
 
@@ -34,13 +38,44 @@ export default async function GoLivePage() {
     }
   })();
 
+  const mode = checkoutMode();
+
+  // The clock: the timed request that retries a step that failed and closes
+  // an order nobody paid for. Quiet for 20 minutes means it has stopped.
+  const db = await getDb();
+  const pulse = await lastTick(db);
+  const pulseAt = pulse === null ? null : new Date(pulse.at);
+  const ticking = pulseAt !== null && minutesSince(pulseAt) < 20;
+  const stuck = await listStuckEvents(db, 200);
+  const gaveUp = stuck.filter((event) => event.gaveUp).length;
+
   const systems = [
     {
       ok: payments.live,
       label: "Payments",
       detail: payments.live
         ? `Live, through ${payments.name}.`
-        : "Test mode. The checkout records an order and charges nobody.",
+        : mode === "sandbox"
+          ? `${payments.name === "stripe" ? "Stripe" : payments.name} in its test mode. Buyers reach the real payment page, and no real money moves.`
+          : "Test mode. The checkout records an order and charges nobody.",
+    },
+    {
+      ok: ticking,
+      label: "The clock",
+      detail:
+        pulseAt === null
+          ? "Has never run. Until it does, nothing tries a failed step again or closes an order nobody paid for."
+          : ticking
+            ? `Running. Last ran ${formatNzRelative(pulseAt)}.`
+            : `Stopped. It last ran ${formatNzDateTime(pulseAt)}.`,
+    },
+    {
+      ok: stuck.length === 0,
+      label: "Steps that failed",
+      detail:
+        stuck.length === 0
+          ? "None waiting."
+          : `${String(stuck.length)} waiting to be tried again${gaveUp > 0 ? `, ${String(gaveUp)} of them out of tries and needing a person` : ""}.`,
     },
     {
       ok: store.durable && store.name !== "file",

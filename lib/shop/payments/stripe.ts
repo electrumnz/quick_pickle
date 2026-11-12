@@ -18,6 +18,9 @@ import type { ChargeRequest, PaymentProvider, PaymentStart } from "./index";
 
 const API = "https://api.stripe.com";
 
+/** Stripe answers in well under a second. Twenty is "it is not going to". */
+const TIMEOUT_MS = 20_000;
+
 type Fetch = typeof fetch;
 
 export class StripeError extends Error {
@@ -87,7 +90,14 @@ async function call<T>(
   if (options.idempotencyKey !== undefined) {
     headers["Idempotency-Key"] = options.idempotencyKey;
   }
-  const response = await fetchImpl(`${API}${path}`, { method, headers, body });
+  const response = await fetchImpl(`${API}${path}`, {
+    method,
+    headers,
+    body,
+    // A call that hangs would hold a buyer's request, or a listener's lease,
+    // until the platform killed it. Better a clean failure and another try.
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
   const text = await response.text();
   let json: unknown = null;
   try {

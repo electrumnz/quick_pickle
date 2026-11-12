@@ -10,7 +10,7 @@
 
 import "server-only";
 
-import { systemCaller } from "@/lib/backstage/core/actor";
+import { systemCaller, type Caller } from "@/lib/backstage/core/actor";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
 import {
@@ -65,9 +65,11 @@ export async function settleOnReturn(
   options: {
     readonly env?: Record<string, string | undefined>;
     readonly fetchImpl?: typeof fetch;
+    /** Who is asking. The shop, unless the clock is doing its rounds. */
+    readonly as?: Caller;
   } = {},
 ): Promise<Settlement> {
-  const shop = systemCaller("The shop", "storefront");
+  const shop = options.as ?? systemCaller("The shop", "storefront");
   try {
     const state = await execute(paymentState, { number }, shop);
     if (state.status === "cancelled") {

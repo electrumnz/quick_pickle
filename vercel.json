@@ -4,5 +4,11 @@
     "deploymentEnabled": {
       "claude/pickle-juice-brand-site-qu6jrr": false
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/tick",
+      "schedule": "23 14 * * *"
+    }
+  ]
 }

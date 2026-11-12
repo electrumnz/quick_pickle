@@ -162,6 +162,15 @@ on after eight tries, where a person can send it round again. So **every listene
 safe to run twice**. `lib/backstage/handlers.ts` is the one list of who hears about what.
 Tests leave the dispatcher off and call `processEvents` themselves.
 
+**The clock** (`lib/backstage/clock/tick.ts`, reached at `/api/tick`) is what makes "later"
+and "again" happen: it gives failed listeners their next try and settles an order still
+unpaid long after its payment page ran out. The database's own scheduler rings it every
+five minutes (pg_cron and pg_net, set up by the infra workflow's `connect-clock`), with
+`CRON_SECRET`; the host's daily cron in `vercel.json` is a second caller. It lives with the
+database so that it survives a change of host. Everything it does is safe to do twice, and
+it can be minutes late, so nothing in the product may promise a time to the minute. The
+go-live list shows when it last ran and what is stuck.
+
 ### Commerce
 
 - `content/offer.ts` is the catalogue. Money is integer cents; never a float in a price path.

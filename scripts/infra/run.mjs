@@ -327,6 +327,7 @@ async function supabaseStatus() {
         `    events ${String(row.type)}: ${String(row.n)}${row.waiting > 0 ? `, ${String(row.waiting)} waiting (most tries ${String(row.most_tries)})` : ""}`,
       );
     }
+    await clockStatus();
   } else {
     console.log(
       "  the app has not connected yet (no qp_migrations table). It makes its own tables the first time it does.",
@@ -772,6 +773,18 @@ async function stripeCheck() {
   stripeChecked = true;
 }
 
+/** The address the public reaches the site at. */
+async function productionHost() {
+  const domains = await vercel(`/v9/projects/${vercelProject}/domains`);
+  const host = (domains?.domains ?? []).find(
+    (domain) => domain.verified !== false,
+  )?.name;
+  if (typeof host !== "string" || !/^[a-z0-9.-]+$/.test(host)) {
+    fail("Could not find the site's address.");
+  }
+  return host;
+}
+
 /**
  * Switches production's checkout from "practice" to Stripe.
  *
@@ -799,13 +812,7 @@ async function connectStripe() {
     return;
   }
 
-  const domains = await vercel(`/v9/projects/${vercelProject}/domains`);
-  const host = (domains?.domains ?? []).find(
-    (domain) => domain.verified !== false,
-  )?.name;
-  if (typeof host !== "string" || host === "") {
-    fail("Could not find the site's address to give to Stripe.");
-  }
+  const host = await productionHost();
   const url = `https://${host}/api/stripe/webhook`;
 
   // The signing secret is only shown when an endpoint is made, so an
@@ -862,6 +869,173 @@ async function disconnectStripe() {
   changedSettings = true;
 }
 
+// --- The clock --------------------------------------------------------------
+
+const CLOCK_JOB = "qp-tick";
+const CLOCK_TIDY_JOB = "qp-tick-tidy";
+const CLOCK_SECRET = "qp_tick_secret";
+
+function writeQuery(query) {
+  return supabase(`/v1/projects/${supabaseRef}/database/query`, {
+    method: "POST",
+    body: { query },
+  });
+}
+
+/**
+ * Gives the back end a clock.
+ *
+ * The database's own scheduler (pg_cron) asks the site's /api/tick every
+ * five minutes (pg_net), with a secret only the two of them hold: it is made
+ * here, kept in the database's vault and in production's settings, and
+ * never printed. The scheduler lives with the database rather than the host,
+ * so it carries on whoever hosts the site.
+ *
+ * Running it again makes a new secret in both places. Until the redeploy
+ * that follows has finished, the site turns the clock away; nothing is lost,
+ * the next tick does the work.
+ */
+async function connectClock() {
+  if (!confirmed) fail('This changes settings. Ask again with confirm "yes".');
+
+  const offered = await readOnlyQuery(
+    "select name, installed_version is not null as installed from pg_catalog.pg_available_extensions where name in ('pg_cron', 'pg_net', 'supabase_vault')",
+  );
+  const installed = new Map(
+    (Array.isArray(offered) ? offered : []).map((row) => [
+      String(row.name),
+      row.installed === true,
+    ]),
+  );
+  for (const needed of ["pg_cron", "pg_net", "supabase_vault"]) {
+    if (!installed.has(needed)) {
+      fail(`This database does not offer ${needed}.`);
+    }
+  }
+  // Only what is not already on is switched on.
+  const switchOn = [
+    [
+      "pg_cron",
+      "switch the scheduler on",
+      "create extension if not exists pg_cron with schema pg_catalog",
+    ],
+    [
+      "pg_net",
+      "switch outgoing requests on",
+      "create extension if not exists pg_net",
+    ],
+    [
+      "supabase_vault",
+      "switch the vault on",
+      "create extension if not exists supabase_vault",
+    ],
+  ]
+    .filter(([name]) => installed.get(name) !== true)
+    .map(([, what, query]) => [what, query]);
+
+  const host = await productionHost();
+  const secret = randomBytes(32).toString("hex");
+  mask(secret);
+
+  // One step at a time, so a failure says which. A failure's own message is
+  // not printed: one of these statements carries the secret.
+  const steps = [
+    ...switchOn,
+    [
+      "keep the secret in the vault",
+      `do $do$ declare found uuid; begin select id into found from vault.secrets where name = '${CLOCK_SECRET}'; if found is null then perform vault.create_secret('${secret}', '${CLOCK_SECRET}', 'What the database says to the site when it rings the clock.'); else perform vault.update_secret(found, '${secret}'); end if; end $do$`,
+    ],
+    [
+      "set the clock going",
+      `select cron.schedule('${CLOCK_JOB}', '*/5 * * * *', $job$select net.http_get(url := 'https://${host}/api/tick', headers := jsonb_build_object('Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = '${CLOCK_SECRET}')), timeout_milliseconds := 55000)$job$)`,
+    ],
+    [
+      "keep the scheduler's own history short",
+      `select cron.schedule('${CLOCK_TIDY_JOB}', '17 3 * * *', $job$delete from cron.job_run_details where end_time < now() - interval '3 days'$job$)`,
+    ],
+  ];
+  for (const [what, query] of steps) {
+    try {
+      await writeQuery(query);
+    } catch (error) {
+      // The reason is said for every step but the one that holds the secret.
+      const why =
+        what.includes("secret") || !(error instanceof Error)
+          ? ""
+          : ` (${error.message.slice(0, 200)})`;
+      fail(`Setting up the clock failed where it tried to ${what}.${why}`);
+    }
+    console.log(`  ok   ${what}`);
+  }
+
+  await vercel(`/v10/projects/${vercelProject}/env?upsert=true`, {
+    method: "POST",
+    body: {
+      key: "CRON_SECRET",
+      value: secret,
+      type: "sensitive",
+      target: ["production"],
+      comment:
+        "What the clock says to /api/tick. Made by the infra workflow; the database's vault holds the same value.",
+    },
+  });
+  console.log(
+    `  the database will ask ${host} to tick every five minutes. CRON_SECRET saved for production.`,
+  );
+  changedSettings = true;
+}
+
+/** Stops the clock. The secret and the endpoint stay; nothing calls it. */
+async function disconnectClock() {
+  if (!confirmed) fail('This changes settings. Ask again with confirm "yes".');
+  for (const job of [CLOCK_JOB, CLOCK_TIDY_JOB]) {
+    try {
+      await writeQuery(
+        `select cron.unschedule(jobid) from cron.job where jobname = '${job}'`,
+      );
+    } catch {
+      fail(`Could not stop ${job}.`);
+    }
+  }
+  console.log("  the clock is stopped.");
+}
+
+/** Is the clock going, and is the site answering it? Counts and times only. */
+async function clockStatus() {
+  const pulse = await readOnlyQuery(
+    "select value->>'at' as at, round(extract(epoch from (now() - (value->>'at')::timestamptz)) / 60)::int as minutes_ago, value->'events' as events, value->'orders' as orders from public.settings where key = 'clock.last_tick'",
+  );
+  const last = Array.isArray(pulse) ? pulse[0] : null;
+  console.log(
+    last
+      ? `  the clock last ran ${String(last.minutes_ago)} min ago: events ${JSON.stringify(last.events)}, unpaid orders ${JSON.stringify(last.orders)}`
+      : "  the clock has never run",
+  );
+  // The scheduler's own tables may be closed to this read-only look.
+  try {
+    const jobs = await readOnlyQuery(
+      "select jobname, schedule, active from cron.job where jobname like 'qp-%' order by 1",
+    );
+    const list = Array.isArray(jobs) ? jobs : [];
+    console.log(
+      list.length === 0
+        ? "  scheduler: no jobs of ours"
+        : `  scheduler: ${list.map((job) => `${String(job.jobname)} (${String(job.schedule)}${job.active ? "" : ", STOPPED"})`).join(", ")}`,
+    );
+    const answers = await readOnlyQuery(
+      "select coalesce(status_code::text, case when timed_out then 'timed out' else 'no answer' end) as answer, count(*)::int as n from net._http_response where created > now() - interval '1 hour' group by 1 order by 1",
+    );
+    const heard = Array.isArray(answers) ? answers : [];
+    if (heard.length > 0) {
+      console.log(
+        `  the site's answers in the last hour: ${heard.map((row) => `${String(row.answer)} x${String(row.n)}`).join(", ")}`,
+      );
+    }
+  } catch {
+    console.log("  (the scheduler's own tables could not be read from here)");
+  }
+}
+
 const ACTIONS = {
   status,
   "ensure-setup-code": ensureSetupCode,
@@ -869,6 +1043,8 @@ const ACTIONS = {
   "stripe-check": stripeCheck,
   "connect-stripe": connectStripe,
   "disconnect-stripe": disconnectStripe,
+  "connect-clock": connectClock,
+  "disconnect-clock": disconnectClock,
   redeploy: redeployIfChanged,
 };
 
