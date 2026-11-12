@@ -128,15 +128,25 @@ export type CheckoutSession = {
   readonly currency: string | null;
   readonly client_reference_id: string | null;
   readonly payment_intent: string | null;
+  /** What came off: `amount_discount` is a promo code's saving, in cents. */
+  readonly total_details?: { readonly amount_discount?: number } | null;
 };
 
 /** The shortest life Stripe allows a payment page is half an hour. */
 const SESSION_MINUTES = 31;
 
-/** What we ask Stripe for. Pure, so the amounts can be tested exactly. */
+/**
+ * What we ask Stripe for. Pure, so the amounts can be tested exactly.
+ *
+ * `couponId` is the one-off Stripe coupon that carries a promo code's saving
+ * on the goods (see `couponFor`). Stripe has no negative line, and this way
+ * its page shows the packs at their price, the discount by name, and a total
+ * that is the order's.
+ */
 export function sessionParams(
   request: ChargeRequest,
   now: Date,
+  couponId?: string,
 ): Record<string, unknown> {
   const lineItems: Record<string, unknown>[] = request.lines.map((line) => ({
     quantity: line.qty,
@@ -164,6 +174,7 @@ export function sessionParams(
     success_url: request.successUrl,
     cancel_url: request.cancelUrl,
     expires_at: Math.floor(now.getTime() / 1000) + SESSION_MINUTES * 60,
+    ...(couponId === undefined ? {} : { discounts: [{ coupon: couponId }] }),
     metadata: { order_number: request.orderNumber },
     payment_intent_data: {
       description: `Quick Pickle order ${request.orderNumber}`,
@@ -219,6 +230,41 @@ export function sessionExtras(look?: PaymentPageLook): Record<string, unknown> {
   };
 }
 
+/**
+ * A promo code's saving on the goods, as Stripe needs it: a coupon for
+ * exactly that many cents, good for this one order and nothing else. Asked
+ * for by the order number, so asking twice makes one.
+ */
+async function couponFor(
+  secretKey: string,
+  request: ChargeRequest,
+  fetchImpl: Fetch,
+): Promise<string | undefined> {
+  if (request.discountCents <= 0) return undefined;
+  const coupon = await call<{ readonly id?: string }>(
+    fetchImpl,
+    secretKey,
+    "POST",
+    "/v1/coupons",
+    {
+      body: {
+        amount_off: request.discountCents,
+        currency: "nzd",
+        duration: "once",
+        max_redemptions: 1,
+        // Shown on the payment page beside the amount. Forty characters at most.
+        name: (request.discountLabel || "Discount").slice(0, 40),
+        metadata: { order_number: request.orderNumber },
+      },
+      idempotencyKey: `coupon-${request.orderNumber}`,
+    },
+  );
+  if (typeof coupon.id !== "string" || coupon.id === "") {
+    throw new StripeError("Stripe gave no coupon for the discount", 200, null);
+  }
+  return coupon.id;
+}
+
 export async function createCheckoutSession(
   secretKey: string,
   request: ChargeRequest,
@@ -226,7 +272,13 @@ export async function createCheckoutSession(
   fetchImpl: Fetch = fetch,
   look?: PaymentPageLook,
 ): Promise<CheckoutSession> {
-  const base = sessionParams(request, now);
+  // The discount is not a nicety: without it the page would ask for more
+  // than the order comes to. If it cannot be made, no page is made either.
+  const base = sessionParams(
+    request,
+    now,
+    await couponFor(secretKey, request, fetchImpl),
+  );
   // The order number: asking twice for one order gives one payment page.
   const key = `checkout-${request.orderNumber}`;
   let extras = sessionExtras(look);

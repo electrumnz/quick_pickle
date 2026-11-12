@@ -1,12 +1,14 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { auditLog, events, orders } from "@/db/schema";
+import { auditLog, events, orders, promoCodes } from "@/db/schema";
 import { systemCaller } from "@/lib/backstage/core/actor";
 import { execute } from "@/lib/backstage/core/op";
+import { createPromoCode } from "@/lib/backstage/marketing/promo-codes";
 import {
   cancelOrder,
   getOrder,
+  recordOrder,
   recordRefund,
 } from "@/lib/backstage/orders/ops";
 import {
@@ -21,7 +23,7 @@ import {
   useDbHandle,
   type DbHandle,
 } from "@/lib/db/client";
-import type { PaymentProvider } from "@/lib/shop/payments";
+import type { ChargeRequest, PaymentProvider } from "@/lib/shop/payments";
 import { closePaymentPage } from "@/lib/backstage/orders/listeners";
 import { sendRefund } from "@/lib/backstage/orders/refunds";
 import { settleOnReturn } from "@/lib/shop/payments/settle";
@@ -915,5 +917,287 @@ describe("giving money back on an order paid through Stripe", () => {
     expect(order.refunds).toMatchObject([{ status: "failed" }]);
     expect(order.refundedCents).toBe(0);
     expect(api.asked).not.toContain("POST /v1/refunds");
+  });
+});
+
+describe("a promo code at the checkout", () => {
+  let handle: DbHandle;
+  const staff = { ...systemCaller("Ashleigh", "ui"), confirmed: true };
+  const store = () => getStore({ NODE_ENV: "test" });
+
+  beforeAll(async () => {
+    handle = await openEmbedded();
+    useDbHandle(handle);
+    await execute(
+      createPromoCode,
+      { code: "CREW10", kind: "percent", value: 10 },
+      staff,
+    );
+    await execute(
+      createPromoCode,
+      { code: "ONEONLY", kind: "amount", value: 500, maxUses: 1 },
+      staff,
+    );
+    await execute(createPromoCode, { code: "KITBAG", kind: "delivery" }, staff);
+    await execute(
+      createPromoCode,
+      { code: "THELOT", kind: "percent", value: 100 },
+      staff,
+    );
+  });
+  afterAll(async () => {
+    await closeDb();
+  });
+
+  /** The practice checkout: paid on the spot, nothing sent anywhere. */
+  const practice: PaymentProvider = {
+    name: "test",
+    isTest: true,
+    savesFirst: false,
+    async begin(request) {
+      return {
+        kind: "done",
+        payment: {
+          provider: "test",
+          status: "test",
+          reference: `TEST-${request.orderNumber}`,
+        },
+      };
+    },
+  };
+
+  const buy = (over: Record<string, unknown>, payments = practice) =>
+    placeOrder(form(over), { payments, store: store(), returnUrls: URLS });
+
+  const uses = async (code: string) => {
+    const [row] = await handle.db
+      .select({ uses: promoCodes.uses })
+      .from(promoCodes)
+      .where(eq(promoCodes.code, code));
+    return row?.uses ?? -1;
+  };
+
+  it("takes the saving off on the server and counts the use with the order", async () => {
+    // A Squad ($84) to a rural address: free delivery, $4.50 rural extra.
+    const result = await buy({
+      email: "code@example.co.nz",
+      promoCode: " crew10 ",
+    });
+    if (!result.ok) throw new Error(JSON.stringify(result));
+    expect(result.order).toMatchObject({
+      subtotalCents: 8400,
+      discountCents: 840,
+      shippingCents: 450,
+      totalCents: 8010,
+      promo: { code: "CREW10", deliveryDiscountCents: 0 },
+    });
+    expect(await uses("CREW10")).toBe(1);
+
+    const saved = await execute(
+      getOrder,
+      { number: result.order.number },
+      shop,
+    );
+    expect(saved).toMatchObject({
+      promoCode: "CREW10",
+      discountCents: 840,
+      totalCents: 8010,
+    });
+  });
+
+  it("tells the buyer, in a sentence, why a code cannot be used, and places nothing", async () => {
+    const before = await handle.db.select({ id: orders.id }).from(orders);
+    for (const [promoCode, message] of [
+      ["NOPE", "We don't know that code."],
+      ["THELOT", "That code would take this order down to nothing"],
+    ] as const) {
+      const result = await buy({
+        email: "nocode@example.co.nz",
+        promoCode,
+        rural: false,
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok || result.reason !== "invalid")
+        throw new Error("expected a refusal");
+      expect(result.errors.promoCode).toContain(message);
+    }
+    expect(await handle.db.select({ id: orders.id }).from(orders)).toHaveLength(
+      before.length,
+    );
+    expect(await uses("THELOT")).toBe(0);
+  });
+
+  it("waives standard delivery with a delivery code, and never the rural extra", async () => {
+    // A Trial ($27) to a rural address: $7 delivery and $4.50 rural.
+    const result = await buy({
+      email: "kitbag@example.co.nz",
+      promoCode: "KITBAG",
+      lines: [{ sku: "QP-SHOT-06", qty: 1 }],
+    });
+    if (!result.ok) throw new Error(JSON.stringify(result));
+    expect(result.order).toMatchObject({
+      subtotalCents: 2700,
+      discountCents: 0,
+      shippingCents: 450,
+      totalCents: 3150,
+      promo: { code: "KITBAG", deliveryDiscountCents: 700 },
+    });
+  });
+
+  it("lets only one of two buyers take a code's last use", async () => {
+    const [a, b] = await Promise.all([
+      buy({ email: "first@example.co.nz", promoCode: "ONEONLY" }),
+      buy({ email: "second@example.co.nz", promoCode: "ONEONLY" }),
+    ]);
+    const placed = [a, b].filter((result) => result.ok);
+    const refused = [a, b].filter((result) => !result.ok);
+    expect(placed).toHaveLength(1);
+    expect(refused).toHaveLength(1);
+    const [no] = refused;
+    if (no === undefined || no.ok || no.reason !== "invalid") {
+      throw new Error("expected the second to be told why");
+    }
+    expect(no.errors.promoCode).toBe("That code has been used up.");
+    expect(await uses("ONEONLY")).toBe(1);
+  });
+
+  it("refuses a saving the code's own terms do not give", async () => {
+    // Straight to the operation, as a tampered checkout would have to go.
+    const attempt = execute(
+      recordOrder,
+      {
+        number: "QP-TAMPER",
+        placedAt: new Date(),
+        mode: "preorder",
+        customer: {
+          email: "tamper@example.co.nz",
+          phone: null,
+          firstName: "T",
+          lastName: "Amper",
+        },
+        delivery: {
+          line1: "1 Test Street",
+          line2: null,
+          suburb: null,
+          city: "Wellington",
+          region: "Wellington",
+          postcode: "6011",
+          rural: false,
+          notes: null,
+        },
+        lines: [
+          {
+            sku: "QP-SHOT-24",
+            name: "The Squad",
+            shots: 24,
+            qty: 1,
+            unitCents: 8400,
+            lineCents: 8400,
+          },
+        ],
+        subtotalCents: 8400,
+        discountCents: 8000,
+        shippingCents: 0,
+        totalCents: 400,
+        currency: "NZD",
+        promo: { code: "CREW10", deliveryDiscountCents: 0 },
+        payment: { provider: "test", status: "test", reference: "X" },
+        joinCrew: false,
+      },
+      shop,
+    );
+    await expect(attempt).rejects.toMatchObject({ code: "conflict" });
+    // And a discount with no code at all does not add up.
+    await expect(
+      execute(
+        recordOrder,
+        {
+          number: "QP-TAMPER",
+          placedAt: new Date(),
+          mode: "preorder",
+          customer: {
+            email: "tamper@example.co.nz",
+            phone: null,
+            firstName: "T",
+            lastName: "Amper",
+          },
+          delivery: {
+            line1: "1 Test Street",
+            line2: null,
+            suburb: null,
+            city: "Wellington",
+            region: "Wellington",
+            postcode: "6011",
+            rural: false,
+            notes: null,
+          },
+          lines: [
+            {
+              sku: "QP-SHOT-24",
+              name: "The Squad",
+              shots: 24,
+              qty: 1,
+              unitCents: 8400,
+              lineCents: 8400,
+            },
+          ],
+          subtotalCents: 8400,
+          discountCents: 8000,
+          shippingCents: 0,
+          totalCents: 400,
+          currency: "NZD",
+          promo: null,
+          payment: { provider: "test", status: "test", reference: "X" },
+          joinCrew: false,
+        },
+        shop,
+      ),
+    ).rejects.toMatchObject({ code: "invalid_input" });
+  });
+
+  it("gives the use back when the buyer is sent to pay and never does", async () => {
+    const before = await uses("CREW10");
+    const result = await buy(
+      { email: "unpaid@example.co.nz", promoCode: "CREW10" },
+      elsewhere(),
+    );
+    if (!result.ok) throw new Error(JSON.stringify(result));
+    expect(await uses("CREW10")).toBe(before + 1);
+
+    await execute(
+      paymentExpired,
+      { number: result.order.number, reason: "The payment page ran out" },
+      stripe,
+    );
+    expect(await uses("CREW10")).toBe(before);
+    // Told twice, it gives back once.
+    await execute(
+      paymentExpired,
+      { number: result.order.number, reason: "The payment page ran out" },
+      stripe,
+    );
+    expect(await uses("CREW10")).toBe(before);
+  });
+
+  it("asks the payment page for the discounted total, with the code named", async () => {
+    let asked: ChargeRequest | null = null;
+    const watching: PaymentProvider = {
+      ...elsewhere(),
+      async begin(request, now) {
+        asked = request;
+        return elsewhere().begin(request, now);
+      },
+    };
+    const result = await buy(
+      { email: "page@example.co.nz", promoCode: "CREW10" },
+      watching,
+    );
+    expect(result.ok).toBe(true);
+    expect(asked).toMatchObject({
+      amountCents: 8010,
+      discountCents: 840,
+      discountLabel: "Code CREW10",
+      shippingCents: 450,
+    });
   });
 });

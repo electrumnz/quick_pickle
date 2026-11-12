@@ -335,6 +335,16 @@ export default async function OrderPage({
               <dd className="bk-num font-semibold">{order.shots}</dd>
               <dt>Subtotal</dt>
               <dd className="bk-num">{formatNzdExact(order.subtotalCents)}</dd>
+              {order.promoCode !== null ? (
+                <>
+                  <dt>Code {order.promoCode}</dt>
+                  <dd className="bk-num">
+                    {order.discountCents > 0
+                      ? `-${formatNzdExact(order.discountCents)}`
+                      : "Off delivery"}
+                  </dd>
+                </>
+              ) : null}
               <dt>Delivery</dt>
               <dd className="bk-num">
                 {order.shippingCents === 0

@@ -22,7 +22,7 @@ import { PromoFields } from "../fields";
 export const metadata: Metadata = { title: "Promo code" };
 
 const STATE_SENTENCE = {
-  live: "A customer can use it now, once the checkout takes codes.",
+  live: "A customer can use it at the checkout now.",
   "not-started": "Its first day has not come yet.",
   finished: "Its last day has gone.",
   "used-up": "It has been used as many times as it may be.",

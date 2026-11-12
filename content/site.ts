@@ -359,6 +359,45 @@ export const CHECKOUT = {
   hideSummary: "Hide order",
 } as const;
 
+/**
+ * Promo codes: everything a customer is told about one, at the checkout and
+ * on the order. The sums are in lib/backstage/marketing/promo.ts; the words
+ * are here so the copy scanner reads them with the rest of the site.
+ */
+export const CODES = {
+  label: "Got a code?",
+  placeholder: "Type it here",
+  apply: "Apply",
+  checking: "Checking",
+  remove: "Take it off",
+  applied: "Code applied",
+  youSave: "You save",
+  discountLine: "Discount",
+  codeLine: "Code",
+  /** What a code gives, in a few words. The figure is put in front. */
+  off: "off",
+  // copy-audit-approved: FTA-06 (only shown for a code that waives standard delivery, and says "standard": the rural extra is still charged and shown)
+  freeDelivery: "Free standard delivery",
+  unknown: "We don't know that code.",
+  notInUse: "That code is not in use.",
+  finished: "That code has finished.",
+  usedUp: "That code has been used up.",
+  notStarted: "That code has not started yet.",
+  emptyJar: "Put something in your jar first.",
+  /** Followed by the amount, then `minimumTail`. */
+  minimumLead: "That code is for orders of",
+  minimumTail: "or more, before delivery.",
+  broken: "That code is not set up properly. Tell us and we will fix it.",
+  // copy-audit-approved: FTA-06 (states that delivery on this order is already free under the stated spend threshold)
+  deliveryAlreadyFree:
+    "Standard delivery is already free on this order, so that code has nothing to take off.",
+  wouldBeFree:
+    "That code would take this order down to nothing, which the checkout can't do. Get in touch and we'll sort it.",
+  changed:
+    "That code changed while you were checking out. Have another look at the total and try again.",
+  unavailable: "We couldn't check that code just now. Try again in a moment.",
+} as const;
+
 export const THANKS = {
   metaTitle: "Order placed",
   title: ["Order's", "in!"],

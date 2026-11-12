@@ -215,6 +215,14 @@ go-live list shows when it last ran and what is stuck.
   pass one cap.
 - An operation that finds its work already done says `ctx.nothingChanged()`. Without it the
   activity log gets a line for a repeat that did nothing.
+- **A promo code is a word, never a number.** The checkout sends what the buyer typed and
+  nothing else. What it is worth comes from the code's own terms
+  (`lib/backstage/marketing/promo.ts`), is worked out when the jar is priced, and is worked
+  out again inside the transaction that records the order, where its use is counted in one
+  guarded statement (two buyers cannot both take a last use). An order that is never paid
+  gives its use back. On Stripe's page the saving is a one-off coupon for that order, and
+  if the coupon cannot be made no page is made. One code an order; none may take an order
+  below a dollar. Everything a customer is told about a code is in `CODES`, in `content/`.
 - `lib/shop/store` is where the shop hands an order over. The default is `db`: the back
   end's own `orders.record` operation, so an order is on the Orders screen as it is placed.
 - The "order's in" page reads a short-lived httpOnly receipt cookie. It is display only.

@@ -1,18 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
 import { Art } from "@/components/brand/Art";
 import { ChevronIcon, LockIcon } from "@/components/brand/Icons";
 import { useCart } from "@/components/cart/CartProvider";
 import { SHIPPING } from "@/content/offer";
-import { CHECKOUT, JAR } from "@/content/site";
+import { CHECKOUT, CODES, JAR } from "@/content/site";
 import { formatNzd, formatNzdExact } from "@/lib/shop/money";
 import { NZ_REGIONS, type FieldErrors } from "@/lib/shop/order";
 import { quote } from "@/lib/shop/pricing";
 
-import { submitCheckout, type CheckoutState } from "./actions";
+import {
+  checkCode,
+  submitCheckout,
+  type CheckoutState,
+  type CodeAnswer,
+} from "./actions";
 
 /**
  * The checkout form.
@@ -135,6 +146,18 @@ export function CheckoutForm({
   const [rural, setRural] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // A promo code. The box holds what was typed; `code` holds the server's
+  // answer for it and the jar it was answered for. Only the word is ever
+  // sent with the order: the server works out what it is worth again.
+  const [typedCode, setTypedCode] = useState("");
+  const [code, setCode] = useState<{
+    readonly answer: CodeAnswer;
+    readonly typed: string;
+    readonly jar: string;
+  } | null>(null);
+  const [checking, startCheck] = useTransition();
+  const codeRef = useRef<HTMLInputElement>(null);
+
   // After a failed submit, take the buyer to the first thing that needs them.
   useEffect(() => {
     if (state.status !== "invalid") return;
@@ -169,10 +192,60 @@ export function CheckoutForm({
     );
   }
 
-  const priced = quote(cart, { rural });
+  const jar = JSON.stringify(cart.lines);
+  const asStored = (text: string) => text.replace(/\s+/g, "").toUpperCase();
+  // An answer only counts for the jar it was given for. If the jar has
+  // changed since (another tab), it is asked for again.
+  const answered = code !== null && code.jar === jar ? code : null;
+  const applied =
+    answered !== null &&
+    answered.answer.ok &&
+    asStored(answered.typed) === asStored(typedCode)
+      ? answered.answer
+      : null;
+  const priced = quote(
+    cart,
+    { rural },
+    applied === null
+      ? undefined
+      : {
+          discountCents: applied.discountCents,
+          deliveryDiscountCents: applied.deliveryDiscountCents,
+        },
+  );
   const errors: FieldErrors = state.errors;
   const values = state.values;
   const placeLabel = mode === "practice" ? CHECKOUT.placeTest : CHECKOUT.place;
+  const chargedDelivery = priced.deliveryCents - priced.deliveryDiscountCents;
+  const savedCents = priced.discountCents + priced.deliveryDiscountCents;
+
+  // What to say under the code box: the server's no for what is typed now,
+  // or the refusal that came back with a failed order.
+  const codeProblem =
+    answered !== null &&
+    !answered.answer.ok &&
+    asStored(answered.typed) === asStored(typedCode)
+      ? answered.answer.reason
+      : code === null && typedCode === (values.promoCode ?? "")
+        ? (errors.promoCode ?? null)
+        : null;
+  const codeWaiting = typedCode.trim() !== "" && applied === null;
+
+  const applyCode = () => {
+    const typed = typedCode.trim();
+    if (typed === "") {
+      setCode(null);
+      return;
+    }
+    startCheck(async () => {
+      const answer = await checkCode(typed, jar, rural);
+      setCode({ answer, typed, jar });
+    });
+  };
+  const removeCode = () => {
+    setTypedCode("");
+    setCode(null);
+  };
 
   const summary = (
     <div>
@@ -201,12 +274,25 @@ export function CheckoutForm({
           <dt>{CHECKOUT.subtotal}</dt>
           <dd>{formatNzdExact(priced.subtotalCents)}</dd>
         </div>
+        {priced.discountCents > 0 && applied !== null ? (
+          <div className="flex justify-between" data-testid="discount-line">
+            <dt>
+              {CODES.codeLine} {applied.code}
+            </dt>
+            <dd>-{formatNzdExact(priced.discountCents)}</dd>
+          </div>
+        ) : null}
         <div className="flex justify-between">
-          <dt>{CHECKOUT.delivery}</dt>
+          <dt>
+            {CHECKOUT.delivery}
+            {priced.deliveryDiscountCents > 0 && applied !== null
+              ? ` (${CODES.codeLine.toLowerCase()} ${applied.code})`
+              : ""}
+          </dt>
           <dd>
-            {priced.deliveryCents === 0
+            {chargedDelivery === 0
               ? CHECKOUT.free
-              : formatNzdExact(priced.deliveryCents)}
+              : formatNzdExact(chargedDelivery)}
           </dd>
         </div>
         {priced.ruralCents > 0 ? (
@@ -288,6 +374,15 @@ export function CheckoutForm({
           action={action}
           noValidate
           className="mt-8 flex flex-col gap-10"
+          onSubmit={(event) => {
+            // A code that is typed but not applied would change the total
+            // after the button was pressed. Apply it first, show the new
+            // total, and let the buyer press the button for that figure.
+            if (!codeWaiting) return;
+            event.preventDefault();
+            applyCode();
+            codeRef.current?.focus();
+          }}
         >
           <input
             type="hidden"
@@ -508,6 +603,76 @@ export function CheckoutForm({
                     ? CHECKOUT.paymentSandbox
                     : CHECKOUT.paymentLive}
               </p>
+            </div>
+
+            <div>
+              <label htmlFor="co-promoCode" className="field-label">
+                {CODES.label}
+              </label>
+              <div className="flex items-stretch gap-2">
+                <input
+                  ref={codeRef}
+                  id="co-promoCode"
+                  name="promoCode"
+                  value={typedCode}
+                  onChange={(event) => setTypedCode(event.target.value)}
+                  onKeyDown={(event) => {
+                    // Enter here means "apply", not "place the order".
+                    if (event.key !== "Enter") return;
+                    event.preventDefault();
+                    applyCode();
+                  }}
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  maxLength={40}
+                  placeholder={CODES.placeholder}
+                  aria-invalid={codeProblem !== null ? true : undefined}
+                  aria-describedby={
+                    codeProblem !== null
+                      ? "co-promoCode-error"
+                      : applied !== null
+                        ? "co-promoCode-ok"
+                        : undefined
+                  }
+                  className="field min-w-0 flex-1 uppercase placeholder:normal-case"
+                />
+                <button
+                  type="button"
+                  onClick={applyCode}
+                  disabled={checking}
+                  data-testid="apply-code"
+                  className="btn btn-cream shrink-0"
+                >
+                  <span className="cap-trim">
+                    {checking ? CODES.checking : CODES.apply}
+                  </span>
+                </button>
+              </div>
+              {codeProblem !== null ? (
+                <p id="co-promoCode-error" className="field-error" role="alert">
+                  {codeProblem}
+                </p>
+              ) : applied !== null ? (
+                <p
+                  id="co-promoCode-ok"
+                  role="status"
+                  className="mt-1.5 text-[0.9375rem] leading-snug"
+                >
+                  <strong>
+                    {CODES.applied}: {applied.label}.
+                  </strong>{" "}
+                  {CODES.youSave} {formatNzdExact(savedCents)}.{" "}
+                  <button
+                    type="button"
+                    onClick={removeCode}
+                    className="link inline-flex min-h-11 items-center"
+                  >
+                    {CODES.remove}
+                  </button>
+                </p>
+              ) : null}
             </div>
 
             <label className="flex cursor-pointer items-start gap-3 py-1">

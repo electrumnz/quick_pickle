@@ -1,6 +1,6 @@
 {
-  "actions": ["connect-clock", "redeploy", "status"],
+  "actions": ["stripe-check", "status"],
   "confirm": "yes",
-  "asked": "2026-11-12T11:08Z",
-  "why": "Give the back end a clock: the database rings /api/tick every five minutes, so failed steps are tried again and orders nobody paid for are closed."
+  "asked": "2026-11-12T12:00Z",
+  "why": "Prove against Stripe's test mode that an order with a promo code comes to the discounted total on the payment page."
 }

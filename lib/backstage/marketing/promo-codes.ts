@@ -19,11 +19,14 @@ import { formatNzDateTime } from "@/lib/time";
 import { conflict, notFound, OpError } from "../core/errors";
 import { defineOp } from "../core/op";
 import {
+  evaluatePromo,
+  findPromo,
   normalisePromoCode,
   PROMO_CODE_PATTERN,
   promoLabel,
   promoState,
   type Promo,
+  type PromoEvaluation,
 } from "./promo";
 import { recordId } from "./shared";
 import { PROMO_KINDS, type PromoKind, type PromoState } from "./status";
@@ -202,7 +205,7 @@ export const createPromoCode = defineOp({
   name: "promoCodes.create",
   title: "Make a promo code",
   description:
-    "Makes a code a customer can type at the checkout. `kind` is percent (`value` is a whole percentage, 1 to 100, worked out on the goods and rounded to the cent in the customer's favour), amount (`value` is cents off) or delivery (free standard delivery; a rural extra still applies). One code per order: codes do not stack. Optional terms: a smallest order (`minSubtotalCents`), the instant it starts and the instant it stops working, and the most times it can be used. The code is stored in capitals with no spaces, and a code that already exists is refused. It is live as soon as it is made unless `active` is false. The checkout does not accept codes yet.",
+    "Makes a code a customer can type at the checkout. `kind` is percent (`value` is a whole percentage, 1 to 100, worked out on the goods and rounded to the cent in the customer's favour), amount (`value` is cents off) or delivery (free standard delivery; a rural extra still applies). One code per order: codes do not stack. Optional terms: a smallest order (`minSubtotalCents`), the instant it starts and the instant it stops working, and the most times it can be used. The code is stored in capitals with no spaces, and a code that already exists is refused. It is live at the checkout as soon as it is made unless `active` is false. No code may take an order below a dollar.",
   access: "write",
   input: z.object({
     code: codeField,
@@ -338,5 +341,26 @@ export const setPromoCodeActive = defineOp({
       summary: `Switched the promo code ${promo.code} ${input.active ? "on" : "off"}`,
     });
     return { active: input.active };
+  },
+});
+
+export const checkPromoCode = defineOp({
+  name: "promoCodes.check",
+  title: "What a code is worth on an order",
+  description:
+    "Given what a customer typed and an order's goods and standard delivery (both in cents, before the code), says what the code takes off or, in a sentence the customer can be shown, why it cannot be used. It counts nothing: a use is counted when the order is recorded. Called by the checkout.",
+  access: "read",
+  input: z.object({
+    code: z.string().max(60),
+    subtotalCents: z.number().int().min(0).max(100_000_000),
+    /** Standard delivery on the order before the code. Not a rural extra. */
+    deliveryCents: z.number().int().min(0).max(100_000_000),
+  }),
+  async run(ctx, input): Promise<PromoEvaluation> {
+    return evaluatePromo(await findPromo(ctx.db, input.code), {
+      subtotalCents: input.subtotalCents,
+      deliveryCents: input.deliveryCents,
+      now: ctx.now,
+    });
   },
 });

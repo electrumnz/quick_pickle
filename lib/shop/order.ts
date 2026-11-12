@@ -69,6 +69,8 @@ export const checkoutSchema = z.object({
     .regex(/^\d{4}$/, "NZ postcodes are four digits"),
   rural: z.boolean(),
   notes: trimmed(280).optional().or(z.literal("")),
+  /** What the buyer typed in the code box. Checked and priced on the server. */
+  promoCode: trimmed(40).optional().or(z.literal("")),
   joinCrew: z.boolean(),
   lines: z
     .array(cartLineSchema)
@@ -131,9 +133,17 @@ export type Order = {
   };
   readonly lines: readonly OrderLine[];
   readonly subtotalCents: number;
+  /** What a promo code took off the goods. Zero with no code. */
+  readonly discountCents: number;
+  /** Delivery as charged, after anything a code took off it. */
   readonly shippingCents: number;
   readonly totalCents: number;
   readonly currency: "NZD";
+  /** The code used, and what it took off standard delivery. Null with none. */
+  readonly promo: {
+    readonly code: string;
+    readonly deliveryDiscountCents: number;
+  } | null;
   readonly payment: PaymentRecord;
   readonly joinCrew: boolean;
 };

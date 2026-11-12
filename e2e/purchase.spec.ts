@@ -161,6 +161,72 @@ test("buys a pack, start to finish", async ({ page }) => {
   await expect(page.getByText("$88.50")).toHaveCount(0);
 });
 
+test("a code takes its saving off before the button is pressed", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.locator("#shop").scrollIntoViewIfNeeded();
+  await page.getByText("The Squad", { exact: true }).click();
+  const add = page.getByTestId("add-to-jar");
+  await expect(add).toContainText("$84");
+  await add.click();
+  await page
+    .getByRole("dialog")
+    .getByRole("link", { name: /checkout/i })
+    .click();
+  await expect(page).toHaveURL(/\/checkout$/);
+
+  const place = page.getByTestId("place-order");
+  const box = page.locator("#co-promoCode");
+  await expect(place).toContainText("$84.00");
+
+  // A code nobody made is refused in a sentence, and the total stays put.
+  await box.fill("nope");
+  await page.getByTestId("apply-code").click();
+  await expect(page.locator("#co-promoCode-error")).toHaveText(
+    "We don't know that code.",
+  );
+  await expect(place).toContainText("$84.00");
+
+  // A real one (the demo's CREW10, 10% off), typed the way people type.
+  await box.fill(" crew10");
+  await box.press("Enter");
+  await expect(page.locator("#co-promoCode-ok")).toContainText(
+    "Code applied: 10% off. You save $8.40.",
+  );
+  await expect(place).toContainText("$75.60");
+
+  // Changed but not applied: pressing the button applies it first rather
+  // than charging a figure that was never on the button.
+  await box.fill("nope");
+  await page.fill("#co-email", "code@example.co.nz");
+  await page.fill("#co-firstName", "Cody");
+  await page.fill("#co-lastName", "Tester");
+  await page.fill("#co-line1", "9 Extra Time Avenue");
+  await page.fill("#co-city", "Nelson");
+  await page.selectOption("#co-region", "Nelson");
+  await page.fill("#co-postcode", "7010");
+  await place.click();
+  await expect(page).toHaveURL(/\/checkout$/);
+  await expect(page.locator("#co-promoCode-error")).toBeVisible();
+
+  await box.fill("CREW10");
+  await page.getByTestId("apply-code").click();
+  await expect(place).toContainText("$75.60");
+  await place.click();
+
+  await expect(page).toHaveURL(/\/order\/thanks$/);
+  await expect(page.getByText("Code CREW10")).toBeVisible();
+  await expect(page.getByText("-$8.40")).toBeVisible();
+  await expect(page.getByText("$75.60")).toBeVisible();
+
+  // And the back end has the order at what was charged, with the code.
+  const number = await page.getByTestId("order-number").innerText();
+  await page.goto(`/backstage/orders/${number}`);
+  await expect(page.getByText("Code CREW10", { exact: true })).toBeVisible();
+  await expect(page.getByText("$75.60").first()).toBeVisible();
+});
+
 test("an empty jar cannot check out", async ({ page }) => {
   await page.goto("/checkout");
   await expect(page.getByText(/nothing to check out yet/i)).toBeVisible();

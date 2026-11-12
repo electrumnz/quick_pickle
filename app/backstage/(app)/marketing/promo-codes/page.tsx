@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Empty, Notice, PageHeader, Panel } from "@/components/backstage/ui";
+import { Empty, PageHeader, Panel } from "@/components/backstage/ui";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { execute } from "@/lib/backstage/core/op";
 import { listPromoCodes } from "@/lib/backstage/marketing/promo-codes";
@@ -25,7 +25,7 @@ export default async function PromoCodesPage({
     <>
       <PageHeader
         title="Promo codes"
-        lead="Codes a customer types at the checkout for money off or free delivery."
+        lead="Codes a customer types at the checkout for money off or free delivery. One code an order."
         actions={
           canWrite ? (
             <Link
@@ -39,13 +39,6 @@ export default async function PromoCodesPage({
       />
       <MarketingNav current="promo-codes" />
       <Flash notice={notice} tone={tone} />
-      <div className="mb-4">
-        <Notice>
-          The checkout does not take promo codes yet. A code made here starts
-          working once it does.
-        </Notice>
-      </div>
-
       <Panel flush>
         {rows.length === 0 ? (
           <Empty title="No codes yet">
