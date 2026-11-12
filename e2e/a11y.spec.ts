@@ -35,6 +35,8 @@ const PAGES = [
   "/backstage/marketing/links",
   "/backstage/marketing/reviews",
   "/backstage/marketing/partners",
+  "/backstage/numbers",
+  "/backstage/numbers?days=90",
   "/backstage/plans",
   "/backstage/plans/tasks",
   "/backstage/plans/questions",

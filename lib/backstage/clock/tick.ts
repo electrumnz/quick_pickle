@@ -8,7 +8,8 @@
  *   - listeners that failed, or never ran because the process died first,
  *     get their next try (lib/backstage/core/events.ts);
  *   - an order still awaiting payment long after its payment page has run
- *     out is settled one way or the other, by asking the processor.
+ *     out is settled one way or the other, by asking the processor;
+ *   - visits to the shop older than thirteen months are thrown away.
  *
  * Everything here is safe to do twice, and two ticks at once do not trip
  * over each other: events are claimed with a lease, and every change to an
@@ -31,6 +32,7 @@ import { systemCaller } from "../core/actor";
 import { processEvents, type ProcessResult } from "../core/events";
 import { execute } from "../core/op";
 import { registerHandlers } from "../handlers";
+import { pruneVisits } from "../numbers/ops";
 import { paymentExpired } from "../orders/payments";
 
 /**
@@ -138,6 +140,9 @@ export async function tick(options: TickOptions = {}): Promise<TickSummary> {
   registerHandlers();
   const events = await processEvents(db, { limit: 50, now });
   const swept = await sweepUnpaidOrders(db, now, settle);
+  // Visits older than we keep them for are thrown away. A failure here is
+  // housekeeping left for the next round, never a reason to fail the tick.
+  await pruneVisits(db, now).catch(() => 0);
 
   const summary: TickSummary = {
     at: now.toISOString(),

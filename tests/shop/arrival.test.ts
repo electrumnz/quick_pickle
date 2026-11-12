@@ -5,6 +5,7 @@ import {
   arrivalFrom,
   isFreshArrival,
   packArrival,
+  referrerHost,
   sourceFromSearch,
   unpackArrival,
   type Arrival,
@@ -69,6 +70,67 @@ describe("where a visit came from", () => {
     ).toEqual({});
     expect(sourceFromSearch("?via=a")).toEqual({});
     expect(sourceFromSearch("")).toEqual({});
+  });
+});
+
+describe("the website a visit came from", () => {
+  it("is the site's name only, never the page", () => {
+    expect(
+      referrerHost(
+        "https://www.Example.co.nz/blog/post?id=7#comments",
+        "quickpickle.example",
+      ),
+    ).toBe("example.co.nz");
+    expect(referrerHost("https://l.instagram.com/?u=x", "qp.example")).toBe(
+      "l.instagram.com",
+    );
+  });
+
+  it("is nothing when there was none, or it was this site", () => {
+    expect(referrerHost("", "quickpickle.example")).toBeNull();
+    expect(
+      referrerHost(
+        "https://quickpickle.example/checkout",
+        "quickpickle.example",
+      ),
+    ).toBeNull();
+    expect(
+      referrerHost("https://www.quickpickle.example/", "quickpickle.example"),
+    ).toBeNull();
+    expect(referrerHost("http://localhost:3000/", "localhost:3000")).toBeNull();
+    expect(referrerHost("not an address", "quickpickle.example")).toBeNull();
+    expect(referrerHost("android-app://com.example/", "qp.example")).toBe(
+      "com.example",
+    );
+  });
+
+  it("counts as a way in, and is replaced by the next one", () => {
+    expect(arrivalFrom("", null, NOW, "google.com")).toEqual({
+      code: null,
+      source: { ref: "google.com" },
+      at: NOW,
+    });
+    // A link and a site together: both are kept.
+    expect(arrivalFrom("?via=kai", null, NOW, "l.instagram.com")).toEqual({
+      code: null,
+      source: { via: "kai", ref: "l.instagram.com" },
+      at: NOW,
+    });
+    // Coming back directly later does not wipe it.
+    const before: Arrival = {
+      code: null,
+      source: { ref: "google.com" },
+      at: 1,
+    };
+    expect(arrivalFrom("", before, NOW, null)).toBeNull();
+    // A name that could not be one is ignored.
+    expect(arrivalFrom("", null, NOW, "<script>")).toBeNull();
+    // And it survives being stored.
+    expect(
+      unpackArrival(
+        packArrival({ code: null, source: { ref: "google.com" }, at: NOW }),
+      ),
+    ).toEqual({ code: null, source: { ref: "google.com" }, at: NOW });
   });
 });
 

@@ -25,6 +25,7 @@ import {
   customers,
   orderLines,
   orders,
+  pageEvents,
   partners,
   refunds,
   type OrderStatus,
@@ -330,6 +331,31 @@ export const recordOrder = defineOp({
         { email: input.customer.email, source: "checkout", customerId },
         ctx.now,
       );
+    }
+
+    // The last step of the visit it came from, written with the order so the
+    // funnel never shows an order that was not placed. A browser that asked
+    // not to be counted sent no visit id, and nothing is written.
+    if (source?.visit !== undefined) {
+      await ctx.db.insert(pageEvents).values({
+        // The moment the order says it was placed, so the two always fall
+        // on the same day.
+        at: input.placedAt,
+        kind: "order",
+        visit: source.visit,
+        path: "/checkout",
+        page: source.page ?? "home",
+        source: Object.fromEntries(
+          Object.entries(source).filter(
+            ([key]) => key === "via" || key.startsWith("utm_"),
+          ),
+        ),
+        referrer: source.ref ?? null,
+        device:
+          source.device === "phone" || source.device === "desk"
+            ? source.device
+            : null,
+      });
     }
 
     if (used !== null && input.promo !== null) {

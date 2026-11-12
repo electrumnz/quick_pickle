@@ -23,16 +23,46 @@ import type { DbOrTx } from "@/lib/db/types";
 
 import { SLUG_PATTERN, UTM_KEYS } from "./links";
 
-/** What may be kept about where a visit came from. Nothing else is. */
-export const SOURCE_KEYS = ["via", ...UTM_KEYS] as const;
+/**
+ * What may be kept about a visit. Nothing else is.
+ *
+ *   via, utm_*  the short link followed, and an advert's own labels
+ *   ref         the website the visit came from, host only
+ *   page        which page was shown: "home", or a landing page's name
+ *   visit       the visit's own random id, to tie an order to its steps
+ *   device      phone or desk
+ *
+ * None of it says who anybody is.
+ */
+export const SOURCE_KEYS = [
+  "via",
+  ...UTM_KEYS,
+  "ref",
+  "page",
+  "visit",
+  "device",
+] as const;
 
 /** A utm label: short, lower case, no spaces. The same shape a link saves. */
 const UTM_VALUE = /^[a-z0-9][a-z0-9._-]{0,59}$/;
+const HOST = /^(?=.{1,100}$)[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
+const VISIT = /^[a-z0-9]{16,32}$/;
+
+const SHAPE: Readonly<Record<(typeof SOURCE_KEYS)[number], RegExp>> = {
+  via: SLUG_PATTERN,
+  utm_source: UTM_VALUE,
+  utm_medium: UTM_VALUE,
+  utm_campaign: UTM_VALUE,
+  ref: HOST,
+  page: SLUG_PATTERN,
+  visit: VISIT,
+  device: /^(?:phone|desk)$/,
+};
 
 /**
- * What the browser said about where the visit came from, cut down to the
- * four things we keep and to values that could be real. Anything else in
- * there is dropped without comment.
+ * What the browser said about the visit, cut down to the things we keep and
+ * to values that could be real. Anything else in there is dropped without
+ * comment.
  */
 export function tidySource(
   raw: Readonly<Record<string, unknown>> | null | undefined,
@@ -43,13 +73,18 @@ export function tidySource(
     const value = raw[key];
     if (typeof value !== "string") continue;
     const tidy = value.trim().toLowerCase();
-    const ok = key === "via" ? SLUG_PATTERN.test(tidy) : UTM_VALUE.test(tidy);
-    if (ok) out[key] = tidy;
+    if (SHAPE[key].test(tidy)) out[key] = tidy;
   }
   return out;
 }
 
-/** The same, with `via` kept only if it names a short link of ours. */
+/** The pages there are to be shown. Only the standard one, so far. */
+const KNOWN_PAGES: readonly string[] = ["home"];
+
+/**
+ * The same, with `via` kept only if it names a short link of ours and
+ * `page` only if it names a page of ours.
+ */
 export async function knownSource(
   db: DbOrTx,
   raw: Readonly<Record<string, unknown>> | null | undefined,
@@ -61,6 +96,9 @@ export async function knownSource(
       .from(links)
       .where(eq(links.slug, source.via));
     if (link === undefined) delete source.via;
+  }
+  if (source.page !== undefined && !KNOWN_PAGES.includes(source.page)) {
+    delete source.page;
   }
   return Object.keys(source).length === 0 ? null : source;
 }

@@ -15,6 +15,7 @@ import {
   arrivalFrom,
   isFreshArrival,
   packArrival,
+  referrerHost,
   unpackArrival,
 } from "@/lib/shop/arrival";
 import {
@@ -29,6 +30,7 @@ import {
 } from "@/lib/shop/cart";
 import { featuredPack } from "@/lib/shop/catalogue";
 import { quote, type Quote } from "@/lib/shop/pricing";
+import { seen } from "@/lib/shop/seen";
 
 /**
  * The jar.
@@ -90,7 +92,9 @@ function noteArrival(): void {
   const now = Date.now();
   let before = unpackArrival(readArrival());
   if (before !== null && !isFreshArrival(before, now)) before = null;
-  const next = arrivalFrom(window.location.search, before, now) ?? before;
+  const cameFrom = referrerHost(document.referrer, window.location.host);
+  const next =
+    arrivalFrom(window.location.search, before, now, cameFrom) ?? before;
   const raw = next === null ? "" : packArrival(next);
   if (raw !== readArrival()) writeKey(ARRIVAL_KEY, raw);
 }
@@ -192,6 +196,7 @@ export function CartProvider({ children }: { readonly children: ReactNode }) {
   const add = useCallback((sku: string, qty = 1) => {
     mutate((current) => addToCart(current, sku, qty));
     setPulse((value) => value + 1);
+    seen("add", unpackArrival(readArrival())?.source ?? NO_SOURCE);
   }, []);
 
   const setQty = useCallback((sku: string, qty: number) => {

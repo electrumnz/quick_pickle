@@ -19,6 +19,12 @@ export const pageEvents = pgTable(
     at: instant("at").notNull().defaultNow(),
     kind: text().$type<"view" | "add" | "checkout" | "order">().notNull(),
     path: text().notNull().default("/"),
+    /**
+     * Which page they were shown: "home" for the standard one, or a landing
+     * page's own short name. Two pages can sit at one address (an A/B test),
+     * so the path alone does not say.
+     */
+    page: text().notNull().default("home"),
     /** Random, per visit, never stored on the visitor's device. */
     visit: text().notNull(),
     /** utm_source and friends, when the link carried them. */
@@ -30,5 +36,6 @@ export const pageEvents = pgTable(
   (t) => [
     index("page_events_at_idx").on(t.at),
     index("page_events_visit_idx").on(t.visit),
+    index("page_events_kind_idx").on(t.kind, t.at),
   ],
 ).enableRLS();
