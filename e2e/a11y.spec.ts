@@ -81,6 +81,7 @@ const PAGES = [
   "/backstage/settings/activity",
   "/backstage/settings/go-live",
   "/backstage/settings/shop",
+  "/backstage/settings/morning-email",
   "/backstage/settings/clock",
 ];
 

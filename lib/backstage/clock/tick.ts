@@ -12,6 +12,8 @@
  *   - visits to the shop older than thirteen months are thrown away.
  *   - while a special is switched on, the shop's kept pages are replaced,
  *     so its first and last day show on the page within minutes.
+ *   - the morning email is written, once a New Zealand morning, if somebody
+ *     has switched it on.
  *
  * Everything here is safe to do twice, and two ticks at once do not trip
  * over each other: events are claimed with a lease, and every change to an
@@ -172,6 +174,20 @@ export async function tick(options: TickOptions = {}): Promise<TickSummary> {
       target: settings.key,
       set: { value: summary, updatedAt: now },
     });
+
+  // The morning email, once each New Zealand morning while it is switched
+  // on (lib/backstage/digest/ops.ts). It is switched off unless somebody
+  // asked for it, and it is never a reason to fail the tick. It comes after
+  // the pulse on purpose: the email counts what Today lists, and Today lists
+  // a clock that has stopped, which this tick has just shown it has not.
+  // (Asked for here, not at the top of the file: Today reads the clock, and
+  // the email reads Today.)
+  await (async () => {
+    const { morningEmailDue, sendMorningEmail } = await import("../digest/ops");
+    if (await morningEmailDue(db, now)) {
+      await execute(sendMorningEmail, {}, clock, { db, now });
+    }
+  })().catch(() => null);
 
   return summary;
 }

@@ -132,3 +132,40 @@ export const ORDER_EMAILS = {
     how: "It goes back the same way you paid. Banks can take a few working days to show it.",
   },
 } as const;
+
+/**
+ * The morning email: one a day, to whoever runs the shop, if they switch it
+ * on. It is a nudge to open the back end and never a copy of what is in it.
+ * It says how many things are waiting and carries nobody's name, address or
+ * order: real records stay behind the sign-in, and an inbox is not that.
+ */
+export const MORNING_EMAIL = {
+  subject: (needs: number) =>
+    needs === 0
+      ? `${STORE.name} today: nothing needs you`
+      : `${STORE.name} today: ${String(needs)} ${needs === 1 ? "thing needs" : "things need"} you`,
+  hello: "Morning.",
+  needs: (count: number) =>
+    count === 0
+      ? "Nothing needs you this morning."
+      : `${String(count)} ${count === 1 ? "thing needs" : "things need"} you today.`,
+  /** After `needs`, when some of them are the ones Today marks "Now". */
+  pressing: (count: number, of: number) =>
+    count === of
+      ? of === 1
+        ? "It should not wait."
+        : "None of them should wait."
+      : `${String(count)} of them should not wait.`,
+  toPack: (count: number) =>
+    `${String(count)} ${count === 1 ? "order is" : "orders are"} paid for and waiting to be packed.`,
+  packed: (count: number) =>
+    `${String(count)} ${count === 1 ? "is" : "are"} packed and waiting for the courier.`,
+  nothingWaiting: "No orders are waiting to be packed or sent.",
+  /** The day's takings follow, as a figure, then a full stop. */
+  yesterday: (orders: number) =>
+    orders === 0
+      ? "Yesterday: no orders."
+      : `Yesterday: ${String(orders)} ${orders === 1 ? "order" : "orders"}, worth`,
+  open: "Open Today",
+  why: "You get this each morning because the morning email is switched on in the back end, under Settings. It can be switched off there.",
+} as const;

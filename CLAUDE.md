@@ -572,6 +572,20 @@ go-live list shows when it last ran and what is stuck.
 - An address on `mail_suppressions` is sent nothing, its own order's emails included.
 - **No secret is logged or stored.** What Resend says when it refuses is scrubbed before it
   is kept, and the go-live list names the settings that are missing, never a value.
+- **The morning email** (`lib/backstage/digest/ops.ts`, Settings, Morning email) is one
+  email a day to whoever runs the shop, saying how many things need them. It ships
+  switched off. Switched on, the clock writes it once each New Zealand morning (its id is
+  worked out from the day, so two ticks write one), and each joins the last one's
+  conversation. **It carries no record:** counts, what yesterday came to and a link, never
+  a name, an address or an order number. Real records stay behind the sign-in, and an
+  inbox is not behind it. With email not connected nothing is written down at all.
+- **Nothing a test does reaches a real provider, whatever the test sets.** The mail seam
+  and the event dispatcher both ask `underTestRunner()` (`lib/under-test.ts`), which reads
+  the runner's own marks as well as `NODE_ENV`. They used to ask `NODE_ENV` alone, and a
+  test that stood in for production by setting it (the morning email's first) was let
+  through to the network. A test that needs email "connected" stubs the settings and
+  also puts a counting `fetch` in the real one's place, and ends by checking it was never
+  asked (`tests/backstage/morning-email.test.ts`).
 
 ### The inbox
 

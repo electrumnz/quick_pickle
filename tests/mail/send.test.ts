@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   assertSendable,
@@ -12,6 +12,7 @@ import {
   type OutgoingMail,
 } from "@/lib/mail";
 import { formatAddress, scrubSecrets } from "@/lib/mail/resend";
+import { underTestRunner } from "@/lib/under-test";
 
 /**
  * The seam mail is sent through, and Resend behind it with a fake network.
@@ -256,6 +257,39 @@ describe("where email may leave from: a provider is not enough", () => {
     expect((error as Error).message).toContain(
       "A test has to hand in its own fetch",
     );
+  });
+
+  it("is refused even by a test that sets the whole environment to look like production", async () => {
+    // A test that stands in for a deployment sets NODE_ENV itself. That used
+    // to be all the seam asked, so such a test could put a call on the wire.
+    const wire = vi.fn(async () => new Response("{}"));
+    vi.stubGlobal("fetch", wire);
+    for (const [name, value] of Object.entries(LIVE)) vi.stubEnv(name, value);
+    try {
+      expect(process.env.NODE_ENV).toBe("production");
+      expect(underTestRunner()).toBe(true);
+      const error = await sendMail(mail()).catch((caught: unknown) => caught);
+      expect(error).toBeInstanceOf(MailSendError);
+      expect((error as Error).message).toContain(
+        "A test has to hand in its own fetch",
+      );
+      expect(wire).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("knows a test runner by its own marks, and a deployment by their absence", () => {
+    expect(underTestRunner({ NODE_ENV: "test" })).toBe(true);
+    expect(underTestRunner({ NODE_ENV: "production", VITEST: "true" })).toBe(
+      true,
+    );
+    expect(
+      underTestRunner({ NODE_ENV: "production", VITEST_WORKER_ID: "3" }),
+    ).toBe(true);
+    expect(underTestRunner({ NODE_ENV: "production" })).toBe(false);
+    expect(underTestRunner({ NODE_ENV: "development" })).toBe(false);
   });
 });
 

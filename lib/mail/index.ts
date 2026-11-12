@@ -25,6 +25,7 @@
  */
 
 import { databaseUrl } from "@/lib/db/client";
+import { underTestRunner } from "@/lib/under-test";
 
 import { sendWithResend } from "./resend";
 import type { MailProvider, OutgoingMail, SendResult } from "./types";
@@ -196,7 +197,7 @@ function nothingLeaves(name: string): MailProvider {
  * its own fake, so no test can ever put a call on the wire.
  */
 function networkFetch(): typeof fetch {
-  if (process.env.NODE_ENV !== "test") return fetch;
+  if (!underTestRunner()) return fetch;
   return async () => {
     throw new Error(
       "A test has to hand in its own fetch. The mail provider is never called from a test.",

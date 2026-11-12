@@ -204,8 +204,15 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       pages and says which sells more, and "see it as": describe a visitor and see the page
       they would get. All of it switched off until somebody starts something, and no cookie
       is set for anybody until then.
-- [ ] **Automations and routines.** Rules that react to events, schedules that run, a
-      daily digest, and an approval queue for anything outward.
+- [x] **The things that should happen by themselves, for one person.** A morning email
+      (Settings, Morning email; off until it is switched on): one a day, saying how many
+      things need you, how many orders are waiting and what yesterday came to, with a link
+      and nobody's details. And the email the site promises a pre-order's customer with
+      the ship date: Today says who has not had it, and one press sends it.
+- [ ] **An approval queue, and rules of your own.** A bot that wants to send or publish
+      something has to ask a person first; that queue comes with the Claude tooling below.
+      Rules somebody writes themselves ("when this happens, do that") are not built:
+      Today already gathers what needs a person, and nobody has asked for one yet.
 - [x] **Plans.** The plan, the budget and what a pack costs to make and send, how-to
       sheets, a to-do list, the open questions for Ashleigh, and a light checklist of what a
       food business has to have in place.

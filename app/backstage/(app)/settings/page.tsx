@@ -35,6 +35,13 @@ const SECTIONS = [
     ownerOnly: false,
   },
   {
+    href: "/backstage/settings/morning-email",
+    label: "Morning email",
+    blurb:
+      "One email a day saying how many things need you. Off unless you switch it on.",
+    ownerOnly: false,
+  },
+  {
     href: "/backstage/settings/go-live",
     label: "Go-live list",
     blurb: "What still stands between this site and taking real money.",
