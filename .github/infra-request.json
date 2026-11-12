@@ -1,6 +1,6 @@
 {
-  "actions": ["stripe-check", "status"],
+  "actions": ["stripe-events", "status"],
   "confirm": "yes",
-  "asked": "2026-11-12T12:00Z",
-  "why": "Prove against Stripe's test mode that an order with a promo code comes to the discounted total on the payment page."
+  "asked": "2026-11-12T17:20Z",
+  "why": "Have Stripe send news of refunds (charge.refunded), so a refund made in Stripe's own dashboard is written onto the order."
 }

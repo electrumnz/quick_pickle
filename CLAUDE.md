@@ -281,6 +281,15 @@ go-live list shows when it last ran and what is stuck.
     went: before sending, Stripe's own list is checked for that id, because Stripe forgets a
     request after a day and a retry can come later. Refused, it comes back off the order.
     Any other order's refund is only written down, and the screen says which it will be.
+  - A refund made from Stripe's own dashboard is written onto the order when Stripe says
+    one was made (`charge.refunded`). `lib/backstage/orders/outside-refunds.ts` reads the
+    refunds Stripe holds for that payment and `orders.refundsSeen` records any the order
+    does not have. **Stripe's list is the record and its news only the nudge**, so being
+    told twice, late or out of order writes nothing twice. A refund the back end started
+    carries our own id at Stripe and is never counted again.
+  - The site only hears the kinds of news its endpoint was told to send. Teach it a new
+    one and add it to `STRIPE_EVENTS` in the infra script, then run `stripe-events`: that
+    changes the list on the endpoint that is there, and keeps its signing secret.
   - **Stripe's payment page cannot be driven by an automated browser.** Its bot check
     swallows the press on Pay. Everything up to it and the way back can be; the paid path
     needs a person with a test card (4242 4242 4242 4242), then `status` in the infra run.

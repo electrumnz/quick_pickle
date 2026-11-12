@@ -365,8 +365,10 @@ async function stripeStatus() {
     } catch {
       host = "?";
     }
+    const sends = Array.isArray(hook.enabled_events) ? hook.enabled_events : [];
+    const missing = STRIPE_EVENTS.filter((type) => !sends.includes(type));
     console.log(
-      `    ${String(hook.status)} ${host} (${String(hook.enabled_events?.length ?? 0)} events)`,
+      `    ${String(hook.status)} ${host} (${String(sends.length)} events)${missing.length === 0 ? "" : `, NOT sending: ${missing.join(", ")}. Run stripe-events.`}`,
     );
   }
   const publishable = (env.QP_STRIPE_PUBLISHABLE_KEY ?? "").trim();
@@ -637,11 +639,18 @@ async function redeployIfChanged() {
 
 // --- Stripe ------------------------------------------------------------------
 
+/**
+ * The kinds of news the site acts on (lib/shop/payments/stripe-events.ts).
+ * Add one here when the site learns to act on it, and run "stripe-events":
+ * an endpoint made by an earlier run only sends what was asked for then.
+ */
 const STRIPE_EVENTS = [
   "checkout.session.completed",
   "checkout.session.async_payment_succeeded",
   "checkout.session.async_payment_failed",
   "checkout.session.expired",
+  // A refund, from the back end or from Stripe's own dashboard.
+  "charge.refunded",
 ];
 
 /** One form-encoded request to Stripe, the way the app makes them. */
@@ -887,6 +896,54 @@ async function connectStripe() {
   changedSettings = true;
 }
 
+/**
+ * Makes Stripe send exactly the kinds of news the site acts on.
+ *
+ * The list grows with the app, and an endpoint made by an earlier run only
+ * sends what was asked for then. This changes the list on the endpoint that
+ * is already there, so its signing secret stays as it is and nothing needs
+ * building again.
+ */
+async function stripeEvents() {
+  const key = required("QP_STRIPE_SECRET_KEY");
+  const host = await productionHost();
+  const url = `https://${host}/api/stripe/webhook`;
+  const existing = await stripeCall(
+    key,
+    "GET",
+    "/v1/webhook_endpoints?limit=100",
+  );
+  const hook = (existing?.data ?? []).find((each) => each.url === url);
+  if (hook === undefined) {
+    fail("Stripe has no webhook endpoint for the site. Run connect-stripe.");
+  }
+  const sends = [...(hook.enabled_events ?? [])].sort();
+  const wanted = [...STRIPE_EVENTS].sort();
+  if (JSON.stringify(sends) === JSON.stringify(wanted)) {
+    console.log(
+      "  Stripe already sends exactly what the site acts on. Left alone.",
+    );
+    return;
+  }
+  if (!confirmed) {
+    fail('This changes what Stripe sends. Ask again with confirm "yes".');
+  }
+  const changed = await stripeCall(
+    key,
+    "POST",
+    `/v1/webhook_endpoints/${hook.id}`,
+    { enabled_events: STRIPE_EVENTS },
+  );
+  const now = Array.isArray(changed?.enabled_events)
+    ? changed.enabled_events
+    : [];
+  const missing = STRIPE_EVENTS.filter((type) => !now.includes(type));
+  if (missing.length > 0) {
+    fail(`Stripe did not take: ${missing.join(", ")}.`);
+  }
+  console.log(`  Stripe now sends: ${STRIPE_EVENTS.join(", ")}`);
+}
+
 /** Back to the practice checkout: orders recorded, nobody sent to pay. */
 async function disconnectStripe() {
   if (!confirmed) fail('This changes settings. Ask again with confirm "yes".');
@@ -1108,6 +1165,7 @@ const ACTIONS = {
   "connect-database": connectDatabase,
   "stripe-check": stripeCheck,
   "connect-stripe": connectStripe,
+  "stripe-events": stripeEvents,
   "disconnect-stripe": disconnectStripe,
   "connect-clock": connectClock,
   "disconnect-clock": disconnectClock,

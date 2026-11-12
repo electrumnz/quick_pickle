@@ -332,6 +332,28 @@ export function retrieveCheckoutSession(
   );
 }
 
+export type StripePaymentIntent = {
+  readonly id: string;
+  readonly metadata?: Readonly<Record<string, string>> | null;
+};
+
+/**
+ * One payment, as Stripe has it. Asked only to find out which order a
+ * payment belongs to, when Stripe's own news about it did not say.
+ */
+export function retrievePaymentIntent(
+  secretKey: string,
+  paymentIntent: string,
+  fetchImpl: Fetch = fetch,
+): Promise<StripePaymentIntent> {
+  return call<StripePaymentIntent>(
+    fetchImpl,
+    secretKey,
+    "GET",
+    `/v1/payment_intents/${encodeURIComponent(paymentIntent)}`,
+  );
+}
+
 /**
  * Close a payment page that has not been paid, so that it cannot be paid
  * afterwards. Stripe refuses if the page is already closed or already paid.
@@ -355,6 +377,11 @@ export type StripeRefund = {
   /** pending, requires_action, succeeded, failed or canceled. */
   readonly status: string | null;
   readonly amount: number;
+  readonly currency?: string | null;
+  /** When Stripe made it, in seconds since 1970. */
+  readonly created?: number | null;
+  /** Stripe's own word for why: requested_by_customer, duplicate, fraudulent. */
+  readonly reason?: string | null;
   readonly metadata?: Readonly<Record<string, string>> | null;
 };
 
