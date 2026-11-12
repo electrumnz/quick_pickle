@@ -1,0 +1,64 @@
+name: Infra
+
+# The repository's own hands on its hosting, database and payments. Nobody
+# holds dashboard access for the code's sake: this is how the state of Vercel,
+# Supabase and Stripe is read, and how the few settings the app needs are
+# made. scripts/infra/run.mjs says what each action does.
+#
+# Started by hand (or by the API) only. It never runs for a pull request, so
+# code from a fork never sees a secret.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do
+        type: choice
+        required: true
+        default: status
+        options:
+          - status
+          - ensure-setup-code
+      confirm:
+        description: Type yes for an action that changes a setting
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra
+  cancel-in-progress: false
+
+jobs:
+  run:
+    name: ${{ inputs.action }}
+    # Only ever the code on main: a branch cannot borrow the secrets.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+
+      - name: Run
+        env:
+          # Pinned here, not taken from an input: Quick Pickle's own project
+          # and team, and nobody else's.
+          QP_SUPABASE_PROJECT_REF: kauxjwjrgtlherljlnbp
+          QP_VERCEL_TEAM_SLUG: electrumnz-9333s-projects
+          QP_VERCEL_PROJECT: quickpickle
+          QP_SUPABASE_ACCESS_TOKEN: ${{ secrets.QP_SUPABASE_ACCESS_TOKEN }}
+          QP_VERCEL_TOKEN: ${{ secrets.QP_VERCEL_TOKEN }}
+          QP_STRIPE_SECRET_KEY: ${{ secrets.QP_STRIPE_SECRET_KEY }}
+          QP_STRIPE_PUBLISHABLE_KEY: ${{ secrets.QP_STRIPE_PUBLISHABLE_KEY }}
+          INFRA_ACTION: ${{ inputs.action }}
+          INFRA_CONFIRM: ${{ inputs.confirm }}
+        run: node scripts/infra/run.mjs
