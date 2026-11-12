@@ -212,6 +212,13 @@ const privacy: Policy = {
       ],
     },
     {
+      heading: "Keeping the checkout safe",
+      body: [
+        "So that nobody can flood the checkout or sit there guessing at promo codes, we count a few things by internet address, ten minutes at a time: promo codes we don't know, code checks that come with an email address, tries at placing an order, and Pickle Crew sign-ups. Too many, and that address is asked to wait.",
+        "We don't keep the address itself. We keep a scrambled mark in its place, which changes every ten minutes and is normally deleted within a few hours.",
+      ],
+    },
+    {
       heading: "Cookies",
       body: [
         "We don't use cookies to count visits or to advertise to you. There are three small ones we do use, each only when it is needed, and none of them says who you are.",

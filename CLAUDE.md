@@ -358,6 +358,26 @@ go-live list shows when it last ran and what is stuck.
   our own count and run a little low. Sales are the orders: paid, less refunds. Every
   figure on `/backstage/numbers` comes from one read (`numbers.summary`) for one stretch of
   New Zealand days, so they agree with each other.
+- **The checkout counts how often one internet address asks it things, and past a ceiling
+  asks it to wait** (`lib/shop/limit.ts` for what counts, `lib/shop/caller.ts` for who is
+  asking, `limits.hit` for the count). In ten minutes: 20 promo codes we do not know or
+  questions that name a person, 30 presses of the order button, 20 Pickle Crew sign-ups.
+  - **One address is often a crowd** (a club's wifi, a stall, a phone company's shared
+    addresses), so an ask about a real code, and a form handed back to fix a field, is
+    counted and then given back. Only what a guesser does stays on the count. Change what
+    counts and keep that true: `tests/shop/limit.test.ts` holds it.
+  - The count is taken first, in one guarded statement, and given back after. Checking
+    first and counting after lets a burst through.
+  - No address is kept. The key holds a keyed hash of the address (an IPv6 one by its /64),
+    the question and the window, so it changes every ten minutes, and the clock throws rows
+    away after two hours. The privacy page says so; change one and change the other.
+  - It is on whenever a database is connected, so never in the browser tests, which all
+    come from one address. It is never why the shop fails: no address, or no count, and
+    the answer is yes. `QP_LIMITS=off` stops it (the infra workflow's `limits-off`, then
+    `redeploy`; `limits-on` is the way back), and the go-live list says which it is.
+  - **The address is read from headers Vercel writes itself.** On another host, or with a
+    proxy in front of this one, `callerOf` is the line to change. Believe the wrong header
+    and either anybody picks their own address or every buyer shares the proxy's.
 - `lib/shop/store` is where the shop hands an order over. The default is `db`: the back
   end's own `orders.record` operation, so an order is on the Orders screen as it is placed.
 - The "order's in" page reads a short-lived httpOnly receipt cookie. It is display only.

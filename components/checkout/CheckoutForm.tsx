@@ -27,6 +27,7 @@ import {
   type CodeAnswer,
   type SpecialAnswer,
 } from "./actions";
+import { checkoutProblem } from "./problem";
 
 /**
  * The checkout form.
@@ -334,6 +335,7 @@ export function CheckoutForm({
         },
   );
   const errors: FieldErrors = state.errors;
+  const problem = checkoutProblem(state);
   const values = state.values;
   const placeLabel = mode === "practice" ? CHECKOUT.placeTest : CHECKOUT.place;
   const chargedDelivery = priced.deliveryCents - priced.deliveryDiscountCents;
@@ -545,17 +547,12 @@ export function CheckoutForm({
             </label>
           </div>
 
-          {state.status !== "idle" ? (
+          {problem !== null ? (
             <p
               role="alert"
               className="border-pink-deep bg-blush text-pink-deep rounded-[14px] border-2 p-4 font-semibold"
             >
-              {errors.special !== undefined
-                ? errors.special
-                : state.status === "invalid"
-                  ? CHECKOUT.problem
-                  : CHECKOUT.failed}
-              {errors.lines ? ` ${errors.lines}.` : ""}
+              {problem}
             </p>
           ) : null}
 

@@ -43,10 +43,33 @@ export type CodeCheck =
       readonly label: string;
       readonly discountCents: number;
       readonly deliveryDiscountCents: number;
+      readonly personal?: true;
     }
-  | { readonly ok: false; readonly reason: string };
+  | {
+      readonly ok: false;
+      readonly reason: string;
+      /**
+       * Set, on a yes or a no, when the answer was about one person: a
+       * once-for-each-customer code looked up against an email. For the
+       * shop's own counting; the checkout is not told.
+       */
+      readonly personal?: true;
+    };
 
 export type CodePeek =
+  | { readonly ok: true; readonly code: string; readonly label: string }
+  | {
+      readonly ok: false;
+      /**
+       * Whether it is a code of ours at all (one that has finished, say).
+       * For the shop's own counting of wrong guesses; a visitor is never
+       * told which kind of no it was.
+       */
+      readonly known: boolean;
+    };
+
+/** The code a new member of the Pickle Crew is given, or a plain no. */
+export type WelcomeCode =
   | { readonly ok: true; readonly code: string; readonly label: string }
   | { readonly ok: false };
 
@@ -126,7 +149,7 @@ export type Store = {
    * The code somebody is given for joining the Pickle Crew, if one is set
    * up and could be used right now.
    */
-  welcomeCode?(): Promise<CodePeek>;
+  welcomeCode?(): Promise<WelcomeCode>;
   /**
    * True when a rule for who sees which page asks whether a visitor has
    * bought before. Only then does the checkout leave a cookie saying so:
@@ -225,6 +248,8 @@ function dbStore(env: Record<string, string | undefined>): Store {
         { code, ...order },
         systemCaller("The shop", "storefront"),
       );
+      const personal =
+        worth.personal === true ? ({ personal: true } as const) : {};
       return worth.ok
         ? {
             ok: true,
@@ -232,8 +257,9 @@ function dbStore(env: Record<string, string | undefined>): Store {
             label: worth.label,
             discountCents: worth.discountCents,
             deliveryDiscountCents: worth.deliveryDiscountCents,
+            ...personal,
           }
-        : { ok: false, reason: worth.reason };
+        : { ok: false, reason: worth.reason, ...personal };
     },
     async remembersBuyers() {
       const { pagesRouting } =
