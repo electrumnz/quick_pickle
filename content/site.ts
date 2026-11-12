@@ -241,10 +241,6 @@ export const FOOTER = {
   foodNote: "Quick Pickle is a food. It is not a medicine.",
 } as const;
 
-export const PREVIEW = {
-  strip: "Preview build: stand-in prices, test checkout.",
-} as const;
-
 export const BUYBAR = {
   label: "Quick add",
   add: preorder ? "Pre-order" : "Add",

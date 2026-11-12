@@ -5,7 +5,6 @@ import {
   Faq,
   FinalCta,
   MeetLucky,
-  PreviewStrip,
   Ritual,
   Shop,
   SiteFooter,
@@ -39,7 +38,6 @@ import { StickyBuyBar } from "@/components/site/StickyBuyBar";
 export default function HomePage() {
   return (
     <>
-      <PreviewStrip />
       <TopTicker />
       <SiteHeader />
       <main id="main" className="flex-1">

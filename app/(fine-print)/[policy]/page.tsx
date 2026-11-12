@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { PreviewStrip, SiteFooter } from "@/components/site/Sections";
+import { SiteFooter } from "@/components/site/Sections";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { POLICIES, policyBySlug } from "@/content/policies";
 
@@ -39,7 +39,6 @@ export default async function PolicyPage({
 
   return (
     <>
-      <PreviewStrip />
       <SiteHeader minimal />
       <main id="main" className="bg-cream px-gutter flex-1 pt-10 pb-20">
         <article className="mx-auto max-w-[42rem]">

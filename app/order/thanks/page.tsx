@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { Art } from "@/components/brand/Art";
 import { ClearJar } from "@/components/checkout/ClearJar";
-import { PreviewStrip, SiteFooter } from "@/components/site/Sections";
+import { SiteFooter } from "@/components/site/Sections";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { CHECKOUT, JAR, THANKS } from "@/content/site";
 import { formatNzdExact } from "@/lib/shop/money";
@@ -82,7 +82,6 @@ export default async function ThanksPage() {
   if (receipt === null) {
     return (
       <>
-        <PreviewStrip />
         <SiteHeader minimal />
         <main id="main" className="bg-cream px-gutter flex-1 py-16">
           <div className="mx-auto flex max-w-[28rem] flex-col items-center text-center">
@@ -109,7 +108,6 @@ export default async function ThanksPage() {
   return (
     <>
       <ClearJar />
-      <PreviewStrip />
       <SiteHeader minimal />
       <main id="main" className="flex-1">
         <section className="on-pink bg-pink px-gutter relative overflow-hidden pt-10 pb-14 text-center">

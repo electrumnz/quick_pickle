@@ -13,12 +13,17 @@
  * holes in the page, each of those carries a sensible stand-in below and is
  * listed in {@link UNCONFIRMED}. While that list is not empty:
  *
- *   - the site shows a "preview build" strip and tells search engines to stay
- *     away (app/robots.ts, app/layout.tsx),
+ *   - the site tells search engines to stay away (app/robots.ts,
+ *     app/layout.tsx) and the back end stays open (lib/backstage.ts),
+ *   - the checkout says plainly that it is in test mode,
  *   - `npm run prelaunch` exits non-zero and names what is missing.
  *
+ * There is deliberately no banner on the public pages saying any of this.
+ * Test mode is explained once, on the checkout, where a visitor would
+ * otherwise expect a card field.
+ *
  * To confirm a fact: put the real value in, then delete its line from
- * UNCONFIRMED. When the list is empty the strip goes and the gate opens.
+ * UNCONFIRMED. When the list is empty the gate opens.
  *
  * Money is integer cents, always. Never a float in a price path.
  */
@@ -168,5 +173,5 @@ export const UNCONFIRMED: readonly Unconfirmed[] = [
   },
 ];
 
-/** True while any fact above is a stand-in. Drives the preview strip. */
+/** True while any fact above is a stand-in. */
 export const IS_PREVIEW = UNCONFIRMED.length > 0;

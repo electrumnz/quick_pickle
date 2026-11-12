@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
-import { PreviewStrip } from "@/components/site/Sections";
 import { CHECKOUT, HEADER } from "@/content/site";
 import { paymentsAreTest } from "@/lib/shop/payments";
 
@@ -21,7 +20,6 @@ export const metadata: Metadata = {
 export default function CheckoutPage() {
   return (
     <>
-      <PreviewStrip />
       <header className="on-navy bg-navy border-navy-deep border-b-[3px]">
         <div className="max-w-page px-gutter mx-auto flex h-14 items-center justify-between gap-4 md:h-16">
           <Link

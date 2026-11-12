@@ -34,7 +34,13 @@ A wink is a claim too. "We can't tell you what it does" implies it does somethin
 is guessed: no ingredient, volume, origin, storage line or process word ("strained",
 "brewed") appears until Ashleigh confirms it. Unknown commercial facts carry a stand-in in
 `content/offer.ts` and are listed in `UNCONFIRMED` there. While that list is not empty the
-site shows a preview strip, tells crawlers to stay out, and `npm run prelaunch` fails.
+site tells crawlers to stay out and `npm run prelaunch` fails.
+
+**No demo or preview banner on public pages.** Test mode is explained once, on the
+checkout, where a visitor would otherwise expect a card field.
+
+**No em dashes in customer-facing copy.** Use a full stop, a comma or a colon. The founder
+reads them as machine-written. Code comments are not copy.
 
 **Never trust a price from the browser.** The jar holds SKUs and quantities. Every total
 is computed from `content/offer.ts` by `lib/shop/pricing.ts`, and computed again on the
@@ -113,7 +119,7 @@ Video and reels go in the slots in `content/media.ts`, encoded by `scripts/build
 - Playwright is pinned to the version whose Chromium is preinstalled in the cloud sandbox
   (1.63). Do not run `playwright install` there.
 - ESLint 9 not 10, TypeScript 6 not 7: both held back on purpose by the Next toolchain.
-- User-facing writing: plain everyday New Zealand English, British spelling, no em dashes.
+- Customer-facing writing is plain everyday New Zealand English with British spelling.
 
 ## Deploying
 

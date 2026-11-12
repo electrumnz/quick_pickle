@@ -12,7 +12,6 @@ import {
 } from "@/components/brand/Icons";
 import { Ticker } from "@/components/ui/Ticker";
 import { faqs, shipDateText } from "@/content/faq";
-import { IS_PREVIEW } from "@/content/offer";
 import {
   BUY,
   CREW,
@@ -21,7 +20,6 @@ import {
   FOOTER,
   LUCKY,
   OFFICIAL,
-  PREVIEW,
   RITUAL,
   TICKER,
   TRUTHS,
@@ -33,16 +31,6 @@ import { CrewForm } from "./CrewForm";
 /* The static sections of the page, top to bottom. All server-rendered: the
    only JavaScript any of them needs belongs to the buy box and the crew form,
    which are their own client components. */
-
-/** Shown while any commercial fact is a stand-in (content/offer.ts). */
-export function PreviewStrip() {
-  if (!IS_PREVIEW) return null;
-  return (
-    <p className="bg-olive text-navy px-4 py-1.5 text-center text-[0.8125rem] leading-snug font-semibold">
-      {PREVIEW.strip}
-    </p>
-  );
-}
 
 export function TopTicker() {
   return (
