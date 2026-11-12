@@ -221,5 +221,12 @@ export const MIGRATIONS: readonly Migration[] = [
       "CREATE TABLE \"file_blobs\" (\n\t\"key\" text PRIMARY KEY NOT NULL,\n\t\"bytes\" \"bytea\" NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
       "ALTER TABLE \"file_blobs\" ENABLE ROW LEVEL SECURITY;"
     ]
+  },
+  {
+    "tag": "0003_event_retries",
+    "hash": "08325ad204fd00ec",
+    "statements": [
+      "ALTER TABLE \"events\" ADD COLUMN \"not_before\" timestamp with time zone;"
+    ]
   }
 ];

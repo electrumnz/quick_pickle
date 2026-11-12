@@ -147,6 +147,12 @@ export const events = pgTable(
     processedAt: instant("processed_at"),
     attempts: integer().notNull().default(0),
     lastError: text(),
+    /**
+     * Not to be picked up before this. While something is working on the
+     * event it is a short lease, so two workers do not both take it; after a
+     * failure it is the wait before the next try.
+     */
+    notBefore: instant("not_before"),
   },
   (t) => [
     index("events_pending_idx")

@@ -22,6 +22,13 @@
       "when": 1794476172103,
       "tag": "0002_file_blobs",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794477320123,
+      "tag": "0003_event_retries",
+      "breakpoints": true
     }
   ]
 }
