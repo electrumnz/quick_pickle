@@ -1,12 +1,6 @@
 {
-  "actions": [
-    "status",
-    "connect-database",
-    "ensure-setup-code",
-    "redeploy",
-    "status"
-  ],
+  "actions": ["status", "stripe-check", "connect-stripe", "redeploy", "status"],
   "confirm": "yes",
-  "asked": "2026-11-12T10:00Z",
-  "why": "First connection: give production its database login and its set-up code, then build it again so both take effect."
+  "asked": "2026-11-12T10:20Z",
+  "why": "Prove the app's Stripe code against Stripe's test mode, and only if that passes switch production's checkout from practice to Stripe (test keys: its real payment page, no real money)."
 }

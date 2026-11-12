@@ -90,6 +90,8 @@ const { actions, confirmed, rotate } = whatWasAsked();
 
 /** Set when an action changed a setting that only a new deployment picks up. */
 let changedSettings = false;
+/** Set once the app's Stripe code has been proved against Stripe in this run. */
+let stripeChecked = false;
 
 const supabaseRef = required("QP_SUPABASE_PROJECT_REF");
 const vercelTeam = required("QP_VERCEL_TEAM_SLUG");
@@ -591,10 +593,222 @@ async function redeployIfChanged() {
   );
 }
 
+// --- Stripe ------------------------------------------------------------------
+
+const STRIPE_EVENTS = [
+  "checkout.session.completed",
+  "checkout.session.async_payment_succeeded",
+  "checkout.session.async_payment_failed",
+  "checkout.session.expired",
+];
+
+/** One form-encoded request to Stripe, the way the app makes them. */
+async function stripeCall(key, method, path, form) {
+  const { stripeForm } = await import("../../lib/shop/payments/stripe.ts");
+  const response = await fetch(`${STRIPE}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${key}`,
+      ...(form === undefined
+        ? {}
+        : { "Content-Type": "application/x-www-form-urlencoded" }),
+    },
+    body: form === undefined ? undefined : stripeForm(form),
+  });
+  const text = await response.text();
+  let json = null;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    json = null;
+  }
+  if (!response.ok) {
+    throw new Error(
+      `${method} ${path.split("?")[0]} answered ${String(response.status)}: ${String(json?.error?.message ?? "").slice(0, 200)}`,
+    );
+  }
+  return json;
+}
+
+/**
+ * Proves the app's own Stripe code against the real Stripe, in test mode:
+ * makes a payment page for a made-up order with the same function the
+ * checkout uses, checks what came back, and closes the page again. No money
+ * can move: it refuses to run with anything but a test key.
+ */
+async function stripeCheck() {
+  const key = required("QP_STRIPE_SECRET_KEY");
+  if (!key.startsWith("sk_test_")) {
+    fail("The Stripe check only ever runs with a test key.");
+  }
+  const { createCheckoutSession, retrieveCheckoutSession } =
+    await import("../../lib/shop/payments/stripe.ts");
+  const number = "QP-TESTZZ";
+  const request = {
+    // A new page each run: the order number is the idempotency key.
+    orderNumber: `${number.slice(0, 3)}${randomBytes(4)
+      .toString("hex")
+      .toUpperCase()
+      .replace(/[01ILOU]/g, "Z")
+      .slice(0, 6)}`,
+    amountCents: 8850,
+    currency: "NZD",
+    email: "check@example.co.nz",
+    lines: [{ name: "The Squad", qty: 1, unitCents: 8400 }],
+    shippingCents: 450,
+    successUrl: "https://quickpickle.vercel.app/order/thanks",
+    cancelUrl: "https://quickpickle.vercel.app/checkout?payment=cancelled",
+  };
+  const session = await createCheckoutSession(key, request, new Date());
+  const checks = [
+    [
+      "has an id",
+      typeof session.id === "string" && session.id.startsWith("cs_test_"),
+    ],
+    [
+      "has a payment page",
+      typeof session.url === "string" && session.url.startsWith("https://"),
+    ],
+    ["totals 8850 cents", session.amount_total === 8850],
+    ["is in NZD", session.currency === "nzd"],
+    [
+      "carries the order number",
+      session.client_reference_id === request.orderNumber,
+    ],
+    [
+      "is open and unpaid",
+      session.status === "open" && session.payment_status === "unpaid",
+    ],
+  ];
+  for (const [label, ok] of checks)
+    console.log(`  ${ok ? "ok  " : "FAIL"} ${label}`);
+
+  const again = await createCheckoutSession(key, request, new Date());
+  console.log(
+    `  ${again.id === session.id ? "ok  " : "FAIL"} asking twice gives the same page`,
+  );
+  const read = await retrieveCheckoutSession(key, session.id);
+  console.log(`  ${read.id === session.id ? "ok  " : "FAIL"} can be read back`);
+
+  await stripeCall(
+    key,
+    "POST",
+    `/v1/checkout/sessions/${session.id}/expire`,
+    {},
+  );
+  const closed = await retrieveCheckoutSession(key, session.id);
+  console.log(
+    `  ${closed.status === "expired" ? "ok  " : "FAIL"} closed again`,
+  );
+
+  if (
+    checks.some(([, ok]) => !ok) ||
+    again.id !== session.id ||
+    read.id !== session.id ||
+    closed.status !== "expired"
+  ) {
+    fail("The Stripe check did not pass. Nothing was changed.");
+  }
+  stripeChecked = true;
+}
+
+/**
+ * Switches production's checkout from "practice" to Stripe.
+ *
+ * Saves the secret key, tells Stripe where to send its word that a payment
+ * was made (and keeps the signing secret Stripe gives back, which is shown
+ * once and never printed here), and names Stripe as the payment provider.
+ * With a test key that means Stripe's test mode: its real payment page, no
+ * real money. It will not run unless the check above passed in the same run.
+ */
+async function connectStripe() {
+  if (!confirmed) fail('This changes settings. Ask again with confirm "yes".');
+  if (!stripeChecked) {
+    fail('Run "stripe-check" before "connect-stripe" in the same request.');
+  }
+  const key = required("QP_STRIPE_SECRET_KEY");
+  const names = await vercelEnvNames();
+  const have = (name) => hasInProduction(names, name);
+  if (
+    have("STRIPE_SECRET_KEY") &&
+    have("STRIPE_WEBHOOK_SECRET") &&
+    have("PAYMENT_PROVIDER") &&
+    !rotate
+  ) {
+    console.log("Production is already set up for Stripe. Left alone.");
+    return;
+  }
+
+  const domains = await vercel(`/v9/projects/${vercelProject}/domains`);
+  const host = (domains?.domains ?? []).find(
+    (domain) => domain.verified !== false,
+  )?.name;
+  if (typeof host !== "string" || host === "") {
+    fail("Could not find the site's address to give to Stripe.");
+  }
+  const url = `https://${host}/api/stripe/webhook`;
+
+  // The signing secret is only shown when an endpoint is made, so an
+  // endpoint of ours from an earlier run is replaced, not reused.
+  const existing = await stripeCall(
+    key,
+    "GET",
+    "/v1/webhook_endpoints?limit=100",
+  );
+  for (const hook of existing?.data ?? []) {
+    if (hook.url === url) {
+      await stripeCall(key, "DELETE", `/v1/webhook_endpoints/${hook.id}`);
+      console.log("  replaced the webhook endpoint from an earlier run");
+    }
+  }
+  const made = await stripeCall(key, "POST", "/v1/webhook_endpoints", {
+    url,
+    enabled_events: STRIPE_EVENTS,
+    description: "Quick Pickle: marks an order paid, or closes it unpaid.",
+  });
+  if (typeof made?.secret !== "string" || !made.secret.startsWith("whsec_")) {
+    fail("Stripe did not give back a signing secret.");
+  }
+  mask(made.secret);
+  console.log(`  Stripe will send payment news to ${host}`);
+
+  const save = (name, value, type) =>
+    vercel(`/v10/projects/${vercelProject}/env?upsert=true`, {
+      method: "POST",
+      body: { key: name, value, type, target: ["production"] },
+    });
+  await save("STRIPE_SECRET_KEY", key, "sensitive");
+  await save("STRIPE_WEBHOOK_SECRET", made.secret, "sensitive");
+  await save("PAYMENT_PROVIDER", "stripe", "plain");
+  console.log(
+    `  production will take payments through Stripe (${key.startsWith("sk_test_") ? "test mode: no real money" : "LIVE"}).`,
+  );
+  changedSettings = true;
+}
+
+/** Back to the practice checkout: orders recorded, nobody sent to pay. */
+async function disconnectStripe() {
+  if (!confirmed) fail('This changes settings. Ask again with confirm "yes".');
+  await vercel(`/v10/projects/${vercelProject}/env?upsert=true`, {
+    method: "POST",
+    body: {
+      key: "PAYMENT_PROVIDER",
+      value: "test",
+      type: "plain",
+      target: ["production"],
+    },
+  });
+  console.log("  production is back on the practice checkout.");
+  changedSettings = true;
+}
+
 const ACTIONS = {
   status,
   "ensure-setup-code": ensureSetupCode,
   "connect-database": connectDatabase,
+  "stripe-check": stripeCheck,
+  "connect-stripe": connectStripe,
+  "disconnect-stripe": disconnectStripe,
   redeploy: redeployIfChanged,
 };
 
@@ -608,5 +822,10 @@ for (const name of actions) {
 
 for (const name of actions) {
   console.log(`\ninfra: ${name}\n`);
-  await ACTIONS[name]();
+  try {
+    await ACTIONS[name]();
+  } catch (error) {
+    // One plain line, and the actions after this one do not run.
+    fail(error instanceof Error ? error.message : "It failed.");
+  }
 }

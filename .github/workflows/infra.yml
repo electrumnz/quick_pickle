@@ -31,6 +31,7 @@ on:
           - status
           - ensure-setup-code
           - connect-database
+          - stripe-check
       confirm:
         description: Type yes for an action that changes a setting
         type: string
