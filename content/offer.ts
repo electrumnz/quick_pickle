@@ -154,7 +154,7 @@ export const UNCONFIRMED: readonly Unconfirmed[] = [
   },
   {
     key: "ship-date",
-    what: "The date Batch 001 pre-orders ship from",
+    what: "The date pre-orders ship from",
     ask: "Ashleigh",
   },
   {

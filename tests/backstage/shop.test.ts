@@ -138,7 +138,7 @@ describe("the shop, run from the back end", () => {
       "The Trial from $27 to $29",
       "The Squad from $84 to $88",
       "standard delivery from $7 to $8",
-      "free delivery from orders of $60 or more to no orders",
+      "no more free delivery (it was on orders of $60 or more)",
       "the ship date to 1 Dec 2026",
       'the batch\'s name to "Batch 002"',
       "not taking orders",

@@ -208,11 +208,16 @@ export function whatChanged(before: Offer, after: Offer): string[] {
     after.shipping.ruralSurchargeCents,
     "nothing",
   );
-  if (before.shipping.freeOverCents !== after.shipping.freeOverCents) {
-    const orders = (cents: number | null) =>
-      cents === null ? "no orders" : `orders of ${formatNzd(cents)} or more`;
+  const freeWas = before.shipping.freeOverCents;
+  const freeNow = after.shipping.freeOverCents;
+  if (freeWas !== freeNow) {
+    const orders = (cents: number) => `orders of ${formatNzd(cents)} or more`;
     said.push(
-      `free delivery from ${orders(before.shipping.freeOverCents)} to ${orders(after.shipping.freeOverCents)}`,
+      freeNow === null
+        ? `no more free delivery${freeWas === null ? "" : ` (it was on ${orders(freeWas)})`}`
+        : freeWas === null
+          ? `free delivery on ${orders(freeNow)}`
+          : `free delivery from ${orders(freeWas)} to ${orders(freeNow)}`,
     );
   }
   if (before.preorderShipsFrom !== after.preorderShipsFrom) {

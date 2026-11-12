@@ -394,7 +394,7 @@ test("the shop can be stopped, says so everywhere, and can be started again", as
   await changeTheShop(
     page,
     (shop) => shop.getByRole("radio", { name: /no, stop for now/i }).check(),
-    /not taking orders/,
+    /not taking orders/i,
   );
   // Today says so, so nobody forgets it is off.
   await page.goto(`${AUTH_URL}/backstage`);
@@ -419,8 +419,18 @@ test("the shop can be stopped, says so everywhere, and can be started again", as
   }).toPass({ timeout: 20_000 });
   await expect(customer.getByTestId("add-to-jar")).toBeDisabled();
   await expect(customer.getByTestId("add-to-jar")).toContainText(
-    /not taking orders right now/i,
+    /not taking orders/i,
   );
+  // On a phone the button's words fit inside it.
+  await customer.setViewportSize({ width: 390, height: 844 });
+  const fits = await customer.getByTestId("add-to-jar").evaluate((button) => {
+    const label = button.querySelector("span");
+    if (label === null) return false;
+    const outer = button.getBoundingClientRect();
+    const inner = label.getBoundingClientRect();
+    return inner.left >= outer.left && inner.right <= outer.right;
+  });
+  expect(fits).toBe(true);
   await expect(
     customer.getByRole("link", { name: /join the pickle crew/i }).first(),
   ).toHaveAttribute("href", "#crew");
@@ -443,7 +453,7 @@ test("the shop can be stopped, says so everywhere, and can be started again", as
       await shop.getByRole("radio", { name: /yes, taking orders/i }).check();
       await shop.getByLabel("The Trial (6 shots)").fill("27");
     },
-    /taking orders again/,
+    /taking orders again/i,
   );
   await expect(async () => {
     await customer.goto(`${AUTH_URL}/`);

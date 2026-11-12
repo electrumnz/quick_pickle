@@ -250,38 +250,42 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
         </fieldset>
 
         <div className="mt-6 flex flex-wrap items-stretch gap-3">
-          <div
-            role="group"
-            aria-label={BUY.quantity}
-            className="border-navy bg-paper flex min-h-[3.75rem] shrink-0 items-center rounded-[12px] border-[3px]"
-          >
-            <button
-              type="button"
-              aria-label={BUY.fewer}
-              disabled={qty <= 1}
-              onClick={() => setQty((value) => Math.max(1, value - 1))}
-              className="grid h-full w-12 place-items-center rounded-l-[9px] active:scale-90 disabled:opacity-30"
+          {/* Shut for now: there is nothing to count, so the button takes
+              the whole row and its words fit. */}
+          {offer.open ? (
+            <div
+              role="group"
+              aria-label={BUY.quantity}
+              className="border-navy bg-paper flex min-h-[3.75rem] shrink-0 items-center rounded-[12px] border-[3px]"
             >
-              <MinusIcon className="size-5" />
-            </button>
-            <output
-              aria-live="polite"
-              className="label w-7 text-center text-[1.5rem] leading-none"
-            >
-              {qty}
-            </output>
-            <button
-              type="button"
-              aria-label={BUY.more}
-              disabled={qty >= MAX_PACKS_PER_LINE}
-              onClick={() =>
-                setQty((value) => Math.min(MAX_PACKS_PER_LINE, value + 1))
-              }
-              className="grid h-full w-12 place-items-center rounded-r-[9px] active:scale-90 disabled:opacity-30"
-            >
-              <PlusIcon className="size-5" />
-            </button>
-          </div>
+              <button
+                type="button"
+                aria-label={BUY.fewer}
+                disabled={qty <= 1}
+                onClick={() => setQty((value) => Math.max(1, value - 1))}
+                className="grid h-full w-12 place-items-center rounded-l-[9px] active:scale-90 disabled:opacity-30"
+              >
+                <MinusIcon className="size-5" />
+              </button>
+              <output
+                aria-live="polite"
+                className="label w-7 text-center text-[1.5rem] leading-none"
+              >
+                {qty}
+              </output>
+              <button
+                type="button"
+                aria-label={BUY.more}
+                disabled={qty >= MAX_PACKS_PER_LINE}
+                onClick={() =>
+                  setQty((value) => Math.min(MAX_PACKS_PER_LINE, value + 1))
+                }
+                className="grid h-full w-12 place-items-center rounded-r-[9px] active:scale-90 disabled:opacity-30"
+              >
+                <PlusIcon className="size-5" />
+              </button>
+            </div>
+          ) : null}
 
           <div className="relative min-w-[13.5rem] flex-1">
             <button
@@ -308,16 +312,12 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
 
         {/* Shut for now: say so, and point at the one thing there is to do. */}
         {offer.open ? null : (
-          <p
-            data-testid="shop-closed"
-            className="card-flat mt-5 p-4 text-[0.9688rem] leading-snug"
-          >
-            {SHOP.closedNote}{" "}
-            <a href="#crew" className="link font-semibold">
-              {SHOP.closedCta}
+          <div data-testid="shop-closed" className="card-flat mt-5 p-4">
+            <p className="text-[0.9688rem] leading-snug">{SHOP.closedNote}</p>
+            <a href="#crew" className="btn btn-sm mt-3">
+              <span className="cap-trim">{SHOP.closedCta}</span>
             </a>
-            .
-          </p>
+          </div>
         )}
 
         <CarriedCodeNote className="mt-5" />

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CheckIcon } from "@/components/brand/Icons";
+import { ShopLink } from "@/components/backstage/ShopLink";
 import { SubmitButton } from "@/components/backstage/SubmitButton";
 import { Notice } from "@/components/backstage/ui";
 import { PRODUCT } from "@/content/offer";
@@ -24,6 +25,13 @@ import { formatNzDateTime, formatNzRelative, minutesSince } from "@/lib/time";
 import { confirmFactAction } from "../shop/actions";
 
 export const metadata: Metadata = { title: "Go-live list" };
+
+/** The pages whose promises an owner agrees to. */
+const FINE_PRINT = [
+  { href: "/returns", label: "Returns" },
+  { href: "/delivery", label: "Delivery" },
+  { href: "/terms", label: "Terms" },
+] as const;
 
 /**
  * The go-live list: everything between this build and taking real money,
@@ -228,6 +236,22 @@ export default async function GoLivePage({
                       Now: {item.now}.
                     </p>
                   )}
+                  {/* Not a figure: the pages themselves are what is being
+                      agreed to, so they are one press away. */}
+                  {item.key === "returns-promises" ? (
+                    <p className="mt-1 flex flex-wrap gap-x-4 text-[0.9375rem]">
+                      Read them:
+                      {FINE_PRINT.map((page) => (
+                        <ShopLink
+                          key={page.href}
+                          href={page.href}
+                          className="underline decoration-2 underline-offset-4"
+                        >
+                          {page.label}
+                        </ShopLink>
+                      ))}
+                    </p>
+                  ) : null}
                   {item.confirmed !== null ? (
                     <p className="text-navy-muted mt-1 text-[0.9375rem]">
                       Confirmed by {item.confirmed.by},{" "}

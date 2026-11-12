@@ -111,6 +111,9 @@ function Choice({
   );
 }
 
+/** A line of what changed, as the start of a sentence. */
+const sentence = (line: string) => line.charAt(0).toUpperCase() + line.slice(1);
+
 export function ShopForm({
   packs,
   start,
@@ -152,7 +155,7 @@ export function ShopForm({
           <p className="font-semibold">The shop is changed.</p>
           <ul className="mt-1 list-disc pl-5">
             {state.changed.map((line) => (
-              <li key={line}>{line}</li>
+              <li key={line}>{sentence(line)}</li>
             ))}
           </ul>
           <p className="mt-2">
@@ -351,7 +354,7 @@ export function ShopForm({
           <p className="font-semibold">This is what would change:</p>
           <ul className="list-disc pl-5">
             {state.changed.map((line) => (
-              <li key={line}>{line}</li>
+              <li key={line}>{sentence(line)}</li>
             ))}
           </ul>
           <p>

@@ -73,7 +73,9 @@ export default async function ShopSettingsPage() {
               className="mt-3 list-disc pl-5 leading-relaxed"
             >
               {moved.map((line) => (
-                <li key={line}>{line}</li>
+                <li key={line}>
+                  {line.charAt(0).toUpperCase() + line.slice(1)}
+                </li>
               ))}
             </ul>
           )}

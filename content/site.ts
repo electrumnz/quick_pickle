@@ -39,8 +39,8 @@ const isPreorder = (sale: OnSale) => sale.launchMode === "preorder";
  * something about an order changed while its buyer was at the checkout.
  */
 export const SHOP = {
-  /** On the buy button, which cannot be pressed. */
-  closedButton: "Not taking orders right now",
+  /** On the buy button, which cannot be pressed. Short: it has to fit. */
+  closedButton: "Not taking orders",
   /** Under it, and in the jar. The Pickle Crew's own promise, said again. */
   closedNote:
     "We've stopped taking orders for the moment. Join the Pickle Crew for first dibs when we're back.",
