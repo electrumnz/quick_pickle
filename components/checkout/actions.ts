@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { CODES } from "@/content/site";
 import { normaliseCart } from "@/lib/shop/cart";
+import { asPromoCode } from "@/lib/shop/code";
 import { cartLineSchema, type FieldErrors } from "@/lib/shop/order";
 import { getPaymentProvider } from "@/lib/shop/payments";
 import { placeOrder, type RawCheckout } from "@/lib/shop/place-order";
@@ -59,10 +60,17 @@ export async function checkCode(
   code: string,
   linesJson: string,
   rural: boolean,
+  email?: string,
 ): Promise<CodeAnswer> {
   if (typeof code !== "string" || code.trim() === "" || code.length > 60) {
     return { ok: false, reason: CODES.unknown };
   }
+  // Some codes work once for each customer. If the email is already typed,
+  // say so now; if not, placing the order checks it anyway.
+  const who =
+    typeof email === "string" && email.length <= 254 && email.includes("@")
+      ? email.trim().toLowerCase()
+      : undefined;
   let lines: z.infer<typeof codeLines>;
   try {
     lines = codeLines.parse(JSON.parse(linesJson));
@@ -78,6 +86,7 @@ export async function checkCode(
     const answer = await store.checkCode(code, {
       subtotalCents: priced.subtotalCents,
       deliveryCents: priced.deliveryCents,
+      ...(who === undefined ? {} : { email: who }),
     });
     if (!answer.ok) return answer;
     const after = quote(
@@ -89,6 +98,28 @@ export async function checkCode(
     return answer;
   } catch {
     return { ok: false, reason: CODES.unavailable };
+  }
+}
+
+/** What a visitor is told about a code their link carried. */
+export type CarriedCode =
+  | { readonly ok: true; readonly code: string; readonly label: string }
+  | { readonly ok: false };
+
+/**
+ * For a visitor who arrived by a link that carries a code: what the code
+ * gives, in a few words, if it could be used right now. Anything else is a
+ * plain no, so the page never promises a saving the checkout would refuse.
+ */
+export async function describeCode(code: string): Promise<CarriedCode> {
+  const wanted = asPromoCode(code);
+  if (wanted === null) return { ok: false };
+  try {
+    const store = getStore();
+    if (store.describeCode === undefined) return { ok: false };
+    return await store.describeCode(wanted);
+  } catch {
+    return { ok: false };
   }
 }
 
@@ -120,6 +151,20 @@ function parseLines(form: FormData): unknown {
   }
 }
 
+/** How the visit arrived, if the form says. Anything unreadable is nothing. */
+function parseSource(form: FormData): unknown {
+  const raw = text(form, "source");
+  if (raw === "" || raw.length > 2000) return undefined;
+  try {
+    const value: unknown = JSON.parse(raw);
+    return typeof value === "object" && value !== null && !Array.isArray(value)
+      ? value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function submitCheckout(
   _previous: CheckoutState,
   form: FormData,
@@ -139,6 +184,7 @@ export async function submitCheckout(
     rural: values.rural === "on",
     joinCrew: values.joinCrew === "on",
     lines: parseLines(form),
+    source: parseSource(form),
   };
 
   let result;

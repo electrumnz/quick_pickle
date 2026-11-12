@@ -183,10 +183,17 @@ test("a code takes its saving off before the button is pressed", async ({
   // A code nobody made is refused in a sentence, and the total stays put.
   await box.fill("nope");
   await page.getByTestId("apply-code").click();
-  await expect(page.locator("#co-promoCode-error")).toHaveText(
+  await expect(page.locator("#co-promoCode-error")).toContainText(
     "We don't know that code.",
   );
   await expect(place).toContainText("$84.00");
+  // A refused code can be taken off in one press, and the box is empty again.
+  await page
+    .locator("#co-promoCode-error")
+    .getByRole("button", { name: "Take it off" })
+    .click();
+  await expect(box).toHaveValue("");
+  await expect(page.locator("#co-promoCode-error")).toHaveCount(0);
 
   // A real one (the demo's CREW10, 10% off), typed the way people type.
   await box.fill(" crew10");
@@ -225,6 +232,127 @@ test("a code takes its saving off before the button is pressed", async ({
   await page.goto(`/backstage/orders/${number}`);
   await expect(page.getByText("Code CREW10", { exact: true })).toBeVisible();
   await expect(page.getByText("$75.60").first()).toBeVisible();
+});
+
+test("a link that carries a code applies it, and the order is counted for its owner", async ({
+  page,
+}) => {
+  // The demo's club poster: a QR code for /go/rovers, which belongs to
+  // Sample Rovers FC and carries their code, ROVERS10 (10% off).
+  await page.goto("/go/rovers");
+  await expect(page).toHaveURL(
+    /\/\?utm_source=rovers&utm_medium=print&utm_campaign=clubrooms&via=rovers&code=ROVERS10$/,
+  );
+
+  // The page says the code is in, once the server has said it can be used.
+  await page.locator("#shop").scrollIntoViewIfNeeded();
+  await expect(page.getByTestId("carried-code").first()).toContainText(
+    "Code ROVERS10 is in: 10% off.",
+  );
+  const add = page.getByTestId("add-to-jar");
+  await expect(add).toContainText("$48");
+  await add.click();
+  const jar = page.getByRole("dialog");
+  await expect(jar.getByTestId("carried-code")).toBeVisible();
+  await jar.getByRole("link", { name: /checkout/i }).click();
+  await expect(page).toHaveURL(/\/checkout$/);
+
+  // Nobody typed anything: the code is in the box and off the total.
+  const place = page.getByTestId("place-order");
+  const box = page.locator("#co-promoCode");
+  await expect(box).toHaveValue("ROVERS10");
+  await expect(page.locator("#co-promoCode-ok")).toContainText(
+    "Code applied: 10% off. You save $4.80.",
+  );
+  await expect(place).toContainText("$50.20");
+
+  // It can be taken off, and it stays off: the buyer said no to it.
+  await page
+    .locator("#co-promoCode-ok")
+    .getByRole("button", { name: "Take it off" })
+    .click();
+  await expect(box).toHaveValue("");
+  await expect(place).toContainText("$55.00");
+  await page.reload();
+  await expect(place).toContainText("$55.00");
+  await expect(box).toHaveValue("");
+
+  // Following the link again puts it back.
+  await page.goto("/go/rovers");
+  await expect(page.getByTestId("carried-code").first()).toBeVisible();
+  await page.goto("/checkout");
+  await expect(box).toHaveValue("ROVERS10");
+  await expect(place).toContainText("$50.20");
+
+  await page.fill("#co-email", "poster@example.co.nz");
+  await page.fill("#co-firstName", "Posy");
+  await page.fill("#co-lastName", "Tester");
+  await page.fill("#co-line1", "4 Clubrooms Lane");
+  await page.fill("#co-city", "Paraparaumu");
+  await page.selectOption("#co-region", "Wellington");
+  await page.fill("#co-postcode", "5032");
+  await place.click();
+
+  await expect(page).toHaveURL(/\/order\/thanks$/);
+  await expect(page.getByText("Code ROVERS10")).toBeVisible();
+  await expect(page.getByText("-$4.80")).toBeVisible();
+
+  // The back end knows which link it came through and whose sale it was.
+  const number = await page.getByTestId("order-number").innerText();
+  await page.goto(`/backstage/orders/${number}`);
+  await expect(page.getByText("/go/rovers", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Sample Rovers FC" }),
+  ).toBeVisible();
+  await expect(page.getByText("Code ROVERS10", { exact: true })).toBeVisible();
+});
+
+test("a carried code that cannot be used is explained, and holds nobody up", async ({
+  page,
+}) => {
+  // SIDELINE5 is the demo's code from a club day that has been and gone.
+  await page.goto("/?code=sideline5&via=flyer");
+  await page.locator("#shop").scrollIntoViewIfNeeded();
+  await page.getByTestId("add-to-jar").click();
+  const jar = page.getByRole("dialog");
+  await expect(jar).toBeVisible();
+  // Nothing on the page promises a saving the checkout would refuse.
+  await expect(page.getByTestId("carried-code")).toHaveCount(0);
+  await jar.getByRole("link", { name: /checkout/i }).click();
+  await expect(page).toHaveURL(/\/checkout$/);
+
+  await expect(page.getByTestId("carried-code-refused")).toHaveText(
+    "Code SIDELINE5 came with your link, but it can't be used on this order. That code has finished.",
+  );
+  const place = page.getByTestId("place-order");
+  await expect(page.locator("#co-promoCode")).toHaveValue("");
+  await expect(place).toContainText("$55.00");
+
+  // The order goes through at full price, first press.
+  await page.fill("#co-email", "flyer@example.co.nz");
+  await page.fill("#co-firstName", "Flo");
+  await page.fill("#co-lastName", "Tester");
+  await page.fill("#co-line1", "2 Sideline Road");
+  await page.fill("#co-city", "Levin");
+  await page.selectOption("#co-region", "Manawatū-Whanganui");
+  await page.fill("#co-postcode", "5510");
+  await place.click();
+  await expect(page).toHaveURL(/\/order\/thanks$/);
+
+  // It still says which link the visit came through.
+  const number = await page.getByTestId("order-number").innerText();
+  await page.goto(`/backstage/orders/${number}`);
+  await expect(page.getByText("/go/flyer", { exact: true })).toBeVisible();
+  // That code has finished for good, so it is not offered a second time.
+  await page.goto("/");
+  await page.locator("#shop").scrollIntoViewIfNeeded();
+  await page.getByTestId("add-to-jar").click();
+  await page
+    .getByRole("dialog")
+    .getByRole("link", { name: /checkout/i })
+    .click();
+  await expect(page.getByTestId("place-order")).toBeVisible();
+  await expect(page.getByTestId("carried-code-refused")).toHaveCount(0);
 });
 
 test("an empty jar cannot check out", async ({ page }) => {

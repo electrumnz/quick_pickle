@@ -25,6 +25,7 @@ import {
   customers,
   orderLines,
   orders,
+  partners,
   refunds,
   type OrderStatus,
   type PaymentStatus,
@@ -39,11 +40,15 @@ import { NZ_REGIONS, ORDER_NUMBER_PATTERN } from "@/lib/shop/order";
 import { conflict, OpError } from "../core/errors";
 import { defineOp } from "../core/op";
 import { joinCrewIn } from "../crew/ops";
+import { cutOn } from "../marketing/collab-sums";
+import { creditFor, knownSource } from "../marketing/credit";
 import {
   evaluatePromo,
   findPromo,
   normalisePromoCode,
   redeemPromoIn,
+  usedByCustomer,
+  type Promo,
 } from "../marketing/promo";
 import { loadOrder } from "./load";
 import { paymentStatusAfter, refundsThroughStripe } from "./refunds";
@@ -120,7 +125,14 @@ const placedOrderSchema = z.object({
     reference: z.string().max(200),
   }),
   joinCrew: z.boolean(),
-  source: z.record(z.string(), z.string()).optional(),
+  /**
+   * Where the visit came from, as the buyer's browser tells it: the short
+   * link they followed (`via`) and any utm labels. A label and nothing more.
+   */
+  source: z
+    .record(z.string().max(40), z.string().max(200))
+    .refine((value) => Object.keys(value).length <= 12, "Too many labels")
+    .optional(),
 });
 
 function itemsSummary(
@@ -203,7 +215,7 @@ export const recordOrder = defineOp({
     // A code is worked out again here, from its own terms, inside the same
     // transaction that counts its use. What the checkout sent is only ever
     // compared with that; it is never what is charged on trust.
-    let promoId: string | null = null;
+    let used: Promo | null = null;
     if (input.promo !== null) {
       const standardDelivery =
         input.subtotalCents >= SHIPPING.freeOverCents
@@ -215,15 +227,30 @@ export const recordOrder = defineOp({
         deliveryCents: standardDelivery,
         now: ctx.now,
       });
-      if (!worth.ok) throw conflict(worth.reason);
+      if (!worth.ok || promo === null) {
+        throw conflict(worth.ok ? CODES.unknown : worth.reason);
+      }
       if (
         worth.discountCents !== input.discountCents ||
         worth.deliveryDiscountCents !== input.promo.deliveryDiscountCents
       ) {
         throw conflict(CODES.changed);
       }
-      promoId = worth.promoId;
+      used = promo;
     }
+
+    // Where the visit came from, as the buyer's browser tells it. It is only
+    // ever a label: a link that does not exist is dropped, and nothing about
+    // the price depends on any of it.
+    const source = await knownSource(ctx.db, input.source);
+    // Who brought the order in: whoever owns the code that was used or,
+    // failing that, the link the buyer came through. The order keeps its own
+    // copy, with the cut that partner is on right now, so a partner's results
+    // never shift when a deal changes or a code is handed to somebody else.
+    const credit = await creditFor(ctx.db, {
+      promoPartnerId: used?.partnerId ?? null,
+      viaSlug: source?.via ?? null,
+    });
 
     const customerId = await customerFor(
       ctx.db,
@@ -268,8 +295,10 @@ export const recordOrder = defineOp({
       deliveryNotes: input.delivery.notes,
       subtotalCents: input.subtotalCents,
       discountCents: input.discountCents,
-      promoCode:
-        input.promo === null ? null : normalisePromoCode(input.promo.code),
+      deliveryDiscountCents: input.promo?.deliveryDiscountCents ?? 0,
+      promoCode: used?.code ?? null,
+      partnerId: credit?.partnerId ?? null,
+      commissionPercent: credit?.commissionPercent ?? 0,
       shippingCents: input.shippingCents,
       totalCents: input.totalCents,
       currency: input.currency,
@@ -278,7 +307,7 @@ export const recordOrder = defineOp({
       paymentReference: input.payment.reference,
       paidAt: paid ? ctx.now : null,
       joinedCrew: input.joinCrew,
-      source: input.source ?? null,
+      source,
       createdAt: ctx.now,
       updatedAt: ctx.now,
     });
@@ -303,14 +332,28 @@ export const recordOrder = defineOp({
       );
     }
 
-    if (promoId !== null && input.promo !== null) {
+    if (used !== null && input.promo !== null) {
       // Counted here, in one guarded statement, so two orders placed at the
       // same moment cannot both take a code's last use. If it cannot be
       // counted this throws, and the order is not recorded at all.
-      await redeemPromoIn(ctx, promoId, {
+      await redeemPromoIn(ctx, used.id, {
         number: input.number,
         savedCents: input.discountCents + input.promo.deliveryDiscountCents,
       });
+      // Asked after the count on purpose. Counting holds the code's row until
+      // this transaction ends, so two orders from one customer take turns
+      // here, and the second one sees the first.
+      if (
+        used.oncePerCustomer &&
+        (await usedByCustomer(
+          ctx.db,
+          used.code,
+          input.customer.email,
+          input.number,
+        ))
+      ) {
+        throw conflict(CODES.alreadyUsed);
+      }
     }
 
     const entity = { type: "order", id };
@@ -475,13 +518,17 @@ export type OrderDetail = typeof orders.$inferSelect & {
   readonly refunds: readonly (typeof refunds.$inferSelect)[];
   readonly shots: number;
   readonly next: readonly OrderStatus[];
+  /** Who brought the order in (their code or their link), if anyone did. */
+  readonly partnerName: string | null;
+  /** That partner's cut on this order as it stands, in cents. */
+  readonly cutCents: number;
 };
 
 export const getOrder = defineOp({
   name: "orders.get",
   title: "Open one order",
   description:
-    "Everything about one order, by its number (QP-7K2M9X): who it is for, where it is going, what is in it, what has been paid and refunded, and which stages it can move to next.",
+    "Everything about one order, by its number (QP-7K2M9X): who it is for, where it is going, what is in it, what has been paid and refunded, which stages it can move to next, the promo code used, the short link the buyer came through (`source.via`), and the partner the order is counted for with their cut on it.",
   access: "read",
   input: z.object({ number: orderNumber }),
   async run(ctx, input): Promise<OrderDetail> {
@@ -497,12 +544,26 @@ export const getOrder = defineOp({
       .where(eq(refunds.orderId, order.id))
       .orderBy(desc(refunds.createdAt));
     const { NEXT_STATUS } = await import("./status");
+    const [partner] =
+      order.partnerId === null
+        ? []
+        : await ctx.db
+            .select({ name: partners.name })
+            .from(partners)
+            .where(eq(partners.id, order.partnerId));
     return {
       ...order,
       lines,
       refunds: given,
       shots: lines.reduce((sum, line) => sum + line.qty * line.shots, 0),
       next: NEXT_STATUS[order.status],
+      partnerName: partner?.name ?? null,
+      // Nothing is earned on an order that was called off or never paid.
+      cutCents:
+        order.status === "cancelled" ||
+        !["paid", "part_refunded"].includes(order.paymentStatus)
+          ? 0
+          : cutOn(order, order.commissionPercent),
     };
   },
 });

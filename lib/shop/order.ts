@@ -71,6 +71,16 @@ export const checkoutSchema = z.object({
   notes: trimmed(280).optional().or(z.literal("")),
   /** What the buyer typed in the code box. Checked and priced on the server. */
   promoCode: trimmed(40).optional().or(z.literal("")),
+  /**
+   * Where the visit came from, as the buyer's browser remembers it: the
+   * short link it followed and any utm labels. A label for the order and
+   * nothing more. The server keeps only what it recognises.
+   */
+  source: z
+    .record(z.string().max(40), z.string().max(200))
+    .refine((value) => Object.keys(value).length <= 12)
+    .optional()
+    .catch(undefined),
   joinCrew: z.boolean(),
   lines: z
     .array(cartLineSchema)
@@ -146,6 +156,8 @@ export type Order = {
   } | null;
   readonly payment: PaymentRecord;
   readonly joinCrew: boolean;
+  /** The link and labels the visit came with, when the browser said. */
+  readonly source?: Readonly<Record<string, string>>;
 };
 
 /**

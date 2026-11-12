@@ -46,6 +46,10 @@ export type CodeCheck =
     }
   | { readonly ok: false; readonly reason: string };
 
+export type CodePeek =
+  | { readonly ok: true; readonly code: string; readonly label: string }
+  | { readonly ok: false };
+
 export type Store = {
   readonly name: string;
   /** False when a record would not survive the process. */
@@ -69,8 +73,19 @@ export type Store = {
    */
   checkCode?(
     code: string,
-    order: { readonly subtotalCents: number; readonly deliveryCents: number },
+    order: {
+      readonly subtotalCents: number;
+      readonly deliveryCents: number;
+      /** The buyer's email, when known: some codes work once each. */
+      readonly email?: string;
+    },
   ): Promise<CodeCheck>;
+  /**
+   * What a code gives, in a few words, but only if it could be used right
+   * now. For telling a visitor who arrived by a link that carries a code
+   * that the code is in. Anything else is a plain no.
+   */
+  describeCode?(code: string): Promise<CodePeek>;
 };
 
 const DATA_DIR = join(process.cwd(), ".data");
@@ -172,6 +187,15 @@ function dbStore(env: Record<string, string | undefined>): Store {
             deliveryDiscountCents: worth.deliveryDiscountCents,
           }
         : { ok: false, reason: worth.reason };
+    },
+    async describeCode(code) {
+      const { peekPromoCode } =
+        await import("@/lib/backstage/marketing/promo-codes");
+      return execute(
+        peekPromoCode,
+        { code },
+        systemCaller("The shop", "storefront"),
+      );
     },
   };
 }

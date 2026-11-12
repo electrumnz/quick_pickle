@@ -30,9 +30,10 @@
 import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { links } from "@/db/schema";
+import { links, partners, promoCodes } from "@/db/schema";
 import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
+import { CODE_PARAM } from "@/lib/shop/code";
 
 import { can } from "../core/actor";
 import { notFound, OpError } from "../core/errors";
@@ -163,6 +164,27 @@ export function withUtm(
   );
 }
 
+/** The name a short link's own slug travels under: /?via=insta */
+export const VIA_PARAM = "via";
+
+/**
+ * Mark a visit to this site with the link it came through and, if the link
+ * carries a promo code, the code. The shop's own pages read both: the code
+ * is tried at the checkout so nobody has to type it, and the link is noted
+ * on the order. A link to another website gets neither: they mean nothing
+ * there, and a code has no business in somebody else's address bar.
+ */
+export function withArrival(
+  target: LinkTarget,
+  arrival: { readonly slug: string; readonly code: string | null },
+): LinkTarget | null {
+  if (target.kind !== "path") return target;
+  const url = new URL(target.value, PLACEHOLDER_ORIGIN);
+  url.searchParams.set(VIA_PARAM, arrival.slug);
+  if (arrival.code !== null) url.searchParams.set(CODE_PARAM, arrival.code);
+  return safeLinkTarget(`${url.pathname}${url.search}${url.hash}`);
+}
+
 /* ---- fields ------------------------------------------------------------- */
 
 const slugField = z
@@ -243,11 +265,43 @@ export type LinkRow = {
   readonly showOrder: number | null;
   readonly clicks: number;
   readonly active: boolean;
+  /** Whose link it is, when it was made for a club, a creator or an event. */
+  readonly partnerId: string | null;
+  readonly partnerName: string | null;
+  /** The promo code it carries into the checkout, if it carries one. */
+  readonly promoCodeId: string | null;
+  readonly code: string | null;
+  /** Paid orders by people who came through it. Test orders do not count. */
+  readonly orders: number;
+  /** What those customers paid, delivery included, less refunds. */
+  readonly salesCents: number;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 };
 
-function toRow(link: LinkRecord): LinkRow {
+type LinkExtras = {
+  readonly partnerName: string | null;
+  readonly code: string | null;
+  readonly orders: number;
+  readonly salesCents: number;
+};
+
+/**
+ * Sales by people who came through a link: the order says which link in its
+ * `source`. These look back at the outer row, so its column is written in
+ * full ("links"."slug").
+ */
+const SOLD = sql`not o.is_test and o.status <> 'cancelled' and o.payment_status in ('paid', 'part_refunded')`;
+const linkOrdersSql = sql<number>`(
+  select count(*)::int from orders o
+  where o.source->>'via' = "links"."slug" and ${SOLD}
+)`;
+const linkSalesSql = sql<number>`coalesce((
+  select sum(o.total_cents - o.refunded_cents)::int from orders o
+  where o.source->>'via' = "links"."slug" and ${SOLD}
+), 0)`;
+
+function toRow(link: LinkRecord, extras: LinkExtras): LinkRow {
   return {
     id: link.id,
     slug: link.slug,
@@ -259,9 +313,84 @@ function toRow(link: LinkRecord): LinkRow {
     showOrder: link.showOrder,
     clicks: link.clicks,
     active: link.active,
+    partnerId: link.partnerId,
+    partnerName: link.partnerId === null ? null : extras.partnerName,
+    promoCodeId: link.promoCodeId,
+    code: link.promoCodeId === null ? null : extras.code,
+    orders: extras.orders,
+    salesCents: extras.salesCents,
     createdAt: link.createdAt,
     updatedAt: link.updatedAt,
   };
+}
+
+/**
+ * Whose link it is and the code it carries, checked before either is saved.
+ * A link that carries a partner's code is that partner's link unless it was
+ * given to somebody else on purpose.
+ */
+async function ownerAndCode(
+  db: DbOrTx,
+  wanted: {
+    readonly partnerId: string | null;
+    readonly promoCodeId: string | null;
+  },
+): Promise<{
+  readonly partnerId: string | null;
+  readonly promoCodeId: string | null;
+  readonly partnerName: string | null;
+  readonly code: string | null;
+}> {
+  let partnerId = wanted.partnerId;
+  let code: string | null = null;
+  if (wanted.promoCodeId !== null) {
+    const [promo] = await db
+      .select({ code: promoCodes.code, partnerId: promoCodes.partnerId })
+      .from(promoCodes)
+      .where(eq(promoCodes.id, wanted.promoCodeId));
+    if (promo === undefined) {
+      const message = "That promo code is not on the list. Pick another.";
+      throw new OpError("invalid_input", message, { promoCodeId: message });
+    }
+    code = promo.code;
+    partnerId ??= promo.partnerId;
+  }
+  let partnerName: string | null = null;
+  if (partnerId !== null) {
+    const [partner] = await db
+      .select({ name: partners.name })
+      .from(partners)
+      .where(eq(partners.id, partnerId));
+    if (partner === undefined) {
+      const message = "That partner is not on the list. Pick another.";
+      throw new OpError("invalid_input", message, { partnerId: message });
+    }
+    partnerName = partner.name;
+  }
+  return { partnerId, promoCodeId: wanted.promoCodeId, partnerName, code };
+}
+
+/** A code only belongs on a link that stays on this site. */
+function refuseCodeOnOutsideLink(
+  target: string,
+  promoCodeId: string | null,
+): void {
+  if (promoCodeId === null) return;
+  if (safeLinkTarget(target)?.kind !== "https") return;
+  const message =
+    "A link to another website cannot carry a promo code. Point it at a page on this site, or take the code off.";
+  throw new OpError("invalid_input", message, { promoCodeId: message });
+}
+
+/** "for Sample Rovers FC, carrying the code ROVERS10", or nothing. */
+function ownerInWords(owner: {
+  readonly partnerName: string | null;
+  readonly code: string | null;
+}): string {
+  const parts: string[] = [];
+  if (owner.partnerName !== null) parts.push(`for ${owner.partnerName}`);
+  if (owner.code !== null) parts.push(`carrying the code ${owner.code}`);
+  return parts.length === 0 ? "" : `, ${parts.join(", ")}`;
 }
 
 async function loadLink(db: DbOrTx, id: string): Promise<LinkRecord> {
@@ -274,21 +403,35 @@ export const listLinks = defineOp({
   name: "links.list",
   title: "List short links",
   description:
-    'Our tracked short links (/go/<slug>) with where each goes, whether that is another website (`external`), and how many times it has been followed. `sort` is "newest" or "clicks" (most followed first). `active` narrows to links that are switched on or off. A click is one visit by something that looks like a person\'s browser. Nothing is kept about visitors, so these are visits, not people.',
+    'Our tracked short links (/go/<slug>) with where each goes, whether that is another website (`external`), how many times it has been followed, whose link it is (a club, a creator, an event) and the promo code it carries, if any, and the paid orders and sales from people who came through it (test orders and cancelled ones left out). `sort` is "newest" or "clicks" (most followed first). `active` narrows to links that are switched on or off, `partnerId` to one partner\'s links. A click is one visit by something that looks like a person\'s browser, so these are visits, not people. An order is tied to a link by the buyer\'s own browser remembering which link it followed, for up to thirty days, so someone who comes back on another device is not counted.',
   access: "read",
   input: z.object({
     active: z.enum(["all", "on", "off"]).default("all"),
     sort: z.enum(["newest", "clicks"]).default("newest"),
+    partnerId: recordId.optional(),
     limit: z.number().int().min(1).max(200).default(100),
   }),
   async run(ctx, input): Promise<LinkRow[]> {
     const rows = await ctx.db
-      .select()
+      .select({
+        link: links,
+        partnerName: partners.name,
+        code: promoCodes.code,
+        orders: linkOrdersSql,
+        salesCents: linkSalesSql,
+      })
       .from(links)
+      .leftJoin(partners, eq(partners.id, links.partnerId))
+      .leftJoin(promoCodes, eq(promoCodes.id, links.promoCodeId))
       .where(
-        input.active === "all"
-          ? undefined
-          : eq(links.active, input.active === "on"),
+        and(
+          input.active === "all"
+            ? undefined
+            : eq(links.active, input.active === "on"),
+          input.partnerId === undefined
+            ? undefined
+            : eq(links.partnerId, input.partnerId),
+        ),
       )
       .orderBy(
         ...(input.sort === "clicks"
@@ -296,7 +439,33 @@ export const listLinks = defineOp({
           : [desc(links.createdAt), desc(links.id)]),
       )
       .limit(input.limit);
-    return rows.map(toRow);
+    return rows.map(({ link, ...extras }) => toRow(link, extras));
+  },
+});
+
+export const getLink = defineOp({
+  name: "links.get",
+  title: "Open one short link",
+  description:
+    "One tracked short link, by its id: where it goes, its utm labels, whose it is and the promo code it carries, how many times it has been followed, and the paid orders and sales from people who came through it.",
+  access: "read",
+  input: z.object({ id: recordId }),
+  async run(ctx, input): Promise<LinkRow> {
+    const [row] = await ctx.db
+      .select({
+        link: links,
+        partnerName: partners.name,
+        code: promoCodes.code,
+        orders: linkOrdersSql,
+        salesCents: linkSalesSql,
+      })
+      .from(links)
+      .leftJoin(partners, eq(partners.id, links.partnerId))
+      .leftJoin(promoCodes, eq(promoCodes.id, links.promoCodeId))
+      .where(eq(links.id, input.id));
+    if (row === undefined) throw notFound("That link");
+    const { link, ...extras } = row;
+    return toRow(link, extras);
   },
 });
 
@@ -306,7 +475,7 @@ export const createLink = defineOp({
   name: "links.create",
   title: "Make a short link",
   description:
-    "Makes a tracked short link at /go/<slug>. The slug is 2 to 40 lower-case letters, numbers or hyphens, and cannot be a word the site itself uses. It is permanent: a link can be pointed somewhere new or switched off later, but never renamed or deleted, because the address may be printed. The target is either a page on this site (starting with a single slash, like /checkout) or a full https address; anything else is refused, and only an owner may point a link at another website. `utm` labels (source, medium, campaign) are added to the address on the way through. `showOrder` puts it on the public links page in that position (that page is not built yet). A slug that is taken is refused.",
+    "Makes a tracked short link at /go/<slug>. The slug is 2 to 40 lower-case letters, numbers or hyphens, and cannot be a word the site itself uses. It is permanent: a link can be pointed somewhere new or switched off later, but never renamed or deleted, because the address may be printed. The target is either a page on this site (starting with a single slash, like /checkout) or a full https address; anything else is refused, and only an owner may point a link at another website. `utm` labels (source, medium, campaign) are added to the address on the way through. `showOrder` puts it on the public links page in that position (that page is not built yet). `partnerId` says whose link it is (a club, a creator, an event), so orders from people who come through it are credited to them. `promoCodeId` makes the link carry a promo code: a visitor who follows it has the code tried at the checkout without typing it. Only a link to a page on this site can carry a code, and a link that carries a partner's code is that partner's unless it is given to somebody else. A slug that is taken is refused.",
   access: "write",
   input: z.object({
     slug: slugField,
@@ -314,9 +483,13 @@ export const createLink = defineOp({
     label: labelField.default(""),
     utm: utmField.default({ source: "", medium: "", campaign: "" }),
     showOrder: showOrderField.default(null),
+    partnerId: recordId.nullable().default(null),
+    promoCodeId: recordId.nullable().default(null),
   }),
   async run(ctx, input): Promise<{ id: string; slug: string; path: string }> {
     refuseOutsideTarget(ctx, input.target);
+    refuseCodeOnOutsideLink(input.target, input.promoCodeId);
+    const owner = await ownerAndCode(ctx.db, input);
     const id = newId("lnk");
     const made = await ctx.db
       .insert(links)
@@ -327,6 +500,8 @@ export const createLink = defineOp({
         label: input.label,
         utm: utmRecord(input.utm),
         showOrder: input.showOrder,
+        partnerId: owner.partnerId,
+        promoCodeId: owner.promoCodeId,
         createdAt: ctx.now,
         updatedAt: ctx.now,
       })
@@ -342,8 +517,13 @@ export const createLink = defineOp({
     const entity = { type: "link", id };
     await ctx.audit({
       entity,
-      summary: `Made the short link /go/${input.slug}, going to ${input.target}`,
-      data: { slug: input.slug, target: input.target },
+      summary: `Made the short link /go/${input.slug}, going to ${input.target}${ownerInWords(owner)}`,
+      data: {
+        slug: input.slug,
+        target: input.target,
+        partnerId: owner.partnerId,
+        promoCodeId: owner.promoCodeId,
+      },
     });
     await ctx.emit({
       type: "link.created",
@@ -358,7 +538,7 @@ export const updateLink = defineOp({
   name: "links.update",
   title: "Change a short link",
   description:
-    "Changes where a short link goes, its label, its utm labels or its place on the public links page. Leave a field out to keep it; pass `showOrder: null` to take it off the public page. The short address itself cannot be changed, because it may already be printed or posted somewhere: make a new link instead. The new target has to pass the same check as a new link's, and only an owner may point a link at another website.",
+    "Changes where a short link goes, its label, its utm labels or its place on the public links page. Leave a field out to keep it; pass `showOrder: null` to take it off the public page. The short address itself cannot be changed, because it may already be printed or posted somewhere: make a new link instead. The new target has to pass the same check as a new link's, and only an owner may point a link at another website. `partnerId` says whose link it is and `promoCodeId` the promo code it carries; pass null to clear either. Orders already placed keep who they were credited to.",
   access: "write",
   input: z.object({
     id: recordId,
@@ -366,18 +546,30 @@ export const updateLink = defineOp({
     label: labelField.optional(),
     utm: utmField.optional(),
     showOrder: showOrderField.optional(),
+    partnerId: recordId.nullable().optional(),
+    promoCodeId: recordId.nullable().optional(),
   }),
   async run(ctx, input): Promise<{ id: string }> {
     const link = await loadLink(ctx.db, input.id);
     if (input.target !== undefined && input.target !== link.target) {
       refuseOutsideTarget(ctx, input.target);
     }
+    const promoCodeId =
+      input.promoCodeId === undefined ? link.promoCodeId : input.promoCodeId;
+    refuseCodeOnOutsideLink(input.target ?? link.target, promoCodeId);
+    const owner = await ownerAndCode(ctx.db, {
+      partnerId:
+        input.partnerId === undefined ? link.partnerId : input.partnerId,
+      promoCodeId,
+    });
     const next = {
       target: input.target ?? link.target,
       label: input.label ?? link.label,
       utm: input.utm === undefined ? link.utm : utmRecord(input.utm),
       showOrder:
         input.showOrder === undefined ? link.showOrder : input.showOrder,
+      partnerId: owner.partnerId,
+      promoCodeId: owner.promoCodeId,
     };
     await ctx.db
       .update(links)
@@ -385,11 +577,19 @@ export const updateLink = defineOp({
       .where(eq(links.id, link.id));
     await ctx.audit({
       entity: { type: "link", id: link.id },
-      summary:
+      summary: `${
         next.target === link.target
           ? `Changed the short link /go/${link.slug}`
-          : `Pointed the short link /go/${link.slug} at ${next.target}`,
-      data: { before: { target: link.target, showOrder: link.showOrder } },
+          : `Pointed the short link /go/${link.slug} at ${next.target}`
+      }${ownerInWords(owner)}`,
+      data: {
+        before: {
+          target: link.target,
+          showOrder: link.showOrder,
+          partnerId: link.partnerId,
+          promoCodeId: link.promoCodeId,
+        },
+      },
     });
     return { id: link.id };
   },
@@ -434,7 +634,7 @@ export const resolveLink = defineOp({
   name: "links.resolve",
   title: "Follow a short link",
   description:
-    "Given a slug, says where to send the visitor (the saved target with the link's utm labels added) and, unless `count` is false, adds one to the link's click count in the same single statement. An unknown slug, a link that is switched off, or a saved target that is not a page on this site or an https address comes back as not found. Nothing about the visitor is stored. It is listed as a read so that a click does not put a line in the activity log, but with `count` left on every call adds a click: to look at a link without counting, pass `count: false` or use links.list. The public /go/<slug> address calls it with `count: false`, sends the redirect, and counts afterwards with links.countClick.",
+    "Given a slug, says where to send the visitor (the saved target with the link's utm labels added and, for a page on this site, the link's own slug as `via` and the promo code it carries as `code`) and, unless `count` is false, adds one to the link's click count in the same single statement. An unknown slug, a link that is switched off, or a saved target that is not a page on this site or an https address comes back as not found. Nothing about the visitor is stored. It is listed as a read so that a click does not put a line in the activity log, but with `count` left on every call adds a click: to look at a link without counting, pass `count: false` or use links.list. The public /go/<slug> address calls it with `count: false`, sends the redirect, and counts afterwards with links.countClick.",
   access: "read",
   input: z.object({
     // Whatever was in the address bar. Anything that is not a slug is simply
@@ -445,22 +645,39 @@ export const resolveLink = defineOp({
   async run(ctx, input): Promise<ResolvedLink> {
     if (!SLUG_PATTERN.test(input.slug)) return { found: false };
     const live = and(eq(links.slug, input.slug), eq(links.active, true));
+    const wanted = {
+      target: links.target,
+      utm: links.utm,
+      promoCodeId: links.promoCodeId,
+    };
     const [link] = input.count
       ? await ctx.db
           .update(links)
           .set({ clicks: sql`${links.clicks} + 1` })
           .where(live)
-          .returning({ target: links.target, utm: links.utm })
-      : await ctx.db
-          .select({ target: links.target, utm: links.utm })
-          .from(links)
-          .where(live);
+          .returning(wanted)
+      : await ctx.db.select(wanted).from(links).where(live);
     if (link === undefined) return { found: false };
 
     // Checked again here, whatever was checked when it was saved.
     const saved = safeLinkTarget(link.target);
     if (saved === null) return { found: false };
-    const target = withUtm(saved, link.utm);
+    const labelled = withUtm(saved, link.utm);
+    if (labelled === null) return { found: false };
+
+    // A code that has been switched off since is not carried: the visitor
+    // would only be told at the checkout that it is not in use.
+    let code: string | null = null;
+    if (link.promoCodeId !== null && labelled.kind === "path") {
+      const [promo] = await ctx.db
+        .select({ code: promoCodes.code })
+        .from(promoCodes)
+        .where(
+          and(eq(promoCodes.id, link.promoCodeId), eq(promoCodes.active, true)),
+        );
+      code = promo?.code ?? null;
+    }
+    const target = withArrival(labelled, { slug: input.slug, code });
     if (target === null) return { found: false };
     return {
       found: true,

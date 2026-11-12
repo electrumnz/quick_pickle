@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 
 import { SubmitButton } from "@/components/backstage/SubmitButton";
 import { PageHeader, Panel } from "@/components/backstage/ui";
-import { requireStaff } from "@/lib/backstage/auth/current";
+import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
+import { execute } from "@/lib/backstage/core/op";
+import { listPartners } from "@/lib/backstage/marketing/partners";
 
 import { Flash, LookOnly, MarketingNav, TextField } from "../../parts";
 import { createPromoCodeAction } from "../actions";
@@ -13,11 +15,16 @@ export const metadata: Metadata = { title: "New promo code" };
 export default async function NewPromoCodePage({
   searchParams,
 }: {
-  searchParams: Promise<{ notice?: string; tone?: string }>;
+  searchParams: Promise<{ notice?: string; tone?: string; partner?: string }>;
 }) {
   const staff = await requireStaff();
-  const { notice, tone } = await searchParams;
+  const { notice, tone, partner } = await searchParams;
   const canWrite = staff.role !== "viewer";
+  const partners = await execute(
+    listPartners,
+    { status: "all", limit: 200 },
+    await staffCaller(),
+  );
 
   return (
     <>
@@ -46,7 +53,12 @@ export default async function NewPromoCodePage({
               placeholder="CREW10"
               hint="3 to 24 letters, numbers or hyphens. It is stored in capitals."
             />
-            <PromoFields />
+            <PromoFields
+              partners={partners}
+              forPartnerId={
+                partners.some((row) => row.id === partner) ? partner : undefined
+              }
+            />
             <SubmitButton pending="Saving">Make the code</SubmitButton>
           </form>
         ) : (

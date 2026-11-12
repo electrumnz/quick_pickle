@@ -51,7 +51,11 @@ export type OrderSink = {
   closeUnpaid?(number: string, reason: string): Promise<void>;
   checkCode?(
     code: string,
-    order: { readonly subtotalCents: number; readonly deliveryCents: number },
+    order: {
+      readonly subtotalCents: number;
+      readonly deliveryCents: number;
+      readonly email?: string;
+    },
   ): Promise<CodeCheck>;
 };
 
@@ -125,6 +129,7 @@ export async function placeOrder(
       check = await deps.store.checkCode(typed, {
         subtotalCents: before.subtotalCents,
         deliveryCents: before.deliveryCents,
+        email: input.email,
       });
     } catch {
       return noCode(CODES.unavailable);
@@ -208,6 +213,7 @@ export async function placeOrder(
     promo,
     payment,
     joinCrew: input.joinCrew,
+    ...(input.source === undefined ? {} : { source: input.source }),
   });
 
   // Saving can refuse a code that was fine a moment ago (somebody else took
@@ -219,6 +225,7 @@ export async function placeOrder(
       const again = await deps.store.checkCode(typed, {
         subtotalCents: before.subtotalCents,
         deliveryCents: before.deliveryCents,
+        email: input.email,
       });
       if (!again.ok) return noCode(again.reason);
       if (

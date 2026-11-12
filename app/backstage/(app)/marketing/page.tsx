@@ -17,6 +17,7 @@ import { marketingOverview } from "@/lib/backstage/marketing/overview";
 import { FORMAT_LABEL, NETWORK_LABEL } from "@/lib/backstage/marketing/status";
 import { formatNzTime, nzDateKey } from "@/lib/time";
 
+import { CollabBoard } from "./collab-parts";
 import { CampaignPill, MarketingNav, SocialPill, VerdictPill } from "./parts";
 
 export const metadata: Metadata = { title: "Marketing" };
@@ -237,6 +238,22 @@ export default async function MarketingPage() {
         </Panel>
 
         <Panel
+          title="Collabs: what came back"
+          flush
+          aside={<More href="/backstage/marketing/partners">All partners</More>}
+          className="lg:col-span-2"
+        >
+          {overview.collabs.length === 0 ? (
+            <Empty title="No collabs yet">
+              Give a club or a creator a promo code or a short link of their
+              own, and what they bring in shows here against what they cost.
+            </Empty>
+          ) : (
+            <CollabBoard rows={overview.collabs} />
+          )}
+        </Panel>
+
+        <Panel
           title="Most followed links"
           flush
           aside={<More href="/backstage/marketing/links">All links</More>}
@@ -258,8 +275,15 @@ export default async function MarketingPage() {
                       {link.label === "" ? link.target : link.label}
                     </span>
                   </span>
-                  <span className="bk-num font-semibold">
-                    {link.clicks} {link.clicks === 1 ? "click" : "clicks"}
+                  <span className="bk-num text-right">
+                    <span className="block font-semibold">
+                      {link.clicks} {link.clicks === 1 ? "click" : "clicks"}
+                    </span>
+                    {link.orders === 0 ? null : (
+                      <span className="bk-muted block text-[0.875rem]">
+                        {link.orders} {link.orders === 1 ? "order" : "orders"}
+                      </span>
+                    )}
                   </span>
                 </li>
               ))}

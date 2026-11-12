@@ -39,6 +39,7 @@ export type IdPrefix =
   | "lnk" // tracked link
   | "rev" // review
   | "prt" // partner (club, stockist)
+  | "pcs" // something a partnership cost
   | "pro" // promo code
   | "doc" // document
   | "ver" // document version

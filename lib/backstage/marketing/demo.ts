@@ -19,6 +19,7 @@ import { addDays, nzDateKey, nzToInstant } from "@/lib/time";
 import { systemCaller } from "../core/actor";
 import { execute } from "../core/op";
 import { joinCrew } from "../crew/ops";
+import { placeDemoOrders } from "../orders/demo";
 import {
   approveCampaign,
   campaignQueue,
@@ -28,9 +29,11 @@ import {
   markCampaignSends,
   sendCampaign,
 } from "./campaigns";
+import { addPartnerCost } from "./collabs";
 import { createLink, resolveLink, setLinkActive } from "./links";
 import {
   addPartner,
+  setPartnerCut,
   setPartnerNextStep,
   setPartnerPermission,
 } from "./partners";
@@ -504,4 +507,187 @@ export async function seedMarketingDemo(db: Db, now: Date): Promise<void> {
     demo,
     at(-12 * 24),
   );
+
+  /* ---- two collabs, paid the two ways there are -------------------------- */
+
+  // The club is on a cut: a code of its own, a poster with a QR code that
+  // carries the code, and a box of product given for committee night.
+  await execute(
+    setPartnerCut,
+    { id: rovers.id, commissionPercent: 10 },
+    demo,
+    at(-7 * 24),
+  );
+  const roversCode = await execute(
+    createPromoCode,
+    {
+      code: "ROVERS10",
+      kind: "percent",
+      value: 10,
+      partnerId: rovers.id,
+      note: "Sample code. For the club's own players and supporters.",
+    },
+    demo,
+    at(-7 * 24 + 1),
+  );
+  await execute(
+    createLink,
+    {
+      slug: "rovers",
+      target: "/",
+      label: "Clubrooms poster (QR code)",
+      utm: { source: "rovers", medium: "print", campaign: "clubrooms" },
+      partnerId: rovers.id,
+      promoCodeId: roversCode.id,
+    },
+    demo,
+    at(-7 * 24 + 2),
+  );
+  await execute(
+    addPartnerCost,
+    {
+      partnerId: rovers.id,
+      kind: "product",
+      amountCents: 4800,
+      paidOn: addDays(nzDateKey(now), -6),
+      note: "Sample cost. A box of 12 for committee night.",
+    },
+    demo,
+    at(-6 * 24),
+  );
+
+  // The creator is on a flat fee: paid for a reel, sent a pack to film with,
+  // and given a link of their own with no code on it.
+  const creator = await execute(
+    addPartner,
+    {
+      name: "Kai Kicks (sample creator)",
+      kind: "ambassador",
+      status: "active",
+      contactName: "Kai (invented)",
+      email: "kai@example.co.nz",
+      region: "Auckland",
+      notes:
+        "Invented creator. Films sideline reels. Paid a flat fee for each one, no cut.",
+    },
+    demo,
+    at(-9 * 24),
+  );
+  await execute(
+    createLink,
+    {
+      slug: "kai",
+      target: "/",
+      label: "Kai's bio link",
+      utm: { source: "instagram", medium: "social", campaign: "kai" },
+      partnerId: creator.id,
+    },
+    demo,
+    at(-9 * 24 + 1),
+  );
+  await execute(
+    addPartnerCost,
+    {
+      partnerId: creator.id,
+      kind: "fee",
+      amountCents: 15000,
+      paidOn: addDays(nzDateKey(now), -8),
+      note: "Sample cost. One reel and two stories.",
+    },
+    demo,
+    at(-8 * 24),
+  );
+  await execute(
+    addPartnerCost,
+    {
+      partnerId: creator.id,
+      kind: "product",
+      amountCents: 2700,
+      paidOn: addDays(nzDateKey(now), -8),
+      note: "Sample cost. A six pack to film with.",
+    },
+    demo,
+    at(-8 * 24),
+  );
+  for (const [slug, clicks] of [
+    ["rovers", 31],
+    ["kai", 38],
+  ] as const) {
+    for (let click = 0; click < clicks; click += 1) {
+      await execute(resolveLink, { slug }, shop, at(-1));
+    }
+  }
+
+  // The orders those two brought in. Placed now, at pretend times after the
+  // code and the links existed, through the same operation the checkout uses.
+  const rovers10 = { code: "ROVERS10", percent: 10 };
+  await placeDemoOrders(db, now, [
+    {
+      number: "QP-RVRS22",
+      hoursAgo: 120,
+      first: "Mikaere",
+      last: "Rangi",
+      city: "Paraparaumu",
+      region: "Wellington",
+      postcode: "5032",
+      line1: "9 Clubrooms Lane",
+      packs: [["QP-SHOT-12", 1]],
+      code: rovers10,
+      via: "rovers",
+      then: "delivered",
+    },
+    {
+      number: "QP-RVRS33",
+      hoursAgo: 74,
+      first: "Dee",
+      last: "Hohepa",
+      city: "Waikanae",
+      region: "Wellington",
+      postcode: "5036",
+      line1: "2 Changing Shed Road",
+      packs: [["QP-SHOT-12", 2]],
+      code: rovers10,
+      then: "shipped",
+    },
+    {
+      number: "QP-RVRS44",
+      hoursAgo: 28,
+      first: "Callum",
+      last: "Reid",
+      city: "Ōtaki",
+      region: "Wellington",
+      postcode: "5512",
+      line1: "31 Goal Line Street",
+      packs: [["QP-SHOT-06", 1]],
+      code: rovers10,
+      via: "rovers",
+      then: "packed",
+    },
+    {
+      number: "QP-KAYK22",
+      hoursAgo: 60,
+      first: "Ruby",
+      last: "Tan",
+      city: "Auckland",
+      region: "Auckland",
+      postcode: "1010",
+      line1: "14 Highlight Reel Road",
+      packs: [["QP-SHOT-24", 1]],
+      via: "kai",
+      then: "delivered",
+    },
+    {
+      number: "QP-KAYK33",
+      hoursAgo: 40,
+      first: "Josh",
+      last: "Perese",
+      city: "Manukau",
+      region: "Auckland",
+      postcode: "2104",
+      line1: "6 Full Time Place",
+      packs: [["QP-SHOT-12", 1]],
+      via: "kai",
+      then: "shipped",
+    },
+  ]);
 }

@@ -22,7 +22,7 @@ import {
 } from "./ops";
 import { markPaid } from "./payments";
 
-type DemoOrder = {
+export type DemoOrder = {
   readonly number: string;
   readonly hoursAgo: number;
   readonly first: string;
@@ -38,6 +38,10 @@ type DemoOrder = {
   /** "mismatch": money arrived for it that was not the order's total. */
   readonly then?: "packed" | "shipped" | "delivered" | "cancelled" | "mismatch";
   readonly note?: string;
+  /** A percent-off promo code used on it, and the percentage it gives. */
+  readonly code?: { readonly code: string; readonly percent: number };
+  /** The short link the buyer came through. */
+  readonly via?: string;
 };
 
 const DEMO: readonly DemoOrder[] = [
@@ -175,10 +179,23 @@ const DEMO: readonly DemoOrder[] = [
 const HOUR = 60 * 60_000;
 
 export async function seedDemoOrders(db: Db, now: Date): Promise<void> {
+  await placeDemoOrders(db, now, DEMO);
+}
+
+/**
+ * Put invented orders in, each through the real operations and at its own
+ * pretend time. Other areas use it for the orders their own demo needs (the
+ * marketing demo's collab orders, with a code or a link on them).
+ */
+export async function placeDemoOrders(
+  db: Db,
+  now: Date,
+  list: readonly DemoOrder[],
+): Promise<void> {
   const demo = systemCaller("Demo data", "script");
   const shop = systemCaller("The shop", "storefront");
 
-  for (const order of DEMO) {
+  for (const order of list) {
     const placedAt = new Date(now.getTime() - order.hoursAgo * HOUR);
     const at = (hoursLater: number) => ({
       db,
@@ -211,6 +228,15 @@ export async function seedDemoOrders(db: Db, now: Date): Promise<void> {
     const shippingCents =
       (subtotalCents >= 6000 ? 0 : 700) + (order.rural ? 450 : 0);
     const payment = order.payment ?? "paid";
+    // The same sum the checkout does for a percentage: on the goods, and
+    // rounded up to the cent in the buyer's favour.
+    const discountCents =
+      order.code === undefined
+        ? 0
+        : Math.min(
+            subtotalCents,
+            Math.floor((subtotalCents * order.code.percent + 99) / 100),
+          );
 
     await execute(
       recordOrder,
@@ -240,15 +266,21 @@ export async function seedDemoOrders(db: Db, now: Date): Promise<void> {
         },
         lines,
         subtotalCents,
+        discountCents,
         shippingCents,
-        totalCents: subtotalCents + shippingCents,
+        totalCents: subtotalCents - discountCents + shippingCents,
         currency: "NZD",
+        promo:
+          order.code === undefined
+            ? null
+            : { code: order.code.code, deliveryDiscountCents: 0 },
         payment: {
           provider: payment === "test" ? "test" : "demo",
           status: payment,
           reference: `DEMO-${order.number}`,
         },
         joinCrew: order.crew ?? false,
+        ...(order.via === undefined ? {} : { source: { via: order.via } }),
       },
       shop,
       at(0),

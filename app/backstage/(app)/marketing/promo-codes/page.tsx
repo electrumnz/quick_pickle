@@ -56,7 +56,12 @@ export default async function PromoCodesPage({
                     <span className="block font-mono font-semibold [overflow-wrap:anywhere]">
                       {promo.code}
                     </span>
-                    <span className="block">{promo.label}</span>
+                    <span className="block">
+                      {promo.label}
+                      {promo.partnerName === null
+                        ? ""
+                        : `, for ${promo.partnerName}`}
+                    </span>
                     <span className="bk-muted block text-[0.9375rem]">
                       {promoSmallPrint(promo)}
                     </span>

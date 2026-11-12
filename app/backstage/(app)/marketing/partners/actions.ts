@@ -1,7 +1,13 @@
 "use server";
 
+import type { CostKind } from "@/lib/backstage/marketing/collab-sums";
+import {
+  addPartnerCost,
+  removePartnerCost,
+} from "@/lib/backstage/marketing/collabs";
 import {
   addPartner,
+  setPartnerCut,
   setPartnerNextStep,
   setPartnerPermission,
   setPartnerStatus,
@@ -11,7 +17,7 @@ import type {
   PartnerKind,
   PartnerStatus,
 } from "@/lib/backstage/marketing/status";
-import { formText, submit } from "@/lib/backstage/ui/submit";
+import { formCents, formText, submit } from "@/lib/backstage/ui/submit";
 
 /** Every button on a partner. */
 
@@ -90,5 +96,45 @@ export async function setPartnerPermissionAction(
         ? "Recorded. They may be named in public."
         : "Recorded. They may not be named in public.",
     },
+  );
+}
+
+export async function setPartnerCutAction(form: FormData): Promise<void> {
+  const raw = formText(form, "commissionPercent");
+  // Empty means no cut. Anything that is not a whole number fails the check.
+  const commissionPercent =
+    raw === "" ? 0 : /^\d{1,3}$/.test(raw) ? Number(raw) : Number.NaN;
+  await submit(
+    setPartnerCut,
+    { id: formText(form, "id"), commissionPercent },
+    {
+      back: `${page(form)}#cut`,
+      done: (saved) =>
+        saved.commissionPercent === 0
+          ? "Saved. They are on no cut."
+          : `Saved. They get ${String(saved.commissionPercent)}% of each sale they bring in from now on.`,
+    },
+  );
+}
+
+export async function addPartnerCostAction(form: FormData): Promise<void> {
+  await submit(
+    addPartnerCost,
+    {
+      partnerId: formText(form, "id"),
+      kind: formText(form, "kind") as CostKind,
+      amountCents: formCents(form, "amount"),
+      paidOn: formText(form, "paidOn"),
+      note: formText(form, "note"),
+    },
+    { back: `${page(form)}#costs`, done: "Written down." },
+  );
+}
+
+export async function removePartnerCostAction(form: FormData): Promise<void> {
+  await submit(
+    removePartnerCost,
+    { id: formText(form, "costId") },
+    { back: `${page(form)}#costs`, done: "Taken off." },
   );
 }

@@ -12,6 +12,7 @@
  *   links.ts         tracked short links (/go/<slug>)
  *   reviews.ts       reviews, read by a person before anyone sees them
  *   partners.ts      clubs, stockists, events, ambassadors, press
+ *   collabs.ts       what a partner has brought in and cost, and the return
  *   overview.ts      the front page, and what is waiting on a person
  *
  * Beside the operations are the plain functions other parts of the app call:
@@ -20,6 +21,7 @@
  */
 
 export * from "./campaigns";
+export * from "./collabs";
 export * from "./links";
 export * from "./overview";
 export * from "./partners";
@@ -45,8 +47,16 @@ import {
   updateCampaign,
 } from "./campaigns";
 import {
+  addPartnerCost,
+  collabBoard,
+  partnerResults,
+  promoCodeResults,
+  removePartnerCost,
+} from "./collabs";
+import {
   countLinkClick,
   createLink,
+  getLink,
   listLinks,
   resolveLink,
   setLinkActive,
@@ -57,15 +67,18 @@ import {
   addPartner,
   getPartner,
   listPartners,
+  setPartnerCut,
   setPartnerNextStep,
   setPartnerPermission,
   setPartnerStatus,
   updatePartner,
 } from "./partners";
 import {
+  checkPromoCode,
   createPromoCode,
   getPromoCode,
   listPromoCodes,
+  peekPromoCode,
   setPromoCodeActive,
   updatePromoCode,
 } from "./promo-codes";
@@ -114,6 +127,9 @@ export const MARKETING_OPS = [
   createPromoCode,
   updatePromoCode,
   setPromoCodeActive,
+  checkPromoCode,
+  peekPromoCode,
+  promoCodeResults,
   listSocialPosts,
   getSocialPost,
   addSocialPost,
@@ -123,6 +139,7 @@ export const MARKETING_OPS = [
   markSocialPosted,
   dropSocialPost,
   listLinks,
+  getLink,
   createLink,
   updateLink,
   setLinkActive,
@@ -143,4 +160,9 @@ export const MARKETING_OPS = [
   setPartnerStatus,
   setPartnerNextStep,
   setPartnerPermission,
+  setPartnerCut,
+  addPartnerCost,
+  removePartnerCost,
+  partnerResults,
+  collabBoard,
 ] as const;

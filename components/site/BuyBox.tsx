@@ -11,6 +11,7 @@ import {
   PlusIcon,
   TruckIcon,
 } from "@/components/brand/Icons";
+import { CarriedCodeNote } from "@/components/cart/CarriedCodeNote";
 import { useCart } from "@/components/cart/CartProvider";
 import { LoopVideo } from "@/components/ui/LoopVideo";
 import type { Media } from "@/content/media";
@@ -303,6 +304,8 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
             ) : null}
           </div>
         </div>
+
+        <CarriedCodeNote className="mt-5" />
 
         <ul className="mt-6 flex flex-col gap-2.5 text-[0.9375rem] leading-snug">
           {preorder ? (

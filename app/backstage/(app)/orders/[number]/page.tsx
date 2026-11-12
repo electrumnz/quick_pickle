@@ -363,6 +363,34 @@ export default async function OrderPage({
                   </dd>
                 </>
               ) : null}
+              {order.source?.via ? (
+                <>
+                  <dt>Came through</dt>
+                  <dd className="bk-num font-mono [overflow-wrap:anywhere]">
+                    /go/{order.source.via}
+                  </dd>
+                </>
+              ) : null}
+              {order.partnerId !== null ? (
+                <>
+                  <dt>Counted for</dt>
+                  <dd className="bk-num">
+                    <Link
+                      href={`/backstage/marketing/partners/${order.partnerId}`}
+                      className="underline"
+                    >
+                      {order.partnerName ?? "A partner"}
+                    </Link>
+                    {order.commissionPercent > 0 ? (
+                      <span className="bk-muted block text-[0.875rem]">
+                        {order.isTest
+                          ? `A test order, so their ${String(order.commissionPercent)}% cut earns nothing`
+                          : `Their ${String(order.commissionPercent)}% cut: ${formatNzdExact(order.cutCents)}`}
+                      </span>
+                    ) : null}
+                  </dd>
+                </>
+              ) : null}
             </dl>
           </Panel>
 

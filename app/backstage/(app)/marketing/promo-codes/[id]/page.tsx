@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ActivityList } from "@/components/backstage/ActivityList";
@@ -8,6 +9,8 @@ import { listActivity } from "@/lib/backstage/activity/ops";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
+import { promoCodeResults } from "@/lib/backstage/marketing/collabs";
+import { listPartners } from "@/lib/backstage/marketing/partners";
 import {
   getPromoCode,
   type PromoRow,
@@ -15,6 +18,7 @@ import {
 import { formatNzd } from "@/lib/shop/money";
 import { formatNzDate } from "@/lib/time";
 
+import { SalesSmallPrint, TakingsList } from "../../collab-parts";
 import { Flash, LookOnly, MarketingNav, PromoPill } from "../../parts";
 import { setPromoCodeActiveAction, updatePromoCodeAction } from "../actions";
 import { PromoFields } from "../fields";
@@ -54,11 +58,15 @@ export default async function PromoCodePage({
     }
     throw error;
   }
-  const history = await execute(
-    listActivity,
-    { entityType: "promo", entityId: promo.id, limit: 50 },
-    caller,
-  );
+  const [history, results, partners] = await Promise.all([
+    execute(
+      listActivity,
+      { entityType: "promo", entityId: promo.id, limit: 50 },
+      caller,
+    ),
+    execute(promoCodeResults, { id: promo.id }, caller),
+    execute(listPartners, { status: "all", limit: 200 }, caller),
+  ]);
   const canWrite = staff.role !== "viewer";
 
   return (
@@ -105,6 +113,20 @@ export default async function PromoCodePage({
                 {promo.maxUses === null
                   ? `${String(promo.uses)} ${promo.uses === 1 ? "time" : "times"}, no limit`
                   : `${String(promo.uses)} of ${String(promo.maxUses)}`}
+                {promo.oncePerCustomer ? ". Once for each customer" : ""}
+              </dd>
+              <dt>Whose it is</dt>
+              <dd>
+                {promo.partnerId === null ? (
+                  "Ours"
+                ) : (
+                  <Link
+                    href={`/backstage/marketing/partners/${promo.partnerId}`}
+                    className="underline"
+                  >
+                    {promo.partnerName}
+                  </Link>
+                )}
               </dd>
               {promo.note === "" ? null : (
                 <>
@@ -135,6 +157,20 @@ export default async function PromoCodePage({
             )}
           </Panel>
 
+          <Panel title="What it has brought in">
+            <TakingsList
+              takings={results}
+              discountLabel="Taken off by this code"
+            />
+            <SalesSmallPrint>
+              So the number of paid orders can be lower than the times the code
+              has been used.
+              {promo.partnerId === null
+                ? ""
+                : ` These count towards ${promo.partnerName ?? "its partner"}: their page has what the partnership has cost and what came back.`}
+            </SalesSmallPrint>
+          </Panel>
+
           <Panel title="History" flush>
             <ActivityList lines={history} now={now} />
           </Panel>
@@ -147,7 +183,11 @@ export default async function PromoCodePage({
               className="flex flex-col gap-4"
             >
               <input type="hidden" name="id" value={promo.id} />
-              <PromoFields values={promo} kindLocked={promo.uses > 0} />
+              <PromoFields
+                values={promo}
+                kindLocked={promo.uses > 0}
+                partners={partners}
+              />
               <SubmitButton pending="Saving">Save the terms</SubmitButton>
               <p className="bk-muted text-[0.9375rem] leading-snug">
                 {promo.uses > 0

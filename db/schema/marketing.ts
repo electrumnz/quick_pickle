@@ -106,10 +106,21 @@ export const promoCodes = pgTable(
     uses: integer().notNull().default(0),
     active: boolean().notNull().default(true),
     note: text().notNull().default(""),
+    /**
+     * Whose code it is: the club or creator it was made for. Null: our own.
+     * An order placed with it is credited to them, and keeps its own note of
+     * that, so moving a code to somebody else never rewrites what came before.
+     */
+    partnerId: text().references(() => partners.id, { onDelete: "set null" }),
+    /** One use for each customer, told apart by email address. */
+    oncePerCustomer: boolean().notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [uniqueIndex("promo_codes_code_key").on(t.code)],
+  (t) => [
+    uniqueIndex("promo_codes_code_key").on(t.code),
+    index("promo_codes_partner_idx").on(t.partnerId),
+  ],
 ).enableRLS();
 
 export type SocialStatus = "idea" | "draft" | "approved" | "posted" | "dropped";
@@ -165,10 +176,22 @@ export const links = pgTable(
     showOrder: integer(),
     clicks: integer().notNull().default(0),
     active: boolean().notNull().default(true),
+    /** Whose link it is, when it was made for a club or creator. */
+    partnerId: text().references(() => partners.id, { onDelete: "set null" }),
+    /**
+     * A code the link carries. Following the link puts the code in the
+     * visitor's checkout for them, so nobody has to remember or type it.
+     */
+    promoCodeId: text().references(() => promoCodes.id, {
+      onDelete: "set null",
+    }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [uniqueIndex("links_slug_key").on(t.slug)],
+  (t) => [
+    uniqueIndex("links_slug_key").on(t.slug),
+    index("links_partner_idx").on(t.partnerId),
+  ],
 ).enableRLS();
 
 export const reviews = pgTable(
@@ -226,6 +249,43 @@ export const partners = pgTable("partners", {
   nextStep: text().notNull().default(""),
   nextStepOn: date({ mode: "string" }),
   notes: text().notNull().default(""),
+  /**
+   * Their cut of each sale they bring in (an order placed with one of their
+   * codes, or through one of their links): a whole percentage of what the
+   * buyer paid for the goods, after any code's saving and not counting
+   * delivery. Zero: none. An order copies it at the moment it is placed.
+   */
+  commissionPercent: integer().notNull().default(0),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }).enableRLS();
+
+/**
+ * What working with a partner has cost: one line for each thing paid or
+ * given. With the sales their codes bring in, this is what the return on a
+ * partnership is worked out from.
+ *
+ *   fee         a flat payment: for a post, a reel, a stall, a season
+ *   product     product given away, at what it is worth
+ *   commission  a payout of the cut their code has earned
+ *   other       anything else: postage, printing, a prize
+ *
+ * A reckoning for the owner, not the books. The books are Xero's.
+ */
+export const partnerCosts = pgTable(
+  "partner_costs",
+  {
+    id: text().primaryKey(),
+    partnerId: text()
+      .notNull()
+      .references(() => partners.id, { onDelete: "cascade" }),
+    kind: text().$type<"fee" | "product" | "commission" | "other">().notNull(),
+    amountCents: integer().notNull(),
+    /** The New Zealand day it was paid or sent. */
+    paidOn: date({ mode: "string" }).notNull(),
+    note: text().notNull().default(""),
+    createdBy: text().references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("partner_costs_partner_idx").on(t.partnerId, t.paidOn)],
+).enableRLS();

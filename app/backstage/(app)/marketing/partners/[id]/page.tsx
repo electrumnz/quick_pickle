@@ -8,6 +8,7 @@ import { listActivity } from "@/lib/backstage/activity/ops";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
+import { partnerResults } from "@/lib/backstage/marketing/collabs";
 import { dayLabel } from "@/lib/backstage/marketing/dates";
 import {
   getPartner,
@@ -18,6 +19,8 @@ import {
   PARTNER_STATUS_LABEL,
   PARTNER_STATUSES,
 } from "@/lib/backstage/marketing/status";
+import { siteUrl } from "@/lib/site";
+import { nzDateKey } from "@/lib/time";
 
 import {
   Flash,
@@ -36,6 +39,7 @@ import {
   updatePartnerAction,
 } from "../actions";
 import { PartnerFields } from "../fields";
+import { Collab } from "./Collab";
 
 export const metadata: Metadata = { title: "Partner" };
 
@@ -68,11 +72,14 @@ export default async function PartnerPage({
     }
     throw error;
   }
-  const history = await execute(
-    listActivity,
-    { entityType: "partner", entityId: partner.id, limit: 50 },
-    caller,
-  );
+  const [history, results] = await Promise.all([
+    execute(
+      listActivity,
+      { entityType: "partner", entityId: partner.id, limit: 50 },
+      caller,
+    ),
+    execute(partnerResults, { partnerId: partner.id }, caller),
+  ]);
   const canWrite = staff.role !== "viewer";
 
   return (
@@ -159,6 +166,13 @@ export default async function PartnerPage({
           </div>
         ) : null}
       </section>
+
+      <Collab
+        results={results}
+        canWrite={canWrite}
+        today={nzDateKey(now)}
+        site={siteUrl()}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr] [&>*]:min-w-0">
         <div className="flex flex-col gap-6">
