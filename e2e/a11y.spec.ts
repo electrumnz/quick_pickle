@@ -48,6 +48,7 @@ const PAGES = [
   "/backstage/marketing/campaigns/new",
   "/backstage/marketing/promo-codes",
   "/backstage/marketing/promo-codes/new",
+  "/backstage/marketing/promo-codes/specials",
   "/backstage/marketing/social",
   "/backstage/marketing/social/new",
   "/backstage/marketing/links",
@@ -103,6 +104,11 @@ for (const [name, list, link] of [
     "a promo code that is a partner's",
     "/backstage/marketing/promo-codes",
     "ROVERS10",
+  ],
+  [
+    "the promo code the Pickle Crew is welcomed with",
+    "/backstage/marketing/promo-codes",
+    "HELLO10",
   ],
   [
     "a landing page's editor, with its preview in a frame",

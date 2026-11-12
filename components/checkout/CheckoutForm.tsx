@@ -13,7 +13,7 @@ import { Art } from "@/components/brand/Art";
 import { ChevronIcon, LockIcon } from "@/components/brand/Icons";
 import { useCart } from "@/components/cart/CartProvider";
 import { SHIPPING } from "@/content/offer";
-import { CHECKOUT, CODES, JAR } from "@/content/site";
+import { CHECKOUT, CODES, JAR, SPECIAL } from "@/content/site";
 import { formatNzd, formatNzdExact } from "@/lib/shop/money";
 import { NZ_REGIONS, type FieldErrors } from "@/lib/shop/order";
 import { quote } from "@/lib/shop/pricing";
@@ -21,9 +21,11 @@ import { visitDetails } from "@/lib/shop/seen";
 
 import {
   checkCode,
+  specialFor,
   submitCheckout,
   type CheckoutState,
   type CodeAnswer,
+  type SpecialAnswer,
 } from "./actions";
 
 /**
@@ -189,6 +191,16 @@ export function CheckoutForm({
   const jar = JSON.stringify(cart.lines);
   const shown = touched ? typedCode : (carriedCode ?? "");
 
+  // A special: a saving that comes off by itself, with nothing to type. The
+  // server says what it takes off this jar, and again whenever the jar or
+  // the delivery answer changes. Only its word goes with the order.
+  const [special, setSpecial] = useState<{
+    readonly answer: SpecialAnswer;
+    readonly jar: string;
+    readonly rural: boolean;
+  } | null>(null);
+  const [specialAsked, setSpecialAsked] = useState(0);
+
   // The server can refuse a code with the order itself (somebody took its
   // last use, or this customer has had it before). What was applied a
   // moment ago no longer stands, so it is dropped as the reply arrives.
@@ -196,7 +208,24 @@ export function CheckoutForm({
   if (answeredFor !== state) {
     setAnsweredFor(state);
     if (state.errors.promoCode !== undefined) setCode(null);
+    // The special that was showing is not what the server found. Drop it
+    // and ask again, so the total on the button is the true one.
+    if (state.errors.special !== undefined) {
+      setSpecial(null);
+      setSpecialAsked((count) => count + 1);
+    }
   }
+
+  useEffect(() => {
+    if (!ready || cart.lines.length === 0) return;
+    let stale = false;
+    void specialFor(jar, rural).then((answer) => {
+      if (!stale) setSpecial({ answer, jar, rural });
+    });
+    return () => {
+      stale = true;
+    };
+  }, [ready, cart.lines.length, jar, rural, specialAsked]);
 
   useEffect(() => {
     if (!ready || touched || carriedCode === null) return;
@@ -269,14 +298,39 @@ export function CheckoutForm({
     asStored(answered.typed) === asStored(shown)
       ? answered.answer
       : null;
+  // One saving an order. With a code and a special both good for this jar,
+  // the buyer gets whichever takes more off, and a code that only draws
+  // level wins because they asked for it. The server decides the same way.
+  const specialNow =
+    special !== null &&
+    special.jar === jar &&
+    special.rural === rural &&
+    special.answer.ok
+      ? special.answer
+      : null;
+  const worth = (saving: {
+    readonly discountCents: number;
+    readonly deliveryDiscountCents: number;
+  }) => saving.discountCents + saving.deliveryDiscountCents;
+  const bySpecial =
+    specialNow !== null &&
+    (applied === null || worth(specialNow) > worth(applied));
+  const saving = bySpecial ? specialNow : applied;
+  /** What the saving is called in the sums. */
+  const savingLine =
+    bySpecial && specialNow !== null
+      ? `${SPECIAL.tag}: ${specialNow.name === "" ? specialNow.label : specialNow.name}`
+      : applied !== null
+        ? `${CODES.codeLine} ${applied.code}`
+        : "";
   const priced = quote(
     cart,
     { rural },
-    applied === null
+    saving === null
       ? undefined
       : {
-          discountCents: applied.discountCents,
-          deliveryDiscountCents: applied.deliveryDiscountCents,
+          discountCents: saving.discountCents,
+          deliveryDiscountCents: saving.deliveryDiscountCents,
         },
   );
   const errors: FieldErrors = state.errors;
@@ -351,19 +405,19 @@ export function CheckoutForm({
           <dt>{CHECKOUT.subtotal}</dt>
           <dd>{formatNzdExact(priced.subtotalCents)}</dd>
         </div>
-        {priced.discountCents > 0 && applied !== null ? (
+        {priced.discountCents > 0 && saving !== null ? (
           <div className="flex justify-between" data-testid="discount-line">
-            <dt>
-              {CODES.codeLine} {applied.code}
-            </dt>
+            <dt>{savingLine}</dt>
             <dd>-{formatNzdExact(priced.discountCents)}</dd>
           </div>
         ) : null}
         <div className="flex justify-between">
           <dt>
             {CHECKOUT.delivery}
-            {priced.deliveryDiscountCents > 0 && applied !== null
-              ? ` (${CODES.codeLine.toLowerCase()} ${applied.code})`
+            {priced.deliveryDiscountCents > 0 && saving !== null
+              ? bySpecial
+                ? ` (${SPECIAL.tag.toLowerCase()})`
+                : ` (${CODES.codeLine.toLowerCase()} ${applied?.code ?? ""})`
               : ""}
           </dt>
           <dd>
@@ -465,6 +519,15 @@ export function CheckoutForm({
           }}
         >
           <input type="hidden" name="lines" value={jar} readOnly />
+          {/* The special the buyer is being shown, by its word. If it is no
+              longer what comes off, the server says so before any money
+              moves, so nobody pays more than the total on the button. */}
+          <input
+            type="hidden"
+            name="special"
+            value={bySpecial && specialNow !== null ? specialNow.code : ""}
+            readOnly
+          />
           {/* How the visit arrived and which page it saw, filled in as the
               form is sent. A label for the order: the server keeps only
               what it recognises, and nothing about the price depends on it. */}
@@ -487,7 +550,11 @@ export function CheckoutForm({
               role="alert"
               className="border-pink-deep bg-blush text-pink-deep rounded-[14px] border-2 p-4 font-semibold"
             >
-              {state.status === "invalid" ? CHECKOUT.problem : CHECKOUT.failed}
+              {errors.special !== undefined
+                ? errors.special
+                : state.status === "invalid"
+                  ? CHECKOUT.problem
+                  : CHECKOUT.failed}
               {errors.lines ? ` ${errors.lines}.` : ""}
             </p>
           ) : null}
@@ -740,6 +807,22 @@ export function CheckoutForm({
                     {CODES.remove}
                   </button>
                 </p>
+              ) : applied !== null && bySpecial ? (
+                <p
+                  id="co-promoCode-ok"
+                  role="status"
+                  data-testid="special-beats-code"
+                  className="mt-1.5 text-[0.9375rem] leading-snug"
+                >
+                  {SPECIAL.beatsCode}{" "}
+                  <button
+                    type="button"
+                    onClick={removeCode}
+                    className="link inline-flex min-h-11 items-center"
+                  >
+                    {CODES.remove}
+                  </button>
+                </p>
               ) : applied !== null ? (
                 <p
                   id="co-promoCode-ok"
@@ -782,6 +865,23 @@ export function CheckoutForm({
               </span>
             </label>
 
+            {bySpecial && specialNow !== null ? (
+              <p
+                role="status"
+                data-testid="special-on"
+                className="border-navy bg-olive-wash rounded-[14px] border-2 p-3 text-[0.9375rem] leading-snug"
+              >
+                <strong>{savingLine}.</strong> {CODES.youSave}{" "}
+                {formatNzdExact(savedCents)}. {SPECIAL.noCode}
+              </p>
+            ) : errors.special !== undefined ? (
+              <p
+                role="status"
+                className="border-pink-deep bg-blush text-pink-deep rounded-[14px] border-2 p-3 text-[0.9375rem] leading-snug font-semibold"
+              >
+                {errors.special}
+              </p>
+            ) : null}
             <button
               type="submit"
               disabled={pending}

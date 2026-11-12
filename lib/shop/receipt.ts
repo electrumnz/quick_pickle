@@ -47,6 +47,8 @@ export const receiptSchema = z.object({
   /** What a code took off the goods, and the code. Absent with none. */
   discountCents: cents.optional(),
   promoCode: z.string().max(40).optional(),
+  /** Set when that saving was a special: what to call it. */
+  special: z.string().max(60).optional(),
   shippingCents: cents,
   totalCents: cents,
 });
@@ -74,7 +76,13 @@ export function receiptFor(order: Order): Receipt {
     subtotalCents: order.subtotalCents,
     ...(order.promo === null
       ? {}
-      : { discountCents: order.discountCents, promoCode: order.promo.code }),
+      : {
+          discountCents: order.discountCents,
+          promoCode: order.promo.code,
+          ...(order.promo.special === undefined
+            ? {}
+            : { special: order.promo.special.slice(0, 60) }),
+        }),
     shippingCents: order.shippingCents,
     totalCents: order.totalCents,
   };

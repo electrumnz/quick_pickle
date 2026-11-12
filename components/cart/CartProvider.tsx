@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { asPromoCode } from "@/lib/shop/code";
 import {
   ARRIVAL_KEY,
   arrivalFrom,
@@ -174,6 +175,12 @@ type CartContextValue = {
   readonly carriedCode: string | null;
   /** Stop offering the carried code: it was taken off, or cannot be used. */
   readonly forgetCarriedCode: () => void;
+  /**
+   * Keep a code for the checkout, as if a link had carried it. For the code
+   * somebody is given when they join the Pickle Crew. A code already being
+   * carried is left alone: it may be a partner's, and it was there first.
+   */
+  readonly carryCode: (code: string) => void;
   /** The link and labels the visit came with, to go on the order. */
   readonly source: Readonly<Record<string, string>>;
 };
@@ -222,6 +229,23 @@ export function CartProvider({ children }: { readonly children: ReactNode }) {
     writeKey(ARRIVAL_KEY, packArrival({ ...now, code: null }));
   }, []);
 
+  const carryCode = useCallback((code: string) => {
+    const wanted = asPromoCode(code);
+    if (wanted === null) return;
+    const now = unpackArrival(readArrival());
+    if (now !== null && now.code !== null) return;
+    // With an arrival already noted, its own date stands: the link it
+    // remembers is not kept any longer for this.
+    writeKey(
+      ARRIVAL_KEY,
+      packArrival(
+        now === null
+          ? { code: wanted, source: {}, at: Date.now() }
+          : { ...now, code: wanted },
+      ),
+    );
+  }, []);
+
   const open = useCallback(() => setOpen(true), []);
   const close = useCallback(() => setOpen(false), []);
 
@@ -244,6 +268,7 @@ export function CartProvider({ children }: { readonly children: ReactNode }) {
       select,
       carriedCode: arrival?.code ?? null,
       forgetCarriedCode,
+      carryCode,
       source: arrival?.source ?? NO_SOURCE,
     }),
     [
@@ -261,6 +286,7 @@ export function CartProvider({ children }: { readonly children: ReactNode }) {
       selectedSku,
       arrival,
       forgetCarriedCode,
+      carryCode,
     ],
   );
 

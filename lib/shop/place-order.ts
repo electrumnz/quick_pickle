@@ -21,9 +21,10 @@
  */
 
 import { STORE } from "@/content/offer";
-import { CODES } from "@/content/site";
+import { CODES, SPECIAL } from "@/content/site";
 
 import { normaliseCart } from "./cart";
+import { normalisePromoCode } from "./code";
 import {
   checkoutSchema,
   fieldErrors,
@@ -34,7 +35,7 @@ import {
 import type { PaymentRecord } from "./order";
 import type { ChargeRequest, PaymentProvider } from "./payments";
 import { quote, type Saving } from "./pricing";
-import type { CodeCheck } from "./store";
+import type { CodeCheck, SpecialCheck } from "./store";
 
 /** The slice of the store an order needs. Easy to fake in a test. */
 export type OrderSink = {
@@ -57,6 +58,10 @@ export type OrderSink = {
       readonly email?: string;
     },
   ): Promise<CodeCheck>;
+  special?(order: {
+    readonly subtotalCents: number;
+    readonly deliveryCents: number;
+  }): Promise<SpecialCheck>;
 };
 
 /** The least an order may come to once a code is off it. One dollar. */
@@ -137,24 +142,76 @@ export async function placeOrder(
     if (!check.ok) return noCode(check.reason);
     code = check;
   }
+  // A special: a saving that comes off by itself, with nothing typed. One
+  // saving an order, so with a code as well the buyer gets whichever takes
+  // more off, and a code that only draws level wins because they asked for it.
+  const readSpecial = async (): Promise<Extract<
+    SpecialCheck,
+    { ok: true }
+  > | null> => {
+    if (deps.store.special === undefined) return null;
+    try {
+      const answer = await deps.store.special({
+        subtotalCents: before.subtotalCents,
+        deliveryCents: before.deliveryCents,
+      });
+      return answer.ok ? answer : null;
+    } catch {
+      // A special that cannot be read is no special. A buyer who was shown
+      // one is told the total has changed, just below.
+      return null;
+    }
+  };
+  const savedBy = (worth: Saving) =>
+    worth.discountCents + worth.deliveryDiscountCents;
+  const special = await readSpecial();
+  const bySpecial =
+    special !== null && (code === null || savedBy(special) > savedBy(code));
+  const specialGone: PlaceOrderResult = {
+    ok: false,
+    reason: "invalid",
+    errors: { special: SPECIAL.gone },
+  };
+  // The buyer was shown a special coming off. If that is not what comes off
+  // now, the total they pressed the button on is not the total any more, so
+  // they are shown the new one first. (Paying LESS than was shown, because
+  // a special started in the meantime, needs nobody's leave.)
+  const shown = normalisePromoCode(input.special ?? "");
+  if (shown !== "" && !(bySpecial && special.code === shown)) {
+    return specialGone;
+  }
+  const applied = bySpecial ? special : code;
+
   const saving: Saving =
-    code === null
+    applied === null
       ? { discountCents: 0, deliveryDiscountCents: 0 }
       : {
-          discountCents: code.discountCents,
-          deliveryDiscountCents: code.deliveryDiscountCents,
+          discountCents: applied.discountCents,
+          deliveryDiscountCents: applied.deliveryDiscountCents,
         };
   const priced = quote(cart, { rural: input.rural }, saving);
-  if (code !== null && priced.totalCents < LEAST_TOTAL_CENTS) {
-    return noCode(CODES.wouldBeFree);
+  if (applied !== null && priced.totalCents < LEAST_TOTAL_CENTS) {
+    return bySpecial ? specialGone : noCode(CODES.wouldBeFree);
   }
+  /** What to call a special on the receipt and the payment page. */
+  const specialCalled =
+    bySpecial && special !== null
+      ? special.name !== ""
+        ? special.name
+        : special.label
+      : null;
   const promo =
-    code === null
+    applied === null
       ? null
       : {
-          code: code.code,
+          code: applied.code,
           deliveryDiscountCents: priced.deliveryDiscountCents,
+          ...(specialCalled === null ? {} : { special: specialCalled }),
         };
+  // The special beat a code the buyer typed. Nothing comes off for the code
+  // and its use is not counted, but whoever it belongs to still brought the
+  // order in.
+  const creditCode = bySpecial && code !== null ? code.code : null;
 
   const number = (deps.orderNumber ?? newOrderNumber)();
   const now = (deps.now ?? (() => new Date()))();
@@ -172,7 +229,12 @@ export async function placeOrder(
     })),
     shippingCents: priced.shippingCents,
     discountCents: priced.discountCents,
-    discountLabel: code === null ? "" : `${CODES.codeLine} ${code.code}`,
+    discountLabel:
+      applied === null
+        ? ""
+        : specialCalled !== null
+          ? `${SPECIAL.tag}: ${specialCalled}`
+          : `${CODES.codeLine} ${applied.code}`,
     successUrl: deps.returnUrls?.success ?? "",
     cancelUrl: deps.returnUrls?.cancel ?? "",
   };
@@ -213,14 +275,25 @@ export async function placeOrder(
     promo,
     payment,
     joinCrew: input.joinCrew,
+    ...(creditCode === null ? {} : { creditCode }),
     ...(input.source === undefined ? {} : { source: input.source }),
   });
 
-  // Saving can refuse a code that was fine a moment ago (somebody else took
-  // its last use). Ask once more, so the buyer is told that and not just
-  // that something went wrong.
+  // Saving can refuse a code or a special that was fine a moment ago
+  // (somebody else took its last use, or it was switched off). Ask once
+  // more, so the buyer is told that and not just that something went wrong.
   const refusedCode = async (): Promise<PlaceOrderResult | null> => {
-    if (code === null || deps.store.checkCode === undefined) return null;
+    if (applied === null) return null;
+    if (bySpecial) {
+      const again = await readSpecial();
+      return again === null ||
+        again.code !== applied.code ||
+        again.discountCents !== applied.discountCents ||
+        again.deliveryDiscountCents !== applied.deliveryDiscountCents
+        ? specialGone
+        : null;
+    }
+    if (deps.store.checkCode === undefined) return null;
     try {
       const again = await deps.store.checkCode(typed, {
         subtotalCents: before.subtotalCents,
@@ -229,8 +302,8 @@ export async function placeOrder(
       });
       if (!again.ok) return noCode(again.reason);
       if (
-        again.discountCents !== code.discountCents ||
-        again.deliveryDiscountCents !== code.deliveryDiscountCents
+        again.discountCents !== applied.discountCents ||
+        again.deliveryDiscountCents !== applied.deliveryDiscountCents
       ) {
         return noCode(CODES.changed);
       }

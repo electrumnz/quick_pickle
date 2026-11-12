@@ -50,6 +50,31 @@ export type CodePeek =
   | { readonly ok: true; readonly code: string; readonly label: string }
   | { readonly ok: false };
 
+/** What the special that is on takes off an order, or a plain no. */
+export type SpecialCheck =
+  | {
+      readonly ok: true;
+      /** The word it goes by on an order. */
+      readonly code: string;
+      /** "Launch week", or "" when it has no name of its own. */
+      readonly name: string;
+      /** "10% off", "Free standard delivery". */
+      readonly label: string;
+      readonly discountCents: number;
+      readonly deliveryDiscountCents: number;
+    }
+  | { readonly ok: false };
+
+/** The words for a special that is on. Nothing in it is private. */
+export type SpecialNow = {
+  readonly code: string;
+  readonly name: string;
+  /** "10% off every pack, until Sunday 15 November." */
+  readonly sentence: string;
+  /** The instant it stops, as an ISO string, or null. */
+  readonly endsAt: string | null;
+};
+
 export type Store = {
   readonly name: string;
   /** False when a record would not survive the process. */
@@ -86,6 +111,22 @@ export type Store = {
    * that the code is in. Anything else is a plain no.
    */
   describeCode?(code: string): Promise<CodePeek>;
+  /**
+   * What the special that is on takes off an order. A special is a saving
+   * nobody types a code for. It counts nothing: like a code, its use is
+   * counted when the order is saved.
+   */
+  special?(order: {
+    readonly subtotalCents: number;
+    readonly deliveryCents: number;
+  }): Promise<SpecialCheck>;
+  /** The special to tell visitors about right now, or null. */
+  currentSpecial?(): Promise<SpecialNow | null>;
+  /**
+   * The code somebody is given for joining the Pickle Crew, if one is set
+   * up and could be used right now.
+   */
+  welcomeCode?(): Promise<CodePeek>;
   /**
    * True when a rule for who sees which page asks whether a visitor has
    * bought before. Only then does the checkout leave a cookie saying so:
@@ -210,6 +251,33 @@ function dbStore(env: Record<string, string | undefined>): Store {
       return execute(
         peekPromoCode,
         { code },
+        systemCaller("The shop", "storefront"),
+      );
+    },
+    async special(order) {
+      const { specialWorth } =
+        await import("@/lib/backstage/marketing/specials");
+      return execute(
+        specialWorth,
+        order,
+        systemCaller("The shop", "storefront"),
+      );
+    },
+    async currentSpecial() {
+      const { currentSpecial } =
+        await import("@/lib/backstage/marketing/specials");
+      return execute(
+        currentSpecial,
+        {},
+        systemCaller("The shop", "storefront"),
+      );
+    },
+    async welcomeCode() {
+      const { crewWelcomeCode } =
+        await import("@/lib/backstage/marketing/promo-codes");
+      return execute(
+        crewWelcomeCode,
+        {},
         systemCaller("The shop", "storefront"),
       );
     },

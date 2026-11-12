@@ -37,7 +37,7 @@ import {
   setPartnerNextStep,
   setPartnerPermission,
 } from "./partners";
-import { createPromoCode } from "./promo-codes";
+import { createPromoCode, setCrewWelcomeCode } from "./promo-codes";
 import { publishReview, rejectReview, submitReview } from "./reviews";
 import {
   addSocialPost,
@@ -45,6 +45,7 @@ import {
   dropSocialPost,
   markSocialPosted,
 } from "./social";
+import { createSpecial } from "./specials";
 
 const HOUR = 60 * 60_000;
 const DAY = 24 * HOUR;
@@ -192,6 +193,40 @@ export async function seedMarketingDemo(db: Db, now: Date): Promise<void> {
     },
     demo,
     at(-2),
+  );
+
+  // The code a new member of the Pickle Crew is given as they join. Its
+  // own code, not CREW10: a welcome code works once for each customer.
+  const hello = await execute(
+    createPromoCode,
+    {
+      code: "HELLO10",
+      kind: "percent",
+      value: 10,
+      note: "Sample code. Given to people as they join the Pickle Crew on the site.",
+    },
+    demo,
+    at(-6 * 24),
+  );
+  await execute(
+    setCrewWelcomeCode,
+    { id: hello.id, on: true },
+    demo,
+    at(-6 * 24),
+  );
+
+  /* ---- a special, set up and switched off -------------------------------- */
+
+  await execute(
+    createSpecial,
+    {
+      code: "OPENING",
+      name: "Opening week",
+      kind: "delivery",
+      note: "Sample special. It is switched off: nothing changes in the shop until somebody switches it on.",
+    },
+    demo,
+    at(-3 * 24),
   );
 
   /* ---- the social planner ---------------------------------------------- */

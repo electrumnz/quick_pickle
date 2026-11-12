@@ -24,26 +24,43 @@ import {
   OFFICIAL,
   REELS,
   RITUAL,
+  SPECIAL,
   TICKER,
   TRUTHS,
 } from "@/content/site";
 
+import { specialLine } from "@/lib/shop/special-now";
+import type { SpecialNow } from "@/lib/shop/store";
+
 import { BuyBox } from "./BuyBox";
 import { CrewForm } from "./CrewForm";
 import { Reels } from "./Reels";
+import { SpecialTicket } from "./SpecialTicket";
+import { WhileOn } from "./WhileOn";
 
 /* The static sections of the page, top to bottom. All server-rendered: the
    only JavaScript any of them needs belongs to the buy box and the crew form,
    which are their own client components. */
 
-export function TopTicker() {
-  return (
+export function TopTicker({
+  special = null,
+}: {
+  /** A special that is on goes first in the line, where it is seen at once. */
+  readonly special?: SpecialNow | null;
+}) {
+  const line = (items: readonly string[]) => (
     <Ticker
-      items={TICKER}
+      items={items}
       seconds={36}
       className="label bg-navy-deep text-cream py-2.5 text-[1.05rem]"
       separator={<Sparkle className="text-pink size-3 shrink-0" />}
     />
+  );
+  if (special === null) return line(TICKER);
+  return (
+    <WhileOn until={special.endsAt} otherwise={line(TICKER)}>
+      {line([specialLine(special, SPECIAL.tag), ...TICKER])}
+    </WhileOn>
   );
 }
 
@@ -68,7 +85,11 @@ export function Band() {
   );
 }
 
-export function Shop() {
+export function Shop({
+  special = null,
+}: {
+  readonly special?: SpecialNow | null;
+}) {
   return (
     <section
       id="shop"
@@ -86,6 +107,9 @@ export function Shop() {
           </h2>
           <p className="mt-3 max-w-[34rem]">{BUY.body}</p>
         </div>
+        {special === null ? null : (
+          <SpecialTicket special={special} className="mt-6" />
+        )}
         <BuyBox
           shipDate={shipDateText()}
           productLoop={MEDIA.productLoop}

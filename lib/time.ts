@@ -132,6 +132,21 @@ const timeFormat = new Intl.DateTimeFormat("en-NZ", {
   hour12: true,
 });
 
+const longDayFormat = new Intl.DateTimeFormat("en-NZ", {
+  timeZone: NZ_TIME_ZONE,
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
+
+/** "Sunday 15 November": a day said in full, for a sentence. */
+export function formatNzDayLong(instant: Date): string {
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    longDayFormat.formatToParts(instant).find((each) => each.type === type)
+      ?.value ?? "";
+  return `${part("weekday")} ${part("day")} ${part("month")}`;
+}
+
 /** "12 Nov 2026" */
 export function formatNzDate(instant: Date): string {
   return dateFormat.format(instant);

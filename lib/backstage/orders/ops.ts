@@ -46,7 +46,7 @@ import { creditFor, knownSource } from "../marketing/credit";
 import {
   evaluatePromo,
   findPromo,
-  normalisePromoCode,
+  promoState,
   redeemPromoIn,
   usedByCustomer,
   type Promo,
@@ -122,6 +122,12 @@ const placedOrderSchema = z.object({
     })
     .nullable()
     .default(null),
+  /**
+   * A code the buyer typed that a special beat. Nothing came off for it and
+   * its use is not counted. It is only here so that whoever the code
+   * belongs to is still credited with the order.
+   */
+  creditCode: z.string().trim().min(1).max(40).optional(),
   payment: z.object({
     provider: z.string().min(1).max(40),
     status: z.enum(["test", "paid", "pending"]),
@@ -250,8 +256,23 @@ export const recordOrder = defineOp({
     // failing that, the link the buyer came through. The order keeps its own
     // copy, with the cut that partner is on right now, so a partner's results
     // never shift when a deal changes or a code is handed to somebody else.
+    //
+    // A special can beat a code the buyer typed (one saving an order, and
+    // they get the bigger). The code's owner still brought them in, so a
+    // partner's code that lost to the special is credited all the same. It
+    // has to be a code that could have been used: a word somebody made up,
+    // or a code that is switched off or finished, credits nobody.
+    const beaten =
+      input.creditCode === undefined || used?.automatic !== true
+        ? null
+        : await findPromo(ctx.db, input.creditCode);
+    const beatenCounts =
+      beaten !== null &&
+      !beaten.automatic &&
+      promoState(beaten, ctx.now) === "live";
     const credit = await creditFor(ctx.db, {
-      promoPartnerId: used?.partnerId ?? null,
+      promoPartnerId:
+        used?.partnerId ?? (beatenCounts ? beaten.partnerId : null),
       viaSlug: source?.via ?? null,
     });
 
@@ -388,7 +409,7 @@ export const recordOrder = defineOp({
     const entity = { type: "order", id };
     await ctx.audit({
       entity,
-      summary: `New ${test ? "test " : ""}order ${input.number}: ${itemsSummary(input.lines)}, ${formatNzd(input.totalCents)}${input.promo === null ? "" : ` with code ${normalisePromoCode(input.promo.code)}`}, for ${input.customer.firstName} ${input.customer.lastName} in ${input.delivery.city}`,
+      summary: `New ${test ? "test " : ""}order ${input.number}: ${itemsSummary(input.lines)}, ${formatNzd(input.totalCents)}${used === null ? "" : used.automatic ? ` with the special ${used.code}${beatenCounts ? ` (the code ${beaten.code} was typed, and the special took more off)` : ""}` : ` with code ${used.code}`}, for ${input.customer.firstName} ${input.customer.lastName} in ${input.delivery.city}`,
       data: {
         number: input.number,
         totalCents: input.totalCents,
@@ -551,6 +572,11 @@ export type OrderDetail = typeof orders.$inferSelect & {
   readonly partnerName: string | null;
   /** That partner's cut on this order as it stands, in cents. */
   readonly cutCents: number;
+  /**
+   * True when what came off was a special (nobody typed a code): the word
+   * in `promoCode` is then the one that special goes by.
+   */
+  readonly bySpecial: boolean;
 };
 
 export const getOrder = defineOp({
@@ -580,6 +606,10 @@ export const getOrder = defineOp({
             .select({ name: partners.name })
             .from(partners)
             .where(eq(partners.id, order.partnerId));
+    const saving =
+      order.promoCode === null
+        ? null
+        : await findPromo(ctx.db, order.promoCode);
     return {
       ...order,
       lines,
@@ -593,6 +623,7 @@ export const getOrder = defineOp({
         !["paid", "part_refunded"].includes(order.paymentStatus)
           ? 0
           : cutOn(order, order.commissionPercent),
+      bySpecial: saving?.automatic === true,
     };
   },
 });

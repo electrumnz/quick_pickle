@@ -19,6 +19,7 @@ import { nextSizeUp, perShotCents } from "@/lib/shop/catalogue";
 import { formatNzd } from "@/lib/shop/money";
 
 import { CarriedCodeNote } from "./CarriedCodeNote";
+import { SpecialNote } from "./SpecialNote";
 import { useCart } from "./CartProvider";
 
 /**
@@ -247,6 +248,7 @@ export function CartDrawer() {
                   </p>
                 ) : null}
                 <CarriedCodeNote className="mb-3" />
+                <SpecialNote open={isOpen} className="mb-3" />
                 <div className="flex items-baseline justify-between">
                   <p className="label text-[1.25rem]">{JAR.subtotal}</p>
                   <p className="label text-[1.75rem] leading-none">

@@ -298,6 +298,32 @@ go-live list shows when it last ran and what is stuck.
   gives its use back. On Stripe's page the saving is a one-off coupon for that order, and
   if the coupon cannot be made no page is made. One code an order; none may take an order
   below a dollar. Everything a customer is told about a code is in `CODES`, in `content/`.
+- **A special is a promo code nobody types.** It is the same table, the same sums and the
+  same guarded count (`promo_codes.automatic`), so an order on a special is recorded,
+  refunded and added up like one with a code. What is its own is in
+  `lib/backstage/marketing/specials.ts`:
+  - It ships switched off. Switching it on is publishing: outward, needs a yes, and its
+    name (the one thing a person typed) goes through the copy rules first. What it gives
+    and until when is never typed. `specialSentence` writes it from the terms and from
+    words in `content/`, so the sentence a customer reads is what the checkout does.
+  - It can only be changed while it is off, and a code's operations refuse to touch it.
+  - One special at a time: two switched on over the same days is refused. One saving an
+    order: with a code typed as well the buyer gets whichever takes more off, and a tie
+    goes to the code. A partner's code that lost to the special is still credited
+    (`creditCode` on the order).
+  - The form sends the special's word, never a number. If that special is not what comes
+    off any more, the order is refused and the buyer is shown the new total, so nobody pays
+    more than the button said. Paying less than was shown needs nobody's leave.
+  - The shop's pages are built once and kept, so the special is read when a page is built
+    (`lib/shop/special-now.ts`), and never while the site itself is being built. Switching
+    one on or off throws the kept pages away. While one is switched on the clock does the
+    same on every tick, which is what catches a first day, a last day and a new deployment.
+    `WhileOn` hides one whose last day has passed, whatever the kept copy says.
+  - Never switch a special on from a browser test unless no other test's jar can reach it
+    (`e2e/specials.spec.ts` asks for $300 of packs): every other test's total would move.
+- **The Pickle Crew's welcome code** is an ordinary code with `crew_welcome` set (at most
+  one, held by an index). The crew form shows it as somebody joins, and their browser keeps
+  it like a code a link carried. It is only handed out while it could be used.
 - **Who brought an order in is decided once, when it is placed, and kept on the order.**
   A promo code or a short link can belong to a partner (a club, a creator, an event). The
   order is credited to whoever owns the code that was used or, failing that, the link the

@@ -98,9 +98,14 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       link can carry their code into the checkout so nobody types it, and every link has a
       QR code to print. A partner's page says what they brought in, what they cost (a cut of
       each sale, a flat fee, product given away) and the sales back for each dollar spent.
-- [ ] **Specials and a welcome code.** An offer that applies itself for a set time with no
-      code to type, shown on the page; and a code for someone the moment they join the
-      Pickle Crew.
+- [x] **Specials and a welcome code.** A special comes off by itself with no code to type,
+      and the shop says so across the top of the page, where the packs are picked, in the
+      jar and at the checkout. It is set up switched off, its name is read by the copy rules
+      before it goes on, and what it gives is written from its own terms. One special at a
+      time, and one saving an order. A code can be chosen as the Pickle Crew's welcome code:
+      people are shown it as they join and it comes off at their checkout.
+      Later, if wanted: the special's saving in the jar's own total (it is said there, and
+      taken off at the checkout), and a code only people on the Crew list can use.
 - [x] **Landing pages.** The one page with other words at the top, for one advert or
       audience, each at its own address with its own numbers. Written as a draft, checked
       against the copy rules, looked at in a preview that is the real page, then published.

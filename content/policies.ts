@@ -208,6 +208,7 @@ const privacy: Policy = {
         "We count visits to this site ourselves, without cookies: how many there were, which pages, whether it was a phone, and how each one found us. Nothing in that says who you are, and we keep it for up to 13 months. If your browser asks not to be tracked (Global Privacy Control, or Do Not Track), we don't count your visit at all.",
         "We also count how many times each of our own short links is followed. We keep the count and nothing about who followed it.",
         "If you arrive through one of those links (from a club, a creator, a flyer or a QR code) or from another website, your own browser remembers which link or site it was, and any promo code that came with the link, for up to 30 days. For a website we keep its name only, not the page you were on. If you place an order, that goes with it, so we can see what is working and give credit to whoever sent you. It says how you found us, not who you are, and we don't use it to follow you around the web.",
+        "If you join the Pickle Crew and we give you a code for it, your browser keeps that code in the same way, so it comes off at the checkout without you typing it.",
       ],
     },
     {

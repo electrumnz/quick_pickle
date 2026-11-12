@@ -291,5 +291,15 @@ export const MIGRATIONS: readonly Migration[] = [
       "CREATE INDEX \"page_rules_order_idx\" ON \"page_rules\" USING btree (\"position\");",
       "CREATE UNIQUE INDEX \"page_tests_one_running\" ON \"page_tests\" USING btree (\"status\") WHERE \"page_tests\".\"status\" = 'running';"
     ]
+  },
+  {
+    "tag": "0008_specials",
+    "hash": "696416fb398d1cb9",
+    "statements": [
+      "ALTER TABLE \"promo_codes\" ADD COLUMN \"automatic\" boolean DEFAULT false NOT NULL;",
+      "ALTER TABLE \"promo_codes\" ADD COLUMN \"public_name\" text DEFAULT '' NOT NULL;",
+      "ALTER TABLE \"promo_codes\" ADD COLUMN \"crew_welcome\" boolean DEFAULT false NOT NULL;",
+      "CREATE UNIQUE INDEX \"promo_codes_one_crew_welcome\" ON \"promo_codes\" USING btree (\"crew_welcome\") WHERE \"promo_codes\".\"crew_welcome\";"
+    ]
   }
 ];

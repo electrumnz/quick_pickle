@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { ActivityList } from "@/components/backstage/ActivityList";
 import { SubmitButton } from "@/components/backstage/SubmitButton";
-import { PageHeader, Panel } from "@/components/backstage/ui";
+import { PageHeader, Panel, Pill } from "@/components/backstage/ui";
 import { listActivity } from "@/lib/backstage/activity/ops";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
@@ -22,6 +22,7 @@ import { SalesSmallPrint, TakingsList } from "../../collab-parts";
 import { Flash, LookOnly, MarketingNav, PromoPill } from "../../parts";
 import { setPromoCodeActiveAction, updatePromoCodeAction } from "../actions";
 import { PromoFields } from "../fields";
+import { setCrewWelcomeAction } from "../specials/actions";
 
 export const metadata: Metadata = { title: "Promo code" };
 
@@ -58,6 +59,11 @@ export default async function PromoCodePage({
     }
     throw error;
   }
+  // A special is looked after on its own screen, where switching it on is
+  // treated as the publishing it is.
+  if (promo.automatic) {
+    redirect(`/backstage/marketing/promo-codes/specials#${promo.id}`);
+  }
   const [history, results, partners] = await Promise.all([
     execute(
       listActivity,
@@ -82,6 +88,7 @@ export default async function PromoCodePage({
       <MarketingNav current="promo-codes" />
       <p className="-mt-1 mb-5 flex flex-wrap items-center gap-2">
         <PromoPill state={promo.state} />
+        {promo.crewWelcome ? <Pill tone="done">Crew welcome code</Pill> : null}
       </p>
       <Flash notice={notice} tone={tone} />
 
@@ -156,6 +163,40 @@ export default async function PromoCodePage({
               </div>
             )}
           </Panel>
+
+          {promo.partnerId !== null && !promo.crewWelcome ? null : (
+            <Panel title="For joining the Pickle Crew">
+              <p className="leading-snug">
+                {promo.crewWelcome
+                  ? promo.state === "live"
+                    ? "This is the code people are given when they join the Pickle Crew on the site. It is saved for them and comes off at the checkout."
+                    : "This is the Crew's welcome code, but nobody is being given it right now because it cannot be used. It is handed out again once it is live."
+                  : "Give this code to everybody who joins the Pickle Crew on the site. They are shown it as they join, and it comes off at their checkout."}
+              </p>
+              <p className="bk-muted mt-2 text-[0.9375rem] leading-snug">
+                There is one welcome code at a time. Choosing this one makes it
+                work once for each customer.
+              </p>
+              {canWrite ? (
+                <form action={setCrewWelcomeAction} className="mt-4">
+                  <input type="hidden" name="id" value={promo.id} />
+                  <input
+                    type="hidden"
+                    name="on"
+                    value={promo.crewWelcome ? "false" : "true"}
+                  />
+                  <SubmitButton
+                    pending="Saving"
+                    className="bk-btn bk-btn-quiet"
+                  >
+                    {promo.crewWelcome
+                      ? "Stop handing it out"
+                      : "Make it the welcome code"}
+                  </SubmitButton>
+                </form>
+              ) : null}
+            </Panel>
+          )}
 
           <Panel title="What it has brought in">
             <TakingsList
