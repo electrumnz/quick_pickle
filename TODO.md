@@ -75,8 +75,17 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       a robot press Pay. Then real keys, once Stripe's own sign-up is finished.
 - [ ] **Order emails.** Receipt, on the courier, cancelled. Plain, and free of anything
       promotional so they stay outside the marketing-email rules.
-- [ ] **Stock and batches.** Shots on hand, batches with best-before dates, which batch
-      went to which order (so a recall list is one press), suppliers and purchase orders.
+- [x] **Stock and batches.** Shots on hand, counted by batch from movements that are never
+      edited. A batch is planned, made, released and closed, with a best-before date and a
+      production record. Packing an order is where its shots leave stock and its batch goes
+      on record, so the recall list for a batch is one press: who has it, how to reach them,
+      and where every other shot went. Materials, suppliers and purchase orders, with what
+      to reorder and what is late. What needs a person shows on Today. Still to do by a
+      person: record the first real batch, with the best-before date printed on its bottles,
+      before the first real order is packed. An order packed while no batch is on sale goes
+      on no recall list. Not built: a purchase order is printed or sent by hand (nothing is
+      emailed), an order is received all at once, and the shop does not yet stop selling
+      when the shelf is empty.
 - [ ] **The inbox.** Mail for the business's domain lands in the back end, threaded by
       our own rules (reply headers, order numbers, the same person and subject), linked to
       customers and orders, answered from there.

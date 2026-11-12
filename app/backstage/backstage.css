@@ -447,8 +447,12 @@
     overflow-wrap: anywhere;
   }
 
-  /* A table that scrolls inside its own box, never the page. */
+  /* A table that scrolls inside its own box, never the page. It is the
+     containing block for what is inside it: words kept for screen readers
+     (`sr-only`) are positioned absolutely, and in a cell past the edge of
+     the screen they would otherwise widen the whole page. */
   .bk-table-wrap {
+    position: relative;
     overflow-x: auto;
   }
 

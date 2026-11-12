@@ -22,6 +22,7 @@ import { listStuckEvents } from "../core/events";
 import { defineOp } from "../core/op";
 import { marketingNeedsYou } from "../marketing/overview";
 import { plansNeeds } from "../plans/needs";
+import { stockNeeds } from "../stock/needs";
 
 export type Need = {
   /** Stable, so a screen can key on it and a test can find it. */
@@ -46,7 +47,7 @@ export const needsYou = defineOp({
   name: "today.needs",
   title: "What needs a person now",
   description:
-    "The things that will not sort themselves out: a payment that does not match its order, an order paid for after it was cancelled, a refund that did not go through, steps that have failed and run out of tries, a clock that has stopped, and whatever marketing has waiting (a campaign that stopped itself, reviews to read, posts due, partners to follow up). Most urgent first. Empty when nothing needs anyone.",
+    "The things that will not sort themselves out: a payment that does not match its order, an order paid for after it was cancelled, a refund that did not go through, steps that have failed and run out of tries, a clock that has stopped, what stock has waiting (orders that need more shots than are ready to sell, shots past their best-before date, stock running low, a purchase order that is overdue, a batch close to its best-before date), whatever marketing has waiting (a campaign that stopped itself, reviews to read, posts due, partners to follow up), and tasks and compliance checks that are due. Most urgent first. Empty when nothing needs anyone.",
   access: "read",
   input: z.object({}),
   async run(ctx): Promise<Need[]> {
@@ -163,6 +164,19 @@ export const needsYou = defineOp({
         detail:
           "Nothing is being tried again and unpaid orders are not being closed. You can run it by hand while it is looked into.",
         href: "/backstage/settings/clock",
+      });
+    }
+
+    // Stock: at most a line each for orders that cannot be filled (urgent:
+    // customers have paid and are waiting), shots past their date, stock
+    // running low, a late purchase order and a batch close to its date.
+    for (const item of await stockNeeds(ctx)) {
+      needs.push({
+        key: `stock-${item.key}`,
+        urgent: item.urgent,
+        title: item.title,
+        detail: item.detail,
+        href: item.href,
       });
     }
 

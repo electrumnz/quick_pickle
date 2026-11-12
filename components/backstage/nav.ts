@@ -35,6 +35,11 @@ export const DESTINATIONS: readonly Destination[] = [
     tab: true,
   },
   {
+    href: "/backstage/stock",
+    label: "Stock",
+    blurb: "Shots on hand, batches, materials, suppliers and purchase orders.",
+  },
+  {
     href: "/backstage/marketing",
     label: "Marketing",
     blurb:

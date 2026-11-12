@@ -9,6 +9,7 @@ import {
   recordRefund,
   updateDelivery,
 } from "@/lib/backstage/orders/ops";
+import { packedFromForm } from "@/lib/backstage/stock/pack-form";
 import { formCents, formText, submit } from "@/lib/backstage/ui/submit";
 import type { NzRegion } from "@/lib/shop/order";
 
@@ -24,7 +25,12 @@ export async function packAction(form: FormData): Promise<void> {
   const undo = formText(form, "undo") === "true";
   await submit(
     markPacked,
-    { number: formText(form, "number"), undo },
+    {
+      number: formText(form, "number"),
+      undo,
+      // The batch (or mix of batches) the person packing said is in the box.
+      ...(undo ? {} : packedFromForm(form)),
+    },
     { back: page(form), done: undo ? "Back to the packing queue." : "Packed." },
   );
 }
@@ -53,7 +59,12 @@ export async function deliveredAction(form: FormData): Promise<void> {
 export async function cancelAction(form: FormData): Promise<void> {
   await submit(
     cancelOrder,
-    { number: formText(form, "number"), reason: formText(form, "reason") },
+    {
+      number: formText(form, "number"),
+      reason: formText(form, "reason"),
+      // Ticked: the packed bottles are going back on the shelf.
+      restock: formText(form, "restock") === "true",
+    },
     { back: page(form), done: "Order cancelled." },
   );
 }
