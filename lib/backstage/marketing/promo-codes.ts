@@ -205,7 +205,7 @@ export const createPromoCode = defineOp({
   name: "promoCodes.create",
   title: "Make a promo code",
   description:
-    "Makes a code a customer can type at the checkout. `kind` is percent (`value` is a whole percentage, 1 to 100, worked out on the goods and rounded to the cent in the customer's favour), amount (`value` is cents off) or delivery (free standard delivery; a rural extra still applies). One code per order: codes do not stack. Optional terms: a smallest order (`minSubtotalCents`), the instant it starts and the instant it stops working, and the most times it can be used. The code is stored in capitals with no spaces, and a code that already exists is refused. It is live as soon as it is made unless `active` is false. The checkout does not accept codes yet.",
+    "Makes a code a customer can type at the checkout. `kind` is percent (`value` is a whole percentage, 1 to 100, worked out on the goods and rounded to the cent in the customer's favour), amount (`value` is cents off) or delivery (free standard delivery; a rural extra still applies). One code per order: codes do not stack. Optional terms: a smallest order (`minSubtotalCents`), the instant it starts and the instant it stops working, and the most times it can be used. The code is stored in capitals with no spaces, and a code that already exists is refused. It is live at the checkout as soon as it is made unless `active` is false. No code may take an order below a dollar.",
   access: "write",
   input: z.object({
     code: codeField,
