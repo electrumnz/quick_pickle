@@ -5,6 +5,47 @@ import { expect, test } from "@playwright/test";
  * see the order. Payments are on the test provider, so nothing is charged.
  */
 
+test("a pack picked before the page comes alive is the one the button offers", async ({
+  page,
+}) => {
+  // Hold the scripts back, the way a slow connection does.
+  const held: (() => Promise<void>)[] = [];
+  let letThrough = false;
+  await page.route("**/_next/static/**/*.js", async (route) => {
+    if (letThrough) {
+      await route.continue();
+      return;
+    }
+    held.push(() => route.continue());
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.locator("#shop").scrollIntoViewIfNeeded();
+  const add = page.getByTestId("add-to-jar");
+  await expect(add).toContainText("$48");
+
+  // No script has run. The tap still shows: the card is the radio's own.
+  const squad = page.locator("label", { hasText: "The Squad" });
+  const starter = page.locator("label", { hasText: "The Starter" });
+  await expect(starter).not.toHaveCSS("box-shadow", "none");
+  await squad.click();
+  await expect(squad.locator("input")).toBeChecked();
+  await expect(squad).not.toHaveCSS("box-shadow", "none");
+  await expect(starter).toHaveCSS("box-shadow", "none");
+  await expect(add).toContainText("$48");
+
+  // The page comes alive and takes the pick the buyer can see.
+  letThrough = true;
+  await Promise.all(held.map((release) => release()));
+  await expect(add).toContainText("$84");
+  await expect(squad).not.toHaveCSS("box-shadow", "none");
+  await expect(starter).toHaveCSS("box-shadow", "none");
+
+  await add.click();
+  const jar = page.getByRole("dialog");
+  await expect(jar.getByText("The Squad")).toBeVisible();
+});
+
 test("buys a pack, start to finish", async ({ page }) => {
   await page.goto("/");
 
