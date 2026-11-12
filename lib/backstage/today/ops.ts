@@ -20,6 +20,7 @@ import { minutesSince } from "@/lib/time";
 import { lastTick } from "../clock/tick";
 import { listStuckEvents } from "../core/events";
 import { defineOp } from "../core/op";
+import { marketingNeedsYou } from "../marketing/overview";
 
 export type Need = {
   /** Stable, so a screen can key on it and a test can find it. */
@@ -44,7 +45,7 @@ export const needsYou = defineOp({
   name: "today.needs",
   title: "What needs a person now",
   description:
-    "The things that will not sort themselves out: a payment that does not match its order, an order paid for after it was cancelled, a refund that did not go through, steps that have failed and run out of tries, and a clock that has stopped. Most urgent first. Empty when nothing needs anyone.",
+    "The things that will not sort themselves out: a payment that does not match its order, an order paid for after it was cancelled, a refund that did not go through, steps that have failed and run out of tries, a clock that has stopped, and whatever marketing has waiting (a campaign that stopped itself, reviews to read, posts due, partners to follow up). Most urgent first. Empty when nothing needs anyone.",
   access: "read",
   input: z.object({}),
   async run(ctx): Promise<Need[]> {
@@ -161,6 +162,19 @@ export const needsYou = defineOp({
         detail:
           "Nothing is being tried again and unpaid orders are not being closed. You can run it by hand while it is looked into.",
         href: "/backstage/settings/clock",
+      });
+    }
+
+    // Marketing keeps its own list of what is waiting: a campaign that has
+    // stopped itself is urgent, the rest is the week's ordinary work.
+    const marketing = await marketingNeedsYou.run(ctx, {});
+    for (const item of marketing.items) {
+      needs.push({
+        key: `marketing-${item.key}`,
+        urgent: item.key === "held",
+        title: item.sentence,
+        detail: "In Marketing.",
+        href: item.href,
       });
     }
 

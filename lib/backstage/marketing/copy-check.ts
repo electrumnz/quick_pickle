@@ -6,8 +6,9 @@
  * a body (legal/COPY-RULES.md). The scanner in legal/scripts/audit-copy.mjs
  * enforces that on the site's own files. An email, a caption or a review is
  * typed into the back end instead, so it is checked here, with the same rule
- * table (copy-rules.generated.ts is lifted straight out of the scanner and a
- * test fails if the two ever differ).
+ * table: legal/scripts/rules.mjs is the one copy of the rules, and both the
+ * scanner and this file read it. A test compares the two, sentence for
+ * sentence.
  *
  * Two things are different from the scanner, both on purpose:
  *
@@ -25,10 +26,16 @@
 import type { CopyCheck } from "@/db/schema";
 
 import {
-  COPY_RULES,
-  COPY_TERMS_OF_ART,
-  SEGMENT_BREAK,
-} from "./copy-rules.generated";
+  RULES as SCANNER_RULES,
+  TERMS_OF_ART,
+} from "@/legal/scripts/rules.mjs";
+
+/**
+ * What separates two pieces of text that are read together. The scanner
+ * uses the same character between two strings in a file, and its rules know
+ * that a phrase ends there.
+ */
+const SEGMENT_BREAK = "\u0001";
 
 export type CopyFinding = CopyCheck["findings"][number];
 
@@ -38,16 +45,18 @@ export type CopyVerdict = "clean" | "restricted" | "banned" | "unchecked";
 const withGlobal = (flags: string) =>
   flags.includes("g") ? flags : `${flags}g`;
 
-const RULES = COPY_RULES.map((rule) => ({
+// Each gets its own RegExp: a global one carries a cursor, and the scanner's
+// are its own to move.
+const RULES = SCANNER_RULES.map((rule) => ({
   id: rule.id,
   severity: rule.severity,
   why: rule.why,
-  re: new RegExp(rule.source, withGlobal(rule.flags)),
+  re: new RegExp(rule.re.source, withGlobal(rule.re.flags)),
 }));
 
-const TERMS = COPY_TERMS_OF_ART.map((term) => ({
+const TERMS = TERMS_OF_ART.map((term) => ({
   rules: term.rules,
-  re: new RegExp(term.source, withGlobal(term.flags)),
+  re: new RegExp(term.re.source, withGlobal(term.re.flags)),
 }));
 
 /** Enough to see what is wrong without storing an essay on every record. */

@@ -108,6 +108,9 @@ tests/  e2e/           vitest and Playwright
 
 `lib/backstage/README.md` is the guide to adding an area to the back end.
 
+`.wip/` holds areas that were stopped part-built (see its README). Nothing in it is built,
+linted, tested or scanned. An area is finished and wired in by moving it out.
+
 ### The shop and the back end do not share a stylesheet or a script
 
 `app/globals.css` is the shop's. It is imported by the root layout, beside the fonts, so
