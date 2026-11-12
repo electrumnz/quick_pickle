@@ -868,12 +868,15 @@ describe("the starter content, as written", () => {
   it("opens every document by saying what it is, and links only to pages that exist", () => {
     const slugs = new Set(STARTER_DOCUMENTS.map((doc) => doc.slug));
     const screens = new Set([
+      "/backstage",
       "/backstage/plans",
       "/backstage/plans/questions",
       "/backstage/plans/tasks",
       "/backstage/plans/compliance",
       "/backstage/plans/budget",
       "/backstage/orders",
+      "/backstage/orders/courier",
+      "/backstage/numbers/books",
       "/backstage/customers",
       "/backstage/brand",
       "/backstage/settings/go-live",
