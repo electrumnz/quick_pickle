@@ -101,10 +101,10 @@ describe("the list of every operation", () => {
     }
     expect(byArea).toEqual({
       approvals: 4,
-      campaigns: 5,
+      campaigns: 6,
       clock: 1,
       connect: 11,
-      crew: 1,
+      crew: 2,
       limits: 2,
       links: 2,
       mail: 7,

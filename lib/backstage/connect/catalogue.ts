@@ -215,8 +215,10 @@ export const SYSTEM_ONLY: ReadonlySet<string> = new Set([
   "campaigns.sendDue",
   "campaigns.markSends",
   "campaigns.findSend",
+  "campaigns.noteTrouble",
   // The shop's own questions, asked on a visitor's behalf.
   "crew.join",
+  "crew.standing",
   "limits.hit",
   "limits.giveBack",
   "links.resolve",

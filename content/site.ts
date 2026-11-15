@@ -504,6 +504,30 @@ export const WELCOME = {
   typeIt: "Type it in at the checkout.",
 } as const;
 
+/**
+ * The page an email's unsubscribe link leads to. It asks for one press of
+ * a button, so that a mail program following links to check them cannot
+ * take anybody off the list by accident. Everything said here has to stay
+ * true: leaving works at once, and emails about an order are not marketing
+ * and are not stopped by it.
+ */
+export const UNSUBSCRIBE = {
+  metaTitle: "Leave the Pickle Crew",
+  title: "Had enough?",
+  body: (email: string) =>
+    `Press the button and we'll stop emailing ${email} about new batches. It takes effect straight away.`,
+  cta: "Take me off the list",
+  doneTitle: "You're off the list.",
+  doneBody: (email: string) =>
+    `We won't email ${email} about new batches again. If you order from us, the emails about that order still come.`,
+  again: "Changed your mind? You can join again any time, from the shop.",
+  shop: "Back to the shop",
+  unknownTitle: "That link didn't work.",
+  unknownBody:
+    "It may have been cut short on its way here. Open the email again and press the unsubscribe link at the bottom.",
+  failed: "That didn't go through. Give it another go in a minute.",
+} as const;
+
 export const THANKS = {
   metaTitle: "Order placed",
   title: ["Order's", "in!"],

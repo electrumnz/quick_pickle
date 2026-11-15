@@ -17,6 +17,8 @@ const PAGES = [
   "/order/thanks",
   // A landing page: the demo's clubs page, which is live.
   "/for/clubs",
+  // Where an email's unsubscribe link leads, for a link that is not ours.
+  "/unsubscribe/not-one-of-ours-at-all-0123",
   // The back end, in demo mode (this server has no database).
   "/backstage",
   "/backstage/more",

@@ -544,6 +544,64 @@ const weeklyCheck: StarterDocument = {
 15. [ ] Write one line in the [business plan](${LINK.doc("business-plan")}) about what you learned this week.`,
 };
 
+const emailTheCrew: StarterDocument = {
+  slug: "how-to-email-the-pickle-crew",
+  title: "How to email the Pickle Crew",
+  kind: "how-to",
+  summary:
+    "Writing a campaign, reading it, sending it, and what to do when somebody wants off the list or an email comes back.",
+  sort: 82,
+  body: `**What this is:** how to send an email to everyone who asked to hear from us. It all lives under Marketing, in [Campaigns](${LINK.campaigns}).
+
+*Starter draft. The steps are how the screens work today. The blanks (____) are yours to fill in.*
+
+## Who gets it
+
+Only people who put their own address into the Pickle Crew form and are still on the list. Buying something puts nobody on it. That is the law here as well as good manners: marketing email goes to people who asked for it, says who it is from, and has a way out that works.
+
+## Write it
+
+1. [ ] Open [Campaigns](${LINK.campaigns}) and press **New campaign**.
+2. [ ] Give it a working title (only you see it), choose who it goes to, and write the subject, the preview line and what it says.
+3. [ ] Press **Save the draft**. The copy check reads it as you save. Wording that is not allowed has to change before it can go. This is where ${HEALTH_CLAIMS} are caught. Write about the taste, the bottle and Lucky, and nothing about a body.
+4. [ ] Read **How it will read**. That is the email as it arrives, with the line saying who we are and the unsubscribe link under it. You do not write those. They are added to every one.
+
+## Approve it
+
+5. [ ] Read every word once more, out loud if it helps. Is every fact in it true today: the price, the date, what is in stock?
+6. [ ] Press **Approve it**. Approving says a person has read it and it can go as it stands. It sends nothing.
+7. [ ] To change a word after that, press **Back to draft, to edit it**, and approve it again.
+
+## Send it
+
+8. [ ] Press **Send to ... now**. The button says how many people. Or set a day and a time and it starts within a few minutes of then.
+9. [ ] It goes out a few dozen at a time, so a long list takes a while. The campaign's page counts them as they go. You do not need to watch it.
+10. [ ] Once an email has gone it cannot be called back. **Stop sending** only stops the ones still waiting.
+11. [ ] First time: send one while the list is only yourselves. Open it on a phone, then press the unsubscribe link in it and see that it works.
+
+## If it says it cannot send
+
+The campaign's page and [Today](${LINK.today}) say why in a sentence. Nobody is marked as missed: the emails wait, and go by themselves a few minutes after it is put right. Most often email is not connected, or the mail company wants something from us. The [go-live list](${LINK.goLive}) says what is missing.
+
+If the campaign has **stopped itself**, too many emails bounced or were marked as spam. Do not start it again the same day. Find out why first: an old list, or an email people did not expect. Who to ask: ____.
+
+## When somebody wants off the list
+
+- **They press the link in the email.** One press and they are off. Nothing for you to do.
+- **They write in, or tell you.** Open [Campaigns](${LINK.campaigns}), open **Somebody asked to come off the list** at the bottom, type their address and press **Take them off the list**. Do it the same day. Then answer them to say it is done.
+- **They never want any email from us at all**, not even about an order: that is the [do-not-email list](${LINK.doNotEmail}). Think twice. They will not get a receipt either.
+
+Emails about an order (the receipt, on the courier) are not marketing. They still go to somebody who has left the list.
+
+## When an email comes back
+
+An address that bounces for good, or somebody who marks an email as spam, is taken off by itself and never emailed again. The campaign's page lists them under **Who it went to**. A mailbox that was only full that day stays on the list.
+
+## How often
+
+Only when there is something worth an email: a new batch, the date it ships, the shop opening again. Our rule: no more than ____ a month.`,
+};
+
 const workWithClaude: StarterDocument = {
   slug: "how-to-work-with-claude",
   title: "How to connect Claude, and what it can do for you",
@@ -610,5 +668,6 @@ export const STARTER_HOW_TOS: readonly StarterDocument[] = [
   healthQuestion,
   monthEnd,
   weeklyCheck,
+  emailTheCrew,
   workWithClaude,
 ];

@@ -449,6 +449,9 @@ go-live list shows when it last ran and what is stuck.
   204 whatever happened. **An order is never counted on a browser's say-so**: `orders.record`
   writes the visit's last step itself, in the order's own transaction. Visits are kept
   thirteen months; the clock throws older ones away. The privacy page says all of this.
+  A page whose address is somebody's own (the unsubscribe link from an email) says so
+  with `data-uncounted` on its `<main>` and sends nothing; the server refuses that path
+  too. A new page with a secret in its address needs both.
 - **Visits and sales are two different things, and Numbers says which is which.** Visits are
   our own count and run a little low. Sales are the orders: paid, less refunds. Every
   figure on `/backstage/numbers` comes from one read (`numbers.summary`) for one stretch of
@@ -594,6 +597,52 @@ go-live list shows when it last ran and what is stuck.
 - An address on `mail_suppressions` is sent nothing, its own order's emails included.
 - **No secret is logged or stored.** What Resend says when it refuses is scrubbed before it
   is kept, and the go-live list names the settings that are missing, never a value.
+- **A campaign's emails are sent a few dozen at a time, by the clock**
+  (`lib/backstage/marketing/deliver.ts`). `campaigns.send` lines them up, one row a
+  person, and sends nothing. A round takes the next few off the queue and hands each to
+  the mail seam: the first few as send is pressed (a listener on
+  `campaign.send_requested`), the rest on each tick, which is also what queues a campaign
+  that was given a time. A long list goes out over several rounds, so nothing may promise
+  when the last one lands.
+  - **A person is only written down as failed for a reason that is theirs:** they left
+    the list, their address is on the do-not-email list, or the provider will not take
+    that one address. When the provider is busy, or refuses us (a wrong key, a domain not
+    set up), nobody is marked: the round stops, the rest wait, the campaign and Today say
+    why (`campaigns.noteTrouble`), and they go by themselves once it is put right. One
+    refusal is taken to be about one person only when an email beside it went. Two
+    running are about us.
+  - **A provider that is only busy is nobody's problem yet**, like a failed email the
+    queue is still trying. Being asked to slow down is ordinary and the next round goes.
+    It is said on the campaign and on Today only once the campaign has got nowhere for
+    twenty minutes (`BUSY_GRACE_MS`). A refusal of us is said at once.
+  - **Nothing is sent again on a guess.** Each email's own id is the key the provider is
+    given, and the provider remembers a key for a day, so two rounds at once, or a round
+    that died before it wrote anything down, send one copy. A try that got no clear
+    answer is written on that email (`campaign_sends.doubted_at`), tried again inside
+    the day, and after that set aside saying it may have arrived.
+  - The finished email is read against the copy rules before the first one of a round
+    goes, footer and all. Only the restricted phrases a person read when they approved
+    it are let through. Who the company is and where it lives are facts about us, and
+    are not read, as on a receipt.
+  - With real records and no way to send, a campaign cannot be queued at all, and a
+    screen says which of the three places it is in (`howCampaignsGo`). On invented
+    records each email is written down as not sent.
+  - **A bounce that will not get better, or a spam complaint, strikes the address off:**
+    the do-not-email list, and marked on the Pickle Crew list. The news comes in by
+    Resend's webhook, which hands it on when the email is not one of the inbox's
+    (`recordCampaignAfterwards`). A mailbox that is only full today strikes nobody off.
+  - The round comes last in a tick, after the pulse is written, and is given only the
+    time that is left (`campaignBudget`): it must never be why the tick's request runs
+    out.
+- **Every campaign email carries a way to leave that needs no sign-in**
+  (`app/(site)/unsubscribe/[token]`). The page has one button and looking at it changes
+  nothing, because a mail program opens every link in an email to check it. A mail
+  program's own unsubscribe button posts to `./one-click`, which is the request itself.
+  The token in the address stands for one person, so the page is never kept, never
+  indexed, tells no other site its address, and **is never counted as a visit**: its
+  `<main data-uncounted>` stops the counter sending, and the server refuses the path as
+  well. Only the shop itself may ask whose a token is (`crew.standing`); no screen and no
+  bot ever shows one.
 - **The morning email** (`lib/backstage/digest/ops.ts`, Settings, Morning email) is one
   email a day to whoever runs the shop, saying how many things need them. It ships
   switched off. Switched on, the clock writes it once each New Zealand morning (its id is

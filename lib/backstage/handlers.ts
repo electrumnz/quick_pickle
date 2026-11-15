@@ -13,6 +13,7 @@ import "server-only";
 
 import { on } from "./core/events";
 import { sendQueuedMail } from "./mail/listeners";
+import { startCampaign } from "./marketing/deliver";
 import {
   showSpecialChange,
   stopSayingUsedUpSpecial,
@@ -52,6 +53,9 @@ export function registerHandlers(): void {
     emailAboutOrder("refunded"),
   );
   on("mail.queued", "send the email", sendQueuedMail());
+  // A campaign's first few emails go as send is pressed. The clock sends
+  // the rest, a few dozen a round (lib/backstage/marketing/deliver.ts).
+  on("campaign.send_requested", "start sending it", startCampaign());
 
   on("page.published", "show the new words at once", refreshPublicPage());
   on("page.taken_down", "stop showing the page at once", refreshPublicPage());

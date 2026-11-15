@@ -23,6 +23,10 @@ import {
 } from "@/lib/backstage/marketing/dates";
 import { EMAIL_WORDS } from "@/lib/backstage/marketing/email";
 import { mapText, parseMarkdown } from "@/lib/backstage/marketing/markdown";
+import {
+  howCampaignsGo,
+  type HowCampaignsGo,
+} from "@/lib/backstage/marketing/sender";
 import { people, plural } from "@/lib/backstage/marketing/shared";
 import { AUDIENCE_LABEL } from "@/lib/backstage/marketing/status";
 import { siteUrl } from "@/lib/site";
@@ -54,9 +58,6 @@ type Params = { id: string };
 
 export const metadata: Metadata = { title: "Campaign" };
 
-const NOT_CONNECTED =
-  "Email is not connected yet, so this lines the emails up and they wait. Nothing leaves until it is.";
-
 function Id({ value }: { readonly value: string }) {
   return <input type="hidden" name="id" value={value} />;
 }
@@ -66,10 +67,13 @@ function NextStep({
   campaign,
   canWrite,
   now,
+  how,
 }: {
   readonly campaign: CampaignDetail;
   readonly canWrite: boolean;
   readonly now: Date;
+  /** Whether a campaign sent from here really goes, and a sentence for it. */
+  readonly how: HowCampaignsGo;
 }) {
   const can = (action: string) =>
     campaign.next.some((allowed) => allowed === action);
@@ -103,12 +107,19 @@ function NextStep({
       ) : null}
       {campaign.status === "sending" ? (
         <p className="leading-snug">
-          Queued. {plural(campaign.sends.queued, "email")} waiting,{" "}
+          On its way. {plural(campaign.sends.queued, "email")} waiting,{" "}
           {String(campaign.sends.sent)} sent
           {problems > 0 ? `, ${String(problems)} not delivered` : ""}.{" "}
-          {campaign.held === null ? NOT_CONNECTED : ""}
+          {campaign.held === null && campaign.stuck === null ? how.says : ""}
         </p>
       ) : null}
+      {campaign.stuck === null || campaign.held !== null ? null : (
+        <Notice tone="bad">
+          The emails that are waiting cannot be sent right now. {campaign.stuck}{" "}
+          Nobody has been marked as not delivered for it: they go by themselves,
+          a few minutes after it is put right.
+        </Notice>
+      )}
       {campaign.held === null ? null : (
         <Notice tone="bad">
           It has stopped itself: {campaign.held}. Nothing more will go. Stop it
@@ -171,7 +182,10 @@ function NextStep({
                 {`Send to ${people(audience)} now`}
               </SubmitButton>
               <p className="bk-muted text-[0.9375rem] leading-snug">
-                {NOT_CONNECTED} Once they have gone they cannot be called back.
+                {how.says}
+                {how.goes
+                  ? " Once they have gone they cannot be called back."
+                  : ""}
               </p>
               {skipped !== null && skipped.total > 0 ? (
                 <p className="bk-muted text-[0.9375rem] leading-snug">
@@ -217,9 +231,9 @@ function NextStep({
               </SubmitButton>
               <p className="bk-muted text-[0.9375rem] leading-snug">
                 New Zealand time. It goes to whoever is on the list then (today
-                that is {people(audience)}). Timed sending is not switched on
-                yet, so for now a campaign with a time still has to be sent by
-                hand.
+                that is {people(audience)}), and starts within a few minutes of
+                the time you set. If it cannot go when the time comes, it stays
+                here as approved and its history says why.
               </p>
             </form>
           </>
@@ -357,6 +371,9 @@ export default async function CampaignPage({
         {campaign.held === null ? null : (
           <Pill tone="todo">Stopped itself</Pill>
         )}
+        {campaign.stuck === null || campaign.held !== null ? null : (
+          <Pill tone="todo">Cannot send right now</Pill>
+        )}
         <VerdictPill verdict={campaign.verdict} />
         {campaign.status === "approved" && campaign.sendAt ? (
           <Pill>Has a time</Pill>
@@ -384,7 +401,12 @@ export default async function CampaignPage({
         <div className="flex flex-col gap-6 lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:self-start">
           {campaign.status === "draft" ? copyCheck : null}
           <Panel title="Next step">
-            <NextStep campaign={campaign} canWrite={canWrite} now={now} />
+            <NextStep
+              campaign={campaign}
+              canWrite={canWrite}
+              now={now}
+              how={howCampaignsGo()}
+            />
           </Panel>
           {campaign.status === "draft" ? null : copyCheck}
         </div>
@@ -419,15 +441,18 @@ export default async function CampaignPage({
               <span className="underline">{EMAIL_WORDS.leave}</span>{" "}
               {EMAIL_WORDS.leaveAfter}
             </p>
-            <p className="mt-1">
-              {STORE.name}, and a line saying how to reach us.
+            <p className="mt-1 [overflow-wrap:anywhere]">
+              {STORE.name}
+              <br />
+              {campaign.foot ?? "A line saying how to reach us."}
             </p>
           </div>
           <p className="bk-muted mt-4 text-[0.9375rem] leading-snug">
-            Shown as it would read for somebody called Sam. The last three lines
-            are added to every campaign email. The line saying how to reach us
-            is not set up yet, and no campaign email can be delivered without
-            it.
+            Shown as it would read for somebody called Sam. The lines under the
+            rule are added to every campaign email.{" "}
+            {campaign.foot === null
+              ? `The line saying how to reach us cannot be written yet. ${campaign.footMissing ?? ""}`
+              : "The last one is who the company is (Settings, The label and the company) and the address customers write to (Settings, The shop)."}
           </p>
         </Panel>
 

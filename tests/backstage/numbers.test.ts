@@ -128,6 +128,15 @@ describe("a step of a visit, as it is stored", () => {
       expect(row({ path }).path, path).toBe("/");
     }
     expect(row({ path: "/for/clubs" }).path).toBe("/for/clubs");
+    // An address that is somebody's own never keeps the part that is theirs.
+    for (const path of [
+      "/unsubscribe/k3v9x2m7q4w8z5t1b6n0c3r7",
+      "/unsubscribe/k3v9x2m7q4w8z5t1b6n0c3r7/one-click",
+      "/Unsubscribe/k3v9x2m7q4w8z5t1b6n0c3r7?failed=1",
+      "/unsubscribe/",
+    ]) {
+      expect(row({ path }).path, path).toBe("/unsubscribe");
+    }
     expect(row({ page: "Not A Slug!" }).page).toBe("home");
     expect(row({ page: "clubs" }).page).toBe("clubs");
     expect(row({ referrer: "News.Example.co.nz" }).referrer).toBe(
@@ -265,6 +274,27 @@ describe("the numbers", () => {
       added: 2,
       checkout: 1,
       ordered: 0,
+    });
+  });
+
+  it("never writes down a visit to an address that is somebody's own", async () => {
+    // The unsubscribe link in an email holds a token that stands for one
+    // person. The page sends nothing; this is the same answer on the server.
+    const visit = visitId();
+    for (const path of [
+      "/unsubscribe/k3v9x2m7q4w8z5t1b6n0c3r7",
+      "/unsubscribe/k3v9x2m7q4w8z5t1b6n0c3r7/one-click",
+      "/Unsubscribe/k3v9x2m7q4w8z5t1b6n0c3r7",
+    ]) {
+      expect(await step("view", visit, NOW, { path }), path).toEqual({
+        counted: false,
+      });
+    }
+    expect(await handle.db.select().from(pageEvents)).toEqual([]);
+    expect((await summary()).noVisitsYet).toBe(true);
+    // Any other page is counted as it always was.
+    expect(await step("view", visit, NOW, { path: "/delivery" })).toEqual({
+      counted: true,
     });
   });
 

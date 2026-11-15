@@ -883,6 +883,8 @@ describe("the starter content, as written", () => {
       "/backstage/settings/shop",
       "/backstage/settings/label",
       "/backstage/settings/claude",
+      "/backstage/marketing/campaigns",
+      "/backstage/inbox/settings#do-not-email",
       "/backstage/approvals",
     ]);
     for (const doc of STARTER_DOCUMENTS) {

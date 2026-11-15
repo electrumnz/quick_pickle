@@ -252,12 +252,70 @@ test.describe("the page", () => {
     await expect(page.getByText(/napping cat/i)).toBeVisible();
   });
 
+  // The unsubscribe link in an email. Its address holds a token that stands
+  // for one person, so the page is never indexed and never counted as a
+  // visit. (What the button does with a real token is in the unit tests: a
+  // browser test has no way to know one, and nothing should give it one.)
+  test("says so for a link to leave the list that is not ours, and counts nobody", async ({
+    page,
+  }) => {
+    const link = "/unsubscribe/not-one-of-ours-at-all-0123";
+    const counted: string[] = [];
+    page.on("request", (each) => {
+      if (each.url().includes("/api/seen")) counted.push(each.url());
+    });
+    // The same watch sees an ordinary page being counted.
+    const seen = page.waitForRequest((each) =>
+      each.url().includes("/api/seen"),
+    );
+    await page.goto("/delivery");
+    await seen;
+    counted.length = 0;
+
+    const response = await page.goto(link);
+    expect(response?.status()).toBe(200);
+    expect(response?.headers()["cache-control"] ?? "").toMatch(/no-store/);
+    const panel = page.getByTestId("unsubscribe");
+    await expect(panel.getByRole("heading", { level: 1 })).toBeVisible();
+    // Nobody is named, and there is nothing to press but the way back.
+    await expect(panel).not.toContainText("@");
+    await expect(panel.getByRole("button")).toHaveCount(0);
+    await expect(panel.getByRole("link")).toHaveAttribute("href", "/");
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      "content",
+      /noindex/,
+    );
+    await expect(page.locator('meta[name="referrer"]')).toHaveAttribute(
+      "content",
+      "no-referrer",
+    );
+    await page.waitForTimeout(1200);
+    expect(counted).toEqual([]);
+
+    // The address a mail program posts to for its own unsubscribe button.
+    const pressed = await page.request.post(`${link}/one-click`, {
+      form: { "List-Unsubscribe": "One-Click" },
+    });
+    expect(pressed.status()).toBe(404);
+    // Followed as a link, it leads to the page and changes nothing.
+    const followed = await page.request.get(`${link}/one-click`, {
+      maxRedirects: 0,
+    });
+    expect(followed.status()).toBe(303);
+    expect(followed.headers().location).toMatch(new RegExp(`${link}$`));
+  });
+
   // The shop's stylesheet only scans the folders it names (app/globals.css).
   // A file left off that list loses its utility classes without any error:
   // the first time, it was the class that stretches the page to the bottom of
   // the screen, and a short page ended in a band of bare navy.
   test("fills the screen on pages shorter than it", async ({ page }) => {
-    for (const path of ["/checkout", "/not-a-page", "/order/thanks"]) {
+    for (const path of [
+      "/checkout",
+      "/not-a-page",
+      "/order/thanks",
+      "/unsubscribe/not-one-of-ours-at-all-0123",
+    ]) {
       await page.goto(path);
       const gap = await page.evaluate(() => {
         const body = document.body.getBoundingClientRect();

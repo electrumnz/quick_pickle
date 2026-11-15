@@ -1,0 +1,1 @@
+ALTER TABLE "campaign_sends" ADD COLUMN "doubted_at" timestamp with time zone;

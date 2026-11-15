@@ -1,10 +1,12 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { GET, POST } from "@/app/api/tick/route";
+import { GET, maxDuration, POST } from "@/app/api/tick/route";
 import { events, orders, settings } from "@/db/schema";
 import { clockStatus, dropStep, retryStep } from "@/lib/backstage/clock/ops";
 import {
+  campaignBudget,
+  CAMPAIGNS_BY_MS,
   lastTick,
   tick,
   UNPAID_AFTER_MINUTES,
@@ -265,6 +267,28 @@ describe("the clock", () => {
     expect((await lastTick(handle.db))?.at).toBe(minutes(8).toISOString());
   });
 
+  it("says how its campaign round went in the pulse, in counts", async () => {
+    const summary = await tick({ now: minutes(3) });
+    expect(summary.campaigns).toEqual({ sent: 0, failed: 0, stopped: false });
+    expect((await lastTick(handle.db))?.campaigns).toEqual(summary.campaigns);
+  });
+
+  it("gives campaign emails only the time that is left, and none when that is too little", () => {
+    const round = 25_000;
+    expect(campaignBudget(0, round)).toBe(round);
+    expect(campaignBudget(4_000, round)).toBe(round);
+    // A tick that was already slow: the round gets what is left.
+    expect(campaignBudget(20_000, round)).toBe(CAMPAIGNS_BY_MS - 20_000);
+    expect(campaignBudget(CAMPAIGNS_BY_MS - 3_000, round)).toBe(3_000);
+    // Too little to be worth starting: it waits for the next tick.
+    expect(campaignBudget(CAMPAIGNS_BY_MS - 2_999, round)).toBeNull();
+    expect(campaignBudget(90_000, round)).toBeNull();
+    // The last email may start as late as that, and one call to the mail
+    // provider can hang for twenty seconds before it is given up on. Both
+    // have to fit inside what the request itself is allowed.
+    expect(CAMPAIGNS_BY_MS + 20_000).toBeLessThan(maxDuration * 1000);
+  });
+
   describe("a step that failed", () => {
     const ash = { ...systemCaller("Ashleigh", "ui"), confirmed: true };
 
@@ -417,10 +441,13 @@ describe("the clock", () => {
         const body = (await ok.json()) as Record<string, unknown>;
         expect(Object.keys(body).sort()).toEqual([
           "at",
+          "campaigns",
           "events",
           "orders",
           "tookMs",
         ]);
+        // Counts only, like the rest of it: never an address.
+        expect(body.campaigns).toEqual({ sent: 0, failed: 0, stopped: false });
         expect((await call(POST, `Bearer ${secret}`)).status).toBe(200);
       });
     });

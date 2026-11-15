@@ -7,10 +7,12 @@
  * who is on the list at that moment and writes one row per person.
  *
  * Nothing here delivers an email. `campaigns.send` queues, and says so with a
- * `campaign.send_requested` event. The mail pipeline reads the queue
- * (`campaigns.queue`), builds each email (email.ts), hands it to the mail
- * provider outside any transaction, and reports back (`campaigns.markSends`).
- * When nothing is left in the queue the campaign is marked sent.
+ * `campaign.send_requested` event. The mail pipeline (deliver.ts) reads the
+ * queue (`campaigns.queue`), builds each email (email.ts), hands it to the
+ * mail provider outside any transaction, and reports back
+ * (`campaigns.markSends`). When nothing is left in the queue the campaign is
+ * marked sent. If the pipeline cannot send at all it says why
+ * (`campaigns.noteTrouble`), and the campaign shows that until it can.
  *
  * Three things keep a send honest:
  *
@@ -30,8 +32,10 @@ import {
   desc,
   eq,
   inArray,
+  isNotNull,
   isNull,
   lte,
+  max,
   ne,
   sql,
   type SQL,
@@ -48,8 +52,10 @@ import {
   type CampaignStatus,
   type CopyCheck,
 } from "@/db/schema";
+import { databaseUrl } from "@/lib/db/client";
 import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
+import { mailConnection } from "@/lib/mail";
 import { formatNzDateTime } from "@/lib/time";
 
 import { systemCaller, type Caller } from "../core/actor";
@@ -60,6 +66,7 @@ import {
   type ExecuteOptions,
   type OpContext,
 } from "../core/op";
+import { readShop } from "../shop/ops";
 import {
   bannedIn,
   copyVerdict,
@@ -72,6 +79,7 @@ import {
   type EmailRecipient,
 } from "./email";
 import { checkPublicCopy, refuseBanned, requireRestrictedRead } from "./gate";
+import { campaignSender, whyNoWayOut } from "./sender";
 import {
   acknowledgeRestricted,
   people,
@@ -269,6 +277,47 @@ async function countSends(db: DbOrTx, campaignId: string): Promise<SendCounts> {
   return out;
 }
 
+/* ---- trouble sending ------------------------------------------------------ */
+
+/**
+ * Why a campaign's waiting emails are not going, if the mail pipeline has
+ * said. It is kept on the rows that are waiting (`campaigns.noteTrouble`),
+ * so it goes when they do.
+ */
+async function troubleOf(
+  db: DbOrTx,
+  campaignId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ error: campaignSends.error })
+    .from(campaignSends)
+    .where(
+      and(
+        eq(campaignSends.campaignId, campaignId),
+        eq(campaignSends.status, "queued"),
+        isNotNull(campaignSends.error),
+      ),
+    )
+    .limit(1);
+  return row?.error ?? null;
+}
+
+/** How many campaigns have emails waiting that cannot be sent. */
+export async function countStuckCampaigns(db: DbOrTx): Promise<number> {
+  const rows = await db
+    .selectDistinct({ id: campaignSends.campaignId })
+    .from(campaignSends)
+    .innerJoin(campaigns, eq(campaigns.id, campaignSends.campaignId))
+    .where(
+      and(
+        eq(campaigns.status, "sending"),
+        eq(campaignSends.status, "queued"),
+        isNotNull(campaignSends.error),
+      ),
+    );
+  return rows.length;
+}
+
 /* ---- the brake ----------------------------------------------------------- */
 
 /**
@@ -456,10 +505,23 @@ export type CampaignDetail = {
    */
   readonly audienceSkipped: AudienceSkipped | null;
   /**
+   * Set while the emails that are waiting cannot be sent: why, in the mail
+   * pipeline's words. They go by themselves once whatever is in the way is
+   * put right.
+   */
+  readonly stuck: string | null;
+  /**
    * Set while a send has stopped itself: why. Nothing more goes out until
    * somebody stops it for good.
    */
   readonly held: string | null;
+  /**
+   * The line under every campaign email that says who it is from and how
+   * to reach them, as it would be printed if one went now. Null when there
+   * is nothing to print yet, and `footMissing` says why.
+   */
+  readonly foot: string | null;
+  readonly footMissing: string | null;
   /** What can be done with it from the stage it is at. */
   readonly next: readonly CampaignAction[];
 };
@@ -494,6 +556,7 @@ export const getCampaign = defineOp({
             .where(inArray(users.id, ids));
     const nameOf = (id: string | null) =>
       names.find((row) => row.id === id)?.name ?? null;
+    const who = campaignSender((await readShop(ctx.db)).offer);
     return {
       id: campaign.id,
       name: campaign.name,
@@ -514,10 +577,16 @@ export const getCampaign = defineOp({
       sends,
       audienceCount,
       audienceSkipped,
+      stuck:
+        campaign.status === "sending" && sends.queued > 0
+          ? await troubleOf(ctx.db, campaign.id)
+          : null,
       held:
         campaign.status === "sending" && sends.queued > 0
           ? brakeReason(sends)
           : null,
+      foot: who.ok ? who.sender.contactLine : null,
+      footMissing: who.ok ? null : who.why,
       next: CAMPAIGN_ACTIONS[campaign.status],
     };
   },
@@ -805,6 +874,26 @@ export const unapproveCampaign = defineOp({
 
 /* ---- sending ------------------------------------------------------------ */
 
+/**
+ * Why a campaign could not be sent from here right now, or null if it
+ * could. Two things can be in the way: email is not connected, or there is
+ * nothing to say who the email is from.
+ */
+export async function whyNothingCanGo(
+  db: DbOrTx,
+  env: Record<string, string | undefined> = process.env,
+): Promise<string | null> {
+  const connection = mailConnection(env);
+  if (!connection.delivers) {
+    // With no real records behind it there is nobody real to email, and
+    // the pipeline writes each one down as not sent.
+    if (databaseUrl(env) === null) return null;
+    return `Nothing can be sent from here. ${whyNoWayOut(env)} The go-live list in Settings says what is missing.`;
+  }
+  const sender = campaignSender((await readShop(db)).offer, env);
+  return sender.ok ? null : sender.why;
+}
+
 type Queued =
   | {
       readonly ok: true;
@@ -833,6 +922,18 @@ async function queueCampaign(
     return {
       ok: false,
       reason: `"${campaign.name}" has not been queued: ${nameFindings(banned)} ${banned.length === 1 ? "is" : "are"} not allowed. Take it back to draft and change the wording.`,
+    };
+  }
+
+  // Can anything be sent from here at all? Lined up with no way out, a
+  // campaign would only look as though it were on its way. (On invented
+  // records it is lined up anyway and every email is written down as not
+  // sent, like every email there.)
+  const cannot = await whyNothingCanGo(ctx.db);
+  if (cannot !== null) {
+    return {
+      ok: false,
+      reason: `"${campaign.name}" has not been queued. ${cannot}`,
     };
   }
 
@@ -928,7 +1029,7 @@ export const sendCampaign = defineOp({
   name: "campaigns.send",
   title: "Send a campaign now",
   description:
-    "Queues an approved campaign for everyone in its audience right now: people on the Pickle Crew list who are subscribed and whose address is not on the do-not-email list (and, for the two narrower audiences, who have or have not ordered). Nobody is ever added because they bought something. `recipients` is the number of people the person saying yes was told it would go to (from campaigns.get); if the list has changed since, it is refused so they can look again. The words are checked against the copy rules once more, and a banned phrase refuses the send and names it. It writes one row per person, says how many were left out and why (`skipped`), and does NOT deliver anything itself: the mail system sends the queue, and until that is connected nothing leaves. Sending twice does not queue anyone twice. Needs a yes from a person.",
+    "Queues an approved campaign for everyone in its audience right now: people on the Pickle Crew list who are subscribed and whose address is not on the do-not-email list (and, for the two narrower audiences, who have or have not ordered). Nobody is ever added because they bought something. `recipients` is the number of people the person saying yes was told it would go to (from campaigns.get); if the list has changed since, it is refused so they can look again. The words are checked against the copy rules once more, and a banned phrase refuses the send and names it. It writes one row per person, says how many were left out and why (`skipped`), and does not deliver anything itself: the mail system sends the queue, the first few straight away and the rest a few dozen at a time over the minutes that follow, so a long list takes a while. With real records and no way to send (email not connected, or nothing to say who the email is from) it is refused and says what is missing. On invented records it is queued and each email is written down as not sent. Sending twice does not queue anyone twice. Needs a yes from a person.",
   access: "write",
   effect: "outward",
   input: z.object({ id: recordId, recipients: recipientsField }),
@@ -971,7 +1072,7 @@ export const scheduleCampaign = defineOp({
   name: "campaigns.schedule",
   title: "Set a time for a campaign to go",
   description:
-    "Gives an approved campaign a time to be queued at (`sendAt`, an instant in the future). The audience is worked out at that time, not now, so people who join or unsubscribe in between are treated correctly. `recipients` is today's count, as shown to the person saying yes. The words are checked against the copy rules again here, and again when the time comes. The time can be changed by calling this again. To stop it, take the campaign back to draft or cancel it. A scheduled routine has to call campaigns.sendDue for anything to happen at the time. Needs a yes from a person.",
+    "Gives an approved campaign a time to be queued at (`sendAt`, an instant in the future). The audience is worked out at that time, not now, so people who join or unsubscribe in between are treated correctly. `recipients` is today's count, as shown to the person saying yes. The words are checked against the copy rules again here, and again when the time comes. The time can be changed by calling this again. To stop it, take the campaign back to draft or cancel it. The clock queues it when the time comes, within a few minutes of it, never to the minute. Needs a yes from a person.",
   access: "write",
   effect: "outward",
   input: z.object({
@@ -1206,6 +1307,12 @@ export type QueuedRecipient = EmailRecipient & {
    */
   readonly deliverable: boolean;
   readonly reason: string | null;
+  /**
+   * When a try at sending this one first got no clear answer, so it may
+   * have gone (see `doubted` on campaigns.noteTrouble). Null: none has.
+   * Trying again is only safe while the provider remembers the key.
+   */
+  readonly doubtedAt: Date | null;
 };
 
 export const campaignQueue = defineOp({
@@ -1222,9 +1329,22 @@ export const campaignQueue = defineOp({
     ctx,
     input,
   ): Promise<{
-    campaign: CampaignForEmail & { name: string; status: CampaignStatus };
+    campaign: CampaignForEmail & {
+      name: string;
+      status: CampaignStatus;
+      /** The copy check a person approved it against. */
+      copyCheck: CopyCheck | null;
+    };
     /** Why the send has stopped itself, if it has. */
     held: string | null;
+    /** Why the last round could not send, if it said (campaigns.noteTrouble). */
+    trouble: string | null;
+    /**
+     * When this campaign last got anywhere: the last email of its that went
+     * or, before any has, when it was queued. A provider that is only busy
+     * is nobody's problem until it has been busy a while since then.
+     */
+    movedAt: Date | null;
     recipients: QueuedRecipient[];
   }> {
     if (ctx.actor.type !== "system") {
@@ -1241,16 +1361,39 @@ export const campaignQueue = defineOp({
       subject: campaign.subject,
       preheader: campaign.preheader,
       body: campaign.body,
+      copyCheck: campaign.copyCheck,
     };
     if (campaign.status !== "sending") {
-      return { campaign: header, held: null, recipients: [] };
+      return {
+        campaign: header,
+        held: null,
+        trouble: null,
+        movedAt: null,
+        recipients: [],
+      };
     }
     const held = brakeReason(await countSends(ctx.db, campaign.id));
-    if (held !== null) return { campaign: header, held, recipients: [] };
+    if (held !== null) {
+      return {
+        campaign: header,
+        held,
+        trouble: null,
+        movedAt: null,
+        recipients: [],
+      };
+    }
+    const trouble = await troubleOf(ctx.db, campaign.id);
+    const [last] = await ctx.db
+      .select({ at: max(campaignSends.sentAt) })
+      .from(campaignSends)
+      .where(eq(campaignSends.campaignId, campaign.id));
+    // While it is being sent, `sendAt` is when it was queued.
+    const movedAt = last?.at ?? campaign.sendAt;
     const rows = await ctx.db
       .select({
         sendId: campaignSends.id,
         email: campaignSends.email,
+        doubtedAt: campaignSends.doubtedAt,
         token: crewMembers.unsubscribeToken,
         crewStatus: crewMembers.status,
         firstName: customers.firstName,
@@ -1273,6 +1416,8 @@ export const campaignQueue = defineOp({
     return {
       campaign: header,
       held: null,
+      trouble,
+      movedAt,
       recipients: rows.map((row) => {
         const reason =
           row.token === null || row.crewStatus !== "subscribed"
@@ -1287,6 +1432,7 @@ export const campaignQueue = defineOp({
           unsubscribeToken: row.token ?? "",
           deliverable: reason === null,
           reason,
+          doubtedAt: row.doubtedAt,
         };
       }),
     };
@@ -1324,7 +1470,8 @@ export const findCampaignSend = defineOp({
 const SEND_MOVES: Readonly<Record<SendStatus, readonly SendStatus[]>> = {
   queued: ["sent", "failed", "bounced", "complained"],
   failed: ["sent", "bounced", "complained"],
-  sent: ["bounced", "complained"],
+  // "failed" after "sent": the provider took it and then could not send it.
+  sent: ["bounced", "complained", "failed"],
   bounced: ["complained"],
   complained: [],
 };
@@ -1336,6 +1483,12 @@ const outcomeField = z.object({
   providerId: z.string().trim().max(200).optional(),
   /** Why it failed or bounced, in the provider's words. */
   error: z.string().trim().max(500).optional(),
+  /**
+   * For a bounce that will not get better, or a spam complaint: also put
+   * the address on the do-not-email list and mark it on the Pickle Crew
+   * list, so nothing is ever sent to it again.
+   */
+  strike: z.boolean().default(false),
 });
 
 export type MarkSendsResult = {
@@ -1356,7 +1509,7 @@ export const markCampaignSends = defineOp({
   name: "campaigns.markSends",
   title: "Record how campaign emails went",
   description:
-    "For the mail system. Records the outcome for one or more of a campaign's emails: sent, failed, bounced, or complained (marked as spam). Safe to call twice with the same news. When nothing is left waiting in the queue the campaign becomes `sent` and a campaign.sent event is raised. If the bounces or spam complaints pass a small threshold while emails are still waiting, the campaign holds itself: campaigns.queue hands out nobody else, a campaign.held event is raised, and `held` says why. It does not touch the do-not-email list or the Pickle Crew list: a bounce or a complaint has to be recorded there by the mail system as well. Send results in batches where you can: each call writes one line in the activity log.",
+    "For the mail system. Records the outcome for one or more of a campaign's emails: sent, failed, bounced, or complained (marked as spam). Safe to call twice with the same news. When nothing is left waiting in the queue the campaign becomes `sent` and a campaign.sent event is raised. If the bounces or spam complaints pass a small threshold while emails are still waiting, the campaign holds itself: campaigns.queue hands out nobody else, a campaign.held event is raised, and `held` says why. A bounce or a complaint reported with `strike: true` also puts the address on the do-not-email list and marks it on the Pickle Crew list, so it is never emailed again; without it neither list is touched. Send results in batches where you can: each call writes one line in the activity log.",
   access: "write",
   input: z.object({
     campaignId: recordId,
@@ -1383,6 +1536,7 @@ export const markCampaignSends = defineOp({
 
     let updated = 0;
     let unchanged = 0;
+    let struck = 0;
     const unknown: string[] = [];
     const tally: Record<string, number> = {};
     for (const result of input.results) {
@@ -1418,6 +1572,32 @@ export const markCampaignSends = defineOp({
       current.set(result.email, { ...row, status: result.status });
       updated += 1;
       tally[result.status] = (tally[result.status] ?? 0) + 1;
+      if (
+        result.strike &&
+        (result.status === "bounced" || result.status === "complained")
+      ) {
+        // Never emailed again, by anything: the do-not-email list is read
+        // before every send, an order's own emails included.
+        await ctx.db
+          .insert(mailSuppressions)
+          .values({
+            email: result.email,
+            reason: result.status === "bounced" ? "bounce" : "complaint",
+            detail: result.error ?? "",
+            at: ctx.now,
+          })
+          .onConflictDoNothing();
+        await ctx.db
+          .update(crewMembers)
+          .set({ status: result.status, updatedAt: ctx.now })
+          .where(
+            and(
+              eq(crewMembers.email, result.email),
+              eq(crewMembers.status, "subscribed"),
+            ),
+          );
+        struck += 1;
+      }
     }
 
     const said = (["sent", "failed", "bounced", "complained"] as const)
@@ -1425,16 +1605,22 @@ export const markCampaignSends = defineOp({
       .map((status) => `${String(tally[status])} ${status}`)
       .join(", ");
     const [only] = input.results;
-    await ctx.audit({
-      entity: entityOf(campaign.id),
-      summary:
-        updated === 0
-          ? `Nothing new to record for the campaign "${campaign.name}"`
-          : input.results.length === 1 && only !== undefined
+    if (updated === 0) {
+      // Told again what is already written down: a mail provider delivers
+      // its news at least once. A line in the log would say something
+      // happened. (If this call still finishes the campaign below, that
+      // gets its own line.)
+      ctx.nothingChanged();
+    } else {
+      await ctx.audit({
+        entity: entityOf(campaign.id),
+        summary:
+          input.results.length === 1 && only !== undefined
             ? `"${campaign.name}" to ${only.email}: ${only.status}${only.status !== "sent" && only.error ? ` (${only.error})` : ""}`
             : `Recorded ${plural(updated, "email")} for the campaign "${campaign.name}": ${said}`,
-      data: { updated, unchanged, unknown: unknown.length },
-    });
+        data: { updated, unchanged, unknown: unknown.length, struck },
+      });
+    }
 
     let finished = false;
     let held: string | null = null;
@@ -1508,10 +1694,95 @@ export const markCampaignSends = defineOp({
   },
 });
 
+export const noteCampaignTrouble = defineOp({
+  name: "campaigns.noteTrouble",
+  title: "Say why a campaign's emails are not going",
+  description:
+    "For the mail system. Writes down why the emails a campaign still has waiting cannot be sent right now (`trouble`: the mail provider refused them, say, or the email could not be built), or clears that once they can (`trouble: null`). Nothing is marked as failed: the emails stay waiting and go by themselves when whatever is in the way is put right. The campaign and Today show the reason until then. `doubted` names an address whose email may have gone, because a try at sending it got no clear answer: the first time is written on that email, which is then only tried again inside the day the provider remembers it for. Saying the same thing twice writes nothing.",
+  access: "write",
+  input: z.object({
+    campaignId: recordId,
+    trouble: z.string().trim().min(1).max(400).nullable(),
+    /**
+     * The address a try at sending got no clear answer for: the provider
+     * did not reply, or replied with a fault of its own, so that email may
+     * have gone. The first time is written on it, and it is only tried
+     * again inside the day the provider remembers its key for.
+     */
+    doubted: emailField.optional(),
+  }),
+  async run(ctx, input): Promise<{ changed: boolean }> {
+    if (ctx.actor.type !== "system") {
+      throw new OpError("forbidden", "Only the mail system says that.");
+    }
+    const campaign = await loadCampaign(ctx.db, input.campaignId);
+    // Only the first doubt is kept: the day runs from the first try that
+    // may have gone, however many come after it.
+    const inDoubt =
+      input.doubted === undefined
+        ? 0
+        : (
+            await ctx.db
+              .update(campaignSends)
+              .set({ doubtedAt: ctx.now })
+              .where(
+                and(
+                  eq(campaignSends.campaignId, campaign.id),
+                  eq(campaignSends.email, input.doubted),
+                  eq(campaignSends.status, "queued"),
+                  isNull(campaignSends.doubtedAt),
+                ),
+              )
+              .returning({ id: campaignSends.id })
+          ).length;
+    const doubt = async () => {
+      if (inDoubt === 0) return;
+      await ctx.audit({
+        entity: entityOf(campaign.id),
+        summary: `One email of the campaign "${campaign.name}" may or may not have gone: the mail provider gave no clear answer. It will be tried again inside a day, and not after`,
+        data: { email: input.doubted ?? null },
+      });
+    };
+    const before = await troubleOf(ctx.db, campaign.id);
+    if (before === input.trouble) {
+      if (inDoubt === 0) ctx.nothingChanged();
+      await doubt();
+      return { changed: inDoubt > 0 };
+    }
+    const waiting = await ctx.db
+      .update(campaignSends)
+      .set({ error: input.trouble })
+      .where(
+        and(
+          eq(campaignSends.campaignId, campaign.id),
+          eq(campaignSends.status, "queued"),
+        ),
+      )
+      .returning({ id: campaignSends.id });
+    if (waiting.length === 0) {
+      if (inDoubt === 0) ctx.nothingChanged();
+      await doubt();
+      return { changed: inDoubt > 0 };
+    }
+    await doubt();
+    await ctx.audit({
+      entity: entityOf(campaign.id),
+      summary:
+        input.trouble === null
+          ? `The campaign "${campaign.name}" is going out again`
+          : `The campaign "${campaign.name}" has stopped going out: ${input.trouble}. ${plural(waiting.length, "email")} ${waiting.length === 1 ? "is" : "are"} waiting, and will go once that is put right`,
+      data: { waiting: waiting.length },
+    });
+    return { changed: true };
+  },
+});
+
 export type SendOutcome = {
   readonly status: "sent" | "failed" | "bounced" | "complained";
   readonly providerId?: string;
   readonly error?: string;
+  /** See `strike` on campaigns.markSends. */
+  readonly strike?: boolean;
 };
 
 /**
