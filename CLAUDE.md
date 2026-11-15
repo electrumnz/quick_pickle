@@ -1071,6 +1071,15 @@ screen. `lib/backstage/connect/` is all of it.
     beside it in `components/site/Sections.tsx`. `e2e/site.spec.ts` measures every band
     in a browser either side of that line and out to the widest: change a band's face or
     size and measure it again.
+- **A band that is turned needs room that grows with the screen.** The olive band under
+  the hero is turned 1.6 degrees about its middle, so its ends rise and fall by 1.4% of
+  the screen's width: 6px on a phone, 54px at 3,840. The box that stops it scrolling the
+  page sideways cuts off whatever leaves it, and with 12px of room at every width the
+  band's top right and bottom left corners were cut off from about 830px wide (Sam, 16
+  November 2026, on a screen 1,887 wide). The room is now `1.4vw` and 6px to spare, and
+  never less than the 12px a phone always had. Change the angle and change the 1.4 with
+  it: `e2e/site.spec.ts` measures the corners out to 3,840, after proving it can see a
+  cut one.
 - **Motion is transform and opacity only**, on the guide's durations, and everything
   collapses under `prefers-reduced-motion`. Content is visible without JavaScript; scroll
   reveal only hides blocks once its observer is actually running.

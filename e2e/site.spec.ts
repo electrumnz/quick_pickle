@@ -193,6 +193,69 @@ test.describe("the page", () => {
     });
   });
 
+  test("cuts no corner off the tilted band, out to the widest screen", async ({
+    page,
+  }) => {
+    // The olive band under the hero is turned 1.6 degrees about its middle,
+    // so its ends rise and fall by about 1.4% of the screen's width: 6px on
+    // a phone, 27px on a 1,900 wide laptop, 54px at 3,840. The box round it
+    // stops it scrolling the page sideways and cuts off whatever leaves it.
+    // With 12px of room at every width, the band's top right and bottom
+    // left corners were cut off from about 830px wide (Sam, 16 November
+    // 2026, on a screen 1,887 wide). The room now grows with the screen.
+    const box = page.getByTestId("tilted-band");
+    // How much room the turned band has left inside its box, above its
+    // highest corner and below its lowest. Less than nothing is a cut.
+    const room = () =>
+      box.evaluate((outer) => {
+        const band = outer.firstElementChild;
+        if (band === null) return null;
+        // For a turned box this is the outline that holds all four corners.
+        const turned = band.getBoundingClientRect();
+        const held = outer.getBoundingClientRect();
+        return {
+          above: turned.top - held.top,
+          below: held.bottom - turned.bottom,
+          cutsOff: getComputedStyle(outer).overflowY !== "visible",
+        };
+      });
+
+    // First, that this can see a cut corner: the room the band used to have.
+    await page.setViewportSize({ width: 1887, height: 900 });
+    await page.goto("/");
+    await page.evaluate(() => document.fonts.ready);
+    await box.evaluate((outer) => {
+      (outer as HTMLElement).style.paddingBlock = "12px";
+    });
+    const before = await room();
+    expect(before?.cutsOff).toBe(true);
+    expect(before?.above ?? 0).toBeLessThan(-10);
+    expect(before?.below ?? 0).toBeLessThan(-10);
+
+    for (const width of [320, 390, 768, 1024, 1280, 1536, 1887, 2560, 3840]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+      await page.evaluate(() => document.fonts.ready);
+      const fits = await room();
+      expect(fits, `at ${String(width)}px`).not.toBeNull();
+      expect(
+        fits?.above,
+        `the top corner at ${String(width)}px`,
+      ).toBeGreaterThan(2);
+      expect(
+        fits?.below,
+        `the bottom corner at ${String(width)}px`,
+      ).toBeGreaterThan(2);
+      // And no more room than the tilt needs: a phone keeps the 12px it had.
+      if (width <= 428) {
+        const padding = await box.evaluate(
+          (outer) => getComputedStyle(outer).paddingTop,
+        );
+        expect(padding, `at ${String(width)}px`).toBe("12px");
+      }
+    }
+  });
+
   test("lines every section's edges up on a wide screen", async ({ page }) => {
     // A section's words start and stop at the same two edges as every other
     // section's: a page in the middle, a gutter either side. The header, the
