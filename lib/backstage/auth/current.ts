@@ -20,6 +20,7 @@ import { getDb } from "@/lib/db/client";
 import type { Caller } from "../core/actor";
 import { OpError } from "../core/errors";
 import { backstageMode } from "../mode";
+import { FRONT, safeNext } from "./next";
 import { readSession, type StaffUser } from "./sessions";
 
 /**
@@ -103,14 +104,8 @@ export const currentStaff = cache(async (): Promise<StaffUser | null> => {
 export async function requireStaff(next?: string): Promise<StaffUser> {
   const staff = await currentStaff();
   if (staff !== null) return staff;
-  const asked = next ?? (await headers()).get("x-qp-path") ?? "";
-  const target =
-    asked.startsWith("/backstage") &&
-    !asked.startsWith("//") &&
-    !asked.includes("\\") &&
-    asked !== "/backstage"
-      ? `?next=${encodeURIComponent(asked)}`
-      : "";
+  const asked = safeNext(next ?? (await headers()).get("x-qp-path"));
+  const target = asked === FRONT ? "" : `?next=${encodeURIComponent(asked)}`;
   redirect(`/backstage/sign-in${target}`);
 }
 

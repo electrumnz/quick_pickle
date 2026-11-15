@@ -61,7 +61,7 @@ import { WhileOn } from "./WhileOn";
  * made of i, l and t to 5.3), not the thinnest sentence anybody is likely
  * to write.
  */
-const TOP_FACE: BandFace = {
+export const TOP_FACE: BandFace = {
   narrowLetterPx: 4.1,
   letterPx: 6.8,
   betweenPx: 49,

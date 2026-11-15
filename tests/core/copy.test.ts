@@ -110,6 +110,44 @@ describe("words that are about to leave", () => {
     expect(error.message).toContain("This cannot go out as written.");
   });
 
+  it("reads a word the same however it was typed", () => {
+    /* copy-audit-ignore-start: banned words typed on purpose, to see them caught */
+    // A character nobody can see, hidden inside the word.
+    for (const unseen of [
+      "\u{200B}",
+      "\u{00AD}",
+      "\u{200E}",
+      "\u{2062}",
+      "\u{E0061}",
+      "\u{0002}",
+    ]) {
+      expect(
+        checkOutgoing({ body: `No more cr${unseen}amps` }).map(
+          (problem) => problem.found,
+        ),
+        `U+${(unseen.codePointAt(0) ?? 0).toString(16)}`,
+      ).toEqual(["cramps"]);
+    }
+    // Full-width letters, and a phone's curly apostrophe.
+    expect(
+      checkOutgoing({
+        body: "\u{FF43}\u{FF52}\u{FF41}\u{FF4D}\u{FF50}\u{FF53}",
+      }).map((problem) => problem.rule),
+    ).toContain("TH-04");
+    expect(
+      checkOutgoing({ body: "The world\u{2019}s finest pickle juice." }).map(
+        (problem) => problem.rule,
+      ),
+    ).toContain("FTA-04");
+    /* copy-audit-ignore-end */
+    // Ordinary words with ordinary marks in them are still ordinary.
+    expect(
+      checkOutgoing({
+        body: "Kia ora from \u{014C}taki. It\u{2019}s on the courier \u{1F952}",
+      }),
+    ).toEqual([]);
+  });
+
   it("keeps em dashes out of anything a customer reads", () => {
     const error = refusal(() =>
       refuseUnsendable({ body: "Your order is on the courier — thanks!" }),

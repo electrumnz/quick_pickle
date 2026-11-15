@@ -294,7 +294,10 @@ export const sendMorningEmail = defineOp({
     if (before !== undefined) return no("Today's has already been written.");
 
     const email = compose(docFor(await figures(ctx)));
-    refuseUnsendable({ subject: email.ours.subject, body: email.ours.body });
+    refuseUnsendable(
+      { subject: email.ours.subject, body: email.ours.body },
+      { struckOut: true },
+    );
 
     // They are kept together: each joins the conversation the last one is
     // in, so the inbox holds one thread of them and not one a day.

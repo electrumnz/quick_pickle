@@ -73,6 +73,7 @@ import { readShop } from "../shop/ops";
 import {
   campaignQueue,
   findCampaignSend,
+  inboxLine,
   markCampaignSends,
   noteCampaignTrouble,
   runDueCampaigns,
@@ -440,6 +441,10 @@ function whyNotAsWritten(
         subject: sample.subject,
         preheader: campaign.preheader,
         body: sample.text,
+        "subject and preheader, as an inbox shows them": inboxLine(
+          sample.subject,
+          campaign.preheader,
+        ),
       },
       { checked: readAtApproval(campaign.copyCheck) },
     );

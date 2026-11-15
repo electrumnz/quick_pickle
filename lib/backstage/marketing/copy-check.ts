@@ -25,6 +25,8 @@
 
 import type { CopyCheck } from "@/db/schema";
 
+import { asRead } from "../core/reading";
+
 import {
   RULES as SCANNER_RULES,
   TERMS_OF_ART,
@@ -62,27 +64,6 @@ const TERMS = TERMS_OF_ART.map((term) => ({
 /** Enough to see what is wrong without storing an essay on every record. */
 const MAX_FINDINGS = 40;
 const MAX_MATCH = 80;
-
-/**
- * The text as a person would read it, which is what the rules have to see.
- *
- * Phones type curly quotes, and the rules are written with straight ones.
- * Invisible characters (a soft hyphen, a zero-width space) can sit inside a
- * word without showing, and compatibility forms (full-width letters, the "fi"
- * ligature) read as ordinary letters. All of those are folded away first.
- */
-function asRead(text: string): string {
-  return (
-    text
-      .normalize("NFKC")
-      .replace(/[\u{2018}\u{2019}\u{201A}\u{201B}\u{2032}]/gu, "'")
-      .replace(/[\u{201C}\u{201D}\u{201E}\u{201F}\u{2033}]/gu, '"')
-      .replace(/[\u{00AD}\u{200B}-\u{200D}\u{2060}\u{FEFF}]/gu, "")
-      // Control characters, the scanner's own segment break among them. Tabs
-      // and line ends stay.
-      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
-  );
-}
 
 type Span = { readonly start: number; readonly end: number };
 

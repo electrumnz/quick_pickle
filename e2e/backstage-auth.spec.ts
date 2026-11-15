@@ -293,6 +293,54 @@ test("a notice box only ever says the back end's own words", async ({
   await expect(page.locator("main [role=alert]")).toHaveCount(0);
 });
 
+test("signing in never brings a stranger's sentence in with it", async ({
+  page,
+}) => {
+  // The link to the sign-in page says where to go once signed in, and a
+  // stranger can write that link. Signing in is a form: with scripting on,
+  // its redirect sets the browser's address without the page being asked
+  // for at that address, so nothing would take a sentence out of it. A
+  // form on that page which is handed back and drawn again would then be
+  // drawn from an address with a stranger's sentence in it.
+  const forged = "Not saved. Ring 0800 000 000 to finish";
+  const staff = `${AUTH_URL}/backstage/settings/staff`;
+  const next = `/backstage/settings/staff?notice=${encodeURIComponent(forged)}&tone=bad`;
+  await page.goto(
+    `${AUTH_URL}/backstage/sign-in?next=${encodeURIComponent(next)}`,
+  );
+  await page.getByLabel("Email").fill(OWNER.email);
+  await page.getByLabel("Password").fill(OWNER.password);
+  await press(page, /sign in/i);
+
+  // They land where they were going, and the address holds no sentence.
+  await expect(
+    page.getByRole("heading", { level: 1, name: /staff/i }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(staff);
+  await expect(page.locator("main")).not.toContainText("0800");
+
+  // A form here that is handed back with what was typed has nothing of a
+  // stranger's to be drawn with.
+  await page.getByLabel("Name", { exact: true }).fill("Nobody");
+  await page.getByLabel("Email", { exact: true }).fill("not an address");
+  await press(page, /^invite$/i);
+  await expect(page).toHaveURL(staff);
+  await expect(page.locator("main")).not.toContainText("0800");
+
+  // The rest of a return address is kept: it is only the sentence that goes.
+  const outside = await page.context().browser()?.newContext();
+  if (outside === undefined) throw new Error("no browser to open");
+  const other = await outside.newPage();
+  await other.goto(
+    `${AUTH_URL}/backstage/sign-in?next=${encodeURIComponent(`/backstage/orders?status=packed&notice=${encodeURIComponent(forged)}`)}`,
+  );
+  await other.getByLabel("Email").fill(OWNER.email);
+  await other.getByLabel("Password").fill(OWNER.password);
+  await press(other, /sign in/i);
+  await expect(other).toHaveURL(`${AUTH_URL}/backstage/orders?status=packed`);
+  await outside.close();
+});
+
 /* ------------------------------------------------------------------------
    The line across the top of the shop.
 

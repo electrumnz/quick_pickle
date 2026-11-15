@@ -97,6 +97,20 @@ describe("a sentence the back end wrote", () => {
     }
   });
 
+  it("is for its page with or without a slash on the end of the address", () => {
+    // A form with nothing in its id box goes back to ".../pages/", and the
+    // browser is sent on to ".../pages" before any page is drawn. The
+    // sentence has to still be there when it arrives.
+    const typed = sent("/backstage/marketing/pages/", "Which one?", "bad");
+    const arrives = new URL(typed);
+    arrives.pathname = "/backstage/marketing/pages";
+    expect(noticeStands(arrives, NOW, SEALED)).toBe(true);
+    expect(noticeStands(typed, NOW, SEALED)).toBe(true);
+    // It is still one page only.
+    arrives.pathname = "/backstage/marketing";
+    expect(noticeStands(arrives, NOW, SEALED)).toBe(false);
+  });
+
   it("is for its page, whatever else that page is asked with", () => {
     const url = sent("/backstage/orders", "Saved.");
     url.searchParams.set("status", "packed");

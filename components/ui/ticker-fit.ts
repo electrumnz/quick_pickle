@@ -18,6 +18,8 @@
  * copies to go past, so the words move at the same pace on both.
  */
 
+import { visibleLength } from "@/lib/text/visible";
+
 /** From this width a screen is shown every copy. Tailwind's `2xl`. */
 export const WIDE_FROM_PX = 1536;
 
@@ -25,11 +27,12 @@ export const WIDE_FROM_PX = 1536;
 export const WIDEST_SCREEN_PX = 3840;
 
 /**
- * The most copies ever laid out. One line of a dozen letters needs about
- * sixty to cross the widest screen. Past this the words are hardly there,
- * and the page is not made heavier for them.
+ * A ceiling no band of ours reaches. One line of a single letter, with the
+ * mark that follows it, needs about a hundred and fifty copies to cross the
+ * widest screen, and it gets them: the band is full whatever is typed. This
+ * is only here so that a slip in a face's measures cannot ask for thousands.
  */
-export const MOST_COPIES = 72;
+export const MOST_COPIES = 160;
 
 /** How one band's words measure, in the face and at the size it sets them. */
 export type BandFace = {
@@ -73,7 +76,8 @@ const EMPTY: BandFit = {
  * long line is not a fast one and a short one is not slow.
  */
 export function bandFit(items: readonly string[], face: BandFace): BandFit {
-  const letters = items.reduce((sum, item) => sum + item.length, 0);
+  // Letters a reader can see. What takes up no room counts for nothing.
+  const letters = items.reduce((sum, item) => sum + visibleLength(item), 0);
   const marks = items.length * face.betweenPx;
   const narrowest = letters * face.narrowLetterPx + marks;
   const typical = letters * face.letterPx + marks;

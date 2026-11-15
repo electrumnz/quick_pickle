@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { currentStaff } from "@/lib/backstage/auth/current";
+import { safeNext } from "@/lib/backstage/auth/next";
 import { backstageMode } from "@/lib/backstage/mode";
 import { countUsers } from "@/lib/backstage/staff/ops";
 import { getDb } from "@/lib/db/client";
@@ -16,12 +17,7 @@ export default async function SignInPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const { next } = await searchParams;
-  const target =
-    next !== undefined &&
-    next.startsWith("/backstage") &&
-    !next.startsWith("//")
-      ? next
-      : "/backstage";
+  const target = safeNext(next);
 
   if ((await currentStaff()) !== null) redirect(target);
   if (backstageMode() === "live" && (await countUsers(await getDb())) === 0) {

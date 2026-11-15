@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Band, TopTicker } from "@/components/site/Sections";
+import { Band, TOP_FACE, TopTicker } from "@/components/site/Sections";
 import {
   bandFit,
   MOST_COPIES,
@@ -89,6 +89,29 @@ describe("what was typed for the line", () => {
       "Three",
     ]);
     expect(tidyTopLines("")).toEqual([]);
+  });
+
+  it("keeps nothing that cannot be seen, and nothing a database will not store", () => {
+    expect(
+      tidyTopLines([
+        // A zero-width space, and a mark that says which way writing runs.
+        "Pickle\u200B Crew\u200E",
+        // A row of nothing that shows is a row of nothing.
+        "\u200B\u2060\uFEFF",
+        // A mark that turns the writing round.
+        "\u202EBig dill",
+        // A control character, and half of a pair.
+        "Tiny\u0000package \uD800",
+      ]),
+    ).toEqual(["Pickle Crew", "Big dill", "Tiny package"]);
+    // What holds an emoji together stays, or it would come apart.
+    const family = "Team \u{1F468}\u200D\u{1F469}\u200D\u{1F467} night";
+    const heart = "Big \u2764\uFE0F dill";
+    expect(tidyTopLines([family, heart])).toEqual([family, heart]);
+    // A row of nothing but those is still a row of nothing.
+    expect(tidyTopLines(["\u200D\uFE0F", " \u200D "])).toEqual([]);
+    // A letter typed as two pieces is kept as the one it reads as.
+    expect(tidyTopLines(["O\u0304taki"])).toEqual(["\u014Ctaki"]);
   });
 
   it("fits, or says in a sentence why it does not", () => {
@@ -181,10 +204,26 @@ describe("how a running band is laid out", () => {
     }
   });
 
-  it("stops adding copies for words that are hardly there", () => {
-    const hardly = bandFit(["Hi"], FACE);
-    expect(hardly.copies).toBe(MOST_COPIES);
-    expect(hardly.narrowCopies).toBeLessThanOrEqual(MOST_COPIES);
+  it("is full for the shortest thing anybody could type", () => {
+    // One letter and the mark after it, in the top line's own face, even if
+    // that letter is the thinnest there is.
+    for (const items of [["A"], ["GO"], ["I"], ["\u{1F952}"]]) {
+      const fit = bandFit(items, TOP_FACE);
+      const least = items.reduce(
+        (sum, item) =>
+          sum + [...item].length * TOP_FACE.narrowLetterPx + TOP_FACE.betweenPx,
+        0,
+      );
+      const said = items.join("|");
+      expect((fit.copies / 2) * least, said).toBeGreaterThanOrEqual(
+        WIDEST_SCREEN_PX,
+      );
+      expect((fit.narrowCopies / 2) * least, said).toBeGreaterThanOrEqual(
+        WIDE_FROM_PX - 1,
+      );
+      // The ceiling is a guard against a slip, and is not what stopped it.
+      expect(fit.copies, said).toBeLessThan(MOST_COPIES);
+    }
     expect(MOST_COPIES % 2).toBe(0);
     // And with no words at all it is still a band that loops.
     expect(bandFit([], FACE)).toEqual({
@@ -193,6 +232,19 @@ describe("how a running band is laid out", () => {
       narrowCopies: 4,
       narrowSeconds: 30,
     });
+  });
+
+  it("counts the letters a reader can see", () => {
+    // What takes up no room counts for nothing, or a line could look long
+    // enough to fill the band and leave it bare.
+    expect(bandFit(["Batch\u200B 002\u200E is in\u2060"], FACE)).toEqual(
+      bandFit(["Batch 002 is in"], FACE),
+    );
+    // An emoji is one thing to look at, however many pieces it is kept as.
+    expect(bandFit(["\u{1F952}"], FACE)).toEqual(bandFit(["A"], FACE));
+    expect(bandFit(["\u{1F468}\u200D\u{1F469}\u200D\u{1F467}"], FACE)).toEqual(
+      bandFit(["ABC"], FACE),
+    );
   });
 });
 

@@ -7,6 +7,7 @@ import { systemCaller, type Caller } from "@/lib/backstage/core/actor";
 import { execute } from "@/lib/backstage/core/op";
 import { addPartner } from "@/lib/backstage/marketing/partners";
 import {
+  holdTopLine,
   publishTopLine,
   resetTopLine,
   saveTopLine,
@@ -14,6 +15,7 @@ import {
   TOP_LINE_ENTITY,
   TOP_LINE_KEY,
   topLineNow,
+  writeTopLine,
 } from "@/lib/backstage/shop/top-line";
 import {
   closeDb,
@@ -402,5 +404,81 @@ describe("the line across the top of the shop", () => {
     await publish(MINE);
     expect(await drawn()).toEqual(MINE);
     await execute(resetTopLine, {}, staff);
+  });
+
+  it("reads the lines one after another, the way the band runs them", async () => {
+    /* copy-audit-ignore-start: claims typed on purpose, to see them stopped */
+    // Each line is fine by itself. Read on from one into the next, as a
+    // visitor reads them, they are a claim.
+    const split = ["It's good for", "you and your mates"];
+    expect((await save(["It's good for"])).verdict).toBe("clean");
+    expect((await save(split)).verdict).toBe("banned");
+    await expect(publish(split)).rejects.toMatchObject({
+      code: "conflict",
+      message: expect.stringContaining("cannot be published"),
+    });
+    // The band has no end: the last line runs on into the first.
+    const round = ["you every day", "Pickles are good for"];
+    expect((await save(round)).verdict).toBe("banned");
+    await expect(publish(round)).rejects.toMatchObject({ code: "conflict" });
+    // And one line said over and over runs on into itself.
+    expect((await save(["you. Honest, they are good for"])).verdict).toBe(
+      "banned",
+    );
+    /* copy-audit-ignore-end */
+    expect(await drawn()).toBeNull();
+    // Lines that only sit beside each other are fine.
+    const fine = ["Good luck", "For you and the team"];
+    expect((await save(fine)).verdict).toBe("clean");
+    expect(await publish(fine)).toEqual({ lines: fine });
+    await execute(resetTopLine, {}, staff);
+  });
+
+  it("is not fooled by a character nobody can see", async () => {
+    /* copy-audit-ignore-start: a claim typed on purpose, to see it stopped */
+    // A mark that takes up no room is not kept, so the word is the word.
+    expect((await save(["No more cr\u200Eamps"])).verdict).toBe("banned");
+    expect((await state()).draft).toEqual(["No more cramps"]);
+    // What holds an emoji together is kept, and the rules see through it.
+    const joined = ["No more cr\u200Damps"];
+    expect((await save(joined)).verdict).toBe("banned");
+    await expect(publish(joined)).rejects.toMatchObject({ code: "conflict" });
+    /* copy-audit-ignore-end */
+    // A row of nothing that shows is not a line, and nothing is kept that a
+    // database will not store.
+    await save(["\u200B\u2060", "Pickle\u0000 Crew \uD800"]);
+    expect((await state()).draft).toEqual(["Pickle Crew"]);
+    expect(await drawn()).toBeNull();
+  });
+
+  it("refuses a write over something somebody else has just written", async () => {
+    const now = new Date("2026-11-15T03:00:00Z");
+    const stamp = { now, by: null };
+    await execute(saveTopLine, { lines: ["Where it started"] }, staff, { now });
+    const mine = await holdTopLine(handle.db);
+    // Somebody else saves in between, in the very same moment: the clock
+    // cannot tell the two writes apart, so it is not the clock that is asked.
+    await execute(saveTopLine, { lines: ["Their draft"] }, staff, { now });
+    await expect(
+      writeTopLine(
+        handle.db,
+        mine,
+        { ...mine.stored, draft: ["My draft"] },
+        stamp,
+      ),
+    ).rejects.toMatchObject({
+      code: "conflict",
+      message: expect.stringContaining("changed by somebody else"),
+    });
+    expect((await state()).draft).toEqual(["Their draft"]);
+    // With what is there now in hand, the write lands.
+    const fresh = await holdTopLine(handle.db);
+    await writeTopLine(
+      handle.db,
+      fresh,
+      { ...fresh.stored, draft: ["My draft"] },
+      stamp,
+    );
+    expect((await state()).draft).toEqual(["My draft"]);
   });
 });
