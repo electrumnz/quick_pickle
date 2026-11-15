@@ -417,6 +417,11 @@ export type StripeRefund = {
   readonly created?: number | null;
   /** Stripe's own word for why: requested_by_customer, duplicate, fraudulent. */
   readonly reason?: string | null;
+  /**
+   * Why a refund failed, in Stripe's word: expired_or_canceled_card,
+   * lost_or_stolen_card, declined and a few more. Only on one that did.
+   */
+  readonly failure_reason?: string | null;
   readonly metadata?: Readonly<Record<string, string>> | null;
 };
 

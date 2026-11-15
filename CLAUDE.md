@@ -366,6 +366,16 @@ go-live list shows when it last ran and what is stuck.
     does not have. **Stripe's list is the record and its news only the nudge**, so being
     told twice, late or out of order writes nothing twice. A refund the back end started
     carries our own id at Stripe and is never counted again.
+  - **A refund can come back.** It leaves, the customer is told, and days or weeks later
+    their bank cannot put it on the card (it has been closed, say). Stripe marks the
+    refund failed and says so (`refund.failed`, `refund.updated`). That news only says
+    "look again": the same read of Stripe's list writes a refund the order holds as given
+    down as `returned`. It comes back off what the order has given back and **keeps both
+    its dates, because money moved twice**: the books show it out on the day it left and
+    back on the day it came back, and never rewrite a day that may already be with the
+    accountant. Nobody is emailed. Today carries it until money goes back another way:
+    `orders.recordRefund` with `byHand` writes down, on a card order, a refund that was
+    sent some other way, and sends nothing.
   - **A card dispute is read from Stripe as it stands, never from the news about it**
     (`lib/backstage/orders/disputes.ts`, table `payment_disputes`). Open, it is on Today
     with the date an answer is due, urgent while the shop is the one being waited on.
@@ -373,6 +383,10 @@ go-live list shows when it last ran and what is stuck.
     (`refunds`, reason "Card dispute lost"), so the order and the books are true, and it
     raises `order.dispute_closed`, never `order.refunded`: nobody is told a refund is on
     its way for money their bank took back. Once decided, later news changes nothing.
+    The order's own page says where it stands, in the same words wherever it is said
+    (`disputeInWords`), and links to Stripe's list of disputes. Stripe's documentation
+    gives no address for one dispute, so none is made up: the page shows the dispute's
+    own id beside the link.
   - The site only hears the kinds of news its endpoint was told to send. Teach it a new
     one and add it to `STRIPE_EVENTS` in the infra script, then run `stripe-events`: that
     changes the list on the endpoint that is there, and keeps its signing secret.

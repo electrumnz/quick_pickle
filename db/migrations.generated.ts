@@ -353,5 +353,12 @@ export const MIGRATIONS: readonly Migration[] = [
     "statements": [
       "ALTER TABLE \"campaign_sends\" ADD COLUMN \"doubted_at\" timestamp with time zone;"
     ]
+  },
+  {
+    "tag": "0013_refund_returned",
+    "hash": "a0a4faa7564e157f",
+    "statements": [
+      "ALTER TABLE \"refunds\" ADD COLUMN \"returned_at\" timestamp with time zone;"
+    ]
   }
 ];

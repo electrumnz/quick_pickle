@@ -8,6 +8,7 @@ import { clearHandlers, MAX_ATTEMPTS, on } from "@/lib/backstage/core/events";
 import { execute } from "@/lib/backstage/core/op";
 import { registerHandlers } from "@/lib/backstage/handlers";
 import { cancelOrder, recordRefund } from "@/lib/backstage/orders/ops";
+import { refundsSeen } from "@/lib/backstage/orders/outside-refunds";
 import { markPaid } from "@/lib/backstage/orders/payments";
 import { refundSettled } from "@/lib/backstage/orders/refunds";
 import { needsYou } from "@/lib/backstage/today/ops";
@@ -180,6 +181,66 @@ describe("what needs a person now", () => {
       ash,
     );
     expect(await needs()).toEqual([]);
+  });
+
+  it("lists a refund that left and came back, until the money goes another way", async () => {
+    const number = await sentToPay("back@example.co.nz");
+    await pay(number);
+    await execute(
+      recordRefund,
+      { number, amountCents: 2000, reason: "One leaked" },
+      ash,
+    );
+    const [row] = await handle.db.select({ id: refunds.id }).from(refunds);
+    await execute(
+      refundSettled,
+      {
+        refundId: row?.id ?? "",
+        outcome: "done",
+        providerReference: "re_left_1",
+      },
+      stripe,
+    );
+    // Gone, as far as anybody knows.
+    expect(await needs()).toEqual([]);
+
+    // Later the bank says the card it was going to has been closed.
+    const later = (seconds: number) => new Date(Date.now() + seconds * 1000);
+    await execute(
+      refundsSeen,
+      {
+        number,
+        refunds: [],
+        returned: [{ reference: "re_left_1", why: "expired_or_canceled_card" }],
+      },
+      stripe,
+      { now: later(1) },
+    );
+    const list = await needs(later(2));
+    expect(list.map((need) => need.key)).toEqual([`refund-returned:${number}`]);
+    expect(list[0]).toMatchObject({
+      urgent: true,
+      title: `A refund on ${number} came back`,
+      href: `/backstage/orders/${number}`,
+    });
+    expect(list[0]?.detail).toContain("$20");
+    expect(list[0]?.detail).toContain("they have not had it");
+
+    // Sending it to the same card again would only come back again. It is
+    // sent by bank transfer and written down, and that is the end of it.
+    const byHand = await execute(
+      recordRefund,
+      {
+        number,
+        amountCents: 2000,
+        reason: "Bank transfer: their card was closed",
+        byHand: true,
+      },
+      ash,
+      { now: later(3) },
+    );
+    expect(byHand.sent).toBe("by-hand");
+    expect(await needs(later(4))).toEqual([]);
   });
 
   it("lists steps that have run out of tries, and a clock that has stopped", async () => {

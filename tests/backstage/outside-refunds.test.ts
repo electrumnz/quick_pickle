@@ -11,6 +11,7 @@ import {
   refundsSeen,
 } from "@/lib/backstage/orders/outside-refunds";
 import { markPaid } from "@/lib/backstage/orders/payments";
+import { refundSettled } from "@/lib/backstage/orders/refunds";
 import {
   closeDb,
   openEmbedded,
@@ -63,6 +64,7 @@ type Held = {
   currency?: string;
   created?: number;
   reason?: string | null;
+  failure_reason?: string | null;
   metadata?: Record<string, string>;
 };
 
@@ -220,6 +222,7 @@ describe("refunds that were not started here", () => {
     expect(await told(number, `pi_${number}`, api)).toEqual({
       number,
       written: 1,
+      returned: 0,
     });
     // Stripe was asked which payment the order was paid with, then what
     // refunds it holds for it. Nothing was sent.
@@ -265,6 +268,7 @@ describe("refunds that were not started here", () => {
       expect(await told(number, `pi_${number}`, api)).toEqual({
         number,
         written: 0,
+        returned: 0,
       });
     }
     expect((await orderOf(number)).refundedCents).toBe(2000);
@@ -295,6 +299,7 @@ describe("refunds that were not started here", () => {
     expect(await told(number, `pi_${number}`, api)).toEqual({
       number,
       written: 0,
+      returned: 0,
     });
     expect((await orderOf(number)).refundedCents).toBe(1500);
     expect(await refundsOf(number)).toHaveLength(1);
@@ -311,6 +316,7 @@ describe("refunds that were not started here", () => {
     expect(await told(number, `pi_${number}`, both)).toEqual({
       number,
       written: 1,
+      returned: 0,
     });
     expect(await orderOf(number)).toMatchObject({
       refundedCents: 2500,
@@ -338,6 +344,7 @@ describe("refunds that were not started here", () => {
     expect(await told(number, `pi_${number}`, api)).toEqual({
       number,
       written: 2,
+      returned: 0,
     });
     expect(await orderOf(number)).toMatchObject({
       refundedCents: 8850,
@@ -374,6 +381,7 @@ describe("refunds that were not started here", () => {
     expect(await told(number, `pi_${number}`, api)).toEqual({
       number,
       written: 1,
+      returned: 0,
     });
     expect(
       (await refundsOf(number)).map((row) => row.providerReference),
@@ -409,6 +417,7 @@ describe("refunds that were not started here", () => {
       expect(await told(null, `pi_${number}`, api)).toEqual({
         number,
         written: 1,
+        returned: 0,
       });
       expect(api.asked).toEqual([
         `/v1/payment_intents/pi_${number}`,
@@ -422,12 +431,14 @@ describe("refunds that were not started here", () => {
       expect(await told(null, "pi_somebody_elses", api)).toEqual({
         number: null,
         written: 0,
+        returned: 0,
       });
       // It was asked about and that is all: no refunds were read.
       expect(api.asked).toEqual(["/v1/payment_intents/pi_somebody_elses"]);
       expect(await told(null, null, stripeApi([]))).toEqual({
         number: null,
         written: 0,
+        returned: 0,
       });
     });
 
@@ -436,6 +447,7 @@ describe("refunds that were not started here", () => {
       expect(await told("QP-222222", "pi_x", api)).toEqual({
         number: null,
         written: 0,
+        returned: 0,
       });
       expect(api.asked).toEqual([]);
     });
@@ -446,6 +458,7 @@ describe("refunds that were not started here", () => {
       expect(await told(number, "pi_another_payment", api)).toEqual({
         number: null,
         written: 0,
+        returned: 0,
       });
       expect((await orderOf(number)).refundedCents).toBe(0);
       // The refunds were never read.
@@ -494,6 +507,7 @@ describe("refunds that were not started here", () => {
       expect(await told(result.order.number, "pi_x", api)).toEqual({
         number: null,
         written: 0,
+        returned: 0,
       });
       expect(api.asked).toEqual([]);
     });
@@ -529,6 +543,307 @@ describe("refunds that were not started here", () => {
     ]);
   });
 
+  describe("a refund that left and came back", () => {
+    const failedEvents = async (number: string) =>
+      (
+        await handle.db
+          .select()
+          .from(events)
+          .where(
+            and(
+              eq(events.entityId, (await orderOf(number)).id),
+              eq(events.type, "order.refund_failed"),
+            ),
+          )
+      ).map((event) => event.payload);
+
+    /** A refund sent from the back end that Stripe took: $15, on its way. */
+    async function sentRefund(number: string, reference: string, at = WHEN) {
+      await execute(
+        recordRefund,
+        { number, amountCents: 1500, reason: "Arrived damaged" },
+        staff,
+        { now: at },
+      );
+      const ours = (await refundsOf(number)).at(-1);
+      if (ours === undefined) throw new Error("no refund");
+      await execute(
+        refundSettled,
+        { refundId: ours.id, outcome: "done", providerReference: reference },
+        stripe,
+        { now: at },
+      );
+      return ours.id;
+    }
+
+    it("comes back off the order when Stripe says it failed after leaving", async () => {
+      const number = await paidOrder();
+      const ours = await sentRefund(number, "re_left_1");
+      expect(await orderOf(number)).toMatchObject({
+        refundedCents: 1500,
+        paymentStatus: "part_refunded",
+      });
+
+      // Eleven days on, the bank says the card has been closed.
+      const cameBack = new Date(WHEN.getTime() + 11 * 24 * 60 * 60_000);
+      const api = stripeApi([
+        dashboard({
+          id: "re_left_1",
+          amount: 1500,
+          status: "failed",
+          failure_reason: "expired_or_canceled_card",
+          metadata: { refund_id: ours, order_number: number },
+        }),
+      ]);
+      expect(
+        await refundsFromStripe(
+          { number, paymentIntent: `pi_${number}` },
+          { env: ENV, fetchImpl: api.fetchImpl, now: cameBack },
+        ),
+      ).toEqual({ number, written: 0, returned: 1 });
+
+      // The order has given nothing back after all.
+      expect(await orderOf(number)).toMatchObject({
+        refundedCents: 0,
+        paymentStatus: "paid",
+      });
+      // The refund keeps both its dates: money moved twice.
+      expect(await refundsOf(number)).toMatchObject([
+        {
+          id: ours,
+          amountCents: 1500,
+          status: "returned",
+          providerReference: "re_left_1",
+          createdAt: WHEN,
+          returnedAt: cameBack,
+        },
+      ]);
+      expect(await logOf(number)).toContain(
+        `The refund of $15 on ${number} did not reach the customer and has come back. Stripe says the card has expired or been closed. They have not had the money`,
+      );
+      // A person is told. The customer is not told anything by us.
+      expect(await failedEvents(number)).toEqual([
+        { number, amountCents: 1500, refundId: ours, returned: true },
+      ]);
+      expect(await refundedEvents(number)).toHaveLength(1);
+
+      // Told again, by either kind of news: nothing more is written.
+      const lines = (await logOf(number)).length;
+      for (let again = 0; again < 3; again += 1) {
+        expect(await told(number, `pi_${number}`, api)).toEqual({
+          number,
+          written: 0,
+          returned: 0,
+        });
+      }
+      expect((await logOf(number)).length).toBe(lines);
+      expect(await failedEvents(number)).toHaveLength(1);
+      expect((await orderOf(number)).refundedCents).toBe(0);
+    });
+
+    it("is the same for one made in Stripe's dashboard, and for one that was called off", async () => {
+      const number = await paidOrder();
+      await told(
+        number,
+        `pi_${number}`,
+        stripeApi([dashboard({ id: "re_dash_gone", amount: 2000 })]),
+      );
+      expect((await orderOf(number)).refundedCents).toBe(2000);
+      // No reason given, or one we have no words for: it says nothing more.
+      for (const status of ["canceled", "failed"]) {
+        const api = stripeApi([
+          dashboard({
+            id: "re_dash_gone",
+            amount: 2000,
+            status,
+            failure_reason: "something_new",
+          }),
+        ]);
+        const answer = await told(number, `pi_${number}`, api);
+        expect(answer.returned, status).toBe(status === "canceled" ? 1 : 0);
+      }
+      expect(await orderOf(number)).toMatchObject({
+        refundedCents: 0,
+        paymentStatus: "paid",
+      });
+      expect((await refundsOf(number)).map((row) => row.status)).toEqual([
+        "returned",
+      ]);
+      expect(await logOf(number)).toContain(
+        `The refund of $20 on ${number} did not reach the customer and has come back. They have not had the money`,
+      );
+    });
+
+    it("leaves alone one still waiting for its first answer, and one that never left", async () => {
+      const number = await paidOrder();
+      await execute(
+        recordRefund,
+        { number, amountCents: 1500, reason: "Arrived damaged" },
+        staff,
+      );
+      const [ours] = await refundsOf(number);
+      const api = stripeApi([
+        // Ours, refused at the first asking: the listener that sent it
+        // writes that down (orders.refundSettled), not this.
+        dashboard({
+          id: "re_never_left",
+          amount: 1500,
+          status: "failed",
+          metadata: { refund_id: ours?.id ?? "" },
+        }),
+        // One tried from the dashboard that failed before we ever saw it.
+        dashboard({ id: "re_nobody", amount: 500, status: "failed" }),
+      ]);
+      expect(await told(number, `pi_${number}`, api)).toEqual({
+        number,
+        written: 0,
+        returned: 0,
+      });
+      expect(await refundsOf(number)).toMatchObject([{ status: "pending" }]);
+      expect((await orderOf(number)).refundedCents).toBe(1500);
+    });
+
+    it("only takes back what is there to take", async () => {
+      // Two refunds, the same one named twice in the list, and the order's
+      // figure never goes below nothing.
+      const number = await paidOrder();
+      const first = await sentRefund(number, "re_two_a");
+      await sentRefund(number, "re_two_b");
+      expect((await orderOf(number)).refundedCents).toBe(3000);
+      const failed = dashboard({
+        id: "re_two_a",
+        amount: 1500,
+        status: "failed",
+        failure_reason: "declined",
+        metadata: { refund_id: first },
+      });
+      expect(
+        await told(number, `pi_${number}`, stripeApi([failed, failed])),
+      ).toEqual({ number, written: 0, returned: 1 });
+      expect(await orderOf(number)).toMatchObject({
+        refundedCents: 1500,
+        paymentStatus: "part_refunded",
+      });
+      expect((await refundsOf(number)).map((row) => row.status).sort()).toEqual(
+        ["done", "returned"],
+      );
+      expect(await logOf(number)).toContain(
+        `The refund of $15 on ${number} did not reach the customer and has come back. Stripe says the customer's bank would not take it. They have not had the money`,
+      );
+    });
+
+    it("is two movements in the books: out on the day it left, back on the day it came back", async () => {
+      const number = await paidOrder();
+      // Paid today. The refund leaves in five days and comes back in
+      // twelve. Other tests here have left things on some of those days, so
+      // each figure is read against what was there before.
+      const left = new Date(Date.now() + 5 * 24 * 60 * 60_000);
+      const back = new Date(Date.now() + 12 * 24 * 60 * 60_000);
+      const books = async (from: Date, to: Date) =>
+        (
+          await execute(
+            booksSummary,
+            { from: nzDateKey(from), to: nzDateKey(to) },
+            staff,
+          )
+        ).total;
+      const start = {
+        left: await books(left, left),
+        back: await books(back, back),
+        both: await books(left, back),
+      };
+
+      const ours = await sentRefund(number, "re_books_back", left);
+      const gone = await books(left, left);
+      expect(gone.refundedCents - start.left.refundedCents).toBe(1500);
+      expect(gone.keptCents - start.left.keptCents).toBe(-1500);
+
+      await refundsFromStripe(
+        { number, paymentIntent: `pi_${number}` },
+        {
+          env: ENV,
+          now: back,
+          fetchImpl: stripeApi([
+            dashboard({
+              id: "re_books_back",
+              amount: 1500,
+              status: "failed",
+              metadata: { refund_id: ours },
+            }),
+          ]).fetchImpl,
+        },
+      );
+      // The day it left reads as it did: nothing is rewritten there.
+      expect(await books(left, left)).toEqual(gone);
+      // The day it came back, that much less was given: it is kept again.
+      const returned = await books(back, back);
+      expect(returned.refundedCents - start.back.refundedCents).toBe(-1500);
+      expect(returned.keptCents - start.back.keptCents).toBe(1500);
+      // Over a stretch that holds both, it is as if it never happened.
+      expect(await books(left, back)).toEqual(start.both);
+    });
+
+    it("can be put right by writing down money sent another way", async () => {
+      const number = await paidOrder();
+      const ours = await sentRefund(number, "re_then_by_hand");
+      await told(
+        number,
+        `pi_${number}`,
+        stripeApi([
+          dashboard({
+            id: "re_then_by_hand",
+            amount: 1500,
+            status: "failed",
+            metadata: { refund_id: ours },
+          }),
+        ]),
+      );
+      const requested = async () =>
+        (
+          await handle.db
+            .select()
+            .from(events)
+            .where(
+              and(
+                eq(events.entityId, (await orderOf(number)).id),
+                eq(events.type, "order.refund_requested"),
+              ),
+            )
+        ).length;
+      const asked = await requested();
+      expect(
+        await execute(
+          recordRefund,
+          {
+            number,
+            amountCents: 1500,
+            reason: "Bank transfer: their card was closed",
+            byHand: true,
+          },
+          staff,
+        ),
+      ).toEqual({ refundedCents: 1500, sent: "by-hand" });
+      // Written down as given, with nothing for Stripe to send.
+      expect((await refundsOf(number)).at(-1)).toMatchObject({
+        status: "done",
+        providerReference: null,
+        amountCents: 1500,
+      });
+      expect(await requested()).toBe(asked);
+      expect(await logOf(number)).toContain(
+        `Wrote down $15 given back on ${number}, sent another way and not through Stripe: Bank transfer: their card was closed`,
+      );
+      // And it still cannot add up to more than was paid.
+      await expect(
+        execute(
+          recordRefund,
+          { number, amountCents: 8000, reason: "Too much", byHand: true },
+          staff,
+        ),
+      ).rejects.toMatchObject({ code: "invalid_input" });
+    });
+  });
+
   it("is the same operation whoever brings the list", async () => {
     // A bot, or a person with a list read off Stripe's dashboard, can hand
     // the same thing straight to the operation.
@@ -541,7 +856,7 @@ describe("refunds that were not started here", () => {
       },
       staff,
     );
-    expect(first).toEqual({ written: 1, refundedCents: 700 });
+    expect(first).toEqual({ written: 1, returned: 0, refundedCents: 700 });
     const again = await execute(
       refundsSeen,
       {
@@ -550,7 +865,7 @@ describe("refunds that were not started here", () => {
       },
       staff,
     );
-    expect(again).toEqual({ written: 0, refundedCents: 700 });
+    expect(again).toEqual({ written: 0, returned: 0, refundedCents: 700 });
     await expect(
       execute(refundsSeen, { number: "QP-222222", refunds: [] }, staff),
     ).rejects.toThrow();

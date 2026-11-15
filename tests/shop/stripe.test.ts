@@ -512,7 +512,8 @@ describe("verifyStripeSignature", () => {
 });
 
 describe("handleStripeEvent", () => {
-  function book() {
+  /** An order book that writes down what it is asked. */
+  function book(says: { readonly returned?: number } = {}) {
     const paid: Parameters<OrderBook["markPaid"]>[0][] = [];
     const closed: Parameters<OrderBook["closeUnpaid"]>[0][] = [];
     const refunded: Parameters<OrderBook["seeRefunds"]>[0][] = [];
@@ -530,7 +531,13 @@ describe("handleStripeEvent", () => {
         // An order of ours, unless the payment is somebody else's.
         return input.paymentIntent === "pi_not_ours"
           ? { number: null, written: 0 }
-          : { number: input.number ?? "QP-7K2M9X", written: 1 };
+          : {
+              number: input.number ?? "QP-7K2M9X",
+              written: 1,
+              ...(says.returned === undefined
+                ? {}
+                : { returned: says.returned }),
+            };
       },
       async seeDispute(input) {
         disputed.push(input);
@@ -660,6 +667,7 @@ describe("handleStripeEvent", () => {
       action: "refunds",
       number: "QP-7K2M9X",
       written: 1,
+      returned: 0,
     });
     expect(b.refunded).toEqual([
       { number: "QP-7K2M9X", paymentIntent: "pi_1" },
@@ -667,6 +675,66 @@ describe("handleStripeEvent", () => {
     // It marks nothing paid and closes nothing.
     expect(b.paid).toHaveLength(0);
     expect(b.closed).toHaveLength(0);
+  });
+
+  it("has them read again when a refund changes after it was made", async () => {
+    // A refund that left and then failed, because the card it was going to
+    // has been closed. The news is about the refund itself, under any of
+    // the three names Stripe has for it, and it only ever says "look again":
+    // whatever its own status says, the list Stripe holds is what is read.
+    for (const type of [
+      "refund.failed",
+      "refund.updated",
+      "charge.refund.updated",
+    ]) {
+      const b = book({ returned: 1 });
+      const outcome = await handleStripeEvent(
+        {
+          type,
+          data: {
+            object: {
+              id: "re_1",
+              status: "failed",
+              payment_intent: "pi_1",
+              metadata: { order_number: "QP-7K2M9X", refund_id: "rfd_x" },
+            },
+          },
+        },
+        b.impl,
+      );
+      expect(outcome, type).toEqual({
+        action: "refunds",
+        number: "QP-7K2M9X",
+        written: 1,
+        returned: 1,
+      });
+      expect(b.refunded, type).toEqual([
+        { number: "QP-7K2M9X", paymentIntent: "pi_1" },
+      ]);
+      expect(b.paid).toHaveLength(0);
+      expect(b.closed).toHaveLength(0);
+    }
+    // One made in the dashboard says nothing about whose order it is: the
+    // payment alone is handed over, as for a charge.
+    const b = book();
+    await handleStripeEvent(
+      {
+        type: "refund.failed",
+        data: { object: { id: "re_2", payment_intent: "pi_2" } },
+      },
+      b.impl,
+    );
+    expect(b.refunded).toEqual([{ number: null, paymentIntent: "pi_2" }]);
+    // With no payment to its name there is nothing to ask about.
+    expect(
+      await handleStripeEvent(
+        { type: "refund.failed", data: { object: { id: "re_3" } } },
+        b.impl,
+      ),
+    ).toEqual({
+      action: "ignored",
+      why: "a refund with no payment to its name",
+    });
   });
 
   it("hands over the payment alone when the charge does not say whose it is", async () => {
