@@ -134,6 +134,40 @@ export async function needsNow(ctx: OpContext): Promise<Need[]> {
     });
   }
 
+  // A refund that left and came back: Stripe sent it, the customer was
+  // told it was on its way, and the bank could not put it on their card.
+  // It stays here until money goes back to them some other way.
+  const cameBack = await db
+    .select({
+      number: orders.number,
+      amountCents: sql<number>`max(${refunds.amountCents})::int`,
+    })
+    .from(refunds)
+    .innerJoin(orders, eq(orders.id, refunds.orderId))
+    .where(
+      and(
+        eq(refunds.status, "returned"),
+        gt(refunds.returnedAt, since),
+        eq(orders.isTest, false),
+        lt(orders.refundedCents, orders.totalCents),
+        // Sorted since: a later refund on the same order went through.
+        sql`not exists (select 1 from ${refunds} as later where later.order_id = "orders"."id" and later.status in ('done', 'pending') and later.created_at > ${refunds.returnedAt})`,
+      ),
+    )
+    .groupBy(orders.number)
+    .limit(20);
+  for (const refund of cameBack) {
+    // Already listed for a bigger reason.
+    if (needs.some((need) => need.href === orderLink(refund.number))) continue;
+    needs.push({
+      key: `refund-returned:${refund.number}`,
+      urgent: true,
+      title: `A refund on ${refund.number} came back`,
+      detail: `${formatNzd(refund.amountCents)} left for the customer's card and did not get there, so they have not had it. Send it another way, write that down on the order, and tell them.`,
+      href: orderLink(refund.number),
+    });
+  }
+
   // Mail: conversations waiting for a reply, and each email of ours that
   // was tried and did not get there. Somebody has been told something is on
   // its way to them, and it is not.

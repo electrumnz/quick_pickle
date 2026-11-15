@@ -27,6 +27,10 @@ import {
   listOrderEmails,
   type OrderEmail,
 } from "@/lib/backstage/orders/emails";
+import {
+  disputeInWords,
+  stripeDisputesUrl,
+} from "@/lib/backstage/orders/disputes";
 import { getOrder, type OrderDetail } from "@/lib/backstage/orders/ops";
 import { refundsThroughStripe } from "@/lib/backstage/orders/refunds";
 import { orderStock, type OrderStock } from "@/lib/backstage/stock/ops";
@@ -429,6 +433,20 @@ export default async function OrderPage({
           </Notice>
         </div>
       ) : null}
+      {order.disputes
+        .filter((dispute) => dispute.status === "open")
+        .map((dispute) => {
+          const words = disputeInWords(dispute, now);
+          return (
+            <div className="mb-4" key={dispute.id} data-testid="open-dispute">
+              <Notice tone={words.urgent ? "bad" : "good"}>
+                The cardholder&apos;s bank has opened a dispute for{" "}
+                {formatNzd(dispute.amountCents)} on this order, and has taken
+                the money while it is decided. {words.says}
+              </Notice>
+            </div>
+          );
+        })}
       {order.paymentStatus === "review" ? (
         <div className="mb-4">
           <Notice tone="bad">
@@ -856,10 +874,44 @@ export default async function OrderPage({
                       ? "on its way back"
                       : refund.status === "failed"
                         ? "did not go back (see the history)"
-                        : "given back"}
+                        : refund.status === "returned"
+                          ? `left and came back${refund.returnedAt ? ` on ${formatNzDateTime(refund.returnedAt)}` : ""}, so the customer has not had it`
+                          : "given back"}
                     : {refund.reason}
                   </li>
                 ))}
+              </ul>
+            ) : null}
+            {order.disputes.length > 0 ? (
+              <ul
+                className="border-navy-line mt-3 flex flex-col gap-2 border-t pt-3 text-[0.9688rem]"
+                data-testid="order-disputes"
+              >
+                {order.disputes.map((dispute) => (
+                  <li key={dispute.id}>
+                    <span className="font-semibold">
+                      Card dispute, {formatNzd(dispute.amountCents)}
+                    </span>
+                    : {disputeInWords(dispute, now).says}{" "}
+                    <span className="bk-muted">
+                      Stripe calls it{" "}
+                      <span className="font-mono text-[0.875rem] [overflow-wrap:anywhere]">
+                        {dispute.providerReference}
+                      </span>
+                      .
+                    </span>
+                  </li>
+                ))}
+                <li>
+                  <a
+                    href={stripeDisputesUrl(order.isTest)}
+                    className="link inline-flex min-h-11 items-center"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    Open the disputes list in Stripe
+                  </a>
+                </li>
               </ul>
             ) : null}
             {refundable ? (
@@ -911,6 +963,62 @@ export default async function OrderPage({
                         ? "This sends the money back to the customer's card through Stripe, and emails them once it is on its way. Their bank can take a few days to show it."
                         : "This sends the money back to the customer's card through Stripe. Their bank can take a few days to show it. Nothing is emailed to them: let them know yourself."
                       : "This only writes the refund down. The money itself has to be sent back by hand, and nothing is emailed to the customer."}
+                  </p>
+                </form>
+              </details>
+            ) : null}
+            {refundable && byStripe ? (
+              <details className="mt-1">
+                <summary className="label inline-flex min-h-11 cursor-pointer items-center text-[1.05rem]">
+                  <span className="cap-trim">
+                    Write down money sent back another way
+                  </span>
+                </summary>
+                <form
+                  action={refundAction}
+                  className="mt-2 flex flex-col gap-3"
+                >
+                  <Number value={order.number} />
+                  <input type="hidden" name="byHand" value="on" />
+                  <p className="leading-snug">
+                    For when the card cannot take a refund (it has been closed,
+                    say) and you have already sent the money some other way,
+                    such as a bank transfer.
+                  </p>
+                  <div>
+                    <label htmlFor="amount-by-hand" className="field-label">
+                      How much
+                    </label>
+                    <input
+                      id="amount-by-hand"
+                      name="amount"
+                      required
+                      inputMode="decimal"
+                      placeholder={`Up to ${formatNzdExact(order.totalCents - order.refundedCents)}`}
+                      className="field"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="reason-by-hand" className="field-label">
+                      Why, and how it was sent
+                    </label>
+                    <input
+                      id="reason-by-hand"
+                      name="reason"
+                      required
+                      maxLength={280}
+                      className="field"
+                    />
+                  </div>
+                  <SubmitButton
+                    pending="Writing it down"
+                    className="bk-btn bk-btn-quiet w-full"
+                  >
+                    Write it down
+                  </SubmitButton>
+                  <p className="bk-muted text-[0.9375rem] leading-snug">
+                    This only writes it down. It sends no money and emails
+                    nobody: tell the customer yourself.
                   </p>
                 </form>
               </details>

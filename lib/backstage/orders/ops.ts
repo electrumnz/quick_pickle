@@ -23,13 +23,14 @@ import { z } from "zod";
 
 import {
   customers,
+  disputes,
   orderLines,
   orders,
+  type OrderStatus,
   pageEvents,
   partners,
-  refunds,
-  type OrderStatus,
   type PaymentStatus,
+  refunds,
 } from "@/db/schema";
 import { CODES, SHOP } from "@/content/site";
 import { newId } from "@/lib/db/id";
@@ -585,6 +586,8 @@ export const countOrders = defineOp({
 export type OrderDetail = typeof orders.$inferSelect & {
   readonly lines: readonly (typeof orderLines.$inferSelect)[];
   readonly refunds: readonly (typeof refunds.$inferSelect)[];
+  /** Card disputes on this order's payment, the latest first. */
+  readonly disputes: readonly (typeof disputes.$inferSelect)[];
   readonly shots: number;
   readonly next: readonly OrderStatus[];
   /** Who brought the order in (their code or their link), if anyone did. */
@@ -617,6 +620,11 @@ export const getOrder = defineOp({
       .from(refunds)
       .where(eq(refunds.orderId, order.id))
       .orderBy(desc(refunds.createdAt));
+    const disputed = await ctx.db
+      .select()
+      .from(disputes)
+      .where(eq(disputes.orderId, order.id))
+      .orderBy(desc(disputes.openedAt));
     const { NEXT_STATUS } = await import("./status");
     const [partner] =
       order.partnerId === null
@@ -633,6 +641,7 @@ export const getOrder = defineOp({
       ...order,
       lines,
       refunds: given,
+      disputes: disputed,
       shots: lines.reduce((sum, line) => sum + line.qty * line.shots, 0),
       next: NEXT_STATUS[order.status],
       partnerName: partner?.name ?? null,
@@ -977,7 +986,7 @@ export const recordRefund = defineOp({
   name: "orders.recordRefund",
   title: "Give money back on an order",
   description:
-    "Refunds an amount on an order, in cents, with the reason. For an order paid by card through Stripe the money is sent back to the card: the refund shows as on its way until Stripe confirms it, and is taken back off the order if Stripe refuses. Once Stripe has taken it, and where order emails are connected, the customer is emailed that the amount is on its way back. For any other order this only writes the refund down, the money has to be sent back by hand, and nobody is emailed. It cannot be more than what is left of what was paid.",
+    "Refunds an amount on an order, in cents, with the reason. For an order paid by card through Stripe the money is sent back to the card: the refund shows as on its way until Stripe confirms it, and is taken back off the order if Stripe refuses. Once Stripe has taken it, and where order emails are connected, the customer is emailed that the amount is on its way back. For any other order this only writes the refund down, the money has to be sent back by hand, and nobody is emailed. `byHand: true` does the same on a card order: for money that has already gone back some other way because the card could not take it (a refund that came back, say). It sends nothing to Stripe and emails nobody. It cannot be more than what is left of what was paid.",
   access: "write",
   effect: "outward",
   input: z.object({
@@ -987,9 +996,17 @@ export const recordRefund = defineOp({
       .int()
       .min(1, "A refund has to be more than nothing"),
     reason: z.string().trim().min(3, "Say why, in a few words").max(280),
+    /**
+     * The money has already gone back some other way (a bank transfer, say):
+     * only write it down. For an order paid by card whose card can no longer
+     * take a refund. Nothing is sent anywhere, and nobody is emailed.
+     */
+    byHand: z.boolean().default(false),
   }),
   explain: (input) =>
-    `This refunds ${formatNzd(input.amountCents)} on ${input.number}. If it was paid by card through Stripe, the money goes back to the card.`,
+    input.byHand
+      ? `This writes down a refund of ${formatNzd(input.amountCents)} on ${input.number} that has already been sent back some other way. It sends no money.`
+      : `This refunds ${formatNzd(input.amountCents)} on ${input.number}. If it was paid by card through Stripe, the money goes back to the card.`,
   async run(
     ctx,
     input,
@@ -1017,7 +1034,7 @@ export const recordRefund = defineOp({
         { amountCents: `No more than ${formatNzd(left)}` },
       );
     }
-    const viaStripe = refundsThroughStripe(order);
+    const viaStripe = !input.byHand && refundsThroughStripe(order);
     const refundedCents = order.refundedCents + input.amountCents;
     const refundId = newId("rfd");
     await ctx.db.insert(refunds).values({
@@ -1044,8 +1061,15 @@ export const recordRefund = defineOp({
       entity,
       summary: viaStripe
         ? `Asked Stripe to send ${formatNzd(input.amountCents)} back for ${order.number}: ${input.reason}`
-        : `Refunded ${formatNzd(input.amountCents)} on ${order.number}: ${input.reason}`,
-      data: { amountCents: input.amountCents, refundedCents, refundId },
+        : input.byHand && refundsThroughStripe(order)
+          ? `Wrote down ${formatNzd(input.amountCents)} given back on ${order.number}, sent another way and not through Stripe: ${input.reason}`
+          : `Refunded ${formatNzd(input.amountCents)} on ${order.number}: ${input.reason}`,
+      data: {
+        amountCents: input.amountCents,
+        refundedCents,
+        refundId,
+        byHand: input.byHand,
+      },
     });
     await ctx.emit(
       viaStripe

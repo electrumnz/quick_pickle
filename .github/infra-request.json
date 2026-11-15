@@ -1,6 +1,6 @@
 {
   "actions": ["stripe-events", "status"],
   "confirm": "yes",
-  "asked": "2026-11-12T17:45Z",
-  "why": "Have Stripe send news of card disputes (charge.dispute.created, updated and closed), so a dispute is on Today the day it arrives."
+  "asked": "2026-11-15T02:30Z",
+  "why": "Have Stripe send news of a refund that changes after it was made (refund.updated and refund.failed), so one that comes back is taken off the order and put on Today."
 }

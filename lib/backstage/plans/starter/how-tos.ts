@@ -249,7 +249,15 @@ const damagedOrMissing: StarterDocument = {
 
 Plain and short. No jokes and no Lucky in this one. Change the details and keep the shape:
 
-> Hi [name], thanks for telling us, and sorry about that. [We are sending a replacement today. / We have sent your money back the way you paid, and it usually shows within five working days.] You do not need to send anything back. [Your name], Quick Pickle`,
+> Hi [name], thanks for telling us, and sorry about that. [We are sending a replacement today. / We have sent your money back the way you paid, and it usually shows within five working days.] You do not need to send anything back. [Your name], Quick Pickle
+
+## If a refund comes back
+
+Now and then a refund leaves and the customer's bank cannot put it on the card, because the card has been closed. It can take a couple of weeks to find out. [Today](${LINK.today}) says "A refund came back", and the order shows it as left and come back.
+
+- The customer was told it was on its way, so write to them first.
+- Send the money another way. Ask them for a bank account. Sending it to the same card again would only come back again.
+- On the order, open **Write down money sent back another way** and enter the amount and how it went. That only writes it down: it sends nothing.`,
 };
 
 const complaint: StarterDocument = {
@@ -326,14 +334,14 @@ A cardholder has told their bank they should not have been charged: they do not 
 
 ## The day it arrives
 
-1. [ ] [Today](${LINK.today}) shows it at the top: which order, how much, the bank's reason and the date to answer by. Open the order.
+1. [ ] [Today](${LINK.today}) shows it at the top: which order, how much, the bank's reason and the date to answer by. Open the order. The same is across the top of the order's own page, and under **Money** there.
 2. [ ] Read the order's history. Was it packed and sent? Is there a tracking number? Has the customer been in touch?
 3. [ ] Do not refund the order while it is disputed. The bank has already taken the money back, and a refund on top could pay it twice.
 4. [ ] If it looks like a mix-up and you can reach the customer, write to them. A customer can tell their bank to drop a dispute. Still answer in Stripe by the date: do not wait on them.
 
 ## Answer it, in Stripe
 
-5. [ ] Open the dispute in Stripe's dashboard. Who has the login: ____.
+5. [ ] Open the dispute in Stripe's dashboard. Under **Money** on the order, **Open the disputes list in Stripe** goes to the list, and the line above it says what Stripe calls this one (it starts with dp_). Who has the login: ____.
 6. [ ] Give the bank what shows the sale was fair. What helps depends on the reason:
    - **They say it never arrived:** the tracking number, the courier's page showing it delivered, and the address it went to.
    - **They do not recognise it, or say it was not them:** the order's details as the customer typed them (name, email, delivery address), and any emails with them.

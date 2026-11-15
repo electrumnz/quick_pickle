@@ -80,6 +80,9 @@ export async function noteAction(form: FormData): Promise<void> {
 
 export async function refundAction(form: FormData): Promise<void> {
   const amountCents = formCents(form, "amount");
+  // Set by the second form on a card order: the money has already gone
+  // back some other way, and this only writes it down.
+  const byHand = formText(form, "byHand") === "on";
   await submit(
     recordRefund,
     {
@@ -87,8 +90,14 @@ export async function refundAction(form: FormData): Promise<void> {
       // NaN fails the schema with a readable message.
       amountCents: Number.isNaN(amountCents) ? -1 : amountCents,
       reason: formText(form, "reason"),
+      byHand,
     },
-    { back: page(form), done: "Refund saved." },
+    {
+      back: page(form),
+      done: byHand
+        ? "Written down. Nothing was sent, and nobody was emailed."
+        : "Refund saved.",
+    },
   );
 }
 

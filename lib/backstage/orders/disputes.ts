@@ -77,6 +77,67 @@ export function disputeReason(reason: string): string {
   return SAYS[reason] ?? "";
 }
 
+/**
+ * Where disputes are answered: the list of them in Stripe's dashboard.
+ *
+ * Read off Stripe's own documentation on 15 November 2026 and not
+ * remembered: docs.stripe.com/disputes/responding links to the first, and
+ * docs.stripe.com/disputes to the second, for payments made in test mode.
+ * The documentation gives no address for one dispute by itself, so none is
+ * made up here. The screen shows the dispute's own id beside the link, to
+ * find it by.
+ */
+export function stripeDisputesUrl(test: boolean): string {
+  return test
+    ? "https://dashboard.stripe.com/test/disputes"
+    : "https://dashboard.stripe.com/disputes";
+}
+
+/**
+ * Where one dispute stands, in sentences, for the order's own page. `urgent`
+ * while the shop is the one being waited on.
+ */
+export function disputeInWords(
+  dispute: {
+    readonly status: DisputeStatus;
+    readonly providerStatus: string;
+    readonly reason: string;
+    readonly dueAt: Date | null;
+    readonly closedAt: Date | null;
+  },
+  now: Date,
+): { readonly urgent: boolean; readonly says: string } {
+  const why = disputeReason(dispute.reason);
+  const reason = why === "" ? "" : ` ${why}`;
+  const on =
+    dispute.closedAt === null ? "" : ` on ${formatNzDayLong(dispute.closedAt)}`;
+  if (dispute.status === "won") {
+    return {
+      urgent: false,
+      says: `Won${on}. The money stays with the shop.${reason}`,
+    };
+  }
+  if (dispute.status === "lost") {
+    return {
+      urgent: false,
+      says: `Lost${on}. The amount went back to the cardholder, and is written on the order as given back.${reason}`,
+    };
+  }
+  if (!needsAnAnswer(dispute.providerStatus)) {
+    return {
+      urgent: false,
+      says: `With the bank. Nothing to do but wait.${reason}`,
+    };
+  }
+  const by =
+    dispute.dueAt === null
+      ? " Answer it in Stripe."
+      : dispute.dueAt.getTime() < now.getTime()
+        ? " The date to answer by has passed: look in Stripe now."
+        : ` Answer it in Stripe by ${formatNzDayLong(dispute.dueAt)}.`;
+  return { urgent: true, says: `Needs an answer.${reason}${by}` };
+}
+
 export const disputeSeen = defineOp({
   name: "orders.disputeSeen",
   title: "Write down where a card dispute stands",

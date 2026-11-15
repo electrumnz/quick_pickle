@@ -12,6 +12,13 @@
  *             refunded is still a sale on the day it was paid.
  *   a refund  counts on the day it was given, whenever the order was
  *             placed, and only once the money has gone back.
+ *   a refund that came back
+ *             (it left, and the customer's bank could not take it) is two
+ *             movements on two days: given on the day it left, and that
+ *             much less given on the day it came back. Nothing is rewritten
+ *             on the day it left, which may be in a month already handed to
+ *             the accountant. So a day's refunded figure can be below
+ *             nothing: more came back that day than went out.
  *
  * So a day is: charged, less refunded. Test orders are never in it, nor is a
  * payment that is waiting for a person to look at it. Fees a payment
@@ -23,7 +30,7 @@
  * the two agree.)
  */
 
-import { and, asc, eq, gte, lt } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lt } from "drizzle-orm";
 import { z } from "zod";
 
 import { orders, refunds, type PaymentStatus } from "@/db/schema";
@@ -58,7 +65,10 @@ export type BooksDay = {
   readonly deliveryCents: number;
   /** What customers were charged: goods, less discount, plus delivery. */
   readonly chargedCents: number;
-  /** Refunds given that day, on any order. */
+  /**
+   * Refunds given that day, on any order, less any that came back that
+   * day. Below nothing when more came back than went out.
+   */
   readonly refundedCents: number;
   /** Charged less refunded. */
   readonly keptCents: number;
@@ -140,9 +150,23 @@ async function read(
     .where(
       and(
         eq(orders.isTest, false),
-        eq(refunds.status, "done"),
+        // One that came back did leave on the day it was given.
+        inArray(refunds.status, ["done", "returned"]),
         gte(refunds.createdAt, start),
         lt(refunds.createdAt, end),
+      ),
+    );
+  // Refunds that left and then came back, on the day they came back.
+  const cameBack = await db
+    .select({ amountCents: refunds.amountCents, at: refunds.returnedAt })
+    .from(refunds)
+    .innerJoin(orders, eq(refunds.orderId, orders.id))
+    .where(
+      and(
+        eq(orders.isTest, false),
+        eq(refunds.status, "returned"),
+        gte(refunds.returnedAt, start),
+        lt(refunds.returnedAt, end),
       ),
     );
 
@@ -193,6 +217,15 @@ async function read(
     byDay.set(key, {
       ...before,
       refundedCents: before.refundedCents + refund.amountCents,
+    });
+  }
+  for (const refund of cameBack) {
+    if (refund.at === null) continue;
+    const key = nzDateKey(refund.at);
+    const before = day(key);
+    byDay.set(key, {
+      ...before,
+      refundedCents: before.refundedCents - refund.amountCents,
     });
   }
 

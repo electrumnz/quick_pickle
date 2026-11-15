@@ -74,7 +74,10 @@ export const refundSettled = defineOp({
     /** Why it was refused, in the processor's words. */
     reason: z.string().trim().max(500).optional(),
   }),
-  async run(ctx, input): Promise<{ status: "pending" | "done" | "failed" }> {
+  async run(
+    ctx,
+    input,
+  ): Promise<{ status: "pending" | "done" | "failed" | "returned" }> {
     const [found] = await ctx.db
       .select({ orderId: refunds.orderId })
       .from(refunds)

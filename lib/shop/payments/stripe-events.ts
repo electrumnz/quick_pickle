@@ -19,11 +19,32 @@ type CheckoutSessionObject = {
   readonly currency?: unknown;
 };
 
-/** A charge, as far as a refund on it concerns us. */
+/**
+ * A charge, as far as a refund on it concerns us. A refund names its
+ * payment the same way, so news about a refund itself is read with this
+ * too.
+ */
 type ChargeObject = {
   readonly payment_intent?: unknown;
-  readonly metadata?: { readonly order_number?: unknown } | null;
+  /** Whatever was put there. Only `order_number` is ever read. */
+  readonly metadata?: Readonly<Record<string, unknown>> | null;
 };
+
+/**
+ * The kinds of news Stripe sends when money goes back, or does not after
+ * all. `charge.refunded` says a refund was made. The rest are about a
+ * refund that has changed since: above all one that left and then failed,
+ * because the card it was going to has been closed. They only ever say
+ * "look again": what Stripe holds for the payment is what gets read.
+ * (`charge.refund.updated` is the older name for `refund.updated`, kept in
+ * case an endpoint still sends it.)
+ */
+const REFUND_NEWS = [
+  "charge.refunded",
+  "refund.updated",
+  "refund.failed",
+  "charge.refund.updated",
+] as const;
 
 /**
  * A dispute, as the news shows it. Only its id is ever taken: how it stands
@@ -65,15 +86,21 @@ export type OrderBook = {
     readonly reason: string;
   }): Promise<unknown>;
   /**
-   * Money went back on a payment, by whoever's hand. The event only says
-   * that something did: the book asks Stripe what, and writes down any
-   * refund it did not already know about. `number` is the order the payment
-   * says it belongs to, when it says.
+   * Money went back on a payment, by whoever's hand, or a refund that had
+   * left has changed. The event only says that something did: the book asks
+   * Stripe what, writes down any refund it did not already know about, and
+   * takes back any it holds as given that has since come back. `number` is
+   * the order the payment says it belongs to, when it says.
    */
   seeRefunds(input: {
     readonly number: string | null;
     readonly paymentIntent: string | null;
-  }): Promise<{ readonly number: string | null; readonly written: number }>;
+  }): Promise<{
+    readonly number: string | null;
+    readonly written: number;
+    /** Refunds that had left and are now known to have come back. */
+    readonly returned?: number;
+  }>;
   /**
    * A cardholder's bank has opened, moved or closed a dispute. The event
    * only names it: the book asks Stripe how it stands now and writes that
@@ -100,6 +127,8 @@ export type EventOutcome =
       readonly action: "refunds";
       readonly number: string;
       readonly written: number;
+      /** How many that had left were found to have come back. */
+      readonly returned: number;
     }
   /** A card dispute on one of our orders, as it stands now. */
   | {
@@ -128,9 +157,10 @@ export async function handleStripeEvent(
   const type = typeof event.type === "string" ? event.type : "";
   const session = event.data?.object;
 
-  // A refund, made from the back end or from Stripe's own dashboard. The
-  // same news arrives either way, and reading it twice writes nothing twice.
-  if (type === "charge.refunded") {
+  // A refund, made from the back end or from Stripe's own dashboard, or one
+  // that has changed since it was made. The same news arrives either way,
+  // and reading it twice writes nothing twice.
+  if ((REFUND_NEWS as readonly string[]).includes(type)) {
     const said = session?.metadata?.order_number;
     const number =
       typeof said === "string" && ORDER_NUMBER_PATTERN.test(said) ? said : null;
@@ -145,7 +175,12 @@ export async function handleStripeEvent(
     const seen = await book.seeRefunds({ number, paymentIntent });
     return seen.number === null
       ? { action: "ignored", why: "not one of our orders" }
-      : { action: "refunds", number: seen.number, written: seen.written };
+      : {
+          action: "refunds",
+          number: seen.number,
+          written: seen.written,
+          returned: seen.returned ?? 0,
+        };
   }
 
   const about = [

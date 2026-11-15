@@ -59,6 +59,13 @@ export default async function BooksPage({
   /** An amount that came off, or a day that ended below nothing. */
   const less = (cents: number) =>
     cents === 0 ? money(0) : `-${money(Math.abs(cents))}`;
+  /**
+   * What was given back. Below nothing means a refund came back that day
+   * (the customer's bank could not take it), and is shown as a plus.
+   */
+  const givenBack = (cents: number) =>
+    cents < 0 ? `+${money(-cents)}` : less(cents);
+  const someCameBack = books.days.some((day) => day.refundedCents < 0);
   const signed = (cents: number) => (cents < 0 ? less(cents) : money(cents));
   const span =
     from === to
@@ -155,7 +162,7 @@ export default async function BooksPage({
           >
             {total.orders === 0 && total.refundedCents === 0
               ? `${span}: nothing was charged and nothing was given back.`
-              : `${span}: ${money(total.chargedCents)} charged across ${String(total.orders)} order${total.orders === 1 ? "" : "s"}, ${money(total.refundedCents)} given back, ${signed(total.keptCents)} kept.`}
+              : `${span}: ${money(total.chargedCents)} charged across ${String(total.orders)} order${total.orders === 1 ? "" : "s"}, ${total.refundedCents < 0 ? `${money(-total.refundedCents)} of refunds came back` : `${money(total.refundedCents)} given back`}, ${signed(total.keptCents)} kept.`}
           </p>
           {books.waiting > 0 ? (
             <p className="mt-2 leading-snug">
@@ -230,7 +237,7 @@ export default async function BooksPage({
                       <td className="bk-num">{less(day.discountCents)}</td>
                       <td className="bk-num">{money(day.deliveryCents)}</td>
                       <td className="bk-num">{money(day.chargedCents)}</td>
-                      <td className="bk-num">{less(day.refundedCents)}</td>
+                      <td className="bk-num">{givenBack(day.refundedCents)}</td>
                       <td className="bk-num font-semibold">
                         {signed(day.keptCents)}
                       </td>
@@ -247,13 +254,20 @@ export default async function BooksPage({
                     <td className="bk-num">{less(total.discountCents)}</td>
                     <td className="bk-num">{money(total.deliveryCents)}</td>
                     <td className="bk-num">{money(total.chargedCents)}</td>
-                    <td className="bk-num">{less(total.refundedCents)}</td>
+                    <td className="bk-num">{givenBack(total.refundedCents)}</td>
                     <td className="bk-num font-semibold">
                       {signed(total.keptCents)}
                     </td>
                   </tr>
                 </tfoot>
               </table>
+              {someCameBack ? (
+                <p className="bk-muted px-4 py-3 text-[0.9375rem] leading-snug md:px-6">
+                  A plus under Refunded is a refund that could not reach the
+                  customer&apos;s card and came back that day. It still shows as
+                  given on the day it left.
+                </p>
+              ) : null}
             </div>
           )}
         </Panel>

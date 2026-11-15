@@ -718,6 +718,10 @@ const STRIPE_EVENTS = [
   "checkout.session.expired",
   // A refund, from the back end or from Stripe's own dashboard.
   "charge.refunded",
+  // A refund that changed after it was made: above all one that left and
+  // then failed, because the card it was going to has been closed.
+  "refund.updated",
+  "refund.failed",
   // A card dispute: opened, moved along, decided.
   "charge.dispute.created",
   "charge.dispute.updated",

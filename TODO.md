@@ -360,10 +360,18 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 - [x] **Card disputes**, written onto the order with the date an answer is due, and on
       Today until they are decided. A lost one is written as given back, so the order and
       the books stay true. The answering itself is done in Stripe's dashboard.
-- [ ] **A dispute on the order's own page.** Today and the order's history say there is
-      one. The page itself has no line for it yet, and no link straight to it in Stripe.
-- [ ] **A refund Stripe later says failed** (a closed card, say) is not taken back off the
-      order. Rare, and Stripe emails about it, but the order would go on saying refunded.
+- [x] **A dispute on the order's own page.** Across the top while it is open, and under
+      Money always: how much, the bank's reason, whether it is ours to answer and by when,
+      and how it ended. It links to Stripe's list of disputes and shows what Stripe calls
+      this one. Stripe's documentation gives no address for a single dispute, so the link
+      goes to the list.
+- [x] **A refund that comes back.** When a refund leaves and the customer's bank cannot
+      put it on the card (a closed card, say), Stripe says so days or weeks later. It is
+      written on the order as left and come back, comes off what the order has given
+      back, and goes on Today until the money is sent another way. The books show it out
+      on the day it left and back on the day it came back. A refund that was sent some
+      other way can be written down on a card order, which sends nothing. Still to do by
+      a person: nothing, until one happens. Then write to the customer first.
 
 ## Would make it sell harder
 

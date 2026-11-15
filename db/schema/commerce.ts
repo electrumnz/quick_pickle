@@ -182,11 +182,21 @@ export const refunds = pgTable(
       .references(() => orders.id, { onDelete: "cascade" }),
     amountCents: integer().notNull(),
     reason: text().notNull(),
-    /** pending: asked for. done: the processor confirmed. failed: it refused. */
-    status: text().$type<"pending" | "done" | "failed">().notNull(),
+    /**
+     * pending: asked for. done: the processor confirmed. failed: it refused,
+     * and nothing left. returned: it left, and then came back because it
+     * could not reach the customer (a closed card, say). A returned refund
+     * is two movements of money, on two days: out on `createdAt` and back on
+     * `returnedAt`. The customer has not had it.
+     */
+    status: text()
+      .$type<"pending" | "done" | "failed" | "returned">()
+      .notNull(),
     providerReference: text(),
     createdBy: text().references(() => users.id, { onDelete: "set null" }),
     createdAt: createdAt(),
+    /** When a refund that had left came back. Null unless it is `returned`. */
+    returnedAt: instant("returned_at"),
   },
   (t) => [index("refunds_order_idx").on(t.orderId)],
 ).enableRLS();
