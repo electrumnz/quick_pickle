@@ -6,7 +6,8 @@ Start here. Everything else is linked from this page.
 
 ## What you are being handed
 
-Two things, in one place.
+Two things, kept in one place: a repository on GitHub, which is the folder that holds all
+the code and these pages.
 
 1. **The shop.** A one-page site that sells Quick Pickle in packs, with its own jar and
    checkout. It is live at [quickpickle.vercel.app](https://quickpickle.vercel.app).
@@ -131,7 +132,9 @@ end under Plans, and here as files:
 - [How to connect Claude, and what it can do for you](docs/starter/how-to/how-to-work-with-claude.md)
 
 There are also draft plans (business, marketing, a launch checklist), a compliance
-checklist and the lines of a budget: [docs/starter](docs/starter/README.md).
+checklist and the lines of a budget: [docs/starter](docs/starter/README.md). The budget
+has a line for each thing that will bill you once the shop is live (hosting, the domain,
+email, card fees). Every one is blank until you have the real figure.
 
 The back end was made for one person. Anything you do not need every day is switched
 off until you start it: the morning email, landing pages for one advert, tests between
@@ -149,24 +152,25 @@ You do not have to remember these. The site enforces them.
 - **A price never comes from the buyer's browser.** Every total is worked out on the
   server, and again as the order is placed.
 - **Real records are only ever behind the sign-in.**
-- **Anything that reaches a customer needs a person's yes.** An AI connected to the back
-  end can draft, look things up and do the day-to-day. It cannot send, publish, refund or
-  delete without you pressing yes in the back end.
+- **An AI never acts on a customer by itself.** A Claude connected to the back end can
+  draft, look things up and do the day-to-day. Anything that sends, refunds, deletes or
+  otherwise reaches a customer waits for you to press yes in the back end. Publishing
+  words is always done by a person, on the screen that shows them.
 - **Every change is written down.** Settings, Activity log says who did what and when.
 
 ## Handing it over
 
-The accounts behind the site are in Sam's name today. Moving them is a morning's work,
-and the shop stays up throughout. [docs/ACCOUNTS.md](docs/ACCOUNTS.md) has every step,
+The accounts behind the site are in Sam's name today. Moving them is about a morning's
+work, and the shop stays up throughout. [docs/ACCOUNTS.md](docs/ACCOUNTS.md) has every step,
 in order, with links to each provider's own instructions.
 
 In short:
 
 | What                | What happens                                              |
 | :------------------ | :-------------------------------------------------------- |
+| The database        | Sam makes you an owner, then leaves                       |
 | The code, on GitHub | Sam transfers the repository to you                       |
 | The hosting, Vercel | Sam transfers the project to you                          |
-| The database        | Sam makes you an owner, then leaves                       |
 | Payments, Stripe    | Sam transfers ownership, then you finish Stripe's sign-up |
 | Email and a domain  | Not made yet. You make them, in the business's name       |
 | Xero and a courier  | Yours to set up. The back end makes files for both        |
@@ -205,8 +209,9 @@ Both have stopped. What still runs by itself is the site's own housekeeping: the
 on every change to the code, and the database ringing the site every five minutes.
 
 That is Claude working on the code. Separately, you can connect a Claude to the back end
-itself, to help run the shop by chat: look up an order, draft a reply, pack a list. It
-ships switched off. The how-to sheet above says how to switch it on and what it may do.
+itself, to help run the shop by chat: look up an order, draft a reply, say what needs
+doing today. It ships switched off. The how-to sheet above says how to switch it on and
+what it may do.
 
 ## What is not built, and what is not certain
 

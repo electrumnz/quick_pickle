@@ -97,7 +97,7 @@ Supabase project:
 | `QP_VERCEL_PROJECT`       | The project's id                     | Check it after the move                |
 | `QP_SUPABASE_PROJECT_REF` | The Supabase project                 | Only if the project itself is replaced |
 
-None of the three is a secret. Vercel shows the account's name and id in the account's
+None of the three Vercel lines is a secret. Vercel shows the account's name and id in the account's
 own Settings, General, and the project's id in the project's Settings, General. Give
 them to Claude and ask it to change the lines. It is one small change, and the
 workflow's `status` run then says whether it can see the project. Until it is made, that
@@ -135,10 +135,12 @@ Sam has seen these, so they change once Ash holds everything.
 
 - **The set-up code** (`BACKSTAGE_SETUP_CODE` on the host). It makes the first login,
   sets a new PIN, and is mixed into the PIN itself. Ash writes a new long phrase over it
-  in Vercel's settings and redeploys. Any PIN made under the old code stops working at
-  that moment, so she then presses **Forgot the PIN, or locked out?** on the sign-in
-  page and sets one with the new code. Better still, she goes straight to a proper login:
-  Settings, Staff, the panel at the top.
+  in Vercel's settings and redeploys, because a changed setting only reaches the site
+  with its next deployment: Vercel's Deployments page can do it, or ask Claude to run
+  `redeploy`. Any PIN made under the old code stops working from then, so she presses
+  **Forgot the PIN, or locked out?** on the sign-in page and sets one with the new code.
+  Better still, she goes straight to a proper login: Settings, Staff, the panel at the
+  top.
 - **The two access tokens** in the repository's secrets. See the next section.
 - **Stripe's keys**, as in step 4.
 - **The database's main password.** Supabase set one when the project was made. Nothing
@@ -146,8 +148,9 @@ Sam has seen these, so they change once Ash holds everything.
   uses an access token. So changing it breaks nothing. Supabase's dashboard has a reset
   for it in the project's database settings.
 
-Nobody has ever seen the database's password or the clock's secret. The repository made
-both itself, kept them out of its own logs, and put them straight where they are used.
+Nobody has ever seen the password of the site's own database login, or the clock's
+secret. The repository made both itself, kept them out of its own logs, and put them
+straight where they are used, saved so that Vercel does not show them back.
 They do not need changing for a handover. To change either anyway, ask Claude to run
 `connect-database` with `"rotate": true`, or `connect-clock`.
 
