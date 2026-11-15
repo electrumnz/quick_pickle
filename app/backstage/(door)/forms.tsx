@@ -6,7 +6,10 @@ import { SubmitButton } from "@/components/backstage/SubmitButton";
 
 import {
   choosePasswordAction,
+  newPinAction,
+  pinSignInAction,
   setUpAction,
+  setUpPinAction,
   signInAction,
   type DoorState,
 } from "./actions";
@@ -22,6 +25,7 @@ function Field({
   hint,
   defaultValue,
   minLength,
+  digits = false,
 }: {
   readonly id: string;
   readonly label: string;
@@ -31,6 +35,8 @@ function Field({
   readonly hint?: string;
   readonly defaultValue?: string;
   readonly minLength?: number;
+  /** A PIN: a phone shows its number pad. */
+  readonly digits?: boolean;
 }) {
   const error = state.fields[id];
   const describedBy =
@@ -51,6 +57,8 @@ function Field({
         spellCheck={false}
         required
         minLength={minLength}
+        inputMode={digits ? "numeric" : undefined}
+        pattern={digits ? "[0-9]*" : undefined}
         defaultValue={defaultValue ?? state.values[id] ?? ""}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
@@ -109,6 +117,105 @@ export function SignInForm({ next }: { readonly next: string }) {
   );
 }
 
+const PIN_HINT =
+  "At least 6 digits. Not one that is easy to guess, like 123456 or a date.";
+
+export function PinSignInForm({ next }: { readonly next: string }) {
+  const [state, action] = useActionState(pinSignInAction, EMPTY);
+  return (
+    <form action={action} className="flex flex-col gap-4" noValidate>
+      <input type="hidden" name="next" value={state.values.next ?? next} />
+      <FormError state={state} />
+      <Field
+        id="pin"
+        label="PIN"
+        type="password"
+        autoComplete="current-password"
+        state={state}
+        digits
+      />
+      <SubmitButton pending="Signing in" className="btn btn-block mt-1">
+        Sign in
+      </SubmitButton>
+    </form>
+  );
+}
+
+export function SetUpPinForm() {
+  const [state, action] = useActionState(setUpPinAction, EMPTY);
+  return (
+    <form action={action} className="flex flex-col gap-4" noValidate>
+      <FormError state={state} />
+      <Field
+        id="code"
+        label="Set-up code"
+        type="password"
+        autoComplete="off"
+        state={state}
+        hint="The phrase saved as BACKSTAGE_SETUP_CODE where the site is hosted."
+      />
+      <Field id="name" label="Your name" autoComplete="name" state={state} />
+      <Field
+        id="pin"
+        label="Choose a PIN"
+        type="password"
+        autoComplete="new-password"
+        state={state}
+        hint={PIN_HINT}
+        digits
+      />
+      <Field
+        id="again"
+        label="And once more"
+        type="password"
+        autoComplete="new-password"
+        state={state}
+        digits
+      />
+      <SubmitButton pending="Setting up" className="btn btn-block mt-1">
+        Create my login
+      </SubmitButton>
+    </form>
+  );
+}
+
+export function NewPinForm() {
+  const [state, action] = useActionState(newPinAction, EMPTY);
+  return (
+    <form action={action} className="flex flex-col gap-4" noValidate>
+      <FormError state={state} />
+      <Field
+        id="code"
+        label="Set-up code"
+        type="password"
+        autoComplete="off"
+        state={state}
+        hint="The phrase saved as BACKSTAGE_SETUP_CODE where the site is hosted."
+      />
+      <Field
+        id="pin"
+        label="New PIN"
+        type="password"
+        autoComplete="new-password"
+        state={state}
+        hint={PIN_HINT}
+        digits
+      />
+      <Field
+        id="again"
+        label="And once more"
+        type="password"
+        autoComplete="new-password"
+        state={state}
+        digits
+      />
+      <SubmitButton pending="Saving" className="btn btn-block mt-1">
+        Save and sign in
+      </SubmitButton>
+    </form>
+  );
+}
+
 export function SetUpForm() {
   const [state, action] = useActionState(setUpAction, EMPTY);
   return (
@@ -129,6 +236,7 @@ export function SetUpForm() {
         type="email"
         autoComplete="username"
         state={state}
+        hint="Only your login name. Nothing is sent to it, so any address of yours will do."
       />
       <Field
         id="password"

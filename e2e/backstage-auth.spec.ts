@@ -32,6 +32,13 @@ const STAFF = {
   email: "sam@example.co.nz",
   password: "three bounces before the serve",
 };
+/**
+ * The owner starts out coming in with a PIN (the door for now), sets a new
+ * one with the set-up code, and then swaps it for the email and password
+ * every later test signs in with.
+ */
+const PIN = "408137";
+const NEW_PIN = "5920486";
 
 /**
  * Press a form's button and wait for the answer to land.
@@ -74,12 +81,8 @@ test("nothing behind the door opens without signing in", async ({ page }) => {
   }
 });
 
-test("set-up makes the first owner, with the code and only once", async ({
-  page,
-}) => {
-  await page.goto(`${AUTH_URL}/backstage/set-up`);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/set up/i);
-
+/** Every accessibility rule, on the page as it stands. */
+async function expectNoAxeViolations(page: Page) {
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
@@ -88,25 +91,88 @@ test("set-up makes the first owner, with the code and only once", async ({
       (v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`,
     ),
   ).toEqual([]);
+}
+
+async function signOut(page: Page) {
+  await page.goto(`${AUTH_URL}/backstage/more`);
+  await press(page, /sign out/i);
+  await expect(page).toHaveURL(/\/backstage\/sign-in/);
+}
+
+test("the shop's footer leads to set-up, which makes the first owner with a PIN, once", async ({
+  page,
+}) => {
+  // The way in is a quiet link at the foot of the shop. It is a full page
+  // load, so the back end's stylesheet is never stacked on the shop's.
+  await page.goto(`${AUTH_URL}/`);
+  await page.evaluate(() => {
+    (window as unknown as { cameFromShop?: boolean }).cameFromShop = true;
+  });
+  const way = page.getByRole("contentinfo").getByRole("link", {
+    name: "Staff",
+    exact: true,
+  });
+  await expect(way).toHaveAttribute("href", "/backstage");
+  await expect(way).toHaveAttribute("rel", "nofollow");
+  await way.click();
+  // No accounts exist yet, so the door hands on to set-up.
+  await expect(page).toHaveURL(`${AUTH_URL}/backstage/set-up`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/set up/i);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { cameFromShop?: boolean }).cameFromShop,
+    ),
+  ).toBeUndefined();
+  await expectNoAxeViolations(page);
+
+  // It asks for a name and a PIN. No email.
+  await expect(page.getByLabel(/email/i)).toHaveCount(0);
+
+  // The other way to set up is one link away: an email and a password. It
+  // says what the address is for, and holds a password to its length.
+  await page
+    .getByRole("link", { name: /email and a password instead/i })
+    .click();
+  await expect(page).toHaveURL(`${AUTH_URL}/backstage/set-up?with=email`);
+  await expect(page.getByText(/Only your login name/)).toBeVisible();
+  await expectNoAxeViolations(page);
+  await page.getByLabel("Set-up code").fill(SETUP_CODE);
+  await page.getByLabel("Your name").fill(OWNER.name);
+  await page.getByLabel("Your email").fill(OWNER.email);
+  await page.getByLabel("Choose a password").fill("short");
+  await press(page, /create my login/i);
+  await expect(page.getByText(/^Use at least 12 characters/)).toHaveCount(1);
+  await expect(page.getByLabel("Your email")).toHaveValue(OWNER.email);
+  await page.getByRole("link", { name: /use a pin instead/i }).click();
+  await expect(page).toHaveURL(`${AUTH_URL}/backstage/set-up`);
 
   await page.getByLabel("Set-up code").fill("not the code at all, sorry");
   await page.getByLabel("Your name").fill(OWNER.name);
-  await page.getByLabel("Your email").fill(OWNER.email);
-  await page.getByLabel("Choose a password").fill(OWNER.password);
+  await page.getByLabel("Choose a PIN").fill(PIN);
+  await page.getByLabel("And once more").fill(PIN);
   await press(page, /create my login/i);
   await expect(page.getByText("That is not the set-up code")).toBeVisible();
   // What was typed is still there, apart from the secrets.
   await expect(page.getByLabel("Your name")).toHaveValue(OWNER.name);
-  await expect(page.getByLabel("Choose a password")).toHaveValue("");
+  await expect(page.getByLabel("Choose a PIN")).toHaveValue("");
 
+  // A PIN everybody tries first is turned down, and so is a slip of the thumb.
   await page.getByLabel("Set-up code").fill(SETUP_CODE);
-  await page.getByLabel("Choose a password").fill("short");
+  await page.getByLabel("Choose a PIN").fill("123456");
+  await page.getByLabel("And once more").fill("123456");
   await press(page, /create my login/i);
-  await expect(page.getByText(/^Use at least 12 characters/)).toHaveCount(1);
+  await expect(page.getByText(/too easy to guess/i)).toHaveCount(1);
   await expect(page.getByText("That is not the set-up code")).toHaveCount(0);
 
   await page.getByLabel("Set-up code").fill(SETUP_CODE);
-  await page.getByLabel("Choose a password").fill(OWNER.password);
+  await page.getByLabel("Choose a PIN").fill(PIN);
+  await page.getByLabel("And once more").fill("408173");
+  await press(page, /create my login/i);
+  await expect(page.getByText("Those two don't match")).toBeVisible();
+
+  await page.getByLabel("Set-up code").fill(SETUP_CODE);
+  await page.getByLabel("Choose a PIN").fill(PIN);
+  await page.getByLabel("And once more").fill(PIN);
   await press(page, /create my login/i);
 
   await expect(page).toHaveURL(`${AUTH_URL}/backstage`);
@@ -121,9 +187,151 @@ test("set-up makes the first owner, with the code and only once", async ({
   expect(session?.sameSite).toBe("Lax");
   expect(await page.evaluate(() => document.cookie)).not.toContain("qp_staff");
 
-  // And the set-up page is gone for good.
+  // Nobody makes a second owner here. What is left of the page is where a
+  // new PIN is set, and that takes the set-up code too.
   await page.goto(`${AUTH_URL}/backstage/set-up`);
-  await expect(page).toHaveURL(/\/backstage(\/sign-in)?$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    /set a new pin/i,
+  );
+  await expect(page.getByLabel("Your name")).toHaveCount(0);
+  await page.goto(`${AUTH_URL}/backstage/set-up?with=email`);
+  await expect(page.getByLabel("Your name")).toHaveCount(0);
+  await expect(page.getByLabel(/email/i)).toHaveCount(0);
+});
+
+test("the PIN opens the door, a wrong one does not, and the set-up code sets a new one", async ({
+  page,
+}) => {
+  // Nothing opens without it, and the page that was asked for is remembered.
+  await page.goto(`${AUTH_URL}/backstage/settings/staff`);
+  await expect(page).toHaveURL(/\/backstage\/sign-in\?next=/);
+  await expect(page.getByLabel("PIN", { exact: true })).toBeVisible();
+  // With nobody else on the team there is no other way in to offer.
+  await expect(page.getByLabel("Email")).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: /email and password/i }),
+  ).toHaveCount(0);
+  await expectNoAxeViolations(page);
+
+  await page.getByLabel("PIN", { exact: true }).fill("408138");
+  await press(page, /sign in/i);
+  await expect(page.locator("main [role=alert]")).toHaveText(
+    "That PIN isn't right.",
+  );
+  await expect(page.getByLabel("PIN", { exact: true })).toHaveValue("");
+
+  await page.getByLabel("PIN", { exact: true }).fill(PIN);
+  await press(page, /sign in/i);
+  await expect(page).toHaveURL(`${AUTH_URL}/backstage/settings/staff`);
+
+  // The staff list says how this login comes in, and shows no address to
+  // write to. It is not offered a password link: the door could not check one.
+  const mine = page.getByRole("listitem").filter({ hasText: OWNER.name });
+  await expect(mine.getByText("Comes in with the PIN")).toBeVisible();
+  await expect(mine.getByText(/invalid/)).toHaveCount(0);
+  await expect(
+    mine.getByRole("button", { name: /new password link/i }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "You come in with a PIN" }),
+  ).toBeVisible();
+  await expectNoAxeViolations(page);
+
+  // The go-live list counts a PIN as not ready for real customers.
+  await page.goto(`${AUTH_URL}/backstage/settings/go-live`);
+  await expect(
+    page.getByText(/The back end is opened with a PIN/),
+  ).toBeVisible();
+  await page.goto(`${AUTH_URL}/backstage/more`);
+  await expect(page.getByText("Signed in with the PIN")).toBeVisible();
+
+  // Forgotten, or locked out: the set-up code sets a new one.
+  await signOut(page);
+  await page.getByRole("link", { name: /forgot the pin/i }).click();
+  await expect(page).toHaveURL(`${AUTH_URL}/backstage/set-up`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    /set a new pin/i,
+  );
+  await expectNoAxeViolations(page);
+
+  await page.getByLabel("Set-up code").fill("still not the code, sorry");
+  await page.getByLabel("New PIN").fill(NEW_PIN);
+  await page.getByLabel("And once more").fill(NEW_PIN);
+  await press(page, /save and sign in/i);
+  await expect(page.getByText("That is not the set-up code")).toBeVisible();
+
+  await page.getByLabel("Set-up code").fill(SETUP_CODE);
+  await page.getByLabel("New PIN").fill(NEW_PIN);
+  await page.getByLabel("And once more").fill(NEW_PIN);
+  await press(page, /save and sign in/i);
+  await expect(page).toHaveURL(`${AUTH_URL}/backstage`);
+
+  // The old PIN is a wrong one now.
+  await signOut(page);
+  await page.getByLabel("PIN", { exact: true }).fill(PIN);
+  await press(page, /sign in/i);
+  await expect(page.locator("main [role=alert]")).toHaveText(
+    "That PIN isn't right.",
+  );
+  await page.getByLabel("PIN", { exact: true }).fill(NEW_PIN);
+  await press(page, /sign in/i);
+  await expect(page).toHaveURL(`${AUTH_URL}/backstage`);
+
+  await page.goto(`${AUTH_URL}/backstage/settings/activity`);
+  await expect(
+    page.getByText(
+      `Set up the back end with ${OWNER.name} as its owner, coming in with a PIN`,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(`Set a new PIN for ${OWNER.name}, with the set-up code`),
+  ).toBeVisible();
+});
+
+test("the PIN is swapped for an email and a password, and then it is gone", async ({
+  page,
+}) => {
+  await page.goto(`${AUTH_URL}/backstage/sign-in`);
+  await page.getByLabel("PIN", { exact: true }).fill(NEW_PIN);
+  await press(page, /sign in/i);
+  await expect(page).toHaveURL(`${AUTH_URL}/backstage`);
+
+  await page.goto(`${AUTH_URL}/backstage/settings/staff`);
+  await page.getByLabel("Your email").fill(OWNER.email);
+  await page.getByLabel("Choose a password").fill("short");
+  await press(page, /make it my login/i);
+  await expect(page.getByText(/^Use at least 12 characters/)).toHaveCount(1);
+  // What was typed is still there, apart from the password.
+  await expect(page.getByLabel("Your email")).toHaveValue(OWNER.email);
+
+  await page.getByLabel("Choose a password").fill(OWNER.password);
+  await press(page, /make it my login/i);
+  await expect(page.locator("main [role=status]")).toHaveText(
+    /you sign in with your email and password, and the PIN no longer works/i,
+  );
+  // Still signed in, as the same person, now under an address.
+  const mine = page.getByRole("listitem").filter({ hasText: OWNER.name });
+  await expect(mine.getByText(OWNER.email)).toBeVisible();
+  await expect(mine.getByText("Comes in with the PIN")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "You come in with a PIN" }),
+  ).toHaveCount(0);
+  await page.goto(`${AUTH_URL}/backstage/settings/go-live`);
+  await expect(
+    page.getByText("Everybody signs in with their own email and password."),
+  ).toBeVisible();
+
+  // The door asks for an email and a password from here on. There is no
+  // PIN to type, and the set-up page is gone for good.
+  await signOut(page);
+  await expect(page.getByLabel("PIN", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Email")).toBeVisible();
+  await page.goto(`${AUTH_URL}/backstage/set-up`);
+  await expect(page).toHaveURL(/\/backstage\/sign-in$/);
+
+  await signIn(page, OWNER.email, OWNER.password);
+  await expect(page).toHaveURL(`${AUTH_URL}/backstage`);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Ash");
 });
 
 test("an owner invites staff with a one-time link", async ({

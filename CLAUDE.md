@@ -102,7 +102,7 @@ checkout, our orders.
 ```
 app/(site)/            the shop: the page, /checkout, /order/thanks, the fine print,
                        landing pages (/for/<slug>) and their staff preview (/preview/<id>)
-app/backstage/(door)/  sign-in, first-time set-up, choose a password
+app/backstage/(door)/  sign-in, first-time set-up (and a new PIN), choose a password
 app/backstage/(app)/   everything behind the door, one folder per area
 app/layout.tsx         the document, the fonts and the shop's stylesheet. No script.
 proxy.ts               in front of /backstage (path header, no-store, noindex) and of
@@ -276,6 +276,40 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
 - **Sign-in:** named accounts with roles (owner, staff, viewer). argon2id passwords,
   sessions stored as hashes, lock-out after five wrong tries, one-time links for invitations.
   The first owner is made once at `/backstage/set-up` with `BACKSTAGE_SETUP_CODE`.
+- **For now the first owner comes in with a PIN**, and the shop's footer has a plain
+  **Staff** link to the door (Sam, 15 November 2026: "a link in the footer and a pin for
+  now. its not a live active website"). `lib/backstage/auth/pin.ts` is the whole idea.
+  - The PIN login is an ordinary owner account whose email is a stand-in
+    (`pin@backstage.invalid`). That is how there is at most one, and how everything else
+    tells (`isPinLogin`). Nobody is invited under a `.invalid` address, and the email
+    door never opens it. **A screen that shows a staff member's email asks `isPinLogin`
+    first:** the stand-in is never shown as an address, or written to.
+  - **A PIN is short, so the door counts wrong tries for everybody together** (`pin:door`
+    in `throttle.ts`), not for each address: five in a day locks it, and each lock is
+    twice the last, up to a day. A right PIN wipes the count and not the ladder, or a
+    guesser would get a fresh run of short locks whenever the owner came in. Locked means
+    the right PIN is turned away with the rest.
+  - **A try is counted before the PIN is looked at** (`takePinTry`), in one statement
+    the database runs by itself, and the count is wiped if the PIN turns out right. The
+    first version looked first and counted after, and a test sent thirty guesses in the
+    same instant: every one read "no wrong tries yet" and the twentieth, the right one,
+    walked in. Only the first five in a day are ever checked against the PIN. (An
+    email's counter still looks first. Against a password of twelve characters a burst
+    buys nothing, but it is the same weakness: count first if that door is touched.)
+  - **The set-up code is what stands behind it.** It makes the PIN, it sets a new one
+    (`/backstage/set-up` lives on for that while a PIN login exists), it wipes the lock,
+    and it is mixed into the PIN before the PIN is hashed, so a copy of the database
+    alone gives nobody the PIN. Change the set-up code and the PIN stops working: set a
+    new one.
+  - **Tries at the set-up code are counted against the caller's own address, never a
+    counter everybody shares.** Otherwise whoever locked the PIN door could lock the way
+    round it for five more tries. That is safe because the code is long and random (the
+    infra script makes it), which a PIN is not.
+  - **It is not ready for launch, and says so.** The go-live list counts a PIN door as
+    open work. Settings, Staff has one form (`staff.makeProperLogin`) that turns the same
+    account into an email and a password, so everything it did keeps its name. After
+    that the PIN and the set-up page are gone for good.
+  - A PIN login is never given a password link: the door could not check a password.
 - `requireStaff()` is the lock, called by every page and (through `staffCaller()`) every
   action. `proxy.ts` is not the lock.
 - **Outward and irreversible operations** (`effect: "outward" | "destructive"`) need a yes.
@@ -312,7 +346,9 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
   - Both browser-test servers are given a secret, so every form the tests press goes
     through the seal.
 - The old build's "one shared password, no email" rule was dropped on purpose: with several
-  people and bots at work the activity log has to say who did what. Its "no MCP" decision is
+  people and bots at work the activity log has to say who did what. (The PIN above is
+  one named owner's login. Hand it to a second person and the log says one name for
+  both, which is one more reason it goes before launch.) Its "no MCP" decision is
   also reversed: a member of staff can connect their own Claude, over the same operations
   (see "Claude, connected" below).
 

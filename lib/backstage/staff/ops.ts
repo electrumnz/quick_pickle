@@ -5,9 +5,13 @@
  * page, with a code only the person deploying the site has. After that an
  * owner invites people: each invitation is a one-time link to choose a
  * password, good for three days.
+ *
+ * For now the first owner can be made with a PIN in place of an email and
+ * a password (auth/pin.ts says why, and what holds it up). One form here
+ * turns that into a proper login, and then the PIN is gone for good.
  */
 
-import { and, asc, count, eq, gt, isNull } from "drizzle-orm";
+import { and, asc, count, eq, gt, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
 
 import { users, userTokens, type Role } from "@/db/schema";
@@ -15,7 +19,15 @@ import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
 
 import { hashPassword, passwordProblem } from "../auth/password";
+import {
+  isPinLogin,
+  PIN_LOGIN,
+  pinProblem,
+  pinSecret,
+  seasoned,
+} from "../auth/pin";
 import { revokeAllSessions } from "../auth/sessions";
+import { forgetPinTries } from "../auth/throttle";
 import { hashToken, newToken } from "../auth/tokens";
 import { conflict, notFound, OpError } from "../core/errors";
 import { defineOp } from "../core/op";
@@ -28,7 +40,12 @@ const emailSchema = z
   .trim()
   .toLowerCase()
   .max(254)
-  .email("That email doesn't look right");
+  .email("That email doesn't look right")
+  // Never a real mailbox. The back end's own stand-ins live there: the PIN
+  // login's, and each bot's.
+  .refine((email) => !email.endsWith(".invalid"), {
+    message: "That email doesn't look right",
+  });
 const nameSchema = z.string().trim().min(1, "A name is needed").max(80);
 
 export type StaffRow = {
@@ -37,6 +54,8 @@ export type StaffRow = {
   readonly name: string;
   readonly role: Role;
   readonly kind: "person" | "bot";
+  /** True for the login that comes in with the PIN. Its email is a stand-in. */
+  readonly pin: boolean;
   readonly hasPassword: boolean;
   readonly disabled: boolean;
   readonly lastSeenAt: Date | null;
@@ -46,6 +65,46 @@ export type StaffRow = {
 export async function countUsers(db: DbOrTx): Promise<number> {
   const [row] = await db.select({ n: count() }).from(users);
   return row?.n ?? 0;
+}
+
+/** The login that comes in with the PIN, while there is one switched on. */
+export async function pinDoor(
+  db: DbOrTx,
+): Promise<{ readonly id: string; readonly name: string } | null> {
+  const [row] = await db
+    .select({ id: users.id, name: users.name })
+    .from(users)
+    .where(and(eq(users.email, PIN_LOGIN), isNull(users.disabledAt)));
+  return row ?? null;
+}
+
+/** True when somebody other than the PIN login is a person with an account. */
+export async function hasNamedLogins(db: DbOrTx): Promise<boolean> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(users)
+    .where(and(eq(users.kind, "person"), ne(users.email, PIN_LOGIN)));
+  return (row?.n ?? 0) > 0;
+}
+
+/**
+ * The hash to store for a PIN, or a refusal that says what is wrong with
+ * it. It is mixed with the set-up code first, so with no set-up code there
+ * is no PIN door to make.
+ */
+async function hashForPin(pin: string): Promise<string> {
+  const problem = pinProblem(pin);
+  if (problem !== null) {
+    throw new OpError("invalid_input", problem, { pin: problem });
+  }
+  const secret = pinSecret();
+  if (secret === null) {
+    throw new OpError(
+      "unavailable",
+      "A PIN needs the set-up code. BACKSTAGE_SETUP_CODE has to be set (16 characters or more) where the site is hosted.",
+    );
+  }
+  return hashPassword(seasoned(pin, secret));
 }
 
 async function countActiveOwners(db: DbOrTx): Promise<number> {
@@ -90,6 +149,7 @@ export const listStaff = defineOp({
       name: row.name,
       role: row.role,
       kind: row.kind,
+      pin: isPinLogin(row),
       hasPassword: row.passwordHash !== null,
       disabled: row.disabledAt !== null,
       lastSeenAt: row.lastSeenAt,
@@ -138,6 +198,134 @@ export const createFirstOwner = defineOp({
       data: { email: input.email },
     });
     return { id };
+  },
+});
+
+/**
+ * Make the very first account with a PIN in place of an email and a
+ * password. Like the one above, it only works while there are no accounts
+ * at all, and the set-up page calls it as the system once the set-up code
+ * has been checked.
+ */
+export const createPinOwner = defineOp({
+  name: "staff.createPinOwner",
+  title: "Create the first owner, who comes in with a PIN",
+  description:
+    "One-time set-up: creates the first owner with a PIN in place of an email and a password. Refused once any account exists. For while the shop is being set up: the go-live list counts a PIN as not ready.",
+  access: "admin",
+  input: z.object({ name: nameSchema, pin: z.string() }),
+  async run(ctx, input): Promise<{ id: string }> {
+    if ((await countUsers(ctx.db)) > 0) {
+      throw conflict("The back end already has an owner. Sign in instead.");
+    }
+    const passwordHash = await hashForPin(input.pin);
+    const id = newId("usr");
+    await ctx.db.insert(users).values({
+      id,
+      email: PIN_LOGIN,
+      name: input.name,
+      role: "owner",
+      kind: "person",
+      passwordHash,
+      createdAt: ctx.now,
+      updatedAt: ctx.now,
+    });
+    await ctx.audit({
+      entity: { type: "user", id },
+      summary: `Set up the back end with ${input.name} as its owner, coming in with a PIN`,
+    });
+    return { id };
+  },
+});
+
+/**
+ * Set a new PIN. The set-up page calls it as the system once the set-up
+ * code has been checked: that code is the proof, because whoever is asking
+ * has forgotten the PIN or been locked out, and is not signed in.
+ */
+export const setNewPin = defineOp({
+  name: "staff.setNewPin",
+  title: "Set a new PIN with the set-up code",
+  description:
+    "For the set-up page: sets a new PIN for the login that comes in with one, signs it out everywhere and unlocks the door after wrong tries. Only works while a login comes in with a PIN.",
+  access: "admin",
+  input: z.object({ pin: z.string() }),
+  async run(ctx, input): Promise<{ id: string }> {
+    const door = await pinDoor(ctx.db);
+    if (door === null) {
+      throw conflict("Nobody comes in with a PIN. Sign in instead.");
+    }
+    const passwordHash = await hashForPin(input.pin);
+    await ctx.db
+      .update(users)
+      .set({ passwordHash, updatedAt: ctx.now })
+      .where(eq(users.id, door.id));
+    await revokeAllSessions(ctx.db, door.id, ctx.now);
+    await forgetPinTries(ctx.db);
+    await ctx.audit({
+      entity: { type: "user", id: door.id },
+      summary: `Set a new PIN for ${door.name}, with the set-up code`,
+    });
+    return { id: door.id };
+  },
+});
+
+/**
+ * Turn the PIN login into a proper one: an email and a password. Only the
+ * person who came in with the PIN can do it, and only for themselves. The
+ * account stays the same one, so everything it did keeps its name.
+ */
+export const makeProperLogin = defineOp({
+  name: "staff.makeProperLogin",
+  title: "Swap the PIN for an email and a password",
+  description:
+    "Turns the login that comes in with a PIN into a proper one, with an email and a password. Only that person can do it, for themselves. The PIN stops working at once and every browser signed in with it is signed out.",
+  access: "admin",
+  input: z.object({ email: emailSchema, password: z.string() }),
+  async run(ctx, input): Promise<{ id: string; email: string }> {
+    const [me] =
+      ctx.actor.type === "human"
+        ? await ctx.db
+            .select()
+            .from(users)
+            .where(eq(users.id, ctx.actor.userId))
+        : [];
+    if (me === undefined || !isPinLogin(me) || me.disabledAt !== null) {
+      throw conflict(
+        "This is for whoever comes in with the PIN, and that is not you.",
+      );
+    }
+    const problem = passwordProblem(input.password);
+    if (problem !== null) {
+      throw new OpError("invalid_input", problem, { password: problem });
+    }
+    const [taken] = await ctx.db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, input.email));
+    if (taken !== undefined) {
+      throw new OpError(
+        "conflict",
+        "Someone with that email already has an account.",
+        { email: "Already has an account" },
+      );
+    }
+    await ctx.db
+      .update(users)
+      .set({
+        email: input.email,
+        passwordHash: await hashPassword(input.password),
+        updatedAt: ctx.now,
+      })
+      .where(eq(users.id, me.id));
+    await revokeAllSessions(ctx.db, me.id, ctx.now);
+    await forgetPinTries(ctx.db);
+    await ctx.audit({
+      entity: { type: "user", id: me.id },
+      summary: `${me.name} swapped the PIN for an email and a password`,
+      data: { email: input.email },
+    });
+    return { id: me.id, email: input.email };
   },
 });
 
@@ -198,6 +386,13 @@ export const resetStaffPassword = defineOp({
       .from(users)
       .where(eq(users.id, input.id));
     if (user === undefined) throw notFound("That account");
+    if (isPinLogin(user)) {
+      // A link would give it a password, and the PIN door could never
+      // check one: the login would be shut for good.
+      throw conflict(
+        `${user.name} comes in with the PIN. A new PIN is set on the set-up page, with the set-up code.`,
+      );
+    }
     await revokeAllSessions(ctx.db, user.id, ctx.now);
     const token = await issueSetPasswordToken(ctx.db, user.id, ctx.now);
     await ctx.audit({

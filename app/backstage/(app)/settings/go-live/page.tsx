@@ -11,7 +11,9 @@ import { lastTick } from "@/lib/backstage/clock/tick";
 import { listStuckEvents } from "@/lib/backstage/core/events";
 import { execute } from "@/lib/backstage/core/op";
 import { resendWebhookSecretState } from "@/lib/backstage/mail/config";
+import { backstageMode } from "@/lib/backstage/mode";
 import { canConfirm, factNow, shopOffer } from "@/lib/backstage/shop/ops";
+import { pinDoor } from "@/lib/backstage/staff/ops";
 import { formatDateKey } from "@/lib/backstage/stock/dates";
 import { getDb } from "@/lib/db/client";
 import { mailConnection } from "@/lib/mail";
@@ -169,6 +171,20 @@ export default async function GoLivePage({
         : limits === "off"
           ? "Switched off by hand (QP_LIMITS is off). Anybody can guess at promo codes and place orders as fast as they like, and pad out the visit and link counts."
           : "Not counting: there is no database, so no real records to protect.",
+  });
+
+  // The way in. A PIN is the door for now (lib/backstage/auth/pin.ts): one
+  // short number is not what stands in front of real customers' details.
+  const demo = backstageMode() === "demo";
+  const pin = demo ? null : await pinDoor(db);
+  systems.push({
+    ok: pin === null,
+    label: "Signing in",
+    detail: demo
+      ? "Nobody signs in: there is no database, so the records here are invented."
+      : pin === null
+        ? "Everybody signs in with their own email and password."
+        : `The back end is opened with a PIN (${pin.name}'s). That is fine while the shop is being set up. Before real customers' details are in here, ${pin.name} swaps it for an email and a password in Settings, Staff. Then look down the staff list for anybody you do not know.`,
   });
 
   const open =

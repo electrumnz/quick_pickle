@@ -1,17 +1,26 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { staffCaller } from "@/lib/backstage/auth/current";
+import {
+  requestIp,
+  requestIsSecure,
+  requestUserAgent,
+  staffCaller,
+  staffCookieName,
+} from "@/lib/backstage/auth/current";
+import { signIn } from "@/lib/backstage/auth/sign-in";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
 import {
   inviteStaff,
+  makeProperLogin,
   resetStaffPassword,
   updateStaff,
 } from "@/lib/backstage/staff/ops";
 import { withNotice } from "@/lib/backstage/ui/notice";
+import { getDb } from "@/lib/db/client";
 
 export type InviteState = {
   readonly error: string | null;
@@ -113,6 +122,77 @@ export async function passwordLinkAction(
       link: null,
     };
   }
+}
+
+export type ProperLoginState = {
+  readonly error: string | null;
+  readonly fields: Readonly<Record<string, string>>;
+  /** What was typed, handed back. Never the password. */
+  readonly values: Readonly<Record<string, string>>;
+};
+
+/**
+ * Whoever came in with the PIN gives themselves an email and a password.
+ * The PIN stops working and every browser it had signed in is signed out,
+ * this one included, so it is signed straight back in the new way.
+ */
+export async function properLoginAction(
+  _previous: ProperLoginState,
+  form: FormData,
+): Promise<ProperLoginState> {
+  const values = { email: text(form, "email") };
+  const password = text(form, "password");
+
+  let email: string;
+  try {
+    const done = await execute(
+      makeProperLogin,
+      { email: values.email, password },
+      await staffCaller(),
+    );
+    email = done.email;
+  } catch (error) {
+    if (error instanceof OpError) {
+      const hasFields = Object.keys(error.fields).length > 0;
+      return {
+        error: hasFields ? null : error.message,
+        fields: error.fields,
+        values,
+      };
+    }
+    return {
+      error: "Something went wrong on our side. Give it another go.",
+      fields: {},
+      values,
+    };
+  }
+
+  const session = await signIn(
+    await getDb(),
+    {
+      email,
+      password,
+      ip: await requestIp(),
+      userAgent: await requestUserAgent(),
+    },
+    new Date(),
+  );
+  if (!session.ok) redirect("/backstage/sign-in");
+  const jar = await cookies();
+  jar.set(await staffCookieName(), session.token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: await requestIsSecure(),
+    path: "/",
+    expires: session.expiresAt,
+  });
+  redirect(
+    withNotice(
+      "/backstage/settings/staff",
+      "Done. From now on you sign in with your email and password, and the PIN no longer works.",
+      "good",
+    ),
+  );
 }
 
 /** Role and on/off changes: a plain form post, then back to the list. */

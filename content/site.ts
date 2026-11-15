@@ -292,6 +292,9 @@ export const FOOTER = {
   legal: "Quick Pickle. All rights reserved.",
   // copy-audit-ignore: a disclaimer. It says what the product is NOT.
   foodNote: "Quick Pickle is a food. It is not a medicine.",
+  // The way in for whoever runs the shop. It leads to a sign-in, and to
+  // nothing a customer needs.
+  staff: { href: "/backstage", label: "Staff" },
 } as const;
 
 export const BUYBAR = {

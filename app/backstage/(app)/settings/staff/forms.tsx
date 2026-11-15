@@ -4,7 +4,13 @@ import { useActionState } from "react";
 
 import { SubmitButton } from "@/components/backstage/SubmitButton";
 
-import { inviteAction, passwordLinkAction, type InviteState } from "./actions";
+import {
+  inviteAction,
+  passwordLinkAction,
+  properLoginAction,
+  type InviteState,
+  type ProperLoginState,
+} from "./actions";
 
 const EMPTY: InviteState = { error: null, fields: {}, values: {}, link: null };
 
@@ -147,5 +153,85 @@ export function PasswordLinkForm({
       ) : null}
       {state.link ? <OneTimeLink link={state.link} /> : null}
     </div>
+  );
+}
+
+const NO_LOGIN_YET: ProperLoginState = { error: null, fields: {}, values: {} };
+
+/** For whoever came in with the PIN: an email and a password of their own. */
+export function ProperLoginForm() {
+  const [state, action] = useActionState(properLoginAction, NO_LOGIN_YET);
+  return (
+    <form
+      action={action}
+      className="flex max-w-[26rem] flex-col gap-4"
+      noValidate
+    >
+      <div>
+        <label htmlFor="proper-email" className="field-label">
+          Your email
+        </label>
+        <input
+          id="proper-email"
+          name="email"
+          type="email"
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          required
+          defaultValue={state.values.email ?? ""}
+          aria-invalid={state.fields.email ? true : undefined}
+          aria-describedby={
+            state.fields.email ? "proper-email-error" : undefined
+          }
+          className="field"
+        />
+        {state.fields.email ? (
+          <p id="proper-email-error" className="field-error">
+            {state.fields.email}
+          </p>
+        ) : null}
+      </div>
+      <div>
+        <label htmlFor="proper-password" className="field-label">
+          Choose a password
+        </label>
+        <input
+          id="proper-password"
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={12}
+          aria-invalid={state.fields.password ? true : undefined}
+          aria-describedby={
+            state.fields.password
+              ? "proper-password-error"
+              : "proper-password-hint"
+          }
+          className="field"
+        />
+        {state.fields.password ? (
+          <p id="proper-password-error" className="field-error">
+            {state.fields.password}
+          </p>
+        ) : (
+          <p
+            id="proper-password-hint"
+            className="bk-muted mt-1.5 text-[0.9375rem] leading-snug"
+          >
+            At least 12 characters. A few words run together works well.
+          </p>
+        )}
+      </div>
+      {state.error ? (
+        <p role="alert" className="bk-notice bk-notice-bad">
+          {state.error}
+        </p>
+      ) : null}
+      <div>
+        <SubmitButton pending="Saving">Make it my login</SubmitButton>
+      </div>
+    </form>
   );
 }
