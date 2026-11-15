@@ -193,6 +193,61 @@ test.describe("the page", () => {
     });
   });
 
+  test("lines every section's edges up on a wide screen", async ({ page }) => {
+    // A section's words start and stop at the same two edges as every other
+    // section's: a page in the middle, a gutter either side. The header, the
+    // hero and the ritual used to sit 64px in from the sections around them
+    // on any screen from about 1,280 wide (tests/brand/page-width.test.ts
+    // says how). A phone cannot show it, so this looks where it shows.
+    for (const width of [1280, 1440, 1920]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const path of ["/", "/checkout", "/backstage/brand"]) {
+        await page.goto(path);
+        const boxes = await page
+          .locator(".max-w-page, .max-w-page-gutters")
+          .evaluateAll((all) =>
+            all
+              // A box inside another is laid out by the one around it.
+              .filter(
+                (box) =>
+                  box.parentElement?.closest(
+                    ".max-w-page, .max-w-page-gutters",
+                  ) === null,
+              )
+              .map((box) => {
+                const style = getComputedStyle(box);
+                const rect = box.getBoundingClientRect();
+                const within = box.closest("section, header, footer, nav");
+                return {
+                  in: `${within?.tagName.toLowerCase() ?? "?"}${within?.id ? `#${within.id}` : ""}`,
+                  shown: rect.width > 0,
+                  left: Math.round(
+                    rect.left + Number.parseFloat(style.paddingLeft),
+                  ),
+                  right: Math.round(
+                    rect.right - Number.parseFloat(style.paddingRight),
+                  ),
+                };
+              })
+              .filter((box) => box.shown),
+          );
+        const where = `${path} at ${String(width)}px`;
+        expect(boxes.length, where).toBeGreaterThan(1);
+        const first = boxes[0];
+        for (const box of boxes) {
+          expect(
+            Math.abs(box.left - (first?.left ?? 0)),
+            `${box.in} starts at ${String(box.left)}, ${first?.in ?? ""} at ${String(first?.left ?? 0)}: ${where}`,
+          ).toBeLessThanOrEqual(1);
+          expect(
+            Math.abs(box.right - (first?.right ?? 0)),
+            `${box.in} ends at ${String(box.right)}, ${first?.in ?? ""} at ${String(first?.right ?? 0)}: ${where}`,
+          ).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+  });
+
   test("cuts nothing off when a reader spaces the text out", async ({
     page,
   }) => {

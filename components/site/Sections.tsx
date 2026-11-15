@@ -245,7 +245,7 @@ export function Ritual() {
       aria-labelledby="ritual-title"
       className="bg-cream scroll-mt-16 overflow-hidden pt-16 pb-14 md:pt-24 md:pb-20"
     >
-      <div className="max-w-page px-gutter mx-auto">
+      <div className="max-w-page-gutters px-gutter mx-auto">
         <div data-reveal className="max-w-[40rem]">
           <p className="label text-pink-deep text-[1.2rem]">{RITUAL.eyebrow}</p>
           <h2
@@ -398,7 +398,7 @@ export function ReelsSection() {
       aria-labelledby="reels-title"
       className="bg-olive-wash border-navy overflow-hidden border-y-[3px] py-14 md:py-20"
     >
-      <div className="max-w-page px-gutter mx-auto" data-reveal>
+      <div className="max-w-page-gutters px-gutter mx-auto" data-reveal>
         <p className="label text-pink-deep text-[1.2rem]">{REELS.eyebrow}</p>
         <h2
           id="reels-title"

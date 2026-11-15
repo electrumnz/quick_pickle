@@ -105,6 +105,15 @@
   /* --- layout ----------------------------------------------------------- */
   --spacing-gutter: clamp(1.25rem, 5vw, 4rem);
   --container-page: 76rem;
+  /* A page, with a gutter either side counted in: for a box that carries its
+     own gutters (`max-w-page-gutters px-gutter`). What is inside it is then
+     exactly a page wide, the same as a `max-w-page` box that sits inside
+     somebody else's gutters, so every section's edges line up on a wide
+     screen. `max-w-page px-gutter` on one box is a page less two gutters, and
+     sat 64px in from its neighbours until a test started measuring them. */
+  --container-page-gutters: calc(
+    var(--container-page) + 2 * var(--spacing-gutter)
+  );
 }
 
 :root {

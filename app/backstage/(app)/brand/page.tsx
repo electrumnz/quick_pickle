@@ -192,7 +192,7 @@ export default async function BrandGuidePage() {
         aria-label="Guide sections"
         className="bg-paper border-navy sticky top-0 z-30 border-b-[3px]"
       >
-        <ul className="max-w-page px-gutter no-scrollbar mx-auto flex gap-1 overflow-x-auto">
+        <ul className="max-w-page-gutters px-gutter no-scrollbar mx-auto flex gap-1 overflow-x-auto">
           {SECTIONS.map((section) => (
             <li key={section.id} className="shrink-0">
               <a
@@ -206,7 +206,7 @@ export default async function BrandGuidePage() {
         </ul>
       </nav>
 
-      <div className="max-w-page px-gutter mx-auto pb-20">
+      <div className="max-w-page-gutters px-gutter mx-auto pb-20">
         <Section id="idea" title="The idea" lead={IDEA.summary}>
           <div className="grid gap-8 lg:grid-cols-2 [&>*]:min-w-0">
             <div>

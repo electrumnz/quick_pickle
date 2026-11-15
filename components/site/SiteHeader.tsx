@@ -24,7 +24,7 @@ export function SiteHeader({
 }) {
   return (
     <header className="on-navy bg-navy border-navy-deep sticky top-0 z-40 border-b-[3px]">
-      <div className="max-w-page px-gutter mx-auto flex h-14 items-center justify-between gap-4 md:h-16">
+      <div className="max-w-page-gutters px-gutter mx-auto flex h-14 items-center justify-between gap-4 md:h-16">
         <Link
           href="/"
           prefetch={false}

@@ -34,7 +34,7 @@ export default async function CheckoutPage({
     <>
       <FreshOffer offer={offer} />
       <header className="on-navy bg-navy border-navy-deep border-b-[3px]">
-        <div className="max-w-page px-gutter mx-auto flex h-14 items-center justify-between gap-4 md:h-16">
+        <div className="max-w-page-gutters px-gutter mx-auto flex h-14 items-center justify-between gap-4 md:h-16">
           <Link
             href="/"
             aria-label={HEADER.home}
