@@ -8,8 +8,9 @@ Zealand. The juice is clear. There are no pickles in the bottle.
    customers, stock, the inbox, marketing, plans and budget, automations. Accounting is the
    one thing it will never do; that is Xero's job.
 
-There is no human writing code here. The owner (Sam) has handed the repository, the
-database and the hosting to Claude: build it, verify it, merge it.
+There is no human writing code here. Sam, who had it built, handed the repository, the
+database and the hosting to Claude: build it, verify it, merge it. It is now being handed
+to Ash, and "Whose it is" below says what that changes.
 
 The brand is Ashleigh Lennard's: the logo, Lucky the superhero cat, the three colours and
 the four fonts. "Brand Guide v2" (Grok's write-up of her files) is a starting point, not a
@@ -21,6 +22,33 @@ until Sam renamed it `quick_pickle` on 12 November 2026) is the umbrella the pro
 under. Whether it ever shows on the pack or the site, and in what
 words, is Ashleigh's call and is not made yet, so until then it appears nowhere a customer
 can see.
+
+## Whose it is
+
+Sam had this built, for Ash. On 16 November 2026 (New Zealand time) he said the build was
+done and asked for everything to be written into the repository so it could be handed to
+her. `HANDOVER.md` is her way in, `docs/ACCOUNTS.md` is how each account moves, and
+`TODO.md` starts with the list for the handover itself.
+
+**What Sam allowed, Sam allowed.** Two things this file says are his own say-so, given
+for the build: Claude merges its own pull requests once CI is green, and Claude changes
+production's settings through the infra workflow. They stand while the repository is his.
+They do not pass to a new owner by being written here. A file is not a person saying yes.
+
+Once the repository is Ash's (on GitHub it has left the `electrumnz` account):
+
+- **Ask her once, at the start, how much she wants done without asking**, and write her
+  answer in this section, with the date, in her own words. Until she has said: open the
+  pull request, say what it does in a sentence a shop owner can follow, and wait for her
+  yes before merging it, and before any infra action other than `status`.
+- What goes live is hers to say. Sam may still be about to help, and that does not make
+  his go-ahead hers.
+- If it is not clear who a session is working for, ask.
+
+None of this touches the rules of the product. No health claims, true facts and the copy
+rules do not depend on who is asking: they come from the law, and `legal/COPY-RULES.md`
+says where. Changing one is a decision for the owner with a food lawyer, made in that
+file, never a favour done in a chat.
 
 ## Non-negotiables
 
@@ -121,6 +149,7 @@ lib/mail/              the sending seam (off, or Resend), an email written as pi
 lib/brand/             tokens.css (the only file with a hex), base.css, fonts, art data
 lib/time.ts            New Zealand time. Every conversion goes through it.
 legal/                 COPY-RULES.md and the scanner
+docs/                  the handover documents. `docs/starter` is written by a script
 tests/  e2e/           vitest and Playwright
 ```
 
@@ -1102,6 +1131,28 @@ scripts take its path as an argument.
 
 Video and reels go in the slots in `content/media.ts`, encoded by `scripts/build-media.mjs`.
 
+### The documents
+
+- `HANDOVER.md` is for the owner, in plain words: what there is, where it stands, what is
+  hers to decide. `docs/ACCOUNTS.md` is every account, setting and key by name, never a
+  value, and how each is handed on. `TODO.md` is the full list with the reasons.
+  **Keep the three true** when something they describe changes: a new setting on the
+  host, a new infra action, a job crossed off. `tests/core/handover-docs.test.ts` fails
+  on a link in them that leads nowhere, and on anything in them shaped like a key.
+- **`docs/starter` is written by a script.** The drafts the back end starts with (the
+  how-to sheets, the plans, the policies, the questions, the compliance list, the lines
+  of the budget) are data in `lib/backstage/plans/starter`. `npm run docs:export` writes
+  them out as Markdown, and `tests/backstage/starter-docs.test.ts` fails when the folder
+  is not exactly what the data makes. Never edit those files by hand. They are the
+  starting drafts and not the working copy: once somebody has changed a sheet in the
+  back end, the back end is where it lives, and every file says so at the top.
+- A link in those files to a screen of the back end carries the shop's whole address
+  (`LIVE_SITE` in `lib/backstage/plans/starter/export.ts`). Change it when the shop has
+  its own domain, and run the export again.
+- The copy scanner reads what a customer can read. It does not read `docs/` or the
+  Markdown at the top of the repository, which quote the very lines the site may not
+  say in order to explain why.
+
 ## Conventions
 
 - **`npm run typecheck` is not sufficient.** Verify with `npm run build`.
@@ -1150,10 +1201,11 @@ checkout -- <path>`, `git add -A` or `db:generate` but the one integrating, and 
 Production follows `main`; every other branch gets a preview. Never push a red build to
 `main`: Vercel keeps the last good deployment, so a failed build silently freezes
 production rather than breaking it. Claude merges its own pull requests once CI is green
-(Sam, 12 November 2026: "you own all three").
+(Sam, 12 November 2026: "you own all three"). That is Sam's say-so and holds while the
+repository is his: "Whose it is", near the top, says what holds after.
 
-Quick Pickle is moving to its own free Vercel account and its own Supabase organisation,
-both apart from Keece. Production needs `DATABASE_URL` or `POSTGRES_URL` (Production
+Quick Pickle has its own free Vercel account and its own Supabase organisation, both
+apart from Keece. Production needs `DATABASE_URL` or `POSTGRES_URL` (Production
 environment only) and `BACKSTAGE_SETUP_CODE`. Vercel's free plan does not allow a business
 that takes money, so launch means either Vercel Pro or moving hosting to Cloudflare: keep
 the app free of Vercel-only services in its core paths so that move stays cheap.

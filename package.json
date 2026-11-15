@@ -19,6 +19,7 @@
     "audit:copy:selftest": "node legal/scripts/test-audit.mjs",
     "db:generate": "drizzle-kit generate && node scripts/embed-migrations.mjs",
     "db:check": "node scripts/embed-migrations.mjs --check",
+    "docs:export": "QP_WRITE_DOCS=1 vitest run tests/backstage/starter-docs.test.ts",
     "prelaunch": "node scripts/prelaunch.mts",
     "lhci": "lhci autorun"
   },
