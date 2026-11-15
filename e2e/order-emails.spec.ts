@@ -63,7 +63,7 @@ test("marking an order as shipped writes its on-the-courier email, which is sett
         "Order emails are not being sent, so the customer is not told: let them know yourself.",
       ),
     ).toBeVisible();
-    await page.getByLabel("Courier", { exact: true }).fill("NZ Post");
+    await page.selectOption("#courier", "nzpost");
     await page
       .getByLabel("Tracking number", { exact: true })
       .fill("LZ601155601NZ");

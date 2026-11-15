@@ -51,7 +51,7 @@ Before you start: clean, dry hands and a clear bench.
 ## Send it
 
 13. [ ] On the order, press **Mark as packed**.
-14. [ ] When the courier has it, enter the courier and the tracking number and press **Mark as shipped**. This cannot be undone, so check you are on the right order. With more than a couple of orders, use the [Courier](${LINK.courier}) screen: it gives the courier's website every packed order as one file, and takes the tracking numbers back in one go.
+14. [ ] When the courier has it, pick the courier from the list, type the tracking number off the label and press **Mark as shipped**. The link the customer follows is worked out for you. This cannot be undone, so check you are on the right order. With more than a couple of orders, use the [Courier](${LINK.courier}) screen: it gives the courier's website every packed order as one file, and takes the tracking numbers back in one go.
 15. [ ] Put the slip in the box, or file it: ____.
 
 ## If something is not right

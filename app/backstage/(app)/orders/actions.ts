@@ -11,7 +11,13 @@ import {
 } from "@/lib/backstage/orders/ops";
 import { retrySend } from "@/lib/backstage/mail/outbound";
 import { packedFromForm } from "@/lib/backstage/stock/pack-form";
-import { formCents, formText, submit } from "@/lib/backstage/ui/submit";
+import { shipWith } from "@/lib/backstage/orders/couriers";
+import {
+  formCents,
+  formText,
+  sayAndGo,
+  submit,
+} from "@/lib/backstage/ui/submit";
 import type { NzRegion } from "@/lib/shop/order";
 
 /**
@@ -37,13 +43,22 @@ export async function packAction(form: FormData): Promise<void> {
 }
 
 export async function shipAction(form: FormData): Promise<void> {
+  // The courier is picked from the list the courier screen uses, and for
+  // one of those the tracking link is worked out, never pasted.
+  const details = shipWith({
+    courier: formText(form, "courier"),
+    courierName: formText(form, "courierName"),
+    trackingNumber: formText(form, "trackingNumber"),
+    trackingUrl: formText(form, "trackingUrl"),
+  });
+  if (!details.ok) sayAndGo(page(form), details.why, "bad");
   await submit(
     markShipped,
     {
       number: formText(form, "number"),
-      carrier: formText(form, "carrier") || undefined,
-      trackingNumber: formText(form, "trackingNumber") || undefined,
-      trackingUrl: formText(form, "trackingUrl") || undefined,
+      carrier: details.carrier ?? undefined,
+      trackingNumber: details.trackingNumber ?? undefined,
+      trackingUrl: details.trackingUrl ?? undefined,
     },
     { back: page(form), done: "Shipped." },
   );

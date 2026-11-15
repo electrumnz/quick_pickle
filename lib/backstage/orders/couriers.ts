@@ -106,3 +106,68 @@ export function trackingLink(
   if (number === null) return null;
   return courier.track.replace("{number}", encodeURIComponent(number));
 }
+
+/** What one order's shipping form came to, or why it cannot be used. */
+export type ShipWith =
+  | {
+      readonly ok: true;
+      readonly carrier: string | null;
+      readonly trackingNumber: string | null;
+      /** The page a customer is sent to follow the parcel, if there is one. */
+      readonly trackingUrl: string | null;
+    }
+  | { readonly ok: false; readonly why: string };
+
+/**
+ * What the shipping form on one order's page comes to.
+ *
+ * For a courier on the list its name is ours to write, and the link is
+ * worked out from the number: nobody pastes one. A number that does not
+ * read as a tracking number is refused there, before anything is shipped,
+ * because shipping cannot be undone and the customer is emailed whatever
+ * was typed.
+ *
+ * For any other courier the name and the number are taken as typed, and a
+ * link only if the person shipping pasted one. They are looking at it. We
+ * do not know where that courier's tracking page is, and do not guess.
+ */
+export function shipWith(typed: {
+  readonly courier: string;
+  readonly courierName: string;
+  readonly trackingNumber: string;
+  readonly trackingUrl: string;
+}): ShipWith {
+  const known = knownCourier(typed.courier.trim());
+  const number = typed.trackingNumber.trim();
+  if (known !== null) {
+    if (number === "") {
+      return {
+        ok: true,
+        carrier: known.name,
+        trackingNumber: null,
+        trackingUrl: null,
+      };
+    }
+    const read = asTrackingNumber(number);
+    if (read === null) {
+      return {
+        ok: false,
+        why: "That does not look like a tracking number. Check it against the label, or leave it empty to ship without one. Nothing has been shipped.",
+      };
+    }
+    return {
+      ok: true,
+      carrier: known.name,
+      trackingNumber: read,
+      trackingUrl: trackingLink(known, read),
+    };
+  }
+  const name = typed.courierName.trim();
+  const link = typed.trackingUrl.trim();
+  return {
+    ok: true,
+    carrier: name === "" ? null : name,
+    trackingNumber: number === "" ? null : number,
+    trackingUrl: link === "" ? null : link,
+  };
+}
