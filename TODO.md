@@ -259,9 +259,14 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       waits for a person's tick. The two numbers are checked for a slipped digit. They
       show under "What's in it?", in the terms of sale, on a receipt and on a purchase
       order.
-- [ ] **Still in the files:** the line across the top of the shop and the video slots
-      (`content/media.ts`). The line needs a draft and the copy rules before it is
-      published, the way a landing page has them, and a video needs somewhere to be kept.
+- [x] **The line across the top of the shop, from the back end.** Marketing, Landing
+      pages, The line across the top: type the lines, save the draft, look at the shop
+      with it on (a preview only staff can open), and publish. The copy rules are run
+      over the words first, the way they are for a landing page. One press puts the
+      site's own line back and keeps yours as the draft. A special that is switched on
+      still says itself first in the line.
+- [ ] **Still in the files:** the video slots (`content/media.ts`). A video needs
+      somewhere to be kept before it can be put up from the back end.
 - [x] **Numbers.** Sales, visits and how far they get (our own count, no cookies, nobody
       identified), where visits came from with the sales from each, phones against
       desktops, and how the crew list is moving.

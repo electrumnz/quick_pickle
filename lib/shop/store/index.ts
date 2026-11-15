@@ -153,6 +153,12 @@ export type Store = {
    */
   currentOffer?(): Promise<Offer>;
   /**
+   * The line of words across the top of the shop, when the back end has
+   * published one, or null for the site's own. Only the database store has
+   * one to give.
+   */
+  currentTopLine?(): Promise<readonly string[] | null>;
+  /**
    * The code somebody is given for joining the Pickle Crew, if one is set
    * up and could be used right now.
    */
@@ -313,6 +319,15 @@ function dbStore(env: Record<string, string | undefined>): Store {
         systemCaller("The shop", "storefront"),
       );
       return shop.offer;
+    },
+    async currentTopLine() {
+      const { topLineNow } = await import("@/lib/backstage/shop/top-line");
+      const line = await execute(
+        topLineNow,
+        {},
+        systemCaller("The shop", "storefront"),
+      );
+      return line.lines;
     },
     async welcomeCode() {
       const { crewWelcomeCode } =

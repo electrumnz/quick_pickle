@@ -12,6 +12,7 @@ import {
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { execute } from "@/lib/backstage/core/op";
 import { listPages } from "@/lib/backstage/pages/ops";
+import { shopTopLine } from "@/lib/backstage/shop/top-line";
 import { siteUrl } from "@/lib/site";
 
 import {
@@ -33,7 +34,11 @@ export default async function PagesPage({
 }) {
   const staff = await requireStaff();
   const { notice, tone } = await searchParams;
-  const rows = await execute(listPages, {}, await staffCaller());
+  const caller = await staffCaller();
+  const [rows, topLine] = await Promise.all([
+    execute(listPages, {}, caller),
+    execute(shopTopLine, {}, caller),
+  ]);
   const canWrite = staff.role !== "viewer";
   const site = siteUrl();
 
@@ -101,6 +106,30 @@ export default async function PagesPage({
             ))}
           </ul>
         )}
+      </Panel>
+
+      <Panel title="The line across the top" className="mt-6">
+        <p className="leading-snug">
+          The line of words that runs across the very top of the shop, on every
+          one of these pages and on the standard page.{" "}
+          {topLine.standard
+            ? "The shop is showing its standard line."
+            : "The shop is showing a line you published."}
+          {topLine.changed ? " There is a draft that is not published." : ""}
+        </p>
+        <p className="bk-muted mt-2 text-[0.9375rem] leading-snug [overflow-wrap:anywhere]">
+          {topLine.showing.join(" \u00b7 ")}
+        </p>
+        <p className="mt-4">
+          <Link
+            href="/backstage/marketing/pages/top-line"
+            className="bk-btn bk-btn-quiet"
+          >
+            <span className="cap-trim">
+              {canWrite ? "Change the line" : "See the line"}
+            </span>
+          </Link>
+        </p>
       </Panel>
 
       <Panel title="Start a landing page" className="mt-6">

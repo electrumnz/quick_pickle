@@ -70,4 +70,9 @@ export function registerHandlers(): void {
     stopSayingUsedUpSpecial(),
   );
   on("shop.changed", "show the new prices at once", showShopChange());
+  on(
+    "shop.line_changed",
+    "show the new line across the top at once",
+    showShopChange(),
+  );
 }

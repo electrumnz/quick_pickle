@@ -42,6 +42,7 @@ export const LINK = {
   goLive: "/backstage/settings/go-live",
   shop: "/backstage/settings/shop",
   label: "/backstage/settings/label",
+  topLine: "/backstage/marketing/pages/top-line",
   claude: "/backstage/settings/claude",
   campaigns: "/backstage/marketing/campaigns",
   doNotEmail: "/backstage/inbox/settings#do-not-email",

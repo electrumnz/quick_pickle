@@ -16,6 +16,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { StickyBuyBar } from "@/components/site/StickyBuyBar";
 import { offerForPage } from "@/lib/shop/offer-now";
 import { specialForPage } from "@/lib/shop/special-now";
+import { topLineForPage } from "@/lib/shop/top-line-now";
 
 /**
  * Quick Pickle, the one page.
@@ -46,11 +47,17 @@ export async function ShopPage({
   words,
   page = "home",
   preview = false,
+  line,
 }: {
   readonly words?: HeroWords;
   readonly page?: string;
   /** A member of staff looking at a draft. The visit counter stays quiet. */
   readonly preview?: boolean;
+  /**
+   * Words to run across the top in place of what is published: a member of
+   * staff looking at a draft of the line. Never set on a public page.
+   */
+  readonly line?: readonly string[];
 }) {
   // What is on sale, for how much. Asked for once and handed down, so every
   // price and every word about delivery on the page is from one offer (the
@@ -59,9 +66,12 @@ export async function ShopPage({
   // A special that is on is said twice: first in the line across the top,
   // and again where the packs are picked. Usually there is none.
   const special = await specialForPage();
+  // The line across the top is the site's own unless the back end has
+  // published another (null is the site's own).
+  const topLine = line ?? (await topLineForPage());
   return (
     <>
-      <TopTicker special={special} />
+      <TopTicker special={special} lines={topLine} />
       <SiteHeader />
       <main
         id="main"
