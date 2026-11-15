@@ -110,6 +110,17 @@ Updated 12 November 2026. Honest status, not a summary.
      and answer that reply from the phone: it joins the same conversation.
      `MAIL_INBOUND_SECRET` is not needed for any of this. It is for a mail forwarder of
      our own, if Resend's receiving is ever not used.
+- [ ] **Before the first campaign to the Pickle Crew.** Three things, in this order.
+  1. Connect email and the webhook (both above). The webhook is how a bounce or a spam
+     complaint about a campaign takes somebody off the list. Without it they would be
+     written to again.
+  2. Enter who the company is (Settings, The label and the company) and the address
+     customers write to (Settings, The shop). They are printed under every campaign
+     email: marketing email has to say who sent it and how to reach them. A campaign's
+     page shows the line as it will print.
+  3. Send the first one while the list is still only yourselves. Open it on a phone,
+     then press the unsubscribe link in it and see that you come off the list. The
+     how-to "How to email the Pickle Crew" (Plans) has the steps.
 - [ ] **Tell pre-order customers the ship date.** The delivery page and the "order's in"
       page promise the ship date by email before anything is sent. Once email is connected
       it is one press: set the date in Settings, The shop, and the panel under it says who
