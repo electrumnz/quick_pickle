@@ -1128,6 +1128,13 @@ Video and reels go in the slots in `content/media.ts`, encoded by `scripts/build
 - With several agents in the tree: each owns its folders, nobody runs `git stash`, `git
 checkout -- <path>`, `git add -A` or `db:generate` but the one integrating, and every
   build takes a private `NEXT_DIST_DIR`.
+- **A test that reads the real clock is run at every hour of the day.** The demo's month
+  of visits was laid out in blocks of 24 hours counted back from now, while Numbers
+  counts New Zealand calendar days. So one test failed for the first half hour after
+  midnight here and passed for the other twenty-three and a half, until somebody pushed
+  at five past twelve (15 November 2026). Anything laid out by day goes through
+  `lib/time.ts`, and its test makes it at fixed moments as well: just after midnight
+  here, just before, and on the days the clocks change.
 - ESLint 9 not 10, TypeScript 6 not 7: both held back on purpose by the Next toolchain.
 - Customer-facing writing is plain everyday New Zealand English with British spelling.
 

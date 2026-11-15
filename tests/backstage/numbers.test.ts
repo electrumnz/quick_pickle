@@ -8,6 +8,7 @@ import { systemCaller, type Caller } from "@/lib/backstage/core/actor";
 import { execute } from "@/lib/backstage/core/op";
 import { joinCrew, leaveCrew } from "@/lib/backstage/crew/ops";
 import { seedDemoData } from "@/lib/backstage/demo";
+import { seedNumbersDemo } from "@/lib/backstage/numbers/demo";
 import {
   KEEP_VISITS_DAYS,
   numbersSummary,
@@ -27,7 +28,7 @@ import { newId } from "@/lib/db/id";
 import type { PaymentProvider } from "@/lib/shop/payments";
 import { placeOrder } from "@/lib/shop/place-order";
 import { getStore } from "@/lib/shop/store";
-import { nzToInstant } from "@/lib/time";
+import { addDays, nzDateKey, nzToInstant, startOfNzDay } from "@/lib/time";
 import { FILE_OFFER } from "@/lib/shop/offer";
 
 /**
@@ -746,4 +747,56 @@ describe("the demo's month of visits", () => {
     expect(numbers.daily).toHaveLength(30);
     expect(numbers.daily.every((day) => day.visits > 0)).toBe(true);
   });
+});
+
+describe("the demo's month of visits, whatever the time it is made", () => {
+  // The month is thirty New Zealand calendar days, because that is how
+  // Numbers counts a day. It used to be thirty blocks of 24 hours counted
+  // back from the moment of seeding, so for the first while after midnight
+  // here "today" had no visit, and the test above failed for whoever
+  // pushed at that hour (15 November 2026, at five past twelve at night).
+  const moments: readonly (readonly [string, Date])[] = [
+    ["five seconds into the day", nzToInstant(2026, 11, 16, 0, 0, 5)],
+    ["five past midnight", nzToInstant(2026, 11, 16, 0, 5)],
+    ["the middle of the day", nzToInstant(2026, 11, 16, 12, 30)],
+    ["half a minute before midnight", nzToInstant(2026, 11, 16, 23, 59, 30)],
+    // The clocks went forward that morning: a day of 23 hours.
+    ["the day the clocks go forward", nzToInstant(2026, 9, 27, 9, 0)],
+    // And back: a day of 25, with one hour that happens twice.
+    ["the day the clocks go back", nzToInstant(2026, 4, 5, 2, 30)],
+  ];
+
+  for (const [when, now] of moments) {
+    it(`has somebody on every one of its thirty days, and nobody in the future: ${when}`, async () => {
+      const handle = await openEmbedded();
+      try {
+        await seedNumbersDemo(handle.db, now);
+        const numbers = await execute(
+          numbersSummary,
+          { days: 30 },
+          systemCaller("A test", "script"),
+          { db: handle.db, now },
+        );
+        expect(numbers.daily).toHaveLength(30);
+        expect(numbers.daily.at(-1)?.day).toBe(nzDateKey(now));
+        expect(
+          numbers.daily.filter((day) => day.visits === 0).map((day) => day.day),
+        ).toEqual([]);
+
+        // Every step that was written is inside those thirty days, and
+        // none of it has not happened yet.
+        const rows = await handle.db
+          .select({ at: pageEvents.at })
+          .from(pageEvents);
+        const first = startOfNzDay(addDays(nzDateKey(now), -29)).getTime();
+        expect(rows.length).toBeGreaterThan(150);
+        for (const row of rows) {
+          expect(row.at.getTime()).toBeGreaterThanOrEqual(first);
+          expect(row.at.getTime()).toBeLessThanOrEqual(now.getTime());
+        }
+      } finally {
+        await handle.close();
+      }
+    });
+  }
 });
