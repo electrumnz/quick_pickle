@@ -238,6 +238,9 @@ export const SYSTEM_ONLY: ReadonlySet<string> = new Set([
   // Who can sign in. People only, and owners at that.
   "staff.list",
   "staff.createFirstOwner",
+  "staff.createPinOwner",
+  "staff.setNewPin",
+  "staff.makeProperLogin",
   "staff.invite",
   "staff.update",
   "staff.sendPasswordLink",

@@ -5,6 +5,7 @@ import { ShopLink } from "@/components/backstage/ShopLink";
 import { DESTINATIONS } from "@/components/backstage/nav";
 import { PageHeader, Panel } from "@/components/backstage/ui";
 import { requireStaff } from "@/lib/backstage/auth/current";
+import { isPinLogin } from "@/lib/backstage/auth/pin";
 import { backstageMode } from "@/lib/backstage/mode";
 
 import { signOutAction } from "../../(door)/actions";
@@ -41,7 +42,9 @@ export default async function MorePage() {
 
       <Panel title="You" className="mt-6">
         <p className="font-semibold">{staff.name}</p>
-        <p className="bk-muted">{staff.email}</p>
+        <p className="bk-muted">
+          {isPinLogin(staff) ? "Signed in with the PIN" : staff.email}
+        </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <ShopLink className="bk-btn bk-btn-quiet">
             <span className="cap-trim">View the shop</span>

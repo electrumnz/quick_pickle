@@ -102,7 +102,7 @@ checkout, our orders.
 ```
 app/(site)/            the shop: the page, /checkout, /order/thanks, the fine print,
                        landing pages (/for/<slug>) and their staff preview (/preview/<id>)
-app/backstage/(door)/  sign-in, first-time set-up, choose a password
+app/backstage/(door)/  sign-in, first-time set-up (and a new PIN), choose a password
 app/backstage/(app)/   everything behind the door, one folder per area
 app/layout.tsx         the document, the fonts and the shop's stylesheet. No script.
 proxy.ts               in front of /backstage (path header, no-store, noindex) and of
@@ -276,6 +276,56 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
 - **Sign-in:** named accounts with roles (owner, staff, viewer). argon2id passwords,
   sessions stored as hashes, lock-out after five wrong tries, one-time links for invitations.
   The first owner is made once at `/backstage/set-up` with `BACKSTAGE_SETUP_CODE`.
+- **For now the first owner comes in with a PIN**, and the shop's footer has a plain
+  **Staff** link to the door (Sam, 15 November 2026: "a link in the footer and a pin for
+  now. its not a live active website"). `lib/backstage/auth/pin.ts` is the whole idea.
+  - The PIN login is an ordinary owner account whose email is a stand-in
+    (`pin@backstage.invalid`). That is how there is at most one, and how everything else
+    tells (`isPinLogin`). Nobody is invited under a `.invalid` address, and the email
+    door never opens it. **A screen that shows a staff member's email asks `isPinLogin`
+    first:** the stand-in is never shown as an address, or written to. `staff.list`
+    hands back no email for it at all.
+  - **A PIN is short, so the door counts wrong tries for everybody together** (`pin:door`
+    in `throttle.ts`), not for each address: five in a day locks it, and each lock is
+    twice the last, up to a day. A right PIN wipes the count and not the ladder, or a
+    guesser would get a fresh run of short locks whenever the owner came in. Locked means
+    the right PIN is turned away with the rest.
+  - **A try is counted before the PIN is looked at** (`takePinTry`), in one statement
+    the database runs by itself, and the count is wiped if the PIN turns out right. The
+    first version looked first and counted after, and a test sent thirty guesses in the
+    same instant: every one read "no wrong tries yet" and the twentieth, the right one,
+    walked in. Only the first five in a day are ever checked against the PIN. (An
+    email's counter still looks first. Against a password of twelve characters a burst
+    buys nothing, but it is the same weakness: count first if that door is touched.)
+  - **The set-up code is what stands behind it.** It makes the PIN, it sets a new one
+    (`/backstage/set-up` lives on for that while a PIN login exists), it wipes the lock,
+    and it is mixed into the PIN before the PIN is hashed, so a copy of the database
+    alone gives nobody the PIN. Change the set-up code and the PIN stops working: set a
+    new one.
+  - **Nothing a PIN session does can put the set-up code out of reach.** Swapping the
+    PIN for a proper login takes the set-up code as well as being signed in, and
+    `staff.update` refuses to switch the PIN login off or turn it down. Without those,
+    somebody who only knew the PIN could shut the real owner out in one press, and only
+    the database would undo it (an independent review, 15 November 2026). They can
+    still make themselves an owner: the real one sets a new PIN and reads the staff list.
+  - **Whoever has just proved themselves is let in without a counter** (`signInProven`):
+    after the set-up code, a one-time link, or a swap made while signed in. A counter is
+    anybody's to run up. The same review found the door could be locked before the
+    first owner was made, and filled again in the instant after a new PIN wiped it.
+  - **Setting a login again cuts off every Claude connected under it** (`cutConnectionsOf`,
+    in `lib/backstage/connect/cut.ts`): a new PIN, the swap, and a new password link.
+    Signing browsers out is not enough. A connection renews itself and never asks for
+    the PIN again, so whoever had the old one could have left a Claude of their own in.
+  - **Tries at the set-up code are counted against the caller's own address, never a
+    counter everybody shares.** Otherwise whoever locked the PIN door could lock the way
+    round it for five more tries. That is safe because the code is long and random (the
+    infra script makes it), which a PIN is not.
+  - **It is not ready for launch, and says so.** The go-live list counts a PIN door as
+    open work. Settings, Staff has one form (`staff.makeProperLogin`) that turns the same
+    account into an email and a password, so everything it did keeps its name. After
+    that the PIN and the set-up page are gone for good, and the set-up code opens
+    nothing.
+  - A PIN login is never given a password link: the door could not check a password.
 - `requireStaff()` is the lock, called by every page and (through `staffCaller()`) every
   action. `proxy.ts` is not the lock.
 - **Outward and irreversible operations** (`effect: "outward" | "destructive"`) need a yes.
@@ -312,7 +362,9 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
   - Both browser-test servers are given a secret, so every form the tests press goes
     through the seal.
 - The old build's "one shared password, no email" rule was dropped on purpose: with several
-  people and bots at work the activity log has to say who did what. Its "no MCP" decision is
+  people and bots at work the activity log has to say who did what. (The PIN above is
+  one named owner's login. Hand it to a second person and the log says one name for
+  both, which is one more reason it goes before launch.) Its "no MCP" decision is
   also reversed: a member of staff can connect their own Claude, over the same operations
   (see "Claude, connected" below).
 
@@ -898,7 +950,9 @@ screen. `lib/backstage/connect/` is all of it.
   what. What it may do is the lesser of what was chosen on the consent screen and what the
   person may do, never an owner's reach, and it is read again on every call: switch the
   person off and their Claude is off. Somebody who can only look cannot connect one, and
-  turned down to that, theirs stops until they are turned back up.
+  turned down to that, theirs stops until they are turned back up. A new password link
+  for the person, a new PIN, or a PIN swapped for a proper login cuts their connections
+  off as well: whoever had the old way in could have connected a Claude of their own.
 - **The way in is OAuth, with nothing taken on trust.** An app registers itself and can
   only ever be sent back to Claude's own callback or to the person's own computer
   (`tokens.ts`), so a code can never go to somebody else's site whatever an app registers.
@@ -996,6 +1050,19 @@ screen. `lib/backstage/connect/` is all of it.
   first paint, the estimate counts them as blocking it, and identical bytes scored 2.4 s or
   2.9 s for the largest paint depending on a 20 ms race. Measured properly it is the first
   paint: about 1.7 s on slow 4G.
+- **Lighthouse measures a warm server** (`scripts/lhci-server.mjs`). With no database the
+  app boots one in its own process on the first requests it gets, and that froze the
+  server for six to nine seconds on a CI runner. So the first of every five samples
+  scored about 0.45, on `main` too, which left four real ones and made the median the
+  second-worst of four. A runner that happened to be slow then failed the check with the
+  shop's code unchanged (15 November 2026). The script asks for the front page until it
+  answers quickly three times running, and only then lets Lighthouse start. Production
+  has a real database and never does that boot, and the budget itself is untouched.
+  - **How fast the runner is moves the score more than most changes do.** Each report
+    carries the machine's own benchmark. The same page scored 0.98 and 0.99 on a runner
+    near 3,000 and 0.91 to 0.96 on one near 2,400, all of it in blocking time while the
+    page's script starts. Read the reports (the `lighthouse-reports` artifact) before
+    believing a small move either way.
 - **Lucky stays drawn into the page.** The home document is about 280 kB before it is
   squeezed (about 40 kB as Vercel sends it), and Lucky's drawing is 53 kB of that, twice over,
   because React sends its own copy of everything the server drew. It is tempting to move
@@ -1061,6 +1128,13 @@ Video and reels go in the slots in `content/media.ts`, encoded by `scripts/build
 - With several agents in the tree: each owns its folders, nobody runs `git stash`, `git
 checkout -- <path>`, `git add -A` or `db:generate` but the one integrating, and every
   build takes a private `NEXT_DIST_DIR`.
+- **A test that reads the real clock is run at every hour of the day.** The demo's month
+  of visits was laid out in blocks of 24 hours counted back from now, while Numbers
+  counts New Zealand calendar days. So one test failed for the first half hour after
+  midnight here and passed for the other twenty-three and a half, until somebody pushed
+  at five past twelve (15 November 2026). Anything laid out by day goes through
+  `lib/time.ts`, and its test makes it at fixed moments as well: just after midnight
+  here, just before, and on the days the clocks change.
 - ESLint 9 not 10, TypeScript 6 not 7: both held back on purpose by the Next toolchain.
 - Customer-facing writing is plain everyday New Zealand English with British spelling.
 

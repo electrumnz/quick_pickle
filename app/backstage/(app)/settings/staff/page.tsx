@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import {
   Notice,
@@ -8,12 +9,13 @@ import {
   When,
 } from "@/components/backstage/ui";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
+import { isPinLogin } from "@/lib/backstage/auth/pin";
 import { execute } from "@/lib/backstage/core/op";
 import { backstageMode } from "@/lib/backstage/mode";
 import { listStaff } from "@/lib/backstage/staff/ops";
 
 import { updateStaffAction } from "./actions";
-import { InviteForm, PasswordLinkForm } from "./forms";
+import { InviteForm, PasswordLinkForm, ProperLoginForm } from "./forms";
 
 export const metadata: Metadata = { title: "Staff" };
 
@@ -34,6 +36,10 @@ export default async function StaffPage({
   const staff = await execute(listStaff, {}, await staffCaller());
   const isOwner = me.role === "owner";
   const demo = backstageMode() === "demo";
+  // Whoever came in with the PIN is shown the way to a login of their own.
+  // (Swapping it is an owner's act, and the PIN login is made as one. If it
+  // has been turned down since, an owner invites that person instead.)
+  const withPin = !demo && isOwner && isPinLogin(me);
 
   return (
     <>
@@ -57,6 +63,34 @@ export default async function StaffPage({
         </div>
       ) : null}
 
+      {withPin ? (
+        <Panel title="You come in with a PIN" className="mb-6">
+          <p className="mb-2 max-w-[44rem] leading-snug">
+            That is fine while the shop is being set up. Before real
+            customers&rsquo; details are in here, give yourself a proper login:
+            an email and a password.
+          </p>
+          <p className="bk-muted mb-2 max-w-[44rem] leading-snug">
+            The email is only your login name. Nothing is sent to it, so any
+            address of yours will do. It takes the set-up code as well, so
+            nobody who only knows the PIN can take the back end over.
+          </p>
+          <p className="bk-muted mb-4 max-w-[44rem] leading-snug">
+            The PIN stops working as soon as this is saved, and any Claude
+            connected under it is cut off and connects again. To change the PIN
+            and keep it,{" "}
+            <Link
+              href="/backstage/set-up"
+              className="underline decoration-2 underline-offset-4"
+            >
+              set a new one with the set-up code
+            </Link>
+            .
+          </p>
+          <ProperLoginForm />
+        </Panel>
+      ) : null}
+
       <Panel flush>
         <ul className="bk-rows">
           {staff.map((person) => (
@@ -74,12 +108,13 @@ export default async function StaffPage({
                   {person.disabled ? (
                     <Pill tone="off">Switched off</Pill>
                   ) : null}
+                  {person.pin ? <Pill tone="todo">PIN</Pill> : null}
                   {!person.hasPassword && !demo ? (
                     <Pill tone="todo">No password yet</Pill>
                   ) : null}
                 </p>
                 <p className="bk-muted mt-0.5 text-[0.9375rem] [overflow-wrap:anywhere]">
-                  {person.email}
+                  {person.pin ? "Comes in with the PIN" : person.email}
                   {" · "}
                   {person.lastSeenAt ? (
                     <>
@@ -91,7 +126,9 @@ export default async function StaffPage({
                 </p>
               </div>
 
-              {isOwner ? (
+              {/* The PIN login is not switched off or turned down: it
+                  stops being one by being swapped for a proper login. */}
+              {isOwner && !person.pin ? (
                 <div className="flex flex-wrap items-start gap-2">
                   <form
                     action={updateStaffAction}

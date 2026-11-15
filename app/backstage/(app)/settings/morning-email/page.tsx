@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { SubmitButton } from "@/components/backstage/SubmitButton";
 import { Notice, PageHeader, Panel } from "@/components/backstage/ui";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
+import { isPinLogin } from "@/lib/backstage/auth/pin";
 import { execute } from "@/lib/backstage/core/op";
 import { morningEmail } from "@/lib/backstage/digest/ops";
 import { formatDateKey } from "@/lib/backstage/stock/dates";
@@ -83,7 +84,10 @@ export default async function MorningEmailPage({
                 type="email"
                 maxLength={254}
                 autoComplete="email"
-                defaultValue={now.to ?? staff.email}
+                defaultValue={
+                  // The PIN login's email is a stand-in, never a mailbox.
+                  now.to ?? (isPinLogin(staff) ? "" : staff.email)
+                }
                 aria-describedby="to-hint"
                 className="field"
               />

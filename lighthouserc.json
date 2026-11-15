@@ -2,9 +2,9 @@
   "$schema": "https://raw.githubusercontent.com/GoogleChrome/lighthouse-ci/main/docs/configuration.md",
   "ci": {
     "collect": {
-      "startServerCommand": "npm run start",
-      "startServerReadyPattern": "Ready in|Local:|started server on",
-      "startServerReadyTimeout": 90000,
+      "startServerCommand": "node scripts/lhci-server.mjs",
+      "startServerReadyPattern": "Warm and ready for Lighthouse",
+      "startServerReadyTimeout": 180000,
       "url": ["http://localhost:3000/"],
       "numberOfRuns": 5,
       "settings": {

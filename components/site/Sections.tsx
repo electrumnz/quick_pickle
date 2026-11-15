@@ -607,6 +607,15 @@ export function SiteFooter() {
             © {year} {FOOTER.legal}
           </p>
           <p>{FOOTER.foodNote}</p>
+          {/* A plain anchor, never next/link: the back end has a stylesheet
+              of its own, and a full page load swaps one for the other. */}
+          <a
+            href={FOOTER.staff.href}
+            rel="nofollow"
+            className="inline-flex min-h-11 min-w-11 items-center self-start decoration-2 underline-offset-4 hover:underline md:justify-end md:self-auto"
+          >
+            {FOOTER.staff.label}
+          </a>
         </div>
       </div>
     </footer>

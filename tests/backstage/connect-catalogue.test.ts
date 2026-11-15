@@ -75,6 +75,9 @@ describe("the list of every operation", () => {
       // Who can sign in.
       "staff.invite",
       "staff.setPasswordWithToken",
+      "staff.createPinOwner",
+      "staff.setNewPin",
+      "staff.makeProperLogin",
       // A bot does not open the door for itself, or say its own yes.
       "connect.grant",
       "connect.setOn",
@@ -118,7 +121,10 @@ describe("the list of every operation", () => {
       // line across its top as it draws a page.
       shop: 2,
       specials: 2,
-      staff: 6,
+      // Every one of them. Three are the PIN door's (15 November 2026):
+      // making the first owner with a PIN, a new PIN by the set-up code,
+      // and swapping the PIN for an email and a password.
+      staff: 9,
     });
     // And the money ones a bot IS offered all wait for a person's yes.
     for (const name of [

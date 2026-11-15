@@ -54,9 +54,19 @@ Updated 15 November 2026. Honest status, not a summary.
       work end to end. Then refund part of it from Stripe's own dashboard: within a minute
       the order in the back end should say part refunded, with a line in its history.
 - [ ] **Make the owner login.** Quick Pickle has its own Supabase organisation and Vercel
-      account, apart from Keece, and production is connected. What is left is to open
-      `/backstage/set-up` once, with the set-up code from Vercel's settings
-      (`BACKSTAGE_SETUP_CODE`), and choose a password.
+      account, apart from Keece, and production is connected. What is left is to press
+      **Staff** at the foot of the shop, which opens the set-up page the first time, and
+      type three things: the set-up code from Vercel's settings (`BACKSTAGE_SETUP_CODE`),
+      a name, and a PIN of six digits or more. No email is needed. From then on the same
+      link asks for the PIN. Forgotten, or locked after wrong tries: "Forgot the PIN" on
+      the sign-in page sets a new one with the set-up code.
+- [ ] **Swap the PIN for a proper login before launch.** The PIN is the door for now
+      (Sam, 15 November 2026), and the go-live list counts it as not ready: one short
+      number is not what stands in front of real customers' details. When there is an
+      address to use, it is one form: Settings, Staff, the panel at the top. It asks for
+      the set-up code again, so nobody who only knows the PIN can take the back end
+      over. The email is only a login name and nothing is sent to it. Then look down the
+      staff list for anybody you do not know.
 - [ ] **Disconnect the old Vercel project** (`half-sour`, in the Keece account). It still
       builds every push to this repository. Nothing here can touch it, on purpose.
 - [ ] **Connect email, so an order's emails are sent.** The receipt, on the courier,

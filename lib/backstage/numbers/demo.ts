@@ -6,6 +6,13 @@
  * Nothing here is random at run time. The same seed gives the same month
  * every time, so a test can say what it expects.
  *
+ * The month is thirty New Zealand calendar days, today included, because
+ * that is how Numbers counts a day. It used to be thirty blocks of 24 hours
+ * counted back from the moment of seeding, with the newest visit half an
+ * hour old. So for the first while after midnight in New Zealand, "today"
+ * had no visit at all, and a test that says every day has one failed for
+ * whoever pushed at that hour (15 November 2026, at five past twelve).
+ *
  * The invented orders (orders/demo.ts) each carry a visit id of their own,
  * and placing them wrote the last step of that visit. This fills in the
  * steps before it, so every order in the demo has a visit that led to it.
@@ -15,11 +22,10 @@ import { isNotNull, sql } from "drizzle-orm";
 
 import { orders, pageEvents } from "@/db/schema";
 import type { Db } from "@/lib/db/types";
+import { addDays, nzDateKey, startOfNzDay } from "@/lib/time";
 
 import { seenRow, type SeenInput } from "./ops";
 
-const HOUR = 60 * 60_000;
-const DAY = 24 * HOUR;
 const ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 
 /** A small seeded generator (mulberry32): the same numbers every time. */
@@ -116,16 +122,26 @@ export async function seedNumbersDemo(db: Db, now: Date): Promise<void> {
   const rows: (typeof pageEvents.$inferInsert)[] = [];
   const step = (input: SeenInput, at: Date) => rows.push(seenRow(input, at));
 
-  // Thirty days of people having a look. About a quarter put something in
-  // the jar, and about half of those open the checkout.
+  // Nothing is ever put in the future, today's later steps included.
+  const upToNow = (ms: number) => new Date(Math.min(ms, now.getTime()));
+
+  // Thirty New Zealand days of people having a look, today included. About
+  // a quarter put something in the jar, and about half of those open the
+  // checkout.
+  const today = nzDateKey(now);
   for (let daysAgo = 29; daysAgo >= 0; daysAgo -= 1) {
+    const day = addDays(today, -daysAgo);
+    const dayStarts = startOfNzDay(day).getTime();
+    // As much of the day as has happened. Today is not over, and a day is
+    // not always 24 hours: the clocks change twice a year.
+    const room =
+      Math.min(startOfNzDay(addDays(day, 1)).getTime(), now.getTime()) -
+      dayStarts;
     const visits = 5 + Math.floor(random() * 8) + (daysAgo % 7 < 2 ? 4 : 0);
     for (let visit = 0; visit < visits; visit += 1) {
       const way = pickWay(random());
       // Some time in that day, and never in the future.
-      const at = new Date(
-        now.getTime() - daysAgo * DAY - (0.02 + random() * 0.95) * DAY,
-      );
+      const at = new Date(dayStarts + (0.02 + random() * 0.95) * room);
       const landed = way.page === undefined ? "/" : `/for/${way.page}`;
       const base = {
         visit: id(),
@@ -138,10 +154,10 @@ export async function seedNumbersDemo(db: Db, now: Date): Promise<void> {
       if (random() >= 0.24) continue;
       step(
         { ...base, kind: "add", path: landed },
-        new Date(at.getTime() + 40_000),
+        upToNow(at.getTime() + 40_000),
       );
       if (random() >= 0.5) continue;
-      const later = new Date(at.getTime() + 95_000);
+      const later = upToNow(at.getTime() + 95_000);
       step({ ...base, kind: "view", path: "/checkout" }, later);
       step({ ...base, kind: "checkout", path: "/checkout" }, later);
     }

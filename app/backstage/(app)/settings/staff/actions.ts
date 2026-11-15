@@ -1,17 +1,27 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { staffCaller } from "@/lib/backstage/auth/current";
+import {
+  requestIp,
+  requestIsSecure,
+  requestUserAgent,
+  staffCaller,
+  staffCookieName,
+} from "@/lib/backstage/auth/current";
+import { setUpCodeRefused } from "@/lib/backstage/auth/set-up-code";
+import { signInProven } from "@/lib/backstage/auth/sign-in";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
 import {
   inviteStaff,
+  makeProperLogin,
   resetStaffPassword,
   updateStaff,
 } from "@/lib/backstage/staff/ops";
 import { withNotice } from "@/lib/backstage/ui/notice";
+import { getDb } from "@/lib/db/client";
 
 export type InviteState = {
   readonly error: string | null;
@@ -113,6 +123,85 @@ export async function passwordLinkAction(
       link: null,
     };
   }
+}
+
+export type ProperLoginState = {
+  readonly error: string | null;
+  readonly fields: Readonly<Record<string, string>>;
+  /** What was typed, handed back. Never the password. */
+  readonly values: Readonly<Record<string, string>>;
+};
+
+/**
+ * Whoever came in with the PIN gives themselves an email and a password.
+ * It takes the set-up code as well (lib/backstage/staff/ops.ts says why).
+ * The PIN stops working and every browser it had signed in is signed out,
+ * this one included, so it is signed straight back in as the same person.
+ */
+export async function properLoginAction(
+  _previous: ProperLoginState,
+  form: FormData,
+): Promise<ProperLoginState> {
+  const values = { email: text(form, "email") };
+  const password = text(form, "password");
+  const code = text(form, "code");
+  const caller = await staffCaller();
+  const db = await getDb();
+  const ip = await requestIp();
+
+  // A wrong code is counted against the address it came from, here as on
+  // the set-up page. (The operation checks the code again for itself.)
+  const refused = await setUpCodeRefused(db, code, ip);
+  if (refused !== null) return { ...refused, values };
+
+  let done;
+  try {
+    done = await execute(
+      makeProperLogin,
+      { email: values.email, password, code },
+      caller,
+    );
+  } catch (error) {
+    if (error instanceof OpError) {
+      const hasFields = Object.keys(error.fields).length > 0;
+      return {
+        error: hasFields ? null : error.message,
+        fields: error.fields,
+        values,
+      };
+    }
+    return {
+      error: "Something went wrong on our side. Give it another go.",
+      fields: {},
+      values,
+    };
+  }
+
+  // Straight back in: they were signed in as this account a moment ago.
+  // No counter is asked, so a lock somebody ran up against the new address
+  // cannot leave them outside with the swap already made.
+  const session = await signInProven(
+    db,
+    done.id,
+    { ip, userAgent: await requestUserAgent() },
+    new Date(),
+  );
+  if (!session.ok) redirect("/backstage/sign-in");
+  const jar = await cookies();
+  jar.set(await staffCookieName(), session.token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: await requestIsSecure(),
+    path: "/",
+    expires: session.expiresAt,
+  });
+  redirect(
+    withNotice(
+      "/backstage/settings/staff",
+      "Done. From now on you sign in with your email and password, and the PIN no longer works.",
+      "good",
+    ),
+  );
 }
 
 /** Role and on/off changes: a plain form post, then back to the list. */
