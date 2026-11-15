@@ -22,8 +22,12 @@ stays up throughout.
       project, and its run on each push to `main` will say so. Ask Claude to change them.
 - [ ] **Change what Sam has seen:** the set-up code and the PIN, the two access tokens in
       the repository's secrets, Stripe's keys, and the database's main password.
-- [ ] **Ash makes the first login herself.** The login carries the name typed when it is
-      made, and that name goes beside everything done under it in the activity log.
+- [ ] **Ash gets a login of her own.** There is one login today. It was made on
+      16 November with a PIN and carries the name typed then, which goes beside
+      everything done under it in the activity log. Whoever has the PIN invites Ash as
+      an owner (Settings, Staff, Invite someone). She gets a one-time link, chooses a
+      password and works under her own name. `HANDOVER.md` has the steps, under
+      "Getting in".
 - [ ] **Ash tells Claude how much it may do without asking.** Sam let it merge its own
       changes once the checks passed, and change the live site's settings. That was Sam's
       call, and it does not pass on by being written down. `CLAUDE.md` has the rule, under
@@ -81,20 +85,22 @@ stays up throughout.
       not let a robot press Pay, so this is the one step of the paid path nobody has seen
       work end to end. Then refund part of it from Stripe's own dashboard: within a minute
       the order in the back end should say part refunded, with a line in its history.
-- [ ] **Make the owner login.** Quick Pickle has its own Supabase organisation and Vercel
-      account, apart from Keece, and production is connected. What is left is to press
-      **Staff** at the foot of the shop, which opens the set-up page the first time, and
-      type three things: the set-up code from Vercel's settings (`BACKSTAGE_SETUP_CODE`),
-      a name, and a PIN of six digits or more. No email is needed. From then on the same
-      link asks for the PIN. Forgotten, or locked after wrong tries: "Forgot the PIN" on
-      the sign-in page sets a new one with the set-up code.
-- [ ] **Swap the PIN for a proper login before launch.** The PIN is the door for now
-      (Sam, 15 November 2026), and the go-live list counts it as not ready: one short
-      number is not what stands in front of real customers' details. When there is an
-      address to use, it is one form: Settings, Staff, the panel at the top. It asks for
-      the set-up code again, so nobody who only knows the PIN can take the back end
-      over. The email is only a login name and nothing is sent to it. Then look down the
-      staff list for anybody you do not know.
+- [x] **The first login is made** (16 November 2026, New Zealand time). The infra
+      workflow's `status` shows one staff login where there had been none. It was made
+      on the set-up page, which takes the set-up code from Vercel's settings
+      (`BACKSTAGE_SETUP_CODE`), a name, and a PIN of six digits or more. **Staff** at the
+      foot of the shop now asks for the PIN. Forgotten, or locked after wrong tries:
+      "Forgot the PIN, or locked out?" on the sign-in page sets a new one with the
+      set-up code.
+- [ ] **Retire the PIN before launch.** The PIN is the door for now (Sam, 15 November
+      2026), and the go-live list counts it as not ready: one short number is not what
+      stands in front of real customers' details. First, everybody who needs to come in
+      gets a login of their own (Settings, Staff, Invite someone). Then whoever comes in
+      with the PIN swaps it for an email and a password: Settings, Staff, the panel at
+      the top. It asks for the set-up code again, so nobody who only knows the PIN can
+      take the back end over. The email is only a login name and nothing is sent to it.
+      After that it is an ordinary login: switch it off if its owner has stepped back,
+      and look down the staff list for anybody you do not know.
 - [ ] **Disconnect the old Vercel project** (`half-sour`, in the Keece account). It still
       builds every push to this repository. Nothing here can touch it, on purpose.
 - [ ] **Connect email, so an order's emails are sent.** The receipt, on the courier,
@@ -443,7 +449,9 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
     those before believing a small move either way.
 - [ ] **A staff member's name cannot be changed from a screen.** The operation takes one
       (`staff.update`); Settings, Staff has no field for it. It matters for the first
-      login: whoever makes it, their name is on it.
+      login: whoever made it, their name is on it. The way round it today is a new
+      login for the person, by invitation. The activity log keeps the name each line
+      was written under, so a change of name would never rewrite what is already there.
 - [ ] **Nothing works on the code unless somebody asks.** While the site was being built
       a Claude session looked at the brand pack's folder on the Drive every hour and
       went over the site in a loop. Both have stopped. The checks still run on every
