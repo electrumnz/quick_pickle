@@ -12,13 +12,16 @@ import {
 } from "@/lib/backstage/auth/current";
 import { safeNext } from "@/lib/backstage/auth/next";
 import { revokeSession } from "@/lib/backstage/auth/sessions";
-import { signIn, signInWithPin } from "@/lib/backstage/auth/sign-in";
 import {
-  lockedUntil,
-  recordFailure,
-  setUpThrottleKeys,
-} from "@/lib/backstage/auth/throttle";
-import { sameSecret } from "@/lib/backstage/auth/tokens";
+  lockEnds,
+  setUpCodeRefused,
+  type Refusal,
+} from "@/lib/backstage/auth/set-up-code";
+import {
+  signIn,
+  signInProven,
+  signInWithPin,
+} from "@/lib/backstage/auth/sign-in";
 import { systemCaller } from "@/lib/backstage/core/actor";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
@@ -31,9 +34,8 @@ import {
   setNewPin,
   setPasswordWithToken,
 } from "@/lib/backstage/staff/ops";
+import { withNotice } from "@/lib/backstage/ui/notice";
 import { getDb } from "@/lib/db/client";
-import type { DbOrTx } from "@/lib/db/types";
-import { formatNzDateTime, formatNzTime, nzDateKey } from "@/lib/time";
 
 export type DoorState = {
   readonly error: string | null;
@@ -67,16 +69,6 @@ async function setStaffCookie(token: string, expiresAt: Date): Promise<void> {
 const WRONG = "That email and password don't match an account.";
 const WRONG_PIN = "That PIN isn't right.";
 const OUR_FAULT = "Something went wrong on our side. Give it another go.";
-
-/**
- * When a lock ends, for a sentence. A lock can run into tomorrow, and a
- * time of day alone would then send somebody back a day early.
- */
-function unlocks(until: Date, now: Date = new Date()): string {
-  return nzDateKey(until) === nzDateKey(now)
-    ? formatNzTime(until)
-    : formatNzDateTime(until);
-}
 
 export async function signInAction(
   _previous: DoorState,
@@ -116,11 +108,7 @@ export async function signInAction(
     );
   } catch {
     await atLeast(startedAt);
-    return {
-      error: "Something went wrong on our side. Give it another go.",
-      fields: {},
-      values,
-    };
+    return { error: OUR_FAULT, fields: {}, values };
   }
 
   await atLeast(startedAt);
@@ -129,7 +117,7 @@ export async function signInAction(
     return {
       error:
         result.reason === "locked"
-          ? `Too many wrong tries. Have another go after ${unlocks(result.until)}.`
+          ? `Too many wrong tries. Have another go after ${lockEnds(result.until)}.`
           : WRONG,
       fields: {},
       values,
@@ -180,7 +168,7 @@ export async function pinSignInAction(
     return {
       error:
         result.reason === "locked"
-          ? `Too many wrong tries. Have another go after ${unlocks(result.until)}, or set a new PIN with the set-up code.`
+          ? `Too many wrong tries. Have another go after ${lockEnds(result.until)}, or set a new PIN with the set-up code.`
           : WRONG_PIN,
       fields: {},
       values,
@@ -202,38 +190,8 @@ export async function signOutAction(): Promise<void> {
   redirect("/backstage/sign-in");
 }
 
-const SET_UP_OFF =
-  "Set-up is switched off. BACKSTAGE_SETUP_CODE needs to be set (16 characters or more) where the site is hosted.";
-
-/**
- * Why the set-up code that was typed does not open anything, as what the
- * form shows, or null when it is the code. A wrong one is counted against
- * the address it came from.
- */
-async function setUpCodeRefused(
-  db: DbOrTx,
-  typed: string,
-  expected: string,
-  ip: string | null,
-): Promise<Pick<DoorState, "error" | "fields"> | null> {
-  const keys = setUpThrottleKeys(ip);
-  const now = new Date();
-  const until = await lockedUntil(db, keys, now);
-  if (until !== null) {
-    return {
-      error: `Too many wrong tries. Have another go after ${unlocks(until, now)}.`,
-      fields: {},
-    };
-  }
-  if (!sameSecret(typed.trim(), expected)) {
-    await recordFailure(db, keys, now);
-    return { error: null, fields: { code: "That is not the set-up code" } };
-  }
-  return null;
-}
-
 /** What a form shows when an operation said no. */
-function saidBy(error: unknown): Pick<DoorState, "error" | "fields"> {
+function saidBy(error: unknown): Refusal {
   if (error instanceof OpError) {
     // A problem with one field is said once, beside that field.
     const hasFields = Object.keys(error.fields).length > 0;
@@ -257,17 +215,12 @@ export async function setUpPinAction(
   const again = text(form, "again").trim();
 
   const db = await getDb();
-  const expected = (process.env.BACKSTAGE_SETUP_CODE ?? "").trim();
   if (backstageMode() === "demo" || (await countUsers(db)) > 0) {
     redirect("/backstage/sign-in");
   }
-  if (expected.length < 16) {
-    await atLeast(startedAt);
-    return { error: SET_UP_OFF, fields: {}, values };
-  }
 
   const ip = await requestIp();
-  const refused = await setUpCodeRefused(db, code, expected, ip);
+  const refused = await setUpCodeRefused(db, code, ip);
   if (refused !== null) {
     await atLeast(startedAt);
     return { ...refused, values };
@@ -277,8 +230,9 @@ export async function setUpPinAction(
     return { error: null, fields: { again: "Those two don't match" }, values };
   }
 
+  let made;
   try {
-    await execute(
+    made = await execute(
       createPinOwner,
       { name: values.name, pin },
       systemCaller("Set-up", "ui"),
@@ -288,9 +242,12 @@ export async function setUpPinAction(
     return { ...saidBy(error), values };
   }
 
-  const session = await signInWithPin(
+  // Straight in, on the strength of the set-up code. Not by way of the PIN
+  // door: its counter is anybody's to run up.
+  const session = await signInProven(
     db,
-    { pin, ip, userAgent: await requestUserAgent() },
+    made.id,
+    { ip, userAgent: await requestUserAgent() },
     new Date(),
   );
   await atLeast(startedAt);
@@ -314,17 +271,12 @@ export async function newPinAction(
   const again = text(form, "again").trim();
 
   const db = await getDb();
-  const expected = (process.env.BACKSTAGE_SETUP_CODE ?? "").trim();
   if (backstageMode() === "demo" || (await pinDoor(db)) === null) {
     redirect("/backstage/sign-in");
   }
-  if (expected.length < 16) {
-    await atLeast(startedAt);
-    return { error: SET_UP_OFF, fields: {}, values };
-  }
 
   const ip = await requestIp();
-  const refused = await setUpCodeRefused(db, code, expected, ip);
+  const refused = await setUpCodeRefused(db, code, ip);
   if (refused !== null) {
     await atLeast(startedAt);
     return { ...refused, values };
@@ -334,21 +286,35 @@ export async function newPinAction(
     return { error: null, fields: { again: "Those two don't match" }, values };
   }
 
+  let done;
   try {
-    await execute(setNewPin, { pin }, systemCaller("Set-up", "ui"));
+    done = await execute(setNewPin, { pin }, systemCaller("Set-up", "ui"));
   } catch (error) {
     await atLeast(startedAt);
     return { ...saidBy(error), values };
   }
 
-  const session = await signInWithPin(
+  // Straight in, on the strength of the set-up code. If this went by way
+  // of the PIN door, a flood of wrong PINs could fill its counter again in
+  // the instant after the new PIN wiped it, and keep the owner out.
+  const session = await signInProven(
     db,
-    { pin, ip, userAgent: await requestUserAgent() },
+    done.id,
+    { ip, userAgent: await requestUserAgent() },
     new Date(),
   );
   await atLeast(startedAt);
-  if (session.ok) await setStaffCookie(session.token, session.expiresAt);
-  redirect(session.ok ? "/backstage" : "/backstage/sign-in");
+  if (!session.ok) redirect("/backstage/sign-in");
+  await setStaffCookie(session.token, session.expiresAt);
+  // To the staff list, not the front page. If the PIN was set again because
+  // somebody else had it, this is where what they left behind would show.
+  redirect(
+    withNotice(
+      "/backstage/settings/staff",
+      "New PIN saved. Every browser was signed out, and any Claude connected under the old PIN was cut off. Look down this list for anybody you do not know.",
+      "good",
+    ),
+  );
 }
 
 /**
@@ -368,24 +334,20 @@ export async function setUpAction(
   const password = text(form, "password");
 
   const db = await getDb();
-  const expected = (process.env.BACKSTAGE_SETUP_CODE ?? "").trim();
   if (backstageMode() === "demo" || (await countUsers(db)) > 0) {
     redirect("/backstage/sign-in");
   }
-  if (expected.length < 16) {
-    await atLeast(startedAt);
-    return { error: SET_UP_OFF, fields: {}, values };
-  }
 
   const ip = await requestIp();
-  const refused = await setUpCodeRefused(db, code, expected, ip);
+  const refused = await setUpCodeRefused(db, code, ip);
   if (refused !== null) {
     await atLeast(startedAt);
     return { ...refused, values };
   }
 
+  let made;
   try {
-    await execute(
+    made = await execute(
       createFirstOwner,
       { name: values.name, email: values.email, password },
       systemCaller("Set-up", "ui"),
@@ -395,14 +357,10 @@ export async function setUpAction(
     return { ...saidBy(error), values };
   }
 
-  const session = await signIn(
+  const session = await signInProven(
     db,
-    {
-      email: values.email,
-      password,
-      ip,
-      userAgent: await requestUserAgent(),
-    },
+    made.id,
+    { ip, userAgent: await requestUserAgent() },
     new Date(),
   );
   await atLeast(startedAt);
@@ -430,40 +388,25 @@ export async function choosePasswordAction(
     };
   }
 
-  let email: string;
+  let done;
   try {
-    const done = await execute(
+    done = await execute(
       setPasswordWithToken,
       { token, password },
       systemCaller("One-time link", "ui"),
     );
-    email = done.email;
   } catch (error) {
     await atLeast(startedAt);
-    if (error instanceof OpError) {
-      const hasFields = Object.keys(error.fields).length > 0;
-      return {
-        error: hasFields ? null : error.message,
-        fields: error.fields,
-        values,
-      };
-    }
-    return {
-      error: "Something went wrong on our side. Give it another go.",
-      fields: {},
-      values,
-    };
+    return { ...saidBy(error), values };
   }
 
-  // Straight in: they have just proved who they are and chosen the password.
-  const session = await signIn(
+  // Straight in: they have just proved who they are and chosen the
+  // password. The link is the proof, so no counter is asked: somebody who
+  // was locked out for forgetting the old password is exactly who is here.
+  const session = await signInProven(
     await getDb(),
-    {
-      email,
-      password,
-      ip: await requestIp(),
-      userAgent: await requestUserAgent(),
-    },
+    done.userId,
+    { ip: await requestIp(), userAgent: await requestUserAgent() },
     new Date(),
   );
   await atLeast(startedAt);

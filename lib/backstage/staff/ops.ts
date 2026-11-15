@@ -27,8 +27,10 @@ import {
   seasoned,
 } from "../auth/pin";
 import { revokeAllSessions } from "../auth/sessions";
+import { isSetUpCode, NOT_THE_CODE } from "../auth/set-up-code";
 import { forgetPinTries } from "../auth/throttle";
 import { hashToken, newToken } from "../auth/tokens";
+import { cutConnectionsOf } from "../connect/cut";
 import { conflict, notFound, OpError } from "../core/errors";
 import { defineOp } from "../core/op";
 
@@ -50,11 +52,16 @@ const nameSchema = z.string().trim().min(1, "A name is needed").max(80);
 
 export type StaffRow = {
   readonly id: string;
-  readonly email: string;
+  /**
+   * Null for the login that comes in with the PIN: what it has for an
+   * email is a stand-in, and that is never shown as an address or written
+   * to.
+   */
+  readonly email: string | null;
   readonly name: string;
   readonly role: Role;
   readonly kind: "person" | "bot";
-  /** True for the login that comes in with the PIN. Its email is a stand-in. */
+  /** True for the login that comes in with the PIN. */
   readonly pin: boolean;
   readonly hasPassword: boolean;
   readonly disabled: boolean;
@@ -107,6 +114,12 @@ async function hashForPin(pin: string): Promise<string> {
   return hashPassword(seasoned(pin, secret));
 }
 
+/** For an activity line: ", and cut off 2 connections to Claude", or nothing. */
+function andCutOff(count: number): string {
+  if (count === 0) return "";
+  return `, and cut off ${String(count)} connection${count === 1 ? "" : "s"} to Claude`;
+}
+
 async function countActiveOwners(db: DbOrTx): Promise<number> {
   const [row] = await db
     .select({ n: count() })
@@ -145,7 +158,7 @@ export const listStaff = defineOp({
       .orderBy(asc(users.createdAt));
     return rows.map((row) => ({
       id: row.id,
-      email: row.email,
+      email: isPinLogin(row) ? null : row.email,
       name: row.name,
       role: row.role,
       kind: row.kind,
@@ -230,6 +243,9 @@ export const createPinOwner = defineOp({
       createdAt: ctx.now,
       updatedAt: ctx.now,
     });
+    // Anybody can knock on a door that is not there yet. Whatever wrong
+    // tries were run up before there was a PIN were not tries at this one.
+    await forgetPinTries(ctx.db);
     await ctx.audit({
       entity: { type: "user", id },
       summary: `Set up the back end with ${input.name} as its owner, coming in with a PIN`,
@@ -247,7 +263,7 @@ export const setNewPin = defineOp({
   name: "staff.setNewPin",
   title: "Set a new PIN with the set-up code",
   description:
-    "For the set-up page: sets a new PIN for the login that comes in with one, signs it out everywhere and unlocks the door after wrong tries. Only works while a login comes in with a PIN.",
+    "For the set-up page: sets a new PIN for the login that comes in with one, signs it out everywhere, cuts off any Claude connected under it, and unlocks the door after wrong tries. Only works while a login comes in with a PIN.",
   access: "admin",
   input: z.object({ pin: z.string() }),
   async run(ctx, input): Promise<{ id: string }> {
@@ -261,10 +277,16 @@ export const setNewPin = defineOp({
       .set({ passwordHash, updatedAt: ctx.now })
       .where(eq(users.id, door.id));
     await revokeAllSessions(ctx.db, door.id, ctx.now);
+    const cut = await cutConnectionsOf(
+      ctx.db,
+      door.id,
+      ctx.now,
+      "A new PIN was set for the login it was made under.",
+    );
     await forgetPinTries(ctx.db);
     await ctx.audit({
       entity: { type: "user", id: door.id },
-      summary: `Set a new PIN for ${door.name}, with the set-up code`,
+      summary: `Set a new PIN for ${door.name}, with the set-up code${andCutOff(cut)}`,
     });
     return { id: door.id };
   },
@@ -274,14 +296,26 @@ export const setNewPin = defineOp({
  * Turn the PIN login into a proper one: an email and a password. Only the
  * person who came in with the PIN can do it, and only for themselves. The
  * account stays the same one, so everything it did keeps its name.
+ *
+ * It takes the set-up code as well as being signed in. After this the
+ * set-up code opens nothing, so without it somebody who only knew the PIN
+ * could put the back end out of the real owner's reach in one press: an
+ * email and a password of their own, and no way left to set a new PIN.
+ * (`staff.update` refuses to switch the PIN login off for the same reason.)
+ * The code is checked here as well as by the form, so nothing else that
+ * ever calls this can leave it out.
  */
 export const makeProperLogin = defineOp({
   name: "staff.makeProperLogin",
   title: "Swap the PIN for an email and a password",
   description:
-    "Turns the login that comes in with a PIN into a proper one, with an email and a password. Only that person can do it, for themselves. The PIN stops working at once and every browser signed in with it is signed out.",
+    "Turns the login that comes in with a PIN into a proper one, with an email and a password. Only that person can do it, for themselves, and it takes the set-up code. The PIN stops working at once, every browser signed in with it is signed out, and any Claude connected under it is cut off.",
   access: "admin",
-  input: z.object({ email: emailSchema, password: z.string() }),
+  input: z.object({
+    email: emailSchema,
+    password: z.string(),
+    code: z.string(),
+  }),
   async run(ctx, input): Promise<{ id: string; email: string }> {
     const [me] =
       ctx.actor.type === "human"
@@ -294,6 +328,9 @@ export const makeProperLogin = defineOp({
       throw conflict(
         "This is for whoever comes in with the PIN, and that is not you.",
       );
+    }
+    if (!isSetUpCode(input.code)) {
+      throw new OpError("invalid_input", NOT_THE_CODE, { code: NOT_THE_CODE });
     }
     const problem = passwordProblem(input.password);
     if (problem !== null) {
@@ -319,10 +356,16 @@ export const makeProperLogin = defineOp({
       })
       .where(eq(users.id, me.id));
     await revokeAllSessions(ctx.db, me.id, ctx.now);
+    const cut = await cutConnectionsOf(
+      ctx.db,
+      me.id,
+      ctx.now,
+      "The PIN it was made under was swapped for an email and a password.",
+    );
     await forgetPinTries(ctx.db);
     await ctx.audit({
       entity: { type: "user", id: me.id },
-      summary: `${me.name} swapped the PIN for an email and a password`,
+      summary: `${me.name} swapped the PIN for an email and a password${andCutOff(cut)}`,
       data: { email: input.email },
     });
     return { id: me.id, email: input.email };
@@ -377,7 +420,7 @@ export const resetStaffPassword = defineOp({
   name: "staff.sendPasswordLink",
   title: "Make a new password link for someone",
   description:
-    "Returns a fresh one-time link for a staff member to choose a new password, and signs them out everywhere. Use it when someone has forgotten theirs.",
+    "Returns a fresh one-time link for a staff member to choose a new password, signs them out everywhere, and cuts off any Claude connected under their login (they connect it again afterwards). Use it when someone has forgotten theirs, or it may be in somebody else's hands.",
   access: "admin",
   input: z.object({ id: z.string() }),
   async run(ctx, input): Promise<{ token: string }> {
@@ -394,10 +437,16 @@ export const resetStaffPassword = defineOp({
       );
     }
     await revokeAllSessions(ctx.db, user.id, ctx.now);
+    const cut = await cutConnectionsOf(
+      ctx.db,
+      user.id,
+      ctx.now,
+      "A new password link was made for the login it was made under.",
+    );
     const token = await issueSetPasswordToken(ctx.db, user.id, ctx.now);
     await ctx.audit({
       entity: { type: "user", id: user.id },
-      summary: `Made a new password link for ${user.name}`,
+      summary: `Made a new password link for ${user.name}${andCutOff(cut)}`,
     });
     return { token };
   },
@@ -481,6 +530,21 @@ export const updateStaff = defineOp({
       .from(users)
       .where(eq(users.id, input.id));
     if (user === undefined) throw notFound("That account");
+
+    // While somebody comes in with a PIN, the set-up code is the way back
+    // in for whoever really owns the place: it sets a new PIN. Switch the
+    // PIN login off, or turn it down, and the set-up code opens nothing.
+    // So the PIN login only stops being one by being swapped for an email
+    // and a password, which takes the set-up code.
+    if (
+      isPinLogin(user) &&
+      (input.disabled === true ||
+        (input.role !== undefined && input.role !== user.role))
+    ) {
+      throw conflict(
+        `${user.name} comes in with the PIN, and stays an owner until the PIN is swapped for an email and a password. ${user.name} does that here, signed in with the PIN, and it takes the set-up code.`,
+      );
+    }
 
     const losingOwner =
       user.role === "owner" &&

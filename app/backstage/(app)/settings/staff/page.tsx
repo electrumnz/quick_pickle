@@ -70,10 +70,15 @@ export default async function StaffPage({
             customers&rsquo; details are in here, give yourself a proper login:
             an email and a password.
           </p>
-          <p className="bk-muted mb-4 max-w-[44rem] leading-snug">
+          <p className="bk-muted mb-2 max-w-[44rem] leading-snug">
             The email is only your login name. Nothing is sent to it, so any
-            address of yours will do. The PIN stops working as soon as this is
-            saved. To change the PIN and keep it,{" "}
+            address of yours will do. It takes the set-up code as well, so
+            nobody who only knows the PIN can take the back end over.
+          </p>
+          <p className="bk-muted mb-4 max-w-[44rem] leading-snug">
+            The PIN stops working as soon as this is saved, and any Claude
+            connected under it is cut off and connects again. To change the PIN
+            and keep it,{" "}
             <Link
               href="/backstage/set-up"
               className="underline decoration-2 underline-offset-4"
@@ -121,7 +126,9 @@ export default async function StaffPage({
                 </p>
               </div>
 
-              {isOwner ? (
+              {/* The PIN login is not switched off or turned down: it
+                  stops being one by being swapped for a proper login. */}
+              {isOwner && !person.pin ? (
                 <div className="flex flex-wrap items-start gap-2">
                   <form
                     action={updateStaffAction}
@@ -158,9 +165,7 @@ export default async function StaffPage({
                       </span>
                     </button>
                   </form>
-                  {person.pin ? null : (
-                    <PasswordLinkForm id={person.id} name={person.name} />
-                  )}
+                  <PasswordLinkForm id={person.id} name={person.name} />
                 </div>
               ) : null}
             </li>

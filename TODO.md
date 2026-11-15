@@ -63,9 +63,10 @@ Updated 15 November 2026. Honest status, not a summary.
 - [ ] **Swap the PIN for a proper login before launch.** The PIN is the door for now
       (Sam, 15 November 2026), and the go-live list counts it as not ready: one short
       number is not what stands in front of real customers' details. When there is an
-      address to use, it is one form: Settings, Staff, the panel at the top. The email is
-      only a login name and nothing is sent to it. Then look down the staff list for
-      anybody you do not know.
+      address to use, it is one form: Settings, Staff, the panel at the top. It asks for
+      the set-up code again, so nobody who only knows the PIN can take the back end
+      over. The email is only a login name and nothing is sent to it. Then look down the
+      staff list for anybody you do not know.
 - [ ] **Disconnect the old Vercel project** (`half-sour`, in the Keece account). It still
       builds every push to this repository. Nothing here can touch it, on purpose.
 - [ ] **Connect email, so an order's emails are sent.** The receipt, on the courier,

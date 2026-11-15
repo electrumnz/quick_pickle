@@ -184,7 +184,7 @@ export default async function GoLivePage({
       ? "Nobody signs in: there is no database, so the records here are invented."
       : pin === null
         ? "Everybody signs in with their own email and password."
-        : `The back end is opened with a PIN (${pin.name}'s). That is fine while the shop is being set up. Before real customers' details are in here, ${pin.name} swaps it for an email and a password in Settings, Staff. Then look down the staff list for anybody you do not know.`,
+        : `The back end is opened with a PIN (${pin.name}'s). That is fine while the shop is being set up. Before real customers' details are in here, ${pin.name} swaps it for an email and a password in Settings, Staff, which takes the set-up code. Then look down the staff list for anybody you do not know.`,
   });
 
   const open =

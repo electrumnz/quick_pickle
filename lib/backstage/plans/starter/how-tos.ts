@@ -667,6 +667,7 @@ Anything that reaches a customer or cannot be undone: sending an email, a refund
 9. [ ] On [Claude](${LINK.claude}), press **Cut off** beside the connection. It stops working at once.
 10. [ ] An owner can cut off anybody's, or press **Stop Claude connecting** to stop them all.
 11. [ ] When somebody leaves, switch off their staff account. Their Claude goes with it.
+12. [ ] A new password link for somebody cuts their Claude off as well, and so does a new PIN. Whoever had the old password or PIN may have connected a Claude of their own. They connect theirs again once they are back in.
 
 ## Things to know
 

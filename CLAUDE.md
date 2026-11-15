@@ -283,7 +283,8 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
     (`pin@backstage.invalid`). That is how there is at most one, and how everything else
     tells (`isPinLogin`). Nobody is invited under a `.invalid` address, and the email
     door never opens it. **A screen that shows a staff member's email asks `isPinLogin`
-    first:** the stand-in is never shown as an address, or written to.
+    first:** the stand-in is never shown as an address, or written to. `staff.list`
+    hands back no email for it at all.
   - **A PIN is short, so the door counts wrong tries for everybody together** (`pin:door`
     in `throttle.ts`), not for each address: five in a day locks it, and each lock is
     twice the last, up to a day. A right PIN wipes the count and not the ladder, or a
@@ -301,6 +302,20 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
     and it is mixed into the PIN before the PIN is hashed, so a copy of the database
     alone gives nobody the PIN. Change the set-up code and the PIN stops working: set a
     new one.
+  - **Nothing a PIN session does can put the set-up code out of reach.** Swapping the
+    PIN for a proper login takes the set-up code as well as being signed in, and
+    `staff.update` refuses to switch the PIN login off or turn it down. Without those,
+    somebody who only knew the PIN could shut the real owner out in one press, and only
+    the database would undo it (an independent review, 15 November 2026). They can
+    still make themselves an owner: the real one sets a new PIN and reads the staff list.
+  - **Whoever has just proved themselves is let in without a counter** (`signInProven`):
+    after the set-up code, a one-time link, or a swap made while signed in. A counter is
+    anybody's to run up. The same review found the door could be locked before the
+    first owner was made, and filled again in the instant after a new PIN wiped it.
+  - **Setting a login again cuts off every Claude connected under it** (`cutConnectionsOf`,
+    in `lib/backstage/connect/cut.ts`): a new PIN, the swap, and a new password link.
+    Signing browsers out is not enough. A connection renews itself and never asks for
+    the PIN again, so whoever had the old one could have left a Claude of their own in.
   - **Tries at the set-up code are counted against the caller's own address, never a
     counter everybody shares.** Otherwise whoever locked the PIN door could lock the way
     round it for five more tries. That is safe because the code is long and random (the
@@ -308,7 +323,8 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
   - **It is not ready for launch, and says so.** The go-live list counts a PIN door as
     open work. Settings, Staff has one form (`staff.makeProperLogin`) that turns the same
     account into an email and a password, so everything it did keeps its name. After
-    that the PIN and the set-up page are gone for good.
+    that the PIN and the set-up page are gone for good, and the set-up code opens
+    nothing.
   - A PIN login is never given a password link: the door could not check a password.
 - `requireStaff()` is the lock, called by every page and (through `staffCaller()`) every
   action. `proxy.ts` is not the lock.
@@ -934,7 +950,9 @@ screen. `lib/backstage/connect/` is all of it.
   what. What it may do is the lesser of what was chosen on the consent screen and what the
   person may do, never an owner's reach, and it is read again on every call: switch the
   person off and their Claude is off. Somebody who can only look cannot connect one, and
-  turned down to that, theirs stops until they are turned back up.
+  turned down to that, theirs stops until they are turned back up. A new password link
+  for the person, a new PIN, or a PIN swapped for a proper login cuts their connections
+  off as well: whoever had the old way in could have connected a Claude of their own.
 - **The way in is OAuth, with nothing taken on trust.** An app registers itself and can
   only ever be sent back to Claude's own callback or to the person's own computer
   (`tokens.ts`), so a code can never go to somebody else's site whatever an app registers.

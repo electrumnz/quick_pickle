@@ -1,7 +1,14 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { authThrottle, sessions, users } from "@/db/schema";
+import {
+  authThrottle,
+  connections,
+  oauthClients,
+  oauthCodes,
+  sessions,
+  users,
+} from "@/db/schema";
 import { verifyPassword } from "@/lib/backstage/auth/password";
 import {
   isPinLogin,
@@ -11,7 +18,11 @@ import {
   seasoned,
 } from "@/lib/backstage/auth/pin";
 import { readSession } from "@/lib/backstage/auth/sessions";
-import { signIn, signInWithPin } from "@/lib/backstage/auth/sign-in";
+import {
+  signIn,
+  signInProven,
+  signInWithPin,
+} from "@/lib/backstage/auth/sign-in";
 import {
   FIRST_LOCK_MS,
   FREE_TRIES,
@@ -36,6 +47,7 @@ import {
   updateStaff,
 } from "@/lib/backstage/staff/ops";
 import { openEmbedded, type DbHandle } from "@/lib/db/client";
+import { newId } from "@/lib/db/id";
 
 /**
  * The PIN door: the way in for now, while nobody has an address to give
@@ -50,6 +62,66 @@ const T0 = new Date("2026-11-15T08:00:00Z");
 const later = (ms: number) => new Date(T0.getTime() + ms);
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
+
+/**
+ * A Claude connected under somebody's login, and a yes they gave a moment
+ * ago that no app has collected yet. Written straight into the tables: the
+ * connection's own tests cover how one is really made.
+ */
+async function connectClaude(
+  handle: DbHandle,
+  userId: string,
+  now: Date,
+): Promise<{ connectionId: string; codeId: string }> {
+  const clientId = newId("usr");
+  await handle.db.insert(oauthClients).values({
+    id: clientId,
+    name: "Claude",
+    redirectUris: ["https://claude.ai/api/mcp/auth_callback"],
+  });
+  const botEmail = `claude.${userId}@bots.invalid`;
+  const [had] = await handle.db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, botEmail));
+  const botUserId = had?.id ?? newId("usr");
+  if (had === undefined) {
+    await handle.db.insert(users).values({
+      id: botUserId,
+      email: botEmail,
+      name: "Claude, for somebody",
+      role: "staff",
+      kind: "bot",
+    });
+  }
+  const connectionId = newId("usr");
+  const soon = new Date(now.getTime() + 60 * 60_000);
+  await handle.db.insert(connections).values({
+    id: connectionId,
+    userId,
+    botUserId,
+    clientId,
+    clientName: "Claude",
+    role: "staff",
+    resource: "https://shop.example/api/mcp",
+    accessHash: `access-${connectionId}`,
+    accessExpiresAt: soon,
+    refreshHash: `refresh-${connectionId}`,
+    refreshExpiresAt: soon,
+  });
+  const codeId = `code-${connectionId}`;
+  await handle.db.insert(oauthCodes).values({
+    id: codeId,
+    clientId,
+    userId,
+    role: "staff",
+    redirectUri: "https://claude.ai/api/mcp/auth_callback",
+    codeChallenge: "challenge",
+    resource: "https://shop.example/api/mcp",
+    expiresAt: soon,
+  });
+  return { connectionId, codeId };
+}
 
 describe("what may be a PIN", () => {
   it("is digits, six to twelve of them", () => {
@@ -207,7 +279,14 @@ describe("coming in with a PIN", () => {
   it("is shown on the staff list as a PIN, never as an address to write to", async () => {
     const list = await execute(listStaff, {}, owner, on(T0));
     expect(list).toHaveLength(1);
-    expect(list[0]).toMatchObject({ name: "Sam", role: "owner", pin: true });
+    // No address comes back at all: what the login has for an email is a
+    // stand-in, and nothing that lists staff can show it or write to it.
+    expect(list[0]).toMatchObject({
+      name: "Sam",
+      role: "owner",
+      pin: true,
+      email: null,
+    });
   });
 
   it("opens for the PIN and for nothing else", async () => {
@@ -315,6 +394,9 @@ describe("coming in with a PIN", () => {
       .from(sessions)
       .where(eq(sessions.userId, ownerId));
     expect(live.some((row) => row.revokedAt === null)).toBe(true);
+    // And a Claude is connected under the login: whoever had the old PIN
+    // could have connected one of their own.
+    const claude = await connectClaude(handle, ownerId, now);
 
     await expect(
       execute(setNewPin, { pin: "654321" }, system, on(now)),
@@ -327,6 +409,20 @@ describe("coming in with a PIN", () => {
       .from(sessions)
       .where(eq(sessions.userId, ownerId));
     expect(after.every((row) => row.revokedAt !== null)).toBe(true);
+    // Signing browsers out is not enough: a connection renews itself and
+    // never asks for the PIN again. It is cut off, and a yes that was
+    // waiting to be collected is spent.
+    const [cut] = await handle.db
+      .select()
+      .from(connections)
+      .where(eq(connections.id, claude.connectionId));
+    expect(cut?.revokedAt).toEqual(now);
+    expect(cut?.revokedWhy).toMatch(/new PIN/);
+    const [code] = await handle.db
+      .select()
+      .from(oauthCodes)
+      .where(eq(oauthCodes.id, claude.codeId));
+    expect(code?.usedAt).toEqual(now);
 
     // The old PIN is a wrong one now. The new one opens the door at once.
     expect(await knock(PIN, new Date(now.getTime() + 1000))).toEqual({
@@ -365,12 +461,8 @@ describe("coming in with a PIN", () => {
     }
   });
 
-  it("switched off, it stays shut and no new PIN opens it", async () => {
+  it("is not switched off or turned down, so the set-up code always has a PIN to set", async () => {
     const now = later(5 * 24 * HOUR);
-    // It takes a second owner: the last one cannot be switched off.
-    await expect(
-      execute(updateStaff, { id: ownerId, disabled: true }, owner, on(now)),
-    ).rejects.toMatchObject({ code: "conflict" });
     const invited = await execute(
       inviteStaff,
       {
@@ -395,7 +487,52 @@ describe("coming in with a PIN", () => {
       confirmed: true,
     };
 
-    await execute(updateStaff, { id: ownerId, disabled: true }, ash, on(now));
+    // Somebody who only knew the PIN could make themselves an owner like
+    // this one. What they cannot do is shut the PIN login, and with it the
+    // set-up code, out: not by switching it off, and not by turning it down.
+    for (const change of [
+      { disabled: true },
+      { role: "staff" as const },
+      { role: "viewer" as const },
+    ]) {
+      for (const who of [ash, owner]) {
+        await expect(
+          execute(updateStaff, { id: ownerId, ...change }, who, on(now)),
+        ).rejects.toMatchObject({
+          code: "conflict",
+          message: expect.stringMatching(/comes in with the PIN/) as unknown,
+        });
+      }
+    }
+    expect(await pinDoor(handle.db)).toEqual({ id: ownerId, name: "Sam" });
+    // What does not touch the way in is still an owner's to change.
+    await execute(updateStaff, { id: ownerId, role: "owner" }, ash, on(now));
+    expect((await knock(NEW_PIN, new Date(now.getTime() + 1000))).ok).toBe(
+      true,
+    );
+
+    // Only whoever came in with the PIN swaps it, and only for themselves,
+    // whoever else has the set-up code.
+    for (const who of [ash, system]) {
+      await expect(
+        execute(
+          makeProperLogin,
+          { email: "sam@example.co.nz", password: PASSWORD, code: CODE },
+          who,
+          on(now),
+        ),
+      ).rejects.toMatchObject({ code: "conflict" });
+    }
+  });
+
+  it("a row that is switched off all the same opens for nothing", async () => {
+    // No operation leaves the PIN login switched off, but the door does
+    // not lean on that: it reads the row.
+    const now = later(5 * 24 * HOUR + HOUR);
+    await handle.db
+      .update(users)
+      .set({ disabledAt: now })
+      .where(eq(users.id, ownerId));
     expect(await pinDoor(handle.db)).toBeNull();
     expect(await knock(NEW_PIN, new Date(now.getTime() + 1000))).toEqual({
       ok: false,
@@ -404,74 +541,66 @@ describe("coming in with a PIN", () => {
     await expect(
       execute(setNewPin, { pin: PIN }, system, on(now)),
     ).rejects.toMatchObject({ code: "conflict" });
+    expect(
+      await signInProven(
+        handle.db,
+        ownerId,
+        { ip: null, userAgent: "vitest" },
+        now,
+      ),
+    ).toEqual({ ok: false, reason: "invalid" });
 
-    // Switched back on for what follows, with the count wiped.
-    await execute(updateStaff, { id: ownerId, disabled: false }, ash, on(now));
-    await execute(setNewPin, { pin: NEW_PIN }, system, on(now));
+    await handle.db
+      .update(users)
+      .set({ disabledAt: null })
+      .where(eq(users.id, ownerId));
     expect((await knock(NEW_PIN, new Date(now.getTime() + 2000))).ok).toBe(
       true,
     );
-
-    // Only whoever came in with the PIN swaps it, and only for themselves.
-    await expect(
-      execute(
-        makeProperLogin,
-        { email: "sam@example.co.nz", password: PASSWORD },
-        ash,
-        on(now),
-      ),
-    ).rejects.toMatchObject({ code: "conflict" });
-    await expect(
-      execute(
-        makeProperLogin,
-        { email: "sam@example.co.nz", password: PASSWORD },
-        system,
-        on(now),
-      ),
-    ).rejects.toMatchObject({ code: "conflict" });
   });
 
-  it("is swapped for an email and a password, and then it is gone", async () => {
+  it("is swapped for an email and a password with the set-up code, and then it is gone", async () => {
     const now = later(6 * 24 * HOUR);
+    const swap = (
+      input: { email: string; password: string; code: string },
+      at = now,
+    ) => execute(makeProperLogin, input, owner, on(at));
+
+    // The PIN alone does not do it. After the swap the set-up code opens
+    // nothing, so without it somebody who only knew the PIN could put the
+    // back end out of the real owner's reach in one press.
+    for (const code of ["", "not the code at all, sorry", `${CODE}!`]) {
+      await expect(
+        swap({ email: "sam@example.co.nz", password: PASSWORD, code }),
+      ).rejects.toMatchObject({
+        code: "invalid_input",
+        fields: { code: "That is not the set-up code" },
+      });
+    }
     await expect(
-      execute(
-        makeProperLogin,
-        { email: "sam@example.co.nz", password: "short" },
-        owner,
-        on(now),
-      ),
+      swap({ email: "sam@example.co.nz", password: "short", code: CODE }),
     ).rejects.toMatchObject({
       code: "invalid_input",
       fields: { password: expect.stringMatching(/at least 12/) as unknown },
     });
     await expect(
-      execute(
-        makeProperLogin,
-        { email: "ASH@example.co.nz", password: PASSWORD },
-        owner,
-        on(now),
-      ),
+      swap({ email: "ASH@example.co.nz", password: PASSWORD, code: CODE }),
     ).rejects.toMatchObject({
       code: "conflict",
       fields: { email: "Already has an account" },
     });
     await expect(
-      execute(
-        makeProperLogin,
-        { email: PIN_LOGIN, password: PASSWORD },
-        owner,
-        on(now),
-      ),
+      swap({ email: PIN_LOGIN, password: PASSWORD, code: CODE }),
     ).rejects.toMatchObject({ code: "invalid_input" });
     // Nothing changed for any of that: the PIN still opens the door.
     const before = await knock(NEW_PIN, new Date(now.getTime() + 1000));
     expect(before.ok).toBe(true);
+    const claude = await connectClaude(handle, ownerId, now);
 
-    const done = await execute(
-      makeProperLogin,
-      { email: " Sam@Example.co.nz ", password: PASSWORD },
-      owner,
-      on(new Date(now.getTime() + 2000)),
+    const swappedAt = new Date(now.getTime() + 2000);
+    const done = await swap(
+      { email: " Sam@Example.co.nz ", password: PASSWORD, code: ` ${CODE} ` },
+      swappedAt,
     );
     expect(done).toEqual({ id: ownerId, email: "sam@example.co.nz" });
 
@@ -482,7 +611,8 @@ describe("coming in with a PIN", () => {
       .where(eq(users.id, ownerId));
     expect(row?.email).toBe("sam@example.co.nz");
     expect(row !== undefined && isPinLogin(row)).toBe(false);
-    // Every browser the PIN had signed in is signed out.
+    // Every browser the PIN had signed in is signed out, and a Claude
+    // connected under the PIN is cut off.
     if (before.ok) {
       expect(
         await readSession(
@@ -492,6 +622,12 @@ describe("coming in with a PIN", () => {
         ),
       ).toBeNull();
     }
+    const [cut] = await handle.db
+      .select()
+      .from(connections)
+      .where(eq(connections.id, claude.connectionId));
+    expect(cut?.revokedAt).toEqual(swappedAt);
+    expect(cut?.revokedWhy).toMatch(/swapped for an email and a password/);
 
     // The new way in works. The PIN opens nothing, and there is no PIN
     // door left to set a new one for.
@@ -515,24 +651,128 @@ describe("coming in with a PIN", () => {
       execute(setNewPin, { pin: PIN }, system, on(now)),
     ).rejects.toMatchObject({ code: "conflict" });
     await expect(
-      execute(
-        makeProperLogin,
-        { email: "again@example.co.nz", password: PASSWORD },
-        owner,
-        on(now),
-      ),
+      swap({ email: "again@example.co.nz", password: PASSWORD, code: CODE }),
     ).rejects.toMatchObject({ code: "conflict" });
 
     const list = await execute(listStaff, {}, owner, on(now));
     expect(list.every((person) => !person.pin)).toBe(true);
-    // And an ordinary login gets its password link like anybody.
+    expect(list.find((person) => person.id === ownerId)?.email).toBe(
+      "sam@example.co.nz",
+    );
+    // An ordinary login now. It gets its password link like anybody, which
+    // signs it out everywhere and cuts its Claude off too.
+    const again = await connectClaude(handle, ownerId, now);
+    const linkAt = new Date(now.getTime() + 6000);
     const link = await execute(
       resetStaffPassword,
       { id: ownerId },
       owner,
-      on(now),
+      on(linkAt),
     );
     expect(link.token.length).toBeGreaterThan(20);
+    const [cutAgain] = await handle.db
+      .select()
+      .from(connections)
+      .where(eq(connections.id, again.connectionId));
+    expect(cutAgain?.revokedAt).toEqual(linkAt);
+    expect(cutAgain?.revokedWhy).toMatch(/new password link/);
+  });
+});
+
+describe("the set-up code is a way in that nobody else can shut", () => {
+  let handle: DbHandle;
+  const system = systemCaller("Set-up", "ui");
+  const env = { BACKSTAGE_SETUP_CODE: CODE };
+  const knock = (pin: string, now: Date, ip: string) =>
+    signInWithPin(handle.db, { pin, ip, userAgent: "vitest" }, now, env);
+  const doorRow = async () => {
+    const [row] = await handle.db
+      .select()
+      .from(authThrottle)
+      .where(eq(authThrottle.key, PIN_KEY));
+    return row;
+  };
+  let ownerId: string;
+
+  beforeAll(async () => {
+    vi.stubEnv("BACKSTAGE_SETUP_CODE", CODE);
+    handle = await openEmbedded();
+  });
+  afterAll(async () => {
+    vi.unstubAllEnvs();
+    await handle.close();
+  });
+
+  it("a door locked before there was a PIN is open for the first owner", async () => {
+    // Anybody can post a PIN at a back end that has no owner yet. Five
+    // of those lock the door, on a ladder, before it exists.
+    let last = await knock("500001", later(1000), "198.51.100.1");
+    for (let i = 2; i <= FREE_TRIES; i += 1) {
+      last = await knock(
+        String(500000 + i),
+        later(i * 1000),
+        `198.51.100.${String(i)}`,
+      );
+    }
+    expect(last).toMatchObject({ ok: false, reason: "locked" });
+    expect(await doorRow()).toMatchObject({ lockCount: 1 });
+
+    // Making the owner wipes it: those were not tries at this PIN.
+    const made = await execute(
+      createPinOwner,
+      { name: "Sam", pin: PIN },
+      system,
+      { db: handle.db, now: later(10_000) },
+    );
+    ownerId = made.id;
+    expect(await doorRow()).toBeUndefined();
+    expect((await knock(PIN, later(11_000), "203.0.113.9")).ok).toBe(true);
+  });
+
+  it("whoever proved themselves with the set-up code is let in whatever the door's counter says", async () => {
+    // The door is locked again, by strangers, and stays locked for the PIN.
+    const start = later(HOUR);
+    for (let i = 0; i < FREE_TRIES; i += 1) {
+      await knock(
+        String(600000 + i),
+        new Date(start.getTime() + i * 1000),
+        `198.51.100.${String(50 + i)}`,
+      );
+    }
+    const now = new Date(start.getTime() + MINUTE);
+    expect(await knock(PIN, now, "203.0.113.9")).toMatchObject({
+      ok: false,
+      reason: "locked",
+    });
+
+    // The set-up page does not go by way of that counter.
+    const proven = await signInProven(
+      handle.db,
+      ownerId,
+      { ip: "203.0.113.9", userAgent: "vitest" },
+      now,
+    );
+    expect(proven.ok).toBe(true);
+    if (!proven.ok) return;
+    expect(proven.user).toMatchObject({ id: ownerId, name: "Sam" });
+    expect(await readSession(handle.db, proven.token, now)).toMatchObject({
+      id: ownerId,
+    });
+    // It opened nothing for anybody else: the PIN door is as locked as it was.
+    expect(await knock(PIN, now, "203.0.113.9")).toMatchObject({
+      ok: false,
+      reason: "locked",
+    });
+
+    // And it lets in nobody who is not there.
+    expect(
+      await signInProven(
+        handle.db,
+        "usr_nobody0000000000000",
+        { ip: null, userAgent: "vitest" },
+        now,
+      ),
+    ).toEqual({ ok: false, reason: "invalid" });
   });
 });
 

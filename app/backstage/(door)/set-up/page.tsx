@@ -49,8 +49,8 @@ export default async function SetUpPage({
         <h1 className="bk-h1">Set a new PIN</h1>
         <p className="bk-muted mt-2 mb-6 leading-snug">
           For when the PIN is forgotten, or the door is locked after too many
-          wrong tries. It takes the set-up code, and signs out every browser
-          that was in.
+          wrong tries. It takes the set-up code, signs out every browser that
+          was in, and cuts off any Claude connected under the old PIN.
         </p>
         {ready ? <NewPinForm /> : <SwitchedOff />}
         <p className="mt-4 text-[0.9375rem] leading-snug">

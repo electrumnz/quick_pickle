@@ -10,7 +10,8 @@ import {
   staffCaller,
   staffCookieName,
 } from "@/lib/backstage/auth/current";
-import { signIn } from "@/lib/backstage/auth/sign-in";
+import { setUpCodeRefused } from "@/lib/backstage/auth/set-up-code";
+import { signInProven } from "@/lib/backstage/auth/sign-in";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
 import {
@@ -133,8 +134,9 @@ export type ProperLoginState = {
 
 /**
  * Whoever came in with the PIN gives themselves an email and a password.
+ * It takes the set-up code as well (lib/backstage/staff/ops.ts says why).
  * The PIN stops working and every browser it had signed in is signed out,
- * this one included, so it is signed straight back in the new way.
+ * this one included, so it is signed straight back in as the same person.
  */
 export async function properLoginAction(
   _previous: ProperLoginState,
@@ -142,15 +144,23 @@ export async function properLoginAction(
 ): Promise<ProperLoginState> {
   const values = { email: text(form, "email") };
   const password = text(form, "password");
+  const code = text(form, "code");
+  const caller = await staffCaller();
+  const db = await getDb();
+  const ip = await requestIp();
 
-  let email: string;
+  // A wrong code is counted against the address it came from, here as on
+  // the set-up page. (The operation checks the code again for itself.)
+  const refused = await setUpCodeRefused(db, code, ip);
+  if (refused !== null) return { ...refused, values };
+
+  let done;
   try {
-    const done = await execute(
+    done = await execute(
       makeProperLogin,
-      { email: values.email, password },
-      await staffCaller(),
+      { email: values.email, password, code },
+      caller,
     );
-    email = done.email;
   } catch (error) {
     if (error instanceof OpError) {
       const hasFields = Object.keys(error.fields).length > 0;
@@ -167,14 +177,13 @@ export async function properLoginAction(
     };
   }
 
-  const session = await signIn(
-    await getDb(),
-    {
-      email,
-      password,
-      ip: await requestIp(),
-      userAgent: await requestUserAgent(),
-    },
+  // Straight back in: they were signed in as this account a moment ago.
+  // No counter is asked, so a lock somebody ran up against the new address
+  // cannot leave them outside with the swap already made.
+  const session = await signInProven(
+    db,
+    done.id,
+    { ip, userAgent: await requestUserAgent() },
     new Date(),
   );
   if (!session.ok) redirect("/backstage/sign-in");

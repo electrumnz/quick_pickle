@@ -168,6 +168,36 @@ export function ProperLoginForm() {
       noValidate
     >
       <div>
+        <label htmlFor="proper-code" className="field-label">
+          Set-up code
+        </label>
+        <input
+          id="proper-code"
+          name="code"
+          type="password"
+          autoComplete="off"
+          spellCheck={false}
+          required
+          aria-invalid={state.fields.code ? true : undefined}
+          aria-describedby={
+            state.fields.code ? "proper-code-error" : "proper-code-hint"
+          }
+          className="field"
+        />
+        {state.fields.code ? (
+          <p id="proper-code-error" className="field-error">
+            {state.fields.code}
+          </p>
+        ) : (
+          <p
+            id="proper-code-hint"
+            className="bk-muted mt-1.5 text-[0.9375rem] leading-snug"
+          >
+            The phrase saved as BACKSTAGE_SETUP_CODE where the site is hosted.
+          </p>
+        )}
+      </div>
+      <div>
         <label htmlFor="proper-email" className="field-label">
           Your email
         </label>

@@ -232,6 +232,12 @@ test("the PIN opens the door, a wrong one does not, and the set-up code sets a n
   await expect(
     mine.getByRole("button", { name: /new password link/i }),
   ).toHaveCount(0);
+  // Nor is it switched off or turned down: the set-up code has to go on
+  // having a PIN to set. It stops being a PIN login by being swapped.
+  await expect(mine.getByRole("button", { name: /switch off/i })).toHaveCount(
+    0,
+  );
+  await expect(mine.getByRole("combobox")).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "You come in with a PIN" }),
   ).toBeVisible();
@@ -264,7 +270,12 @@ test("the PIN opens the door, a wrong one does not, and the set-up code sets a n
   await page.getByLabel("New PIN").fill(NEW_PIN);
   await page.getByLabel("And once more").fill(NEW_PIN);
   await press(page, /save and sign in/i);
-  await expect(page).toHaveURL(`${AUTH_URL}/backstage`);
+  // Straight in, and to the staff list: if the PIN was set again because
+  // somebody else had it, this is where what they left behind would show.
+  await expect(page).toHaveURL(/\/backstage\/settings\/staff\?/);
+  await expect(page.locator("main [role=status]")).toHaveText(
+    /New PIN saved.*Look down this list for anybody you do not know/,
+  );
 
   // The old PIN is a wrong one now.
   await signOut(page);
@@ -297,13 +308,27 @@ test("the PIN is swapped for an email and a password, and then it is gone", asyn
   await expect(page).toHaveURL(`${AUTH_URL}/backstage`);
 
   await page.goto(`${AUTH_URL}/backstage/settings/staff`);
+  // The PIN alone does not do it: the swap takes the set-up code, so
+  // nobody who only knows the PIN can take the back end over.
+  await page.getByLabel("Set-up code").fill("the PIN is all I have, sorry");
   await page.getByLabel("Your email").fill(OWNER.email);
+  await page.getByLabel("Choose a password").fill(OWNER.password);
+  await press(page, /make it my login/i);
+  await expect(page.getByText("That is not the set-up code")).toBeVisible();
+  // What was typed is still there, apart from the secrets.
+  await expect(page.getByLabel("Your email")).toHaveValue(OWNER.email);
+  await expect(page.getByLabel("Set-up code")).toHaveValue("");
+  await expect(
+    page.getByRole("heading", { name: "You come in with a PIN" }),
+  ).toBeVisible();
+
+  await page.getByLabel("Set-up code").fill(SETUP_CODE);
   await page.getByLabel("Choose a password").fill("short");
   await press(page, /make it my login/i);
   await expect(page.getByText(/^Use at least 12 characters/)).toHaveCount(1);
-  // What was typed is still there, apart from the password.
-  await expect(page.getByLabel("Your email")).toHaveValue(OWNER.email);
+  await expect(page.getByText("That is not the set-up code")).toHaveCount(0);
 
+  await page.getByLabel("Set-up code").fill(SETUP_CODE);
   await page.getByLabel("Choose a password").fill(OWNER.password);
   await press(page, /make it my login/i);
   await expect(page.locator("main [role=status]")).toHaveText(
