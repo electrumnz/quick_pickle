@@ -133,14 +133,18 @@ Going live later is the same step again with live keys in place of test ones.
 
 Sam has seen these, so they change once Ash holds everything.
 
-- **The set-up code** (`BACKSTAGE_SETUP_CODE` on the host). It makes the first login,
-  sets a new PIN, and is mixed into the PIN itself. Ash writes a new long phrase over it
-  in Vercel's settings and redeploys, because a changed setting only reaches the site
-  with its next deployment: Vercel's Deployments page can do it, or ask Claude to run
-  `redeploy`. Any PIN made under the old code stops working from then, so she presses
-  **Forgot the PIN, or locked out?** on the sign-in page and sets one with the new code.
-  Better still, she goes straight to a proper login: Settings, Staff, the panel at the
-  top.
+- **Who can sign in to the back end.** There is one login today, made on 16 November
+  2026 with a PIN. Ash gets a login of her own by invitation, the PIN is retired, and
+  Sam's login is switched off once he has stepped back.
+  [HANDOVER.md](../HANDOVER.md) has the steps, under "Getting in".
+- **The set-up code** (`BACKSTAGE_SETUP_CODE` on the host). While the back end has a PIN
+  login, the code is the key behind it: whoever has the code can set a new PIN. Retiring
+  the PIN ends that, because once the PIN has been swapped for an email and a password
+  the code opens nothing. If the PIN is being kept for a while, Ash writes a new long
+  phrase over the code in Vercel's settings and redeploys, because a changed setting
+  only reaches the site with its next deployment: Vercel's Deployments page can do it,
+  or ask Claude to run `redeploy`. The old PIN stops working from then, and she sets a
+  new one with the new code (**Forgot the PIN, or locked out?** on the sign-in page).
 - **The two access tokens** in the repository's secrets. See the next section.
 - **Stripe's keys**, as in step 4.
 - **The database's main password.** Supabase set one when the project was made. Nothing
@@ -159,6 +163,8 @@ They do not need changing for a handover. To change either anyway, ask Claude to
 - Deletes the two tokens he made for this, in his own Vercel and Supabase account
   settings. Each could reach everything he can reach, not only Quick Pickle.
 - Leaves the Supabase organisation and the Stripe account once Ash is the owner of both.
+- Has his login to the back end switched off, once Ash has her own and the PIN is
+  retired.
 - Disconnects the old `half-sour` Vercel project from the repository.
 - Clears three things left on his Claude account from the build:
   - a scheduled task, already switched off: "Quick Pickle: Drive watch and build loop";

@@ -1193,6 +1193,16 @@ checkout -- <path>`, `git add -A` or `db:generate` but the one integrating, and 
   at five past twelve (15 November 2026). Anything laid out by day goes through
   `lib/time.ts`, and its test makes it at fixed moments as well: just after midnight
   here, just before, and on the days the clocks change.
+- **After a link inside the back end is followed, the new page's heading is drawn a few
+  milliseconds before its title is in the document** (up to 20 ms on a slowed machine).
+  A check that reads the whole document waits for the title first, or it can catch the
+  page without one: axe did, in one CI run of some dozens (16 November 2026).
+  `expectNoAxeViolations` in `e2e/backstage-auth.spec.ts` shows how. No rule is switched
+  off for it.
+- **The sign-in tests are one story on a server that keeps its accounts, so they cannot
+  be retried.** When one fails, the retry starts the story again and its first test
+  fails too, because the first owner is already made. Read the first error in the log,
+  not the retry's.
 - ESLint 9 not 10, TypeScript 6 not 7: both held back on purpose by the Next toolchain.
 - Customer-facing writing is plain everyday New Zealand English with British spelling.
 

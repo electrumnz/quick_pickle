@@ -39,27 +39,34 @@ with the reasons written out.
 
 ## Getting in
 
-1. Go to the shop, scroll to the very bottom, press **Staff**.
-2. The first time, it asks for three things: the **set-up code**, your name, and a
-   **PIN** you make up (6 to 12 digits, typed twice).
-3. After that, **Staff** asks for the PIN and nothing else.
+Go to the shop, scroll to the very bottom and press **Staff**.
 
-The set-up code is a long phrase kept where the site is hosted (Vercel, the project's
-Settings, Environment Variables, `BACKSTAGE_SETUP_CODE`). It is the key behind the PIN:
-it makes the first login, and it sets a new PIN if you forget yours or get locked out
-(**Forgot the PIN, or locked out?** on the sign-in page).
+**There is one login today.** It was made on 16 November 2026 with a PIN, while the shop
+was being set up, and it carries the name typed that day. The activity log puts that name
+beside everything done under it, and no screen changes it. If that name is not yours, do
+not take the login over. Get one of your own:
 
-When this was written, nobody had made that first login. Make it yourself. The login
-carries the name typed then, the activity log puts that name beside everything done under
-it, and no screen changes it afterwards. If somebody has made one before you, the set-up
-code still sets a new PIN for it, and putting your name on it is a small change to ask
-Claude for.
+1. Whoever has the PIN signs in and opens **Settings, Staff**, then **Invite someone**.
+   They type your name and an email address, and pick **Owner**. The email is only a
+   login name: nothing is sent to it.
+2. The page shows a link that works once and lasts three days. They pass it to you.
+3. You open it and choose a password. You are in.
+4. From then on, **Staff** shows the sign-in page, and **Sign in with an email and
+   password** is the line under the PIN box.
 
-**The PIN is for now.** A short number is fine while the shop is being set up. It is not
-what should stand in front of real customers' details, and the go-live list says so
-until it is gone. Swapping it takes a minute: Settings, Staff, the panel at the top. It
-asks for an email (only a login name: nothing is sent to it), a password, and the set-up
-code once more.
+That login is yours, and the activity log says your name.
+
+**Then retire the PIN.** A short number is fine while a shop is being set up. It is not
+what should stand in front of real customers' details, and the go-live list says so until
+it is gone. It cannot simply be switched off. Whoever comes in with the PIN swaps it for
+an email and a password first (Settings, Staff, the panel at the top), which asks for the
+set-up code. After that it is an ordinary login, and you can switch it off from yours.
+
+**The set-up code** is a long phrase kept where the site is hosted (Vercel, the project's
+Settings, Environment Variables, `BACKSTAGE_SETUP_CODE`). It is the key behind the PIN: it
+made the first login, and it sets a new PIN if the PIN is forgotten or the door is locked
+(**Forgot the PIN, or locked out?** on the sign-in page). Once the PIN has been swapped,
+the code opens nothing.
 
 ## What is yours to decide
 
@@ -108,7 +115,7 @@ In rough order. Each is spelt out in [TODO.md](TODO.md).
 3. Buy a domain.
 4. Make a Resend account for the domain and connect email, so receipts are really sent.
 5. Move the hosting off Vercel's free plan. It is not for a business that takes money.
-6. Swap the PIN for a proper login.
+6. Retire the PIN, as under Getting in above.
 7. Make one test purchase yourself, start to finish. Stripe's payment page will not let
    a robot press Pay, so it is the one step nobody has watched work end to end.
 8. Switch Stripe from test keys to live ones.
@@ -175,8 +182,8 @@ In short:
 | Email and a domain  | Not made yet. You make them, in the business's name       |
 | Xero and a courier  | Yours to set up. The back end makes files for both        |
 
-Then a few things change so that only you know them: the set-up code, the PIN, and the
-keys the repository uses. That page says which and how.
+Then a few things change so that only you know them: who can sign in to the back end,
+the set-up code, and the keys the repository uses. That page says which and how.
 
 ## Keeping it going
 
