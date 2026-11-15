@@ -232,6 +232,25 @@ between two pages. Both are optional and both start switched off.
   A form's button is the yes. A bot has to ask first.
 - **Demo mode** (no database): open, seeded through the real operations, labelled on every
   screen. The label lives only in the back end. Nothing on a public page says "demo".
+- **A notice box only ever says the back end's own words.** The sentence a page shows
+  after a form is saved travels in the address, and anybody can type an address. So the
+  back end seals each one it writes (`lib/backstage/ui/notice.ts`): the sentence, its
+  tone, the page it is for and the moment it was said, signed with a secret the server
+  already holds (the clock's, else the set-up code, else the database's own address).
+  `proxy.ts` checks the seal before any page is drawn and takes the sentence out of the
+  address if it does not hold, by sending the browser to the same address without it.
+  - Pages read `notice` and `tone` as they always did and check nothing. **Never build
+    `?notice=` by hand:** use `submit`, `sayAndGo` or `withNotice`. One built by hand
+    shows on a developer's machine and is taken out in production, so a test reads the
+    source and fails on it (`tests/core/notice.test.ts`).
+  - A seal is good for its own page and for ten minutes. After that a reload shows the
+    page without the sentence.
+  - Only a page being asked for is checked (GET and HEAD). A form posts to the address
+    it is on, stale sentence and all, and must never be turned away for it: what the
+    form gets back is drawn from a new address with a new sentence.
+  - This is not the lock either. It decides what a notice box may say, never who comes in.
+  - Both browser-test servers are given a secret, so every form the tests press goes
+    through the seal.
 - The old build's "one shared password, no email" rule was dropped on purpose: with several
   people and bots at work the activity log has to say who did what. Its "no MCP" decision is
   also reversed: a member of staff can connect their own Claude, over the same operations

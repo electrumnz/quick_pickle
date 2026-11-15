@@ -93,6 +93,13 @@ Rules that are easy to get wrong:
 - A form posts to a Server Action that ends in `submit(op, input, { back, done })`
   (`lib/backstage/ui/submit.ts`): it runs the operation and redirects with a short message,
   good or bad. Forms therefore work with scripting off, and a reload never repeats a change.
+- That message travels in the address, sealed (`lib/backstage/ui/notice.ts`). A page reads
+  `notice` and `tone` from its address as plain text and never checks them: what stands in
+  front of the back end (`proxy.ts`) takes out any sentence the back end did not write, for
+  that page, in the last ten minutes. So **never build `?notice=` by hand.** Use `submit`,
+  `sayAndGo`, or `withNotice` where neither fits (a route that sends a file, say). A test
+  reads the source and fails on one built by hand: it would show on a developer's machine
+  and be taken out in production.
 - Offer only what is allowed: the buttons on an order come from its stage. A viewer sees no
   buttons.
 - Parts are in `components/backstage/ui.tsx`: `PageHeader`, `Panel`, `Pill`, `Stat`, `When`

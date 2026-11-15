@@ -1,6 +1,7 @@
 import { NextRequest, type NextFetchEvent } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { withNotice } from "@/lib/backstage/ui/notice";
 import { forgetRouting, PATH_HEADER, proxy } from "@/proxy";
 import type { Routing } from "@/lib/shop/routing";
 
@@ -72,6 +73,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -350,5 +352,81 @@ describe("the back end", () => {
     // And it never asks what is set up for the shop.
     expect(asked).toBe(0);
     expect(keptAlive).toHaveLength(0);
+  });
+
+  describe("a sentence in the address", () => {
+    const SECRET = "left boot first, then the right";
+    const ask = (path: string, method = "GET") =>
+      proxy(
+        new NextRequest(`https://quickpickle.example${path}`, {
+          method,
+          headers: { "user-agent": PHONE },
+        }),
+      );
+    /** Where the browser was sent instead, or null if the page was let through. */
+    const sentTo = (response: Response) => {
+      const location = response.headers.get("location");
+      return location === null
+        ? null
+        : `${new URL(location).pathname}${new URL(location).search}`;
+    };
+
+    it("is taken out when it is not the back end's own", async () => {
+      vi.stubEnv("CRON_SECRET", SECRET);
+      const forged = await ask(
+        "/backstage/orders/QP-7K2M9X?notice=Your%20session%20ended.%20Sign%20in%20at%20evil.example&tone=bad",
+      );
+      expect(forged.status).toBe(307);
+      expect(sentTo(forged)).toBe("/backstage/orders/QP-7K2M9X");
+      // The redirect is as private as any other answer from the back end.
+      expect(forged.headers.get("cache-control")).toBe("private, no-store");
+      expect(forged.headers.get("x-robots-tag")).toContain("noindex");
+
+      // Everything else in the address is kept.
+      const kept = await ask(
+        "/backstage/orders?status=all&notice=Hello&tone=good&nat=1&nsig=zz",
+      );
+      expect(sentTo(kept)).toBe("/backstage/orders?status=all");
+    });
+
+    it("is shown when the back end wrote it, for that page, just now", async () => {
+      vi.stubEnv("CRON_SECRET", SECRET);
+      const own = withNotice("/backstage/orders/QP-7K2M9X", "Shipped.", "good");
+      const response = await ask(own);
+      expect(sentTo(response)).toBeNull();
+      expect(response.headers.get(`x-middleware-request-${PATH_HEADER}`)).toBe(
+        own,
+      );
+      // On another page it is somebody moving a sentence about.
+      const moved = own.replace("QP-7K2M9X", "QP-OTHER1");
+      expect(sentTo(await ask(moved))).toBe("/backstage/orders/QP-OTHER1");
+      // With a word changed it is not what was written.
+      const changed = own.replace("Shipped.", "Refunded.");
+      expect(sentTo(await ask(changed))).toBe("/backstage/orders/QP-7K2M9X");
+    });
+
+    it("lets a form post to the address it is on", async () => {
+      // What the form gets back is drawn from a new address, with a new
+      // sentence. Turning the post away would lose what was typed.
+      vi.stubEnv("CRON_SECRET", SECRET);
+      const posted = await ask(
+        "/backstage/orders/QP-7K2M9X?notice=Anything&tone=good",
+        "POST",
+      );
+      expect(sentTo(posted)).toBeNull();
+    });
+
+    it("checks nothing where there is no secret, so nothing real behind the door", async () => {
+      for (const name of [
+        "CRON_SECRET",
+        "BACKSTAGE_SETUP_CODE",
+        "DATABASE_URL",
+        "POSTGRES_URL",
+      ]) {
+        vi.stubEnv(name, "");
+      }
+      const open = await ask("/backstage/orders?notice=Saved.&tone=good");
+      expect(sentTo(open)).toBeNull();
+    });
   });
 });

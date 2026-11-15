@@ -4,6 +4,7 @@ import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
 import { courierFile } from "@/lib/backstage/orders/courier";
+import { withNotice } from "@/lib/backstage/ui/notice";
 
 /**
  * The file of orders for the courier's website, as a download.
@@ -16,9 +17,7 @@ import { courierFile } from "@/lib/backstage/orders/courier";
 const PAGE = "/backstage/orders/courier";
 
 function back(request: NextRequest, notice: string): NextResponse {
-  const to = new URL(PAGE, request.url);
-  to.searchParams.set("notice", notice);
-  to.searchParams.set("tone", "bad");
+  const to = new URL(withNotice(PAGE, notice, "bad"), request.url);
   // 303: come back with a GET, whatever the form sent.
   return NextResponse.redirect(to, 303);
 }
