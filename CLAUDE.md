@@ -290,13 +290,8 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
     twice the last, up to a day. A right PIN wipes the count and not the ladder, or a
     guesser would get a fresh run of short locks whenever the owner came in. Locked means
     the right PIN is turned away with the rest.
-  - **A try is counted before the PIN is looked at** (`takePinTry`), in one statement
-    the database runs by itself, and the count is wiped if the PIN turns out right. The
-    first version looked first and counted after, and a test sent thirty guesses in the
-    same instant: every one read "no wrong tries yet" and the twentieth, the right one,
-    walked in. Only the first five in a day are ever checked against the PIN. (An
-    email's counter still looks first. Against a password of twelve characters a burst
-    buys nothing, but it is the same weakness: count first if that door is touched.)
+  - **A try is counted before the PIN is looked at**, and only the first five in a day
+    are ever checked against it (the next bullet but one says how, for every door).
   - **The set-up code is what stands behind it.** It makes the PIN, it sets a new one
     (`/backstage/set-up` lives on for that while a PIN login exists), it wipes the lock,
     and it is mixed into the PIN before the PIN is hashed, so a copy of the database
@@ -326,6 +321,18 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
     that the PIN and the set-up page are gone for good, and the set-up code opens
     nothing.
   - A PIN login is never given a password link: the door could not check a password.
+- **Every guess takes its place in the line before it is looked at**
+  (`takeTries` in `lib/backstage/auth/throttle.ts`): a password, the PIN, the set-up
+  code. The count goes up in one statement the database runs by itself, and a right
+  guess gives its place back. Looking first and counting after lets a burst through: a
+  hundred guesses sent in the same instant each read "no wrong tries yet". The PIN door
+  was built that way first, and a test sent thirty at once with the right one twentieth.
+  It walked in (15 November 2026). The email door had done the same since the start.
+  - A guess is held against the address it came from, then against what it is guessing
+    at. **The address is named first**, so one that is locked out cannot use up an
+    email's tries or the PIN door's. A guess that is turned away by one counter was
+    never looked at, so it is given back on the others.
+  - Coming in right is never charged to the address: a whole office signs in from one.
 - `requireStaff()` is the lock, called by every page and (through `staffCaller()`) every
   action. `proxy.ts` is not the lock.
 - **Outward and irreversible operations** (`effect: "outward" | "destructive"`) need a yes.

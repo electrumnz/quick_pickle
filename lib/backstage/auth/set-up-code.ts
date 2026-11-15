@@ -16,7 +16,12 @@ import type { DbOrTx } from "@/lib/db/types";
 import { formatNzDateTime, formatNzTime, nzDateKey } from "@/lib/time";
 
 import { pinSecret } from "./pin";
-import { lockedUntil, recordFailure, setUpThrottleKeys } from "./throttle";
+import {
+  giveBackAll,
+  setUpThrottleKeys,
+  takeTries,
+  wrongTry,
+} from "./throttle";
 import { sameSecret } from "./tokens";
 
 type Env = Record<string, string | undefined>;
@@ -66,17 +71,19 @@ export async function setUpCodeRefused(
   env: Env = process.env,
 ): Promise<Refusal | null> {
   if (!setUpIsOn(env)) return { error: SET_UP_OFF, fields: {} };
-  const keys = setUpThrottleKeys(ip);
-  const until = await lockedUntil(db, keys, now);
-  if (until !== null) {
+  // A place in the line first, like every guess (throttle.ts says why).
+  const turn = await takeTries(db, setUpThrottleKeys(ip), now);
+  if (!turn.allowed) {
     return {
-      error: `Too many wrong tries. Have another go after ${lockEnds(until, now)}.`,
+      error: `Too many wrong tries. Have another go after ${lockEnds(turn.until, now)}.`,
       fields: {},
     };
   }
   if (!isSetUpCode(typed, env)) {
-    await recordFailure(db, keys, now);
+    await wrongTry(db, turn, now);
     return { error: null, fields: { code: NOT_THE_CODE } };
   }
+  // The code: not a wrong try, so the count goes back.
+  await giveBackAll(db, turn.keys);
   return null;
 }

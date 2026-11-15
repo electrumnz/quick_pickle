@@ -21,13 +21,13 @@ import { isPinLogin, PIN_LOGIN, pinSecret, seasoned } from "./pin";
 import { createSession, type StaffUser } from "./sessions";
 import {
   addressKeys,
-  lockedUntil,
-  lockPinDoor,
-  recordFailure,
+  giveBackAll,
+  pinKeys,
   recordPinSuccess,
   recordSuccess,
-  takePinTry,
+  takeTries,
   throttleKeys,
+  wrongTry,
 } from "./throttle";
 
 export type SignInResult =
@@ -55,10 +55,11 @@ export async function signIn(
   now: Date,
 ): Promise<SignInResult> {
   const email = normaliseEmail(attempt.email);
-  const keys = throttleKeys(email, attempt.ip);
 
-  const until = await lockedUntil(db, keys, now);
-  if (until !== null) return { ok: false, reason: "locked", until };
+  // A place in the line first, on the address's counter and the email's,
+  // before the password is looked at (throttle.ts says why).
+  const turn = await takeTries(db, throttleKeys(email, attempt.ip), now);
+  if (!turn.allowed) return { ok: false, reason: "locked", until: turn.until };
 
   // The PIN login has a stand-in for an email. It is never let in this
   // way: its tries belong on the door's own counter.
@@ -73,14 +74,15 @@ export async function signIn(
   );
 
   if (user === undefined || !passwordOk || user.disabledAt !== null) {
-    await recordFailure(db, keys, now);
-    const nowLocked = await lockedUntil(db, keys, now);
-    return nowLocked === null
+    const until = await wrongTry(db, turn, now);
+    return until === null
       ? { ok: false, reason: "invalid" }
-      : { ok: false, reason: "locked", until: nowLocked };
+      : { ok: false, reason: "locked", until };
   }
 
+  // Right: the email's slate is wiped, and the address gets its try back.
   await recordSuccess(db, email);
+  await giveBackAll(db, addressKeys(attempt.ip));
   return letIn(db, user, attempt, now);
 }
 
@@ -164,7 +166,7 @@ export async function signInProven(
  * Signing in with the PIN.
  *
  * Every try is counted against the door itself, whoever made it, and it is
- * counted before the PIN is looked at (`takePinTry` says why). Only the
+ * counted before the PIN is looked at (throttle.ts says why). Only the
  * first five in a day are ever checked. While the door is locked the right
  * PIN is turned away with the rest: a lock that let the right one through
  * would not slow a guesser at all. With no set-up code there is nothing to
@@ -176,14 +178,10 @@ export async function signInWithPin(
   now: Date,
   env: Record<string, string | undefined> = process.env,
 ): Promise<SignInResult> {
-  // An address that is locked out does not get to use up the door's tries.
-  const address = addressKeys(attempt.ip);
-  const addressLocked = await lockedUntil(db, address, now);
-  if (addressLocked !== null) {
-    return { ok: false, reason: "locked", until: addressLocked };
-  }
-
-  const turn = await takePinTry(db, now);
+  // A place in the line first: on the address's counter, then the door's.
+  // An address that is locked out is turned away before it can use up one
+  // of the door's five.
+  const turn = await takeTries(db, pinKeys(attempt.ip), now);
   if (!turn.allowed) return { ok: false, reason: "locked", until: turn.until };
 
   const secret = pinSecret(env);
@@ -201,16 +199,15 @@ export async function signInWithPin(
   );
 
   if (user === undefined || !pinOk || user.disabledAt !== null) {
-    await recordFailure(db, address, now);
-    if (turn.last) {
-      return { ok: false, reason: "locked", until: await lockPinDoor(db, now) };
-    }
-    const nowLocked = await lockedUntil(db, address, now);
-    return nowLocked === null
+    const until = await wrongTry(db, turn, now);
+    return until === null
       ? { ok: false, reason: "invalid" }
-      : { ok: false, reason: "locked", until: nowLocked };
+      : { ok: false, reason: "locked", until };
   }
 
+  // Right: the door's count is wiped (not its ladder), and the address
+  // gets its try back.
   await recordPinSuccess(db);
+  await giveBackAll(db, addressKeys(attempt.ip));
   return letIn(db, user, attempt, now);
 }
