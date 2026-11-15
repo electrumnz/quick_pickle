@@ -346,5 +346,12 @@ export const MIGRATIONS: readonly Migration[] = [
       "CREATE INDEX \"oauth_codes_expires_idx\" ON \"oauth_codes\" USING btree (\"expires_at\");",
       "ALTER TABLE \"approvals\" ADD CONSTRAINT \"approvals_connection_id_connections_id_fk\" FOREIGN KEY (\"connection_id\") REFERENCES \"public\".\"connections\"(\"id\") ON DELETE set null ON UPDATE no action;"
     ]
+  },
+  {
+    "tag": "0012_campaign_doubt",
+    "hash": "a925ae0144206adb",
+    "statements": [
+      "ALTER TABLE \"campaign_sends\" ADD COLUMN \"doubted_at\" timestamp with time zone;"
+    ]
   }
 ];

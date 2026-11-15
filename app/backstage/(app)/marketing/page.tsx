@@ -14,6 +14,7 @@ import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { execute } from "@/lib/backstage/core/op";
 import { dayLabel } from "@/lib/backstage/marketing/dates";
 import { marketingOverview } from "@/lib/backstage/marketing/overview";
+import { howCampaignsGo } from "@/lib/backstage/marketing/sender";
 import { FORMAT_LABEL, NETWORK_LABEL } from "@/lib/backstage/marketing/status";
 import { formatNzTime, nzDateKey } from "@/lib/time";
 
@@ -38,6 +39,7 @@ export default async function MarketingPage() {
   await requireStaff();
   const now = new Date();
   const overview = await execute(marketingOverview, {}, await staffCaller());
+  const campaigns = howCampaignsGo();
   const today = nzDateKey(now);
 
   return (
@@ -49,9 +51,9 @@ export default async function MarketingPage() {
       <MarketingNav current="overview" />
       <div className="mb-5">
         <Notice>
-          Two things do not happen from here yet. Email is not connected, so a
-          campaign you send is lined up and waits. And nothing posts to social
-          media: posts are put up by hand, then marked as posted.
+          {campaigns.goes ? "" : `${campaigns.says} `}
+          Nothing posts to social media from here: posts are put up by hand,
+          then marked as posted.
         </Notice>
       </div>
 

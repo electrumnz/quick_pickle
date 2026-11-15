@@ -12,17 +12,24 @@ import {
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { execute } from "@/lib/backstage/core/op";
 import { listCampaigns } from "@/lib/backstage/marketing/campaigns";
+import { howCampaignsGo } from "@/lib/backstage/marketing/sender";
 import { plural } from "@/lib/backstage/marketing/shared";
 import { AUDIENCE_LABEL } from "@/lib/backstage/marketing/status";
 import { formatNzDateTime } from "@/lib/time";
+
+import { SubmitButton } from "@/components/backstage/SubmitButton";
 
 import {
   CampaignPill,
   FilterTabs,
   Flash,
+  Fold,
   MarketingNav,
+  TextField,
   VerdictPill,
 } from "../parts";
+
+import { takeOffListAction } from "./actions";
 
 export const metadata: Metadata = { title: "Campaigns" };
 
@@ -51,6 +58,7 @@ export default async function CampaignsPage({
     await staffCaller(),
   );
   const canWrite = staff.role !== "viewer";
+  const campaigns = howCampaignsGo();
 
   return (
     <>
@@ -67,12 +75,11 @@ export default async function CampaignsPage({
       />
       <MarketingNav current="campaigns" />
       <Flash notice={params.notice} tone={params.tone} />
-      <div className="mb-4">
-        <Notice>
-          Email is not connected yet. Sending a campaign lines its emails up,
-          one per person, and they wait until it is. Nothing leaves today.
-        </Notice>
-      </div>
+      {campaigns.goes ? null : (
+        <div className="mb-4">
+          <Notice>{campaigns.says}</Notice>
+        </div>
+      )}
 
       <FilterTabs
         label="Campaign stages"
@@ -135,6 +142,43 @@ export default async function CampaignsPage({
           </ul>
         )}
       </Panel>
+
+      {canWrite ? (
+        <div className="mt-6">
+          <Fold summary="Somebody asked to come off the list">
+            <form
+              action={takeOffListAction}
+              className="flex max-w-[32rem] flex-col gap-3"
+            >
+              <p className="leading-snug">
+                Every campaign email has an unsubscribe link that works by
+                itself. This is for somebody who wrote in, or told you, instead.
+              </p>
+              <TextField
+                id="leave-email"
+                name="email"
+                type="email"
+                label="Their email address"
+                required
+                inputMode="email"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+              <SubmitButton
+                pending="Taking them off"
+                className="bk-btn bk-btn-quiet w-full"
+              >
+                Take them off the list
+              </SubmitButton>
+              <p className="bk-muted text-[0.9375rem] leading-snug">
+                They get no more campaigns, from the next email that goes.
+                Emails about an order of theirs still go. Only they can join
+                again, from the shop.
+              </p>
+            </form>
+          </Fold>
+        </div>
+      ) : null}
     </>
   );
 }

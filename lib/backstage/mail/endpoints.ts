@@ -206,6 +206,47 @@ function addresses(value: unknown): string[] {
   return out;
 }
 
+/**
+ * News about an email that is not one of the inbox's: if it was a
+ * campaign's, it is recorded on the campaign. A bounce that will not get
+ * better and a spam complaint also strike the address off for good
+ * (lib/backstage/marketing/deliver.ts).
+ */
+async function campaignNews(
+  db: Db,
+  now: Date,
+  emailId: string,
+  type: string,
+  event: ProviderEvent,
+  data: unknown,
+): Promise<Response> {
+  if (event === "sent" || event === "delivered") {
+    return answer(200, { ok: true, result: "unknown" });
+  }
+  const bounce = field(data, "bounce");
+  const kind = `${text(field(bounce, "type")) ?? ""} ${text(field(bounce, "subType")) ?? ""}`;
+  const detail =
+    type === "email.suppressed"
+      ? (text(field(field(data, "suppressed"), "message")) ??
+        "The mail provider has this address on its own do-not-send list.")
+      : event === "failed"
+        ? (text(field(field(data, "failed"), "reason")) ?? "")
+        : (text(field(bounce, "message")) ?? "");
+  try {
+    const { recordCampaignAfterwards } = await import("../marketing/deliver");
+    const ours = await recordCampaignAfterwards(db, now, {
+      providerId: emailId,
+      event,
+      permanent: !/transient|temporary|soft|undetermined/i.test(kind),
+      detail: detail.replace(/\s+/g, " ").slice(0, 300),
+    });
+    return answer(200, { ok: true, result: ours ? event : "unknown" });
+  } catch (error) {
+    logFailure("mail.resend_campaign_event_failed", error);
+    return answer(500, { ok: false, error: "failed" });
+  }
+}
+
 const AFTERWARDS: Readonly<Record<string, ProviderEvent>> = {
   "email.sent": "sent",
   "email.delivered": "delivered",
@@ -343,7 +384,11 @@ export async function handleResendWebhook(
       ),
     )
     .limit(1);
-  if (ours === undefined) return answer(200, { ok: true, result: "unknown" });
+  if (ours === undefined) {
+    // Not a message of the inbox's. It may be one of a campaign's emails,
+    // which are kept on the campaign and not in any conversation.
+    return campaignNews(db, now, emailId, type, event, data);
+  }
   // The Message-ID it really went out with. Replies will name this one.
   const reported = (text(field(data, "message_id")) ?? "")
     .replace(/^<|>$/g, "")

@@ -15,6 +15,10 @@ async function inABrowser(options: {
   readonly doNotTrack?: string;
   readonly phone?: boolean;
   readonly page?: string;
+  /** What else the page's <main> says about itself: "preview", "uncounted". */
+  readonly marks?: readonly string[];
+  /** The address the page is at. */
+  readonly pathname?: string;
   readonly beacon?: boolean;
 }) {
   const sent: Sent[] = [];
@@ -31,13 +35,22 @@ async function inABrowser(options: {
 
   vi.resetModules();
   vi.stubGlobal("window", {
-    location: { pathname: "/checkout" },
+    location: { pathname: options.pathname ?? "/checkout" },
     matchMedia: () => ({ matches: options.phone ?? true }),
   });
   vi.stubGlobal("document", {
     cookie: options.cookie ?? "",
     querySelector: () =>
-      options.page === undefined ? null : { dataset: { page: options.page } },
+      options.page === undefined && options.marks === undefined
+        ? null
+        : {
+            dataset: {
+              ...(options.page === undefined ? {} : { page: options.page }),
+              ...Object.fromEntries(
+                (options.marks ?? []).map((mark) => [mark, ""]),
+              ),
+            },
+          },
   });
   vi.stubGlobal("navigator", {
     globalPrivacyControl: options.gpc,
@@ -123,6 +136,24 @@ describe("the visit counter, in the browser", () => {
         page: "home",
         device: "phone",
       });
+    }
+  });
+
+  it("sends nothing from a page that says it is not to be counted", async () => {
+    // A member of staff looking at a draft, and the unsubscribe page, whose
+    // address holds the token that stands for one person on the list.
+    for (const page of [
+      { marks: ["preview"], pathname: "/preview/pge_abcdefghijklmnopqrst" },
+      {
+        marks: ["uncounted"],
+        pathname: "/unsubscribe/k3v9x2m7q4w8z5t1b6n0c3r7",
+      },
+    ]) {
+      const browser = await inABrowser(page);
+      browser.seen("view", { via: "rovers" });
+      browser.seen("add", { via: "rovers" });
+      browser.seen("checkout", { via: "rovers" });
+      expect(await browser.sent(), page.pathname).toEqual([]);
     }
   });
 

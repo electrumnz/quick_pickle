@@ -1,5 +1,6 @@
 "use server";
 
+import { leaveCrew } from "@/lib/backstage/crew/ops";
 import {
   approveCampaign,
   cancelCampaign,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/backstage/marketing/campaigns";
 import type { CopyVerdict } from "@/lib/backstage/marketing/copy-check";
 import { instantFromFields } from "@/lib/backstage/marketing/dates";
+import { howCampaignsGo } from "@/lib/backstage/marketing/sender";
 import { people } from "@/lib/backstage/marketing/shared";
 import type { CampaignAudience } from "@/lib/backstage/marketing/status";
 import { formText, submit } from "@/lib/backstage/ui/submit";
@@ -90,10 +92,19 @@ export async function sendCampaignAction(form: FormData): Promise<void> {
     { id: formText(form, "id"), recipients: count(form, "recipients") },
     {
       back: page(form),
-      done: (sent) =>
-        sent.already
-          ? "It had already been queued. Nobody was queued twice."
-          : `Queued for ${people(sent.queued)}.${sent.skipped > 0 ? ` ${people(sent.skipped)} on the do-not-email list ${sent.skipped === 1 ? "was" : "were"} left out.` : ""} Email is not connected yet, so nothing has left: the emails wait until it is.`,
+      done: (sent) => {
+        if (sent.already) {
+          return "It had already been queued. Nobody was queued twice.";
+        }
+        const leftOut =
+          sent.skipped > 0
+            ? ` ${people(sent.skipped)} on the do-not-email list ${sent.skipped === 1 ? "was" : "were"} left out.`
+            : "";
+        // Said the way it is true of this place: on its way, or (on invented
+        // records) written down and not sent.
+        const how = howCampaignsGo();
+        return `Queued for ${people(sent.queued)}.${leftOut} ${how.goes ? "The first few go now, and the rest a few dozen at a time." : how.says}`;
+      },
     },
   );
 }
@@ -125,6 +136,22 @@ export async function cancelCampaignAction(form: FormData): Promise<void> {
         cancelled.stopped > 0
           ? `Stopped. ${String(cancelled.stopped)} ${cancelled.stopped === 1 ? "email that was" : "emails that were"} waiting will not go.`
           : "Cancelled.",
+    },
+  );
+}
+
+/**
+ * Somebody asked to come off the list some other way than the link in an
+ * email: they wrote in, or said so at a stall. The button is the yes.
+ */
+export async function takeOffListAction(form: FormData): Promise<void> {
+  await submit(
+    leaveCrew,
+    { email: formText(form, "email") },
+    {
+      back: LIST,
+      done: (left) =>
+        `${left.email} is off the Pickle Crew list. They get no more campaigns.`,
     },
   );
 }

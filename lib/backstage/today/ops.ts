@@ -207,7 +207,7 @@ export async function needsNow(ctx: OpContext): Promise<Need[]> {
   for (const item of marketing.items) {
     needs.push({
       key: `marketing-${item.key}`,
-      urgent: item.key === "held",
+      urgent: item.key === "held" || item.key === "stuck",
       title: item.sentence,
       detail: "In Marketing.",
       href: item.href,

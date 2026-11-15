@@ -18,7 +18,7 @@ import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
 
 import { newToken } from "../auth/tokens";
-import { notFound } from "../core/errors";
+import { notFound, OpError } from "../core/errors";
 import { defineOp } from "../core/op";
 
 type CrewSource = "crew-form" | "checkout" | "manual" | "import";
@@ -147,7 +147,7 @@ export const leaveCrew = defineOp({
   name: "crew.unsubscribe",
   title: "Take someone off the Pickle Crew",
   description:
-    "Unsubscribes an address, by the token from an email's unsubscribe link or by the address itself. Takes effect at once. The row is kept so the address is never emailed or re-added by mistake.",
+    "Unsubscribes an address, by the token from an email's unsubscribe link or by the address itself. Takes effect at once: a campaign already on its way leaves them out. Emails about an order of theirs are not marketing and still go. The row is kept so the address is never emailed or re-added by mistake. Asking again for somebody already off the list changes nothing.",
   access: "write",
   // It cannot be undone from here: only the person can join again.
   effect: "destructive",
@@ -170,7 +170,14 @@ export const leaveCrew = defineOp({
           ? eq(crewMembers.unsubscribeToken, input.token)
           : eq(crewMembers.email, input.email ?? ""),
       );
-    if (member === undefined) throw notFound("That address");
+    if (member === undefined) {
+      throw input.email === undefined
+        ? notFound("That address")
+        : new OpError(
+            "not_found",
+            `${input.email} is not on the Pickle Crew list, so there is nothing to take them off. They are not sent campaigns.`,
+          );
+    }
     if (member.status === "subscribed") {
       await ctx.db
         .update(crewMembers)
@@ -190,12 +197,43 @@ export const leaveCrew = defineOp({
         payload: { email: member.email },
       });
     } else {
-      await ctx.audit({
-        entity: { type: "crew", id: member.email },
-        summary: `${member.email} asked to leave the Pickle Crew again (already off it)`,
-      });
+      // Already off it: the link pressed twice, or a mail program's own
+      // button and then ours. Nothing changed, so the log gets no line.
+      ctx.nothingChanged();
     }
     return { email: member.email };
+  },
+});
+
+/** What an unsubscribe link is made of. Anything else is not looked up. */
+const TOKEN = /^[A-Za-z0-9_-]{10,200}$/;
+
+export type CrewStanding = {
+  readonly email: string;
+  /** True while they are on the list and being emailed. */
+  readonly subscribed: boolean;
+};
+
+export const crewStanding = defineOp({
+  name: "crew.standing",
+  title:
+    "Whose unsubscribe link this is, and whether they are still on the list",
+  description:
+    "For the shop's own unsubscribe page: given the token from an email's unsubscribe link, says whose address it is and whether they are still on the Pickle Crew. Null for a token that is not one of ours. The token is what proves somebody was sent the email, so only the shop itself asks: not a person, not a bot.",
+  access: "read",
+  input: z.object({ token: z.string().max(200) }),
+  async run(ctx, input): Promise<CrewStanding | null> {
+    if (ctx.actor.type !== "system") {
+      throw new OpError("forbidden", "Only the shop itself asks that.");
+    }
+    if (!TOKEN.test(input.token)) return null;
+    const [member] = await ctx.db
+      .select({ email: crewMembers.email, status: crewMembers.status })
+      .from(crewMembers)
+      .where(eq(crewMembers.unsubscribeToken, input.token));
+    return member === undefined
+      ? null
+      : { email: member.email, subscribed: member.status === "subscribed" };
   },
 });
 

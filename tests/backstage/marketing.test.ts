@@ -4502,6 +4502,17 @@ describe("the demo data", () => {
   });
 
   describe("the screens", () => {
+    // A screen reads the clock itself, and the demo records are dated from
+    // NOW. Left on the real clock, this passed on the day it was written and
+    // failed three days later, when a partner's next step fell due and its
+    // screen grew a line. So the clock stands still here, at NOW.
+    beforeAll(() => {
+      vi.useFakeTimers({ toFake: ["Date"], now: NOW });
+    });
+    afterAll(() => {
+      vi.useRealTimers();
+    });
+
     /** Every screen in the area, with records from the demo data. */
     async function screens(): Promise<[name: string, html: string][]> {
       const all = await execute(listCampaigns, {}, system, run());
@@ -4587,10 +4598,15 @@ describe("the demo data", () => {
       }
       const page = new Map(drawn);
 
-      // Each says, in a sentence, what does not happen from here yet.
-      expect(page.get("marketing")).toContain("Email is not connected");
-      expect(page.get("marketing")).toContain("nothing posts to social media");
-      expect(page.get("campaigns")).toContain("Email is not connected yet.");
+      // Each says, in a sentence, what does not happen from here: on
+      // invented records nothing is sent, and nothing ever posts itself.
+      const INVENTED =
+        "This back end is on invented records, so nothing is sent: each email is written down as not sent.";
+      expect(page.get("marketing")).toContain(INVENTED);
+      expect(page.get("marketing")).toContain(
+        "Nothing posts to social media from here",
+      );
+      expect(page.get("campaigns")).toContain(INVENTED);
       expect(page.get("campaign: draft")).toContain("Approve it");
       // Codes work at the checkout now, so nothing says otherwise.
       expect(page.get("promo codes")).toContain("One code an order.");
@@ -5002,7 +5018,9 @@ describe("the screens the demo data does not reach", () => {
     expect(ready).toContain(
       "1 person on the list will be left out, because their address is on the do-not-email list (1 marked us as spam).",
     );
-    expect(ready).toContain("Email is not connected yet");
+    expect(ready).toContain("on invented records, so nothing is sent");
+    // And it does not go on to say they cannot be called back, when none go.
+    expect(ready).not.toContain("cannot be called back");
     expect(ready).toContain("Set the time");
     expect(ready).toContain("Back to draft, to edit it");
     expect(ready).toMatch(
@@ -5019,7 +5037,7 @@ describe("the screens the demo data does not reach", () => {
 
     const going = page("campaign: sending");
     expect(going).toContain(
-      "Queued. 4 emails waiting, 1 sent, 1 not delivered.",
+      "On its way. 4 emails waiting, 1 sent, 1 not delivered.",
     );
     expect(going).toContain("Stop sending");
     expect(going).toContain("Who it went to");
@@ -5031,18 +5049,19 @@ describe("the screens the demo data does not reach", () => {
       "It has stopped itself: 3 of the 4 emails that have gone bounced. Nothing more will go.",
     );
     expect(stopped).toContain(
-      "Queued. 2 emails waiting, 1 sent, 3 not delivered.",
+      "On its way. 2 emails waiting, 1 sent, 3 not delivered.",
     );
     expect(stopped).toContain("Stop sending");
     // A pill says so as well as the notice.
     expect(stopped.match(/Stopped itself/g)).toHaveLength(1);
-    // It does not go on to say the emails are waiting on a connection.
+    // It does not go on to say why else they might be waiting.
     expect(
       stopped.slice(
-        stopped.indexOf("Queued."),
+        stopped.indexOf("On its way."),
         stopped.indexOf("Stop sending"),
       ),
-    ).not.toContain("Email is not connected yet");
+    ).not.toContain("invented records");
+    expect(stopped).not.toContain("Cannot send right now");
 
     const off = page("campaign: cancelled");
     expect(off).toContain("Cancelled. It will not be sent.");

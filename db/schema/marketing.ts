@@ -82,6 +82,14 @@ export const campaignSends = pgTable(
     providerId: text(),
     sentAt: instant("sent_at"),
     error: text(),
+    /**
+     * The first time a try at sending this one got no clear answer: the mail
+     * provider did not reply, or replied with a fault of its own, so the
+     * email may have gone. It is tried again while the provider still
+     * remembers the key it was given (a day), and after that it is set aside
+     * rather than risk a second copy. Null: no try has been in doubt.
+     */
+    doubtedAt: instant("doubted_at"),
   },
   (t) => [
     uniqueIndex("campaign_sends_key").on(t.campaignId, t.email),

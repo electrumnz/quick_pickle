@@ -59,10 +59,22 @@ function currentPage(): string {
   }
 }
 
-/** A member of staff previewing a draft is not a visit. */
-function isPreview(): boolean {
+/**
+ * Pages that are never counted, because the page itself says so on its
+ * <main>:
+ *
+ *   data-preview    a member of staff looking at a draft is not a visit
+ *   data-uncounted  the page's own address is somebody's (the unsubscribe
+ *                   link from an email names one person), so not even the
+ *                   path may be sent. The server refuses it as well.
+ */
+function notCounted(): boolean {
   try {
-    return document.querySelector("main")?.dataset.preview !== undefined;
+    const main = document.querySelector("main");
+    return (
+      main?.dataset.preview !== undefined ||
+      main?.dataset.uncounted !== undefined
+    );
   } catch {
     return false;
   }
@@ -102,7 +114,7 @@ export function seen(
   source: Readonly<Record<string, string>>,
 ): void {
   if (typeof window === "undefined" || VISIT === "") return;
-  if (askedNotToBeTracked() || isPreview()) return;
+  if (askedNotToBeTracked() || notCounted()) return;
   try {
     const body = JSON.stringify({
       kind: step,

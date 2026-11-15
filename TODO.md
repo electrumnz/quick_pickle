@@ -110,6 +110,17 @@ Updated 12 November 2026. Honest status, not a summary.
      and answer that reply from the phone: it joins the same conversation.
      `MAIL_INBOUND_SECRET` is not needed for any of this. It is for a mail forwarder of
      our own, if Resend's receiving is ever not used.
+- [ ] **Before the first campaign to the Pickle Crew.** Three things, in this order.
+  1. Connect email and the webhook (both above). The webhook is how a bounce or a spam
+     complaint about a campaign takes somebody off the list. Without it they would be
+     written to again.
+  2. Enter who the company is (Settings, The label and the company) and the address
+     customers write to (Settings, The shop). They are printed under every campaign
+     email: marketing email has to say who sent it and how to reach them. A campaign's
+     page shows the line as it will print.
+  3. Send the first one while the list is still only yourselves. Open it on a phone,
+     then press the unsubscribe link in it and see that you come off the list. The
+     how-to "How to email the Pickle Crew" (Plans) has the steps.
 - [ ] **Tell pre-order customers the ship date.** The delivery page and the "order's in"
       page promise the ship date by email before anything is sent. Once email is connected
       it is one press: set the date in Settings, The shop, and the panel under it says who
@@ -183,9 +194,19 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       there is no screen for it, because one person runs this).
 - [x] **Marketing.** Campaigns to the crew with approval before sending, a social planner,
       reviews read by a person before anyone sees them, and partners with a written yes on
-      file before they are named. Not built: a campaign that is sent is queued, one row for
-      each person, and nothing drains that queue yet. Sending those through the mail seam
-      (`lib/mail`), with the unsubscribe link each one has to carry, is still to do.
+      file before they are named.
+- [x] **Campaigns really go.** A campaign that is sent goes out a few dozen emails at a
+      time, the first few as send is pressed and the rest every five minutes, and one
+      given a time is queued when the time comes. Each email says who it is from and
+      carries an unsubscribe link that works with one press and no sign-in, as well as the
+      header a mail program's own unsubscribe button uses. If the mail provider is busy or
+      refuses us nobody is marked as failed: the campaign waits, says why on its own page
+      and on Today, and carries on by itself. Nobody is sent a second copy on a guess. An
+      address that bounces for good, or marks an email as spam, is never emailed again.
+      With email not connected a campaign cannot be queued at all, and the screen says so.
+      Still to do by a person: connect email (above), then send the first campaign while
+      the list is still only yourselves, and press the unsubscribe link in it. Not built:
+      counting opens and clicks. Nothing in an email is tracked, on purpose.
 - [x] **Codes, links and collabs.** Promo codes at the checkout (percent, dollars or free
       delivery, with dates, a limit, and once for each customer). A code or a short link
       can belong to a club, a creator or an event: their orders are counted as theirs, a

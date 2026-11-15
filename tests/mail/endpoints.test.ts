@@ -9,6 +9,8 @@ import { POST as inboundRoute } from "@/app/api/mail/inbound/route";
 import { POST as resendRoute } from "@/app/api/mail/resend/route";
 import {
   auditLog,
+  campaignSends,
+  crewMembers,
   events,
   mailboxes,
   mailConversations,
@@ -16,8 +18,9 @@ import {
   mailSuppressions,
   users,
 } from "@/db/schema";
-import type { Caller } from "@/lib/backstage/core/actor";
+import { systemCaller, type Caller } from "@/lib/backstage/core/actor";
 import { execute } from "@/lib/backstage/core/op";
+import { joinCrew } from "@/lib/backstage/crew/ops";
 import {
   handleInboundRaw,
   handleResendWebhook,
@@ -27,6 +30,13 @@ import {
   listConversations,
   sendReply,
 } from "@/lib/backstage/mail/ops";
+import {
+  approveCampaign,
+  createCampaign,
+  getCampaign,
+  markCampaignSend,
+  sendCampaign,
+} from "@/lib/backstage/marketing/campaigns";
 import {
   closeDb,
   openEmbedded,
@@ -751,6 +761,217 @@ describe("POST /api/mail/resend", () => {
       expect(rows).toMatchObject([{ reason: "complaint" }]);
       // The email itself did arrive: it is not marked as failed.
       expect((await message(third.messageId))?.status).toBe("sent");
+    });
+  });
+
+  /**
+   * A campaign's emails are kept on the campaign, not in any conversation,
+   * so news about one is not the inbox's. It is the same door all the same:
+   * the provider has one webhook, and a bounce it reports for a campaign
+   * email has to stop the next campaign going to that address.
+   */
+  describe("what became of a campaign's email", () => {
+    const shop = systemCaller("The shop", "storefront");
+    // The ids the provider gave each email as it took it.
+    const SENT = {
+      "mere@example.co.nz": "0b6f2c1e-11aa-4c53-9a7e-5f0d1c2b3a01",
+      "kai@example.co.nz": "0b6f2c1e-11aa-4c53-9a7e-5f0d1c2b3a02",
+      "ana@example.co.nz": "0b6f2c1e-11aa-4c53-9a7e-5f0d1c2b3a03",
+      "tom@example.co.nz": "0b6f2c1e-11aa-4c53-9a7e-5f0d1c2b3a04",
+    } as const;
+    type Person = keyof typeof SENT;
+    let campaignId = "";
+
+    const sendTo = async (email: Person) =>
+      (
+        await handle.db
+          .select()
+          .from(campaignSends)
+          .where(eq(campaignSends.providerId, SENT[email]))
+      )[0];
+    const onTheList = async (email: Person) =>
+      (
+        await handle.db
+          .select({ status: crewMembers.status })
+          .from(crewMembers)
+          .where(eq(crewMembers.email, email))
+      )[0]?.status;
+    const struckOff = async (email: Person) =>
+      (
+        await handle.db
+          .select()
+          .from(mailSuppressions)
+          .where(eq(mailSuppressions.email, email))
+      ).map((row) => row.reason);
+    const linesAbout = async () =>
+      (
+        await handle.db
+          .select()
+          .from(auditLog)
+          .where(eq(auditLog.operation, "campaigns.markSends"))
+      ).filter((line) => line.entityId === campaignId).length;
+
+    beforeAll(async () => {
+      const at = { db: handle.db, now: NOW };
+      for (const email of Object.keys(SENT)) {
+        await execute(joinCrew, { email, source: "crew-form" }, shop, at);
+      }
+      const { id } = await execute(
+        createCampaign,
+        {
+          name: "Batch news",
+          subject: "Batch 002 is in",
+          body: "Tiny bottle. Big dill.",
+        },
+        staff,
+        at,
+      );
+      await execute(
+        approveCampaign,
+        { id, acknowledgeRestricted: false },
+        staff,
+        at,
+      );
+      const { audienceCount } = await execute(getCampaign, { id }, staff, at);
+      await execute(
+        sendCampaign,
+        { id, recipients: audienceCount ?? 0 },
+        staff,
+        at,
+      );
+      for (const [email, providerId] of Object.entries(SENT)) {
+        await markCampaignSend(id, email, { status: "sent", providerId }, at);
+      }
+      campaignId = id;
+    });
+
+    it("strikes off an address that bounced for good, once", async () => {
+      const payload = {
+        type: "email.bounced",
+        data: {
+          email_id: SENT["mere@example.co.nz"],
+          to: ["mere@example.co.nz"],
+          bounce: {
+            type: "Permanent",
+            subType: "General",
+            message: "The recipient's mail server\n rejected the email.",
+          },
+        },
+      };
+      expect(await body(await send(payload))).toEqual({
+        ok: true,
+        result: "bounced",
+      });
+      expect(await sendTo("mere@example.co.nz")).toMatchObject({
+        status: "bounced",
+        error: "The recipient's mail server rejected the email.",
+      });
+      expect(await onTheList("mere@example.co.nz")).toBe("bounced");
+      expect(await struckOff("mere@example.co.nz")).toEqual(["bounce"]);
+
+      // The provider delivers its news at least once. Told again, nothing
+      // is written twice and the activity log gets no second line.
+      const lines = await linesAbout();
+      expect((await send(payload)).status).toBe(200);
+      expect(await struckOff("mere@example.co.nz")).toEqual(["bounce"]);
+      expect(await linesAbout()).toBe(lines);
+      // Nobody else on the list was touched.
+      expect(await onTheList("kai@example.co.nz")).toBe("subscribed");
+    });
+
+    it("leaves a mailbox that is only full today alone", async () => {
+      const response = await send({
+        type: "email.bounced",
+        data: {
+          email_id: SENT["kai@example.co.nz"],
+          to: ["kai@example.co.nz"],
+          bounce: {
+            type: "Transient",
+            subType: "MailboxFull",
+            message: "Full",
+          },
+        },
+      });
+      expect(response.status).toBe(200);
+      expect((await sendTo("kai@example.co.nz"))?.status).toBe("sent");
+      expect(await onTheList("kai@example.co.nz")).toBe("subscribed");
+      expect(await struckOff("kai@example.co.nz")).toEqual([]);
+    });
+
+    it("strikes off somebody who marked it as spam", async () => {
+      const response = await send({
+        type: "email.complained",
+        data: {
+          email_id: SENT["kai@example.co.nz"],
+          to: ["kai@example.co.nz"],
+        },
+      });
+      expect(await body(response)).toEqual({ ok: true, result: "complained" });
+      expect((await sendTo("kai@example.co.nz"))?.status).toBe("complained");
+      expect(await onTheList("kai@example.co.nz")).toBe("complained");
+      expect(await struckOff("kai@example.co.nz")).toEqual(["complaint"]);
+    });
+
+    it("writes down an email the provider took and then did not send, and strikes nobody off for it", async () => {
+      const response = await send({
+        type: "email.failed",
+        data: {
+          email_id: SENT["ana@example.co.nz"],
+          to: ["ana@example.co.nz"],
+          failed: { reason: "The sending domain is not verified." },
+        },
+      });
+      expect(await body(response)).toEqual({ ok: true, result: "failed" });
+      expect(await sendTo("ana@example.co.nz")).toMatchObject({
+        status: "failed",
+        error: "The sending domain is not verified.",
+      });
+      // That one was about us, not about them.
+      expect(await onTheList("ana@example.co.nz")).toBe("subscribed");
+      expect(await struckOff("ana@example.co.nz")).toEqual([]);
+    });
+
+    it("has nothing to write down for one that simply arrived", async () => {
+      const lines = await linesAbout();
+      for (const type of ["email.sent", "email.delivered"]) {
+        const response = await send({
+          type,
+          data: {
+            email_id: SENT["tom@example.co.nz"],
+            to: ["tom@example.co.nz"],
+          },
+        });
+        expect(response.status).toBe(200);
+      }
+      expect((await sendTo("tom@example.co.nz"))?.status).toBe("sent");
+      expect(await onTheList("tom@example.co.nz")).toBe("subscribed");
+      expect(await linesAbout()).toBe(lines);
+    });
+
+    it("does not take an unsigned word for it", async () => {
+      const text = JSON.stringify({
+        type: "email.complained",
+        data: {
+          email_id: SENT["tom@example.co.nz"],
+          to: ["tom@example.co.nz"],
+        },
+      });
+      const response = await send(null, {
+        raw: text,
+        headers: {
+          "svix-id": "msg_2b1f",
+          "svix-timestamp": seconds,
+          "svix-signature": sign(
+            text,
+            "msg_2b1f",
+            seconds,
+            "whsec_c29tZW9uZSBlbHNlcyBzZWNyZXQ=",
+          ),
+        },
+      });
+      expect(response.status).toBe(401);
+      expect(await onTheList("tom@example.co.nz")).toBe("subscribed");
+      expect(await struckOff("tom@example.co.nz")).toEqual([]);
     });
   });
 

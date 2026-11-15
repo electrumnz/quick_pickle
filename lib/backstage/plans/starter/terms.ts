@@ -43,6 +43,8 @@ export const LINK = {
   shop: "/backstage/settings/shop",
   label: "/backstage/settings/label",
   claude: "/backstage/settings/claude",
+  campaigns: "/backstage/marketing/campaigns",
+  doNotEmail: "/backstage/inbox/settings#do-not-email",
   approvals: "/backstage/approvals",
   doc: (slug: string) => `/backstage/plans/docs/${slug}`,
 } as const;

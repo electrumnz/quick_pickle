@@ -16,6 +16,10 @@
  *     has switched it on.
  *   - a request for a person's yes that has waited a week lapses, and what
  *     is left over from connecting Claude is cleared away.
+ *   - a campaign that was given a time is queued when it comes, and the
+ *     next few dozen emails of any campaign on its way are sent
+ *     (lib/backstage/marketing/deliver.ts). That comes last and is given
+ *     only the time that is left.
  *
  * Everything here is safe to do twice, and two ticks at once do not trip
  * over each other: events are claimed with a lease, and every change to an
@@ -53,6 +57,28 @@ export const UNPAID_AFTER_MINUTES = 45;
 /** The setting the last tick is written to, for the back end to show. */
 export const LAST_TICK_KEY = "clock.last_tick";
 
+/**
+ * How far into a tick campaign emails may still be started. The request the
+ * tick runs in is cut off at a minute (app/api/tick), and one call to the
+ * mail provider can hang for twenty seconds before it is given up on, so
+ * the last email has to start by here for the round to end by itself.
+ */
+export const CAMPAIGNS_BY_MS = 35_000;
+/** With less than this left, the round is left for the next tick. */
+const WORTH_STARTING_MS = 3_000;
+
+/**
+ * How long the campaign round may run, given how long the tick has taken
+ * so far. Null: not this time.
+ */
+export function campaignBudget(
+  elapsedMs: number,
+  mostMs: number,
+): number | null {
+  const left = CAMPAIGNS_BY_MS - elapsedMs;
+  return left < WORTH_STARTING_MS ? null : Math.min(mostMs, left);
+}
+
 export type TickSummary = {
   /** When it ran, as an ISO instant. */
   readonly at: string;
@@ -64,6 +90,13 @@ export type TickSummary = {
     readonly closed: number;
     /** Still not settled: a payment on its way, or one a person must check. */
     readonly left: number;
+  };
+  /** Campaign emails this round. Absent in a pulse written before it did. */
+  readonly campaigns?: {
+    readonly sent: number;
+    readonly failed: number;
+    /** True when the round stopped early: busy, held, or not connected. */
+    readonly stopped: boolean;
   };
   readonly tookMs: number;
 };
@@ -169,7 +202,7 @@ export async function tick(options: TickOptions = {}): Promise<TickSummary> {
     await tidyConnections(db, now);
   })().catch(() => null);
 
-  const summary: TickSummary = {
+  const pulse: TickSummary = {
     at: now.toISOString(),
     events,
     orders: swept,
@@ -179,13 +212,15 @@ export async function tick(options: TickOptions = {}): Promise<TickSummary> {
   // Written straight to the table, not through an operation: it is the
   // clock's own pulse, once every few minutes for ever, and a line in the
   // activity log for each would bury everything a person did.
-  await db
-    .insert(settings)
-    .values({ key: LAST_TICK_KEY, value: summary, updatedAt: now })
-    .onConflictDoUpdate({
-      target: settings.key,
-      set: { value: summary, updatedAt: now },
-    });
+  const beat = (summary: TickSummary) =>
+    db
+      .insert(settings)
+      .values({ key: LAST_TICK_KEY, value: summary, updatedAt: now })
+      .onConflictDoUpdate({
+        target: settings.key,
+        set: { value: summary, updatedAt: now },
+      });
+  await beat(pulse);
 
   // The morning email, once each New Zealand morning while it is switched
   // on (lib/backstage/digest/ops.ts). It is switched off unless somebody
@@ -201,6 +236,41 @@ export async function tick(options: TickOptions = {}): Promise<TickSummary> {
     }
   })().catch(() => null);
 
+  // Campaigns: queue what has come due and send the next few dozen emails.
+  // Last of everything, after the pulse, because it is the slow part and is
+  // paced on purpose: it gets the time that is left and no more, so it can
+  // never be why the request runs out, and a tick that was already slow
+  // leaves it for the next one. Never a reason to fail the tick.
+  // (Asked for here, not at the top: the mail pipeline knows the shop, and
+  // the shop's operations are loaded with Today, which reads the clock.)
+  const campaignRound = await (async () => {
+    const { deliverCampaigns, ROUND_MS } = await import("../marketing/deliver");
+    const budgetMs = campaignBudget(Date.now() - started, ROUND_MS);
+    if (budgetMs === null) return undefined;
+    const round = await deliverCampaigns(db, now, { budgetMs });
+    return {
+      sent: round.sent,
+      failed: round.failed,
+      stopped: round.stopped !== null,
+    };
+  })().catch((error: unknown) => {
+    console.error(
+      JSON.stringify({
+        event: "clock.campaigns_failed",
+        message: error instanceof Error ? error.message : "unknown",
+      }),
+    );
+    return undefined;
+  });
+  if (campaignRound === undefined) return pulse;
+
+  // The pulse again, with how the round went and how long it all took.
+  const summary: TickSummary = {
+    ...pulse,
+    campaigns: campaignRound,
+    tookMs: Date.now() - started,
+  };
+  await beat(summary).catch(() => null);
   return summary;
 }
 

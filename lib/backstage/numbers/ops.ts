@@ -46,9 +46,23 @@ const HOST_PATTERN = /^(?=.{1,100}$)[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
 export const SEEN_KINDS = ["view", "add", "checkout", "order"] as const;
 export type SeenKind = (typeof SEEN_KINDS)[number];
 
+/**
+ * Pages whose address is somebody's own. The unsubscribe link in an email
+ * holds a token that stands for one person on the Pickle Crew, so a visit
+ * there is never written down: kept, its path would tie a visit to a
+ * person, and nothing here may say who a visitor is.
+ */
+const PRIVATE_PATH = /^\/unsubscribe(?:\/|$)/i;
+
+/** True for a path that must never be kept. See PRIVATE_PATH. */
+export function isPrivatePath(path: string): boolean {
+  return PRIVATE_PATH.test(path);
+}
+
 /** A path on this site, without its query: "/checkout". Anything else is "/". */
 function tidyPath(raw: string): string {
   const path = raw.split(/[?#]/)[0] ?? "";
+  if (isPrivatePath(path)) return "/unsubscribe";
   return /^\/[A-Za-z0-9\-._~/]{0,119}$/.test(path) && !path.startsWith("//")
     ? path
     : "/";
@@ -106,6 +120,9 @@ export const recordSeen = defineOp({
   access: "read",
   input: seenInput,
   async run(ctx, input): Promise<{ counted: boolean }> {
+    // The page does not send this, and the answer is the same if something
+    // else does: a visit to a private address is not counted at all.
+    if (isPrivatePath(input.path)) return { counted: false };
     await ctx.db.insert(pageEvents).values(seenRow(input, ctx.now));
     return { counted: true };
   },

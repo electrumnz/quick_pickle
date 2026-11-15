@@ -22,6 +22,7 @@ import { addDays, nzDateKey, startOfNzDay } from "@/lib/time";
 import { defineOp } from "../core/op";
 import {
   countHeldCampaigns,
+  countStuckCampaigns,
   listCampaigns,
   type CampaignRow,
 } from "./campaigns";
@@ -97,7 +98,8 @@ export const marketingOverview = defineOp({
 });
 
 export type NeedsYouItem = {
-  readonly key: "held" | "reviews" | "posts" | "campaigns" | "partners";
+  readonly key:
+    "held" | "stuck" | "reviews" | "posts" | "campaigns" | "partners";
   readonly count: number;
   /** A whole sentence, ready to show. */
   readonly sentence: string;
@@ -117,9 +119,10 @@ export const marketingNeedsYou = defineOp({
     const endOfToday = startOfNzDay(addDays(today, 1));
     const one = async (query: Promise<{ n: number }[]>) =>
       (await query)[0]?.n ?? 0;
-    const [held, reviewsWaiting, postsDue, campaignsReady, partnersDue] =
+    const [held, stuck, reviewsWaiting, postsDue, campaignsReady, partnersDue] =
       await Promise.all([
         countHeldCampaigns(ctx.db),
+        countStuckCampaigns(ctx.db),
         one(
           ctx.db
             .select({ n: count() })
@@ -164,6 +167,14 @@ export const marketingNeedsYou = defineOp({
         key: "held",
         count: held,
         sentence: `${plural(held, "campaign")} ${held === 1 ? "has" : "have"} stopped part way: too many emails bounced or were marked as spam.`,
+        href: "/backstage/marketing/campaigns",
+      });
+    }
+    if (stuck > 0) {
+      items.push({
+        key: "stuck",
+        count: stuck,
+        sentence: `${plural(stuck, "campaign")} ${stuck === 1 ? "has" : "have"} emails waiting that cannot be sent. ${stuck === 1 ? "It says" : "Each says"} why.`,
         href: "/backstage/marketing/campaigns",
       });
     }
