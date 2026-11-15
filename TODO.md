@@ -1,6 +1,6 @@
 # Quick Pickle: what's done, what isn't
 
-Updated 12 November 2026. Honest status, not a summary.
+Updated 15 November 2026. Honest status, not a summary.
 
 `npm run prelaunch` checks the first two sections for you and fails until they are done.
 
