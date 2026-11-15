@@ -27,6 +27,12 @@ import {
   listOrderEmails,
   type OrderEmail,
 } from "@/lib/backstage/orders/emails";
+import { lastCourierUsed } from "@/lib/backstage/orders/courier";
+import {
+  ANOTHER_COURIER,
+  KNOWN_COURIERS,
+  knownCourierByName,
+} from "@/lib/backstage/orders/couriers";
 import {
   disputeInWords,
   stripeDisputesUrl,
@@ -163,6 +169,7 @@ function NextStep({
   canWrite,
   stock,
   emailing,
+  lastCourier,
 }: {
   readonly order: OrderDetail;
   readonly canWrite: boolean;
@@ -170,6 +177,8 @@ function NextStep({
   readonly stock: OrderStock;
   /** This order's customer is really emailed as it moves along. */
   readonly emailing: boolean;
+  /** The courier the last order went with, if it was one on the list. */
+  readonly lastCourier: string | null;
 }) {
   if (!canWrite) {
     return (
@@ -179,6 +188,14 @@ function NextStep({
     );
   }
   const can = (to: string) => order.next.some((status) => status === to);
+  // Which courier the shipping form starts on: the one already written on
+  // this order, else the one the last order went with, else the first on
+  // the list. Most days it is the same courier as yesterday.
+  const startCourier =
+    knownCourierByName(order.carrier)?.key ??
+    ((order.carrier ?? "") !== ""
+      ? ANOTHER_COURIER
+      : (lastCourier ?? KNOWN_COURIERS[0]?.key ?? ANOTHER_COURIER));
 
   if (order.next.length === 0) {
     return (
@@ -212,44 +229,82 @@ function NextStep({
       {can("shipped") ? (
         <form action={shipAction} className="flex flex-col gap-3">
           <Number value={order.number} />
-          <div>
-            <label htmlFor="carrier" className="field-label">
-              Courier
-            </label>
-            <input
-              id="carrier"
-              name="carrier"
-              defaultValue={order.carrier ?? ""}
-              placeholder="NZ Post"
-              className="field"
-            />
-          </div>
-          <div>
-            <label htmlFor="trackingNumber" className="field-label">
-              Tracking number
-            </label>
-            <input
-              id="trackingNumber"
-              name="trackingNumber"
-              defaultValue={order.trackingNumber ?? ""}
-              autoCapitalize="characters"
-              spellCheck={false}
-              className="field"
-            />
-          </div>
-          <div>
-            <label htmlFor="trackingUrl" className="field-label">
-              Tracking link
-            </label>
-            <input
-              id="trackingUrl"
-              name="trackingUrl"
-              type="url"
-              inputMode="url"
-              defaultValue={order.trackingUrl ?? ""}
-              placeholder="https://"
-              className="field"
-            />
+          {/* The courier's name and the link are only asked for when the
+              courier is not one on the list. The stylesheet puts those two
+              boxes away while one on the list is picked (.bk-other-choice
+              in backstage.css), so it is right with scripting off too. */}
+          <div className="bk-other-choice flex flex-col gap-3">
+            <div>
+              <label htmlFor="courier" className="field-label">
+                Which courier
+              </label>
+              <select
+                id="courier"
+                name="courier"
+                // A select only reads its starting value once.
+                key={`courier-${startCourier}`}
+                defaultValue={startCourier}
+                className="field"
+              >
+                {KNOWN_COURIERS.map((known) => (
+                  <option key={known.key} value={known.key}>
+                    {known.name}
+                  </option>
+                ))}
+                <option value={ANOTHER_COURIER}>Another courier</option>
+              </select>
+            </div>
+            <div className="bk-when-other">
+              <label htmlFor="courierName" className="field-label">
+                Its name
+              </label>
+              <input
+                id="courierName"
+                name="courierName"
+                maxLength={60}
+                autoComplete="off"
+                defaultValue={
+                  startCourier === ANOTHER_COURIER ? (order.carrier ?? "") : ""
+                }
+                className="field"
+              />
+            </div>
+            <div>
+              <label htmlFor="trackingNumber" className="field-label">
+                Tracking number
+              </label>
+              <input
+                id="trackingNumber"
+                name="trackingNumber"
+                defaultValue={order.trackingNumber ?? ""}
+                autoCapitalize="characters"
+                spellCheck={false}
+                className="field"
+              />
+              <p className="bk-muted mt-1 text-[0.9375rem] leading-snug">
+                For a courier on the list, the link the customer follows is
+                worked out from this. There is nothing to paste.
+              </p>
+            </div>
+            <div className="bk-when-other">
+              <label htmlFor="trackingUrl" className="field-label">
+                Tracking link
+              </label>
+              <input
+                id="trackingUrl"
+                name="trackingUrl"
+                type="url"
+                inputMode="url"
+                defaultValue={order.trackingUrl ?? ""}
+                placeholder="https://"
+                className="field"
+              />
+              <p className="bk-muted mt-1 text-[0.9375rem] leading-snug">
+                We do not know where this courier&apos;s tracking page is. Paste
+                the link for this parcel if it has one. Left empty, the customer
+                gets the number alone.
+              </p>
+            </div>
           </div>
           <SubmitButton
             pending="Saving"
@@ -362,6 +417,11 @@ export default async function OrderPage({
     caller,
   );
   const stock = await execute(orderStock, { number: order.number }, caller);
+  // Only asked when this order can still be shipped: the shipping form
+  // starts on the courier the last one went with.
+  const lastCourier = order.next.some((status) => status === "shipped")
+    ? await execute(lastCourierUsed, {}, caller)
+    : null;
   const emails = await execute(
     listOrderEmails,
     { number: order.number },
@@ -653,6 +713,7 @@ export default async function OrderPage({
               canWrite={canWrite}
               stock={stock}
               emailing={emailing}
+              lastCourier={lastCourier}
             />
           </Panel>
 

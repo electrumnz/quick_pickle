@@ -516,6 +516,12 @@ go-live list shows when it last ran and what is stuck.
   - **A courier's tracking address is read off its own page, never remembered**
     (`lib/backstage/orders/couriers.ts` says where each came from and when). A customer
     is sent that link. For a courier not on the list the customer gets the number alone.
+  - **One order shipped from its own page uses the same list** (`shipWith`): pick the
+    courier, type the number, and the link is worked out. Nobody pastes one. A number
+    that does not read as a tracking number is refused before anything is shipped,
+    because shipping cannot be undone and emails the customer what was typed. For another
+    courier the name and number are taken as typed, with a link only if the person
+    shipping pasted one: they are looking at it, and we do not guess.
   - Every cell a customer typed is made safe for a spreadsheet (`csvCell` in
     `lib/backstage/orders/csv.ts`): one that starts a sum gets a leading apostrophe. Any
     new file that leaves the back end is written with `toCsv`.

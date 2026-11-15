@@ -135,7 +135,28 @@ test("buys a pack, start to finish", async ({ page }) => {
     "Packed.",
   );
 
-  await page.getByLabel("Courier", { exact: true }).fill("NZ Post");
+  // The courier is picked from a list. While one on the list is picked
+  // there is no name to type and no link to paste.
+  await expect(page.locator("#courierName")).toBeHidden();
+  await expect(page.locator("#trackingUrl")).toBeHidden();
+  await page.selectOption("#courier", "other");
+  await expect(page.locator("#courierName")).toBeVisible();
+  await expect(page.locator("#trackingUrl")).toBeVisible();
+  // A slip of the fingers is caught before anything is shipped.
+  await page.selectOption("#courier", "nzpost");
+  await page.getByLabel("Tracking number").fill("see the label");
+  await Promise.all([
+    reply(),
+    page.getByRole("button", { name: "Mark as shipped" }).click(),
+  ]);
+  await expect(page.locator("main [role=alert]").first()).toContainText(
+    "That does not look like a tracking number.",
+  );
+  await expect(
+    page.getByRole("button", { name: "Mark as shipped" }),
+  ).toBeVisible();
+
+  await page.selectOption("#courier", "nzpost");
   await page.getByLabel("Tracking number").fill("LZ123456789NZ");
   await Promise.all([
     reply(),
@@ -147,6 +168,13 @@ test("buys a pack, start to finish", async ({ page }) => {
   await expect(
     page.getByText(`Shipped ${number} with NZ Post, tracking LZ123456789NZ`),
   ).toBeVisible();
+  // Nobody pasted a link: it was worked out from the courier and the number.
+  await expect(
+    page.getByRole("link", { name: "LZ123456789NZ" }),
+  ).toHaveAttribute(
+    "href",
+    "https://www.nzpost.co.nz/tools/tracking?trackid=LZ123456789NZ",
+  );
   // Once it has gone, the only thing left to do is say it arrived.
   await expect(
     page.getByRole("button", { name: "Mark as delivered" }),

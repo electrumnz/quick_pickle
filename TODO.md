@@ -281,9 +281,10 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 - [ ] **What a packed box weighs.** The courier's file has no weight in it, because nobody
       has weighed one. Once the box is real: a weight for each pack size, and the file
       carries it.
-- [ ] **The same courier list on an order's own page.** Shipping one order by hand still
-      means typing the courier's name and pasting its tracking link. The list the courier
-      screen uses could fill the link in there too.
+- [x] **The same courier list on an order's own page.** Pick the courier, type the
+      tracking number, and the link the customer follows is worked out. A number that
+      does not look like one is caught before anything is shipped. For a courier not on
+      the list there is a box for its name, and one for a link if it has one.
 - [x] **Claude, connected (MCP).** Settings, Claude: an owner switches it on, and a member
       of staff connects their own Claude with one address. Three tools (find, look,
       change) reach the whole back end. It can read and make ordinary changes; anything

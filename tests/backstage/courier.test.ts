@@ -49,6 +49,7 @@ import {
   KNOWN_COURIERS,
   knownCourier,
   knownCourierByName,
+  shipWith,
   trackingLink,
 } from "@/lib/backstage/orders/couriers";
 import {
@@ -217,6 +218,102 @@ describe("the couriers known by name", () => {
     ]) {
       expect(asTrackingNumber(not), not).toBeNull();
     }
+  });
+});
+
+describe("shipping one order from its own page", () => {
+  const typed = (over: Partial<Parameters<typeof shipWith>[0]> = {}) =>
+    shipWith({
+      courier: "nzpost",
+      courierName: "",
+      trackingNumber: "",
+      trackingUrl: "",
+      ...over,
+    });
+
+  it("works the link out for a courier on the list, so nobody pastes one", () => {
+    expect(typed({ trackingNumber: " lz 123 456 789 nz " })).toEqual({
+      ok: true,
+      carrier: "NZ Post",
+      trackingNumber: "LZ123456789NZ",
+      trackingUrl:
+        "https://www.nzpost.co.nz/tools/tracking?trackid=LZ123456789NZ",
+    });
+    // Whatever was left in the other two boxes is not used: they are put
+    // away while a courier on the list is picked.
+    expect(
+      typed({
+        courier: "aramex",
+        courierName: "A mate with a van",
+        trackingNumber: "0079 4210 3926",
+        trackingUrl: "https://evil.example/track",
+      }),
+    ).toEqual({
+      ok: true,
+      carrier: "Aramex",
+      trackingNumber: "007942103926",
+      trackingUrl: "https://www.aramex.co.nz/tools/track?l=007942103926",
+    });
+  });
+
+  it("ships with no tracking at all when no number is given", () => {
+    expect(typed()).toEqual({
+      ok: true,
+      carrier: "NZ Post",
+      trackingNumber: null,
+      trackingUrl: null,
+    });
+  });
+
+  it("refuses a number that does not read as one, before anything is shipped", () => {
+    // Shipping cannot be undone and the customer is emailed what was typed.
+    for (const slip of ["12 Sideline Road", "see label", "12345", "N/A"]) {
+      const answer = typed({ trackingNumber: slip });
+      expect(answer.ok, slip).toBe(false);
+      if (!answer.ok) {
+        expect(answer.why).toContain("does not look like a tracking number");
+        expect(answer.why).toContain("Nothing has been shipped.");
+      }
+    }
+  });
+
+  it("takes another courier as typed, with a link only if one was pasted", () => {
+    expect(
+      typed({
+        courier: ANOTHER_COURIER,
+        courierName: " A mate with a van ",
+        trackingNumber: " JOB-77 ",
+      }),
+    ).toEqual({
+      ok: true,
+      carrier: "A mate with a van",
+      trackingNumber: "JOB-77",
+      // We do not know where their tracking page is, and do not guess.
+      trackingUrl: null,
+    });
+    expect(
+      typed({
+        courier: ANOTHER_COURIER,
+        courierName: "Van Co",
+        trackingNumber: "JOB-78",
+        trackingUrl: " https://vanco.example/track/JOB-78 ",
+      }),
+    ).toMatchObject({
+      ok: true,
+      carrier: "Van Co",
+      trackingUrl: "https://vanco.example/track/JOB-78",
+    });
+    // Nothing typed at all is still an order that can go.
+    expect(typed({ courier: ANOTHER_COURIER })).toEqual({
+      ok: true,
+      carrier: null,
+      trackingNumber: null,
+      trackingUrl: null,
+    });
+    // A word that is not a courier's key is read as another courier's.
+    expect(
+      typed({ courier: "not-a-key", courierName: "Van Co" }),
+    ).toMatchObject({ ok: true, carrier: "Van Co" });
   });
 });
 
