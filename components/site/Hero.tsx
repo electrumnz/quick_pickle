@@ -78,7 +78,7 @@ export function Hero({
         className="pattern-stripes pointer-events-none absolute inset-0 -z-10 opacity-[0.055]"
       />
 
-      <div className="max-w-page px-gutter mx-auto pt-5 pb-10 md:grid md:grid-cols-[1fr_1fr] md:items-center md:gap-10 md:pt-14 md:pb-20 lg:gap-16">
+      <div className="max-w-page-gutters px-gutter mx-auto pt-5 pb-10 md:grid md:grid-cols-[1fr_1fr] md:items-center md:gap-10 md:pt-14 md:pb-20 lg:gap-16">
         <div className="relative z-10">
           <p className="label bg-navy text-cream animate-rise inline-flex rounded-full px-4 py-2 text-[1.15rem] leading-none md:text-[1.3rem]">
             <span className="cap-trim">{words?.eyebrow ?? HERO.eyebrow}</span>

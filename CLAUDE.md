@@ -925,6 +925,15 @@ screen. `lib/backstage/connect/` is all of it.
   words 0.16em, paragraphs 2em). `e2e/site.spec.ts` applies that and looks for clipped
   words, after proving it can see one. A box that is clipped on purpose says so with
   `data-marquee`.
+- **Every section's words start and stop at the same two edges**: a page
+  (`--container-page`) in the middle, a gutter either side. There are two ways to write
+  that and they come to the same thing: `max-w-page mx-auto` for a box inside somebody
+  else's gutters, and `max-w-page-gutters px-gutter mx-auto` for a box that carries its
+  own. `max-w-page px-gutter` on one box is neither. It is a page less two gutters: it
+  looks right on a phone, and from about 1,280 wide it sits 64px in from its neighbours,
+  as the header, the hero and the ritual did until 15 November 2026.
+  `tests/brand/page-width.test.ts` catches it where it is typed and `e2e/site.spec.ts`
+  measures the edges in a browser.
 - **A running band is laid out to cross the widest screen.** A band slides its words by
   half their width and starts again, so half the copies have to reach right across. With
   four copies the olive band under the hero fell short on a 27 inch monitor (2,560 wide)
