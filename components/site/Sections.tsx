@@ -116,11 +116,28 @@ export function TopTicker({
   );
 }
 
-/** The tilted olive band under the hero. Pure brand noise, on purpose. */
+/**
+ * The tilted olive band under the hero. Pure brand noise, on purpose.
+ *
+ * It is turned 1.6 degrees about its middle, so its right end rises and its
+ * left end falls by half the screen's width times the sine of that: 1.4% of
+ * the screen. That is 6px on a phone, 27px on a 1,900 wide laptop and 54px
+ * at 3,840. The box round it is what stops the band scrolling the page
+ * sideways, and it cuts off whatever leaves it. So the room above and below
+ * grows with the screen (1.4vw, and 6px to spare), and is never less than
+ * the 12px a phone has always had. With 12px at every width the band's top
+ * right and bottom left corners were cut off from about 830px wide.
+ *
+ * Change the angle and change the 1.4 with it: e2e/site.spec.ts measures the
+ * corners against the box, out to the widest screen.
+ */
 export function Band() {
   const items = [OFFICIAL.tinyPackage, OFFICIAL.pickleCrew, OFFICIAL.neverFear];
   return (
-    <div className="bg-cream relative z-10 -my-3 overflow-hidden py-3">
+    <div
+      data-testid="tilted-band"
+      className="bg-cream relative z-10 -my-3 overflow-hidden py-[max(0.75rem,calc(1.4vw+6px))]"
+    >
       <div className="-mx-4 -rotate-[1.6deg]">
         <Ticker
           items={items}
