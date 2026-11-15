@@ -81,8 +81,19 @@ test("nothing behind the door opens without signing in", async ({ page }) => {
   }
 });
 
-/** Every accessibility rule, on the page as it stands. */
+/**
+ * Every accessibility rule, on the page once it has arrived.
+ *
+ * After a link inside the back end is followed, the new page's heading is
+ * drawn a few milliseconds before its title is in the document (measured:
+ * up to 20 ms on a slowed machine, on every hop from the sign-in page to
+ * set-up). Axe reads the whole document, so a check that starts the instant
+ * the heading is up can catch the page with no title, and one CI run in
+ * some dozens did (16 November 2026). So this waits for a title first. A
+ * page that never gets one still fails, here, and no rule is switched off.
+ */
 async function expectNoAxeViolations(page: Page) {
+  await expect(page).toHaveTitle(/\S/);
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
