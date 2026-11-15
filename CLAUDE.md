@@ -1050,6 +1050,19 @@ screen. `lib/backstage/connect/` is all of it.
   first paint, the estimate counts them as blocking it, and identical bytes scored 2.4 s or
   2.9 s for the largest paint depending on a 20 ms race. Measured properly it is the first
   paint: about 1.7 s on slow 4G.
+- **Lighthouse measures a warm server** (`scripts/lhci-server.mjs`). With no database the
+  app boots one in its own process on the first requests it gets, and that froze the
+  server for six to nine seconds on a CI runner. So the first of every five samples
+  scored about 0.45, on `main` too, which left four real ones and made the median the
+  second-worst of four. A runner that happened to be slow then failed the check with the
+  shop's code unchanged (15 November 2026). The script asks for the front page until it
+  answers quickly three times running, and only then lets Lighthouse start. Production
+  has a real database and never does that boot, and the budget itself is untouched.
+  - **How fast the runner is moves the score more than most changes do.** Each report
+    carries the machine's own benchmark. The same page scored 0.98 and 0.99 on a runner
+    near 3,000 and 0.91 to 0.96 on one near 2,400, all of it in blocking time while the
+    page's script starts. Read the reports (the `lighthouse-reports` artifact) before
+    believing a small move either way.
 - **Lucky stays drawn into the page.** The home document is about 280 kB before it is
   squeezed (about 40 kB as Vercel sends it), and Lucky's drawing is 53 kB of that, twice over,
   because React sends its own copy of everything the server drew. It is tempting to move
