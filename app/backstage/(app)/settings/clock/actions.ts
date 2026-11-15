@@ -9,6 +9,7 @@ import { OpError } from "@/lib/backstage/core/errors";
 import { processEvents } from "@/lib/backstage/core/events";
 import { execute } from "@/lib/backstage/core/op";
 import { registerHandlers } from "@/lib/backstage/handlers";
+import { withNotice } from "@/lib/backstage/ui/notice";
 import { formText, submit } from "@/lib/backstage/ui/submit";
 import { getDb } from "@/lib/db/client";
 
@@ -21,7 +22,7 @@ import { getDb } from "@/lib/db/client";
 const PAGE = "/backstage/settings/clock";
 
 const say = (notice: string, tone: "good" | "bad") =>
-  `${PAGE}?notice=${encodeURIComponent(notice)}&tone=${tone}`;
+  withNotice(PAGE, notice, tone);
 
 const count = (n: number, one: string, many: string) =>
   `${String(n)} ${n === 1 ? one : many}`;

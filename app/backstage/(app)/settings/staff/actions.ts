@@ -11,6 +11,7 @@ import {
   resetStaffPassword,
   updateStaff,
 } from "@/lib/backstage/staff/ops";
+import { withNotice } from "@/lib/backstage/ui/notice";
 
 export type InviteState = {
   readonly error: string | null;
@@ -119,7 +120,7 @@ export async function updateStaffAction(form: FormData): Promise<void> {
   const role = text(form, "role");
   const disabled = text(form, "disabled");
   let notice = "Saved.";
-  let tone = "good";
+  let tone: "good" | "bad" = "good";
   try {
     await execute(
       updateStaff,
@@ -141,7 +142,5 @@ export async function updateStaffAction(form: FormData): Promise<void> {
         : "Something went wrong on our side. Give it another go.";
     tone = "bad";
   }
-  redirect(
-    `/backstage/settings/staff?notice=${encodeURIComponent(notice)}&tone=${tone}`,
-  );
+  redirect(withNotice("/backstage/settings/staff", notice, tone));
 }

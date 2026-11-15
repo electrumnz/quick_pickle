@@ -39,6 +39,17 @@ const NO_MAIL = {
  */
 const OWN_PAGES = { QP_KEPT_PAGES: "memory" };
 
+/**
+ * The sentence a back-end page shows after a form is saved travels in the
+ * address, sealed with a secret the server holds, and one that is not sealed
+ * is taken out (lib/backstage/ui/notice.ts). Both servers are given a secret,
+ * so every form these tests press goes through the seal as it does in
+ * production. On the first server, which has no accounts, the set-up code
+ * does nothing else. The clock's own secret is blanked so that a machine's
+ * own environment cannot change which secret the seal is made with.
+ */
+const SEALED_NOTICES = { BACKSTAGE_SETUP_CODE: SETUP_CODE, CRON_SECRET: "" };
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -77,6 +88,7 @@ export default defineConfig({
         PAYMENT_PROVIDER: "test",
         NEXT_PUBLIC_SITE_URL: baseURL,
         QP_EMBEDDED_DB: "memory",
+        ...SEALED_NOTICES,
         ...NO_MAIL,
         ...OWN_PAGES,
       },
@@ -94,7 +106,7 @@ export default defineConfig({
         NEXT_PUBLIC_SITE_URL: AUTH_URL,
         QP_EMBEDDED_DB: "memory",
         BACKSTAGE_AUTH: "required",
-        BACKSTAGE_SETUP_CODE: SETUP_CODE,
+        ...SEALED_NOTICES,
         ...NO_MAIL,
         ...OWN_PAGES,
       },

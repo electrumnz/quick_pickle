@@ -4,6 +4,7 @@ import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
 import { booksFile } from "@/lib/backstage/numbers/books";
+import { withNotice } from "@/lib/backstage/ui/notice";
 
 /**
  * Sales for the books, as a file. Asked for by a form's button (a POST),
@@ -39,11 +40,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   } catch (error) {
     if (!(error instanceof OpError)) throw error;
-    const back = new URL(PAGE, request.url);
-    back.searchParams.set("from", from);
-    back.searchParams.set("to", to);
-    back.searchParams.set("notice", error.message);
-    back.searchParams.set("tone", "bad");
+    const days = new URLSearchParams({ from, to });
+    const back = new URL(
+      withNotice(`${PAGE}?${days.toString()}`, error.message, "bad"),
+      request.url,
+    );
     return NextResponse.redirect(back, 303);
   }
 }

@@ -4,6 +4,7 @@ import {
   type NextRequest,
 } from "next/server";
 
+import { noticeStands, withoutNotice } from "@/lib/backstage/ui/notice";
 import { asPromoCode } from "@/lib/shop/code";
 import { fromAPersonsBrowser } from "@/lib/shop/person";
 import {
@@ -23,12 +24,18 @@ import {
  * page of the shop. Every other page of the shop is static and never passes
  * through here.
  *
- * THE BACK END. Two small things and no deciding:
+ * THE BACK END. Three small things and no deciding:
  *
  *   1. Tells the page which path was asked for (a layout cannot see it
  *      otherwise), so that signing in can send you back where you were going.
  *      Whatever a browser sent under that header name is overwritten.
  *   2. Marks every back-end response as private: never cached, never indexed.
+ *   3. Takes a sentence out of the address if it is not the back end's own.
+ *      A page shows the `notice` in its address in a notice box, and anybody
+ *      can type an address. The back end seals the ones it writes
+ *      (lib/backstage/ui/notice.ts). One that is not sealed, is for another
+ *      page, or is more than a few minutes old is taken out before any page
+ *      is drawn, by sending the browser to the same address without it.
  *
  * It is NOT the lock. Who may come in is checked by `requireStaff()` in the
  * page and in every action (lib/backstage/auth/current.ts), against the
@@ -239,6 +246,22 @@ export async function proxy(
     } catch {
       // Whatever went wrong in the deciding, the shop still opens.
       return NextResponse.next();
+    }
+  }
+
+  // A sentence in the address that is not the back end's own goes no
+  // further. Only where a page is being asked for: a form posts to the
+  // address it is on, and what it gets back is drawn from a new address.
+  if (
+    (request.method === "GET" || request.method === "HEAD") &&
+    request.nextUrl.searchParams.has("notice")
+  ) {
+    const asked = new URL(request.url);
+    if (!noticeStands(asked, new Date())) {
+      const response = NextResponse.redirect(withoutNotice(asked), 307);
+      response.headers.set("x-robots-tag", "noindex, nofollow, noarchive");
+      response.headers.set("cache-control", "private, no-store");
+      return response;
     }
   }
 

@@ -7,6 +7,9 @@
  * a refusal it lands back where it was with the reason. Both are ordinary
  * redirects, so the forms work with scripting off and a reload never repeats
  * the change.
+ *
+ * The sentence travels in the address, sealed (./notice.ts), so that only
+ * the back end's own words are ever shown in a notice box.
  */
 
 import "server-only";
@@ -17,17 +20,7 @@ import type { z } from "zod";
 import { staffCaller } from "../auth/current";
 import { OpError } from "../core/errors";
 import { execute, type Op } from "../core/op";
-
-function withNotice(
-  path: string,
-  notice: string,
-  tone: "good" | "bad",
-): string {
-  const [base, hash = ""] = path.split("#");
-  const joiner = (base ?? "").includes("?") ? "&" : "?";
-  const anchor = hash === "" ? "" : `#${hash}`;
-  return `${base ?? ""}${joiner}notice=${encodeURIComponent(notice)}&tone=${tone}${anchor}`;
-}
+import { withNotice } from "./notice";
 
 export async function submit<I extends z.ZodType, O>(
   op: Op<I, O>,

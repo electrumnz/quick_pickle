@@ -246,6 +246,53 @@ test("an owner can switch an account off, and it stays out", async ({
   await expect(page.locator("main [role=alert]")).toHaveText(/no owner/i);
 });
 
+test("a notice box only ever says the back end's own words", async ({
+  page,
+}) => {
+  await signIn(page, OWNER.email, OWNER.password);
+  const staff = `${AUTH_URL}/backstage/settings/staff`;
+
+  // A link somebody made by hand, with a sentence of theirs in it. The
+  // sentence is taken out of the address before the page is drawn.
+  await page.goto(
+    `${staff}?notice=Your%20session%20ended.%20Sign%20in%20again%20at%20evil.example&tone=bad`,
+  );
+  await expect(page).toHaveURL(staff);
+  await expect(
+    page.getByRole("heading", { level: 1, name: /staff/i }),
+  ).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("evil.example");
+  await expect(page.locator("main [role=alert]")).toHaveCount(0);
+
+  // What the back end says itself still arrives, and is still there when
+  // the page is loaded again.
+  const mine = page.getByRole("listitem").filter({ hasText: OWNER.email });
+  await Promise.all([
+    page.waitForResponse((response) => response.request().method() === "POST"),
+    mine.getByRole("button", { name: /switch off/i }).click(),
+  ]);
+  await expect(page.locator("main [role=alert]")).toHaveText(/no owner/i);
+  const said = new URL(page.url());
+  expect(said.searchParams.get("nsig")).toMatch(/^[a-f0-9]{32}$/);
+  await page.reload();
+  await expect(page.locator("main [role=alert]")).toHaveText(/no owner/i);
+
+  // The same address with the sentence changed is somebody else's again.
+  const changed = new URL(said);
+  changed.searchParams.set("notice", "Now pay the invoice at evil.example");
+  await page.goto(changed.toString());
+  await expect(page).toHaveURL(staff);
+  await expect(page.locator("main")).not.toContainText("evil.example");
+  await expect(page.locator("main [role=alert]")).toHaveCount(0);
+
+  // And it is only good for the page it was said on.
+  const moved = new URL(said);
+  moved.pathname = "/backstage/settings";
+  await page.goto(moved.toString());
+  await expect(page).toHaveURL(`${AUTH_URL}/backstage/settings`);
+  await expect(page.locator("main [role=alert]")).toHaveCount(0);
+});
+
 /* ------------------------------------------------------------------------
    The shop's settings.
 

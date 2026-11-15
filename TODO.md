@@ -324,14 +324,13 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       are also signed in to the back end, and press Connect there. Claude should refuse
       to finish. If it finishes, switch connecting off and tell whoever looks after this
       code: the fix is a short code the person types across.
-- [ ] **A notice in the address is the back end's own voice on every screen but one.**
-      After a form is saved, the sentence that says how it went travels in the address
-      (`?notice=`), so a link somebody made by hand can put any sentence in a notice box
-      on a back-end page. It is text only and it is behind the sign-in, and the one page
-      where it mattered (the yes/no page a bot hands out the link to) now takes a word
-      from a fixed list instead. Doing the same everywhere means signing the notice, or
-      carrying it in a short-lived cookie: about fifty pages read it today
-      (`lib/backstage/ui/submit.ts` writes it).
+- [x] **A notice box only ever says the back end's own words.** After a form is saved,
+      the sentence that says how it went travels in the address (`?notice=`), so a link
+      somebody made by hand could put any sentence in a notice box on a back-end page.
+      The back end now seals each sentence it writes, for its own page and for ten
+      minutes, and anything else is taken out of the address before a page is drawn
+      (`lib/backstage/ui/notice.ts`, checked in `proxy.ts`). The fifty or so pages that
+      read it did not have to change.
 - [ ] **Say in the privacy page which tools read customers' details.** It now says the
       shop may be run with an AI assistant. If Claude is never switched on, that line can
       come out; if another tool is added, it goes in.
