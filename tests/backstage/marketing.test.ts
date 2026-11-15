@@ -57,6 +57,7 @@ import {
   dueCampaigns,
   findCampaignSend,
   getCampaign,
+  inboxLine,
   listCampaigns,
   listCampaignSends,
   markCampaignSend,
@@ -634,6 +635,23 @@ describe("the copy check", () => {
     expect(
       rulesOf("\u{FF43}\u{FF52}\u{FF41}\u{FF4D}\u{FF50}\u{FF53}"),
     ).toContain("TH-04");
+    // Anything else that takes up no room: a mark that says which way the
+    // writing runs, an invisible "times", a selector, a tag letter, a
+    // control character. The word is still the word.
+    for (const unseen of [
+      "\u{200E}",
+      "\u{202E}",
+      "\u{2062}",
+      "\u{FE0F}",
+      "\u{E0061}",
+      "\u{0002}",
+      "\u{0001}",
+    ]) {
+      expect(
+        rulesOf(`Stops cr${unseen}amps.`),
+        `U+${(unseen.codePointAt(0) ?? 0).toString(16)}`,
+      ).toContain("TH-04");
+    }
   });
 
   it("checks several parts as one without matching across the join", () => {
@@ -1226,6 +1244,41 @@ describe("campaigns, from a draft to the queue", () => {
   }, 60_000);
   afterAll(async () => {
     await closeDb();
+  });
+
+  it("reads the subject and the preheader together, as an inbox shows them", async () => {
+    // Each half is fine. A list of emails runs the preheader straight on
+    // from the subject, and read that way they are a claim.
+    const split = await execute(
+      createCampaign,
+      {
+        name: "Two halves",
+        subject: "This one is good for",
+        preheader: "you and the whole team",
+        body: "Hi {{name}},\n\nTiny bottle.",
+      },
+      w.staff,
+      run,
+    );
+    expect(split.verdict).toBe("banned");
+    await expect(
+      execute(approveCampaign, { id: split.id }, w.staff, run),
+    ).rejects.toMatchObject({ code: "conflict" });
+    // Halves that only sit beside each other are fine, and so is a subject
+    // with no preheader at all.
+    const fine = await execute(
+      createCampaign,
+      {
+        name: "Two halves, fine",
+        subject: "Good luck",
+        preheader: "For you and the team",
+        body: "Hi {{name}},\n\nTiny bottle.",
+      },
+      w.staff,
+      run,
+    );
+    expect(fine.verdict).toBe("clean");
+    expect(inboxLine("Good for", "")).toBe("");
   });
 
   it("checks a draft every time it is saved, and a banned phrase blocks approval", async () => {

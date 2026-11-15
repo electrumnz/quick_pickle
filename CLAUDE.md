@@ -42,6 +42,14 @@ npm run audit:copy:selftest   # proves the scanner still catches the deck's own 
 
 A wink is a claim too. "We can't tell you what it does" implies it does something.
 
+**The rules read text the way a person would** (`lib/backstage/core/reading.ts`), in both
+checks: the one a draft is shown with and the last look before anything leaves. A curly
+quote is a quote, full-width letters are letters, and a character nobody can see (a
+zero-width space, a direction mark, a control character) is taken out, so a word a rule
+knows is still that word with one hidden inside it. An email written as pieces marks
+where somebody's own words were struck out, and says so when it hands itself over
+(`struckOut`), because in typed text that mark is one more thing nobody can see.
+
 Not every word a customer reads is in the repository: a reply typed in the inbox, a
 campaign, a template kept in the database, anything a bot drafts. So the rules themselves
 live in `legal/scripts/rules.mjs`, and **every operation that sends or publishes words runs
@@ -215,6 +223,16 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
 - **A yes is for the words that were on the screen.** Publishing is handed the lines it
   was shown and refuses if the draft is something else by now. A bot may write the draft
   and never publishes it (`PEOPLE_ONLY`).
+- **The rules read the lines the way the band runs them:** one after another, and round
+  to the first again, never a line at a time. Two lines that are each fine can make a
+  sentence that is not, and the band has no end. The same review found "It's good for"
+  and "you and your mates" published as two clean lines.
+- **What is typed is tidied of what nobody can see** (`tidyTopLines`): a zero-width
+  space, a mark that turns the writing round, a control character, half of a pair. A
+  row of nothing that shows is not a line. What holds an emoji together stays.
+- A write only lands if the row still holds what was read (`writeTopLine`). What is
+  compared is the row's own contents, not the moment it was written: two writes can
+  share a moment.
 - **Nothing typed is thrown away for being a letter over.** A draft may be longer than
   what can be published (8 lines, 60 letters each): the screen says what does not fit, and
   the draft waits.
@@ -225,8 +243,9 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
   somebody took down does not come back because the database blinked.
 - **The band is always full and runs at one pace**, however few or many the words
   (`bandFit`, under "Design rules that came from measuring"). One short line is laid out
-  about sixty times to cross the widest screen, and far fewer of them are drawn on a
-  phone. Only the first copy is read out by a screen reader.
+  about sixty times to cross the widest screen, a single letter about a hundred and
+  fifty, and far fewer of them are drawn on a phone. Only letters a reader can see are
+  counted. Only the first copy is read out by a screen reader.
 - A special that is switched on still says itself first, in front of whichever line it is.
 - The preview is the real page: `/preview/home?line=draft`, behind `requireStaff()`.
 - **Never change the line from a browser test on the first server:** every other test
@@ -279,6 +298,16 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
   - Only a page being asked for is checked (GET and HEAD). A form posts to the address
     it is on, stale sentence and all, and must never be turned away for it: what the
     form gets back is drawn from a new address with a new sentence.
+  - **So nothing may put an address in front of a browser, other than by a page being
+    asked for, unless every sentence in it was sealed.** A form that hands back what was
+    typed and has its page drawn again draws it from the address the browser is on. A
+    redirect from a form is the one way an address gets there unasked (with scripting
+    on it sets the address without asking for the page), and the only form that
+    redirects to an address from outside is signing in. `safeNext`
+    (`lib/backstage/auth/next.ts`) is the one function that reads a return address: a
+    page of the back end or nothing, and never with a sentence in it. An independent
+    review found a sentence riding in that way (15 November 2026). **Add a form that
+    redirects to an address it was handed, and send it through `safeNext`.**
   - This is not the lock either. It decides what a notice box may say, never who comes in.
   - Both browser-test servers are given a secret, so every form the tests press goes
     through the seal.
@@ -700,6 +729,9 @@ go-live list shows when it last ran and what is stuck.
     goes, footer and all. Only the restricted phrases a person read when they approved
     it are let through. Who the company is and where it lives are facts about us, and
     are not read, as on a receipt.
+  - **The subject and the preheader are read together as well as apart** (`inboxLine`),
+    because a list of emails runs one straight on from the other. Words are read the way
+    they are seen: the same rule as the lines of the band across the top.
   - With real records and no way to send, a campaign cannot be queued at all, and a
     screen says which of the three places it is in (`howCampaignsGo`). On invented
     records each email is written down as not sent.

@@ -68,9 +68,11 @@ export const data = (text: string): Piece => ({ data: text });
 /**
  * What stands in for a piece that is not ours when the rules read the email:
  * the character the copy scanner itself puts between two strings, which no
- * rule can match across.
+ * rule can match across. Whoever hands `ours` to the rules says so
+ * (`struckOut` in lib/backstage/core/copy.ts), because in text a person
+ * typed the same character is something nobody can see, and is taken out.
  */
-const STRUCK = "\u0001";
+export const STRUCK_OUT = "\u0001";
 
 const CONTROL = /[\u0000-\u0008\u000b-\u001f\u007f]/g;
 
@@ -89,7 +91,7 @@ const asSent = (line: Line): string => line.map(shown).join("");
 
 const asOurs = (line: Line): string =>
   line
-    .map((piece) => (typeof piece === "string" ? shown(piece) : STRUCK))
+    .map((piece) => (typeof piece === "string" ? shown(piece) : STRUCK_OUT))
     .join("");
 
 function escapeHtml(text: string): string {

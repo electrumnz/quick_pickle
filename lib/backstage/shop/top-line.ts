@@ -12,6 +12,10 @@
  * A yes is for the words that were on the screen. Publishing is handed the
  * lines it was shown and refuses if they are not the draft any more.
  *
+ * The rules read the lines the way the band runs them: one after another,
+ * and round to the first again. Two lines that are each fine can make a
+ * sentence that is not.
+ *
  * Putting the site's own line back is one press. The words that were up are
  * kept as the draft, so nothing typed is lost.
  *
@@ -82,68 +86,70 @@ const storedSchema = z.object({
   publishedBy: z.string().nullable().default(null),
 });
 
-type Stored = z.infer<typeof storedSchema>;
+export type TopLineStored = z.infer<typeof storedSchema>;
 
-const NOTHING: Stored = {
+const NOTHING: TopLineStored = {
   draft: null,
   published: null,
   publishedAt: null,
   publishedBy: null,
 };
 
-type Held = {
-  readonly stored: Stored;
-  /** When the row was last written, or null when there is no row. */
-  readonly writtenAt: Date | null;
+export type HeldTopLine = {
+  readonly stored: TopLineStored;
+  /** Exactly what the row holds, or `undefined` when there is no row. */
+  readonly raw: unknown;
 };
 
-async function hold(db: DbOrTx): Promise<Held> {
+/** What is kept about the line, and exactly as it is kept. */
+export async function holdTopLine(db: DbOrTx): Promise<HeldTopLine> {
   const [row] = await db
-    .select({ value: settings.value, updatedAt: settings.updatedAt })
+    .select({ value: settings.value })
     .from(settings)
     .where(eq(settings.key, TOP_LINE_KEY));
-  if (row === undefined) return { stored: NOTHING, writtenAt: null };
+  if (row === undefined) return { stored: NOTHING, raw: undefined };
   const read = storedSchema.safeParse(row.value);
   // Something stored that cannot be read is nothing stored: the shop shows
   // its own line, and the next save writes over it.
-  return {
-    stored: read.success ? read.data : NOTHING,
-    writtenAt: row.updatedAt,
-  };
+  return { stored: read.success ? read.data : NOTHING, raw: row.value };
 }
 
 /**
- * Write the row, for a change made to exactly what was read. With a row
- * there already, the write only lands if nobody has written since.
+ * Write the row, for a change made to exactly what was read: the write only
+ * lands if the row still holds what `held` saw, and is refused if somebody
+ * else has written since.
+ *
+ * What is compared is the row's own contents and not the moment it was
+ * written: two writes can share a moment, and a write that slipped in
+ * between would then go unseen.
  */
-async function keep(ctx: OpContext, held: Held, next: Stored): Promise<void> {
-  const by = userIdOf(ctx);
-  if (held.writtenAt === null) {
-    const made = await ctx.db
-      .insert(settings)
-      .values({
-        key: TOP_LINE_KEY,
-        value: next,
-        updatedAt: ctx.now,
-        updatedBy: by,
-      })
-      .onConflictDoNothing()
-      .returning({ key: settings.key });
-    refuseIfMoved(made, "The line across the top");
-    return;
-  }
-  const written = await ctx.db
-    .update(settings)
-    .set({ value: next, updatedAt: ctx.now, updatedBy: by })
-    .where(
-      and(
-        eq(settings.key, TOP_LINE_KEY),
-        eq(settings.updatedAt, held.writtenAt),
-      ),
-    )
-    .returning({ key: settings.key });
+export async function writeTopLine(
+  db: DbOrTx,
+  held: HeldTopLine,
+  next: TopLineStored,
+  stamp: { readonly now: Date; readonly by: string | null },
+): Promise<void> {
+  const row = { value: next, updatedAt: stamp.now, updatedBy: stamp.by };
+  const written =
+    held.raw === undefined
+      ? await db
+          .insert(settings)
+          .values({ key: TOP_LINE_KEY, ...row })
+          .onConflictDoNothing()
+          .returning({ key: settings.key })
+      : await db
+          .update(settings)
+          .set(row)
+          .where(
+            and(eq(settings.key, TOP_LINE_KEY), eq(settings.value, held.raw)),
+          )
+          .returning({ key: settings.key });
   refuseIfMoved(written, "The line across the top");
 }
+
+const hold = (db: DbOrTx) => holdTopLine(db);
+const keep = (ctx: OpContext, held: HeldTopLine, next: TopLineStored) =>
+  writeTopLine(ctx.db, held, next, { now: ctx.now, by: userIdOf(ctx) });
 
 const fileLines = (): string[] => [...TICKER];
 
@@ -151,10 +157,21 @@ const fileLines = (): string[] => [...TICKER];
 const said = (lines: readonly string[]) =>
   lines.map((line) => `"${line}"`).join(" · ");
 
-const partsOf = (lines: readonly string[]): Record<string, string> =>
-  Object.fromEntries(
-    lines.map((line, index) => [`line ${String(index + 1)}`, line]),
-  );
+/**
+ * The lines as a visitor reads them: one after another, and round to the
+ * first again, because the band has no end. A phrase can start on one line
+ * and finish on the next, the last line and the first included. So the
+ * rules are shown the whole run, and never a line at a time: two lines that
+ * are each fine can make a sentence that is not.
+ */
+function asTheBandRuns(lines: readonly string[]): string {
+  const [first] = lines;
+  return first === undefined ? "" : [...lines, first].join(" ");
+}
+
+/** What the copy rules make of a set of lines, read the way the band runs. */
+const check = (db: DbOrTx, lines: readonly string[], now: Date) =>
+  checkPublicCopy(db, [asTheBandRuns(lines)], now);
 
 /* ---- reading ------------------------------------------------------------- */
 
@@ -190,7 +207,7 @@ export const shopTopLine = defineOp({
     const file = fileLines();
     const showing = stored.published ?? file;
     const draft = stored.draft ?? showing;
-    const copyCheck = await checkPublicCopy(ctx.db, draft, ctx.now);
+    const copyCheck = await check(ctx.db, draft, ctx.now);
     return {
       showing,
       standard: stored.published === null,
@@ -264,7 +281,7 @@ export const saveTopLine = defineOp({
         : input.lines;
     const next = draft ?? showing;
     const answer = async () => ({
-      verdict: copyVerdict(await checkPublicCopy(ctx.db, next, ctx.now)),
+      verdict: copyVerdict(await check(ctx.db, next, ctx.now)),
       problems: topLineProblems(next),
       changed: draft !== null,
     });
@@ -322,7 +339,7 @@ export const publishTopLine = defineOp({
         `This line cannot be published as it stands. ${problems.join(" ")}`,
       );
     }
-    const copyCheck = await checkPublicCopy(ctx.db, draft, ctx.now);
+    const copyCheck = await check(ctx.db, draft, ctx.now);
     refuseBanned(copyCheck, "This line", "published");
     const read = requireRestrictedRead(
       copyCheck,
@@ -331,7 +348,10 @@ export const publishTopLine = defineOp({
     );
     // The last look, by the same rules everything that leaves the back end
     // is held to, on the very words about to go out.
-    refuseUnsendable(partsOf(draft), { checked: read });
+    refuseUnsendable(
+      { "the line across the top": asTheBandRuns(draft) },
+      { checked: read },
+    );
 
     const published = publishedLines.parse(draft);
     // The site's own words typed back in and published are the site's own

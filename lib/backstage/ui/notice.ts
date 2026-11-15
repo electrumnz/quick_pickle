@@ -27,6 +27,18 @@
  * With none of them there is nothing real behind the door (a preview, a
  * developer's machine), and nothing is sealed or checked.
  *
+ * WHAT IS NOT CHECKED. Only a page being asked for (GET, HEAD). A form posts
+ * to the address its page is on, and a form that hands back what was typed
+ * and has the page drawn again draws it from that address, sentence and
+ * all. Turning that post away, or sending it to another address, would lose
+ * what was typed or what the form had to say. So the rule that keeps this
+ * safe is about addresses: **nothing may put an address in front of a
+ * browser, other than by a page being asked for, unless every sentence in
+ * it was sealed here.** A redirect from a form is the one way that happens
+ * (with scripting on, it sets the address without asking for the page), and
+ * the only form that redirects to an address from outside is signing in,
+ * which takes any sentence out first (lib/backstage/auth/next.ts).
+ *
  * This file is read by proxy.ts, so it imports nothing of the app's.
  */
 
@@ -67,6 +79,16 @@ export function noticeSecret(env: Env = process.env): string | null {
 /** Only used to read a path apart. Never an address anybody is sent to. */
 const PARSE_BASE = "https://site.invalid";
 
+/**
+ * A page's path as the seal knows it: with no slash on the end. An address
+ * that ends in one is sent on to the same address without it before any
+ * page is drawn, so the two are one page.
+ */
+function pageOf(pathname: string): string {
+  const trimmed = pathname.replace(/\/+$/, "");
+  return trimmed === "" ? "/" : trimmed;
+}
+
 function sealOf(
   secret: string,
   pathname: string,
@@ -76,7 +98,7 @@ function sealOf(
 ): string {
   // Written as a list, so that no sentence can be read as two of the parts.
   return createHmac("sha256", `quick-pickle-notice:${secret}`)
-    .update(JSON.stringify([pathname, tone, at, notice]))
+    .update(JSON.stringify([pageOf(pathname), tone, at, notice]))
     .digest("hex")
     .slice(0, 32);
 }

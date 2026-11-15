@@ -824,7 +824,10 @@ export const emailCustomer = defineOp({
     // leaves is held to. The customer's own name and address are theirs and
     // are not read as ours (lib/mail/compose.ts).
     const email = compose(doc);
-    refuseUnsendable({ subject: email.ours.subject, body: email.ours.body });
+    refuseUnsendable(
+      { subject: email.ours.subject, body: email.ours.body },
+      { struckOut: true },
+    );
 
     const written = await writeOutbound(ctx, {
       id,

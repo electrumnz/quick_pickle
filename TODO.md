@@ -264,7 +264,8 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       with it on (a preview only staff can open), and publish. The copy rules are run
       over the words first, the way they are for a landing page. One press puts the
       site's own line back and keeps yours as the draft. A special that is switched on
-      still says itself first in the line.
+      still says itself first in the line. The copy rules read the lines the way they
+      run, one into the next, so a phrase cannot be split over two of them.
 - [ ] **Still in the files:** the video slots (`content/media.ts`). A video needs
       somewhere to be kept before it can be put up from the back end.
 - [x] **Numbers.** Sales, visits and how far they get (our own count, no cookies, nobody
@@ -335,7 +336,9 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       The back end now seals each sentence it writes, for its own page and for ten
       minutes, and anything else is taken out of the address before a page is drawn
       (`lib/backstage/ui/notice.ts`, checked in `proxy.ts`). The fifty or so pages that
-      read it did not have to change.
+      read it did not have to change. An independent review the same day found one way
+      round it, through the address the sign-in page sends you on to, and that is
+      closed too (`lib/backstage/auth/next.ts`).
 - [ ] **Say in the privacy page which tools read customers' details.** It now says the
       shop may be run with an AI assistant. If Claude is never switched on, that line can
       come out; if another tool is added, it goes in.

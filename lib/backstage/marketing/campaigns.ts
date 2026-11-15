@@ -649,9 +649,18 @@ async function checkCampaign(
       words.body,
       // As it reads once the formatting marks are gone.
       campaignBodyText(words.body),
+      // As an inbox shows it: the subject, and the preheader straight
+      // after it on the same line. Two halves that are each fine can make
+      // a sentence that is not.
+      inboxLine(words.subject, words.preheader),
     ],
     ctx.now,
   );
+}
+
+/** A subject and its preheader the way a list of emails runs them together. */
+export function inboxLine(subject: string, preheader: string): string {
+  return preheader.trim() === "" ? "" : `${subject} ${preheader}`;
 }
 
 const entityOf = (id: string) => ({ type: "campaign", id });

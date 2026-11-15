@@ -20,8 +20,10 @@
  */
 
 import { scanText } from "@/legal/scripts/rules.mjs";
+import { STRUCK_OUT } from "@/lib/mail/compose";
 
 import { OpError } from "./errors";
+import { asRead } from "./reading";
 
 export type OutgoingProblem = {
   /** The rule's id, as in legal/COPY-RULES.md, or STYLE-… for a house rule. */
@@ -63,6 +65,14 @@ export type CheckOptions = {
    * word for word. See `ON_A_LABEL`.
    */
   readonly labelList?: readonly string[];
+  /**
+   * The parts are an email written as pieces, with everything that is not
+   * our own words struck out (lib/mail/compose.ts). The mark a struck piece
+   * leaves is kept where it is, so no rule reads our words on one side of
+   * somebody's name into our words on the other. Anywhere else that
+   * character is one nobody can see, and is taken out like the rest.
+   */
+  readonly struckOut?: boolean;
 };
 
 /** Every problem in a message, part by part. Finds; does not judge. */
@@ -74,7 +84,13 @@ export function checkOutgoing(
   const problems: OutgoingProblem[] = [];
   for (const [part, text] of Object.entries(parts)) {
     const seen = new Set<string>();
-    for (const finding of scanText(text)) {
+    // Read as a person reads it: a word is the same word with a curly
+    // quote in it, or with a character nobody can see.
+    const read =
+      options.struckOut === true
+        ? text.split(STRUCK_OUT).map(asRead).join(STRUCK_OUT)
+        : asRead(text);
+    for (const finding of scanText(read)) {
       // The same words tripping the same rule twice is one thing to fix.
       const key = `${finding.id}:${finding.match.toLowerCase()}`;
       if (seen.has(key)) continue;

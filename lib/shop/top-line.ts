@@ -7,10 +7,13 @@
  * rules, and a publish that needs a yes, the way a landing page has them.
  *
  * This file is the part both sides read: how many lines there may be and
- * how long each may be. It imports nothing, so a page can use it without
- * pulling anything in. (How the band is laid out so that it is always full
- * is components/ui/ticker-fit.ts.)
+ * how long each may be. It imports nothing of the app's but a few lines
+ * about what a reader can see, so a page can use it without pulling
+ * anything in. (How the band is laid out so that it is always full is
+ * components/ui/ticker-fit.ts.)
  */
+
+import { visibleLength, withoutStray } from "@/lib/text/visible";
 
 /** The most lines the band holds. */
 export const TOP_LINE_MOST = 8;
@@ -20,13 +23,30 @@ export const TOP_LINE_LETTERS = 60;
 
 /**
  * What was typed, a line to a row: runs of spaces squeezed to one, nothing
- * at either end, and empty rows dropped.
+ * at either end, and rows with nothing to read in them dropped.
+ *
+ * Text pasted from somewhere else brings things with it that nobody can
+ * see: a zero-width space, a mark that turns the writing round, a control
+ * character, half of a pair. None of it is kept. A row made only of such
+ * things would be a line of the band with nothing in it, and some of them
+ * a database will not store at all.
  */
 export function tidyTopLines(typed: string | readonly string[]): string[] {
   const rows = typeof typed === "string" ? typed.split(/\r?\n/) : typed;
   return rows
-    .map((row) => row.replace(/\s+/g, " ").trim())
-    .filter((row) => row !== "");
+    .map((row) =>
+      withoutStray(
+        row
+          .normalize("NFC")
+          // Half of a pair of code units, which is not a character at all.
+          .replace(/\p{Cs}/gu, "")
+          // A control character is a gap at most.
+          .replace(/\p{Cc}/gu, " "),
+      )
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter((row) => visibleLength(row.replace(/\s/g, "")) > 0);
 }
 
 /**

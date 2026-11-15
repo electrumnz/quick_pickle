@@ -10,6 +10,7 @@ import {
   requestUserAgent,
   staffCookieName,
 } from "@/lib/backstage/auth/current";
+import { safeNext } from "@/lib/backstage/auth/next";
 import { revokeSession } from "@/lib/backstage/auth/sessions";
 import { signIn } from "@/lib/backstage/auth/sign-in";
 import { lockedUntil, recordFailure } from "@/lib/backstage/auth/throttle";
@@ -36,15 +37,6 @@ export type DoorState = {
 function text(form: FormData, key: string): string {
   const value = form.get(key);
   return typeof value === "string" ? value : "";
-}
-
-/** Only ever send someone on to a page inside the back end. */
-function safeNext(next: string): string {
-  return next.startsWith("/backstage") &&
-    !next.startsWith("//") &&
-    !next.includes("\\")
-    ? next
-    : "/backstage";
 }
 
 /** Every answer takes at least this long, right or wrong. */

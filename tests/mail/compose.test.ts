@@ -148,7 +148,9 @@ describe("an email written as pieces", () => {
         { kind: "rows", rows: [{ label: ["Great for hydration"], value: [] }] },
       ],
     });
-    const found = checkOutgoing(email.ours).map((problem) => problem.found);
+    const found = checkOutgoing(email.ours, { struckOut: true }).map(
+      (problem) => problem.found,
+    );
     expect(found).toEqual(
       expect.arrayContaining(["pickle punch", "in 60 seconds", "hydration"]),
     );
@@ -158,7 +160,16 @@ describe("an email written as pieces", () => {
       subject: ["Hi"],
       blocks: [{ kind: "text", lines: [["a pickle ", theirs("x"), " punch"]] }],
     });
-    expect(checkOutgoing(split.ours)).toEqual([]);
+    expect(checkOutgoing(split.ours, { struckOut: true })).toEqual([]);
+    // In text somebody typed, the same character is one nobody can see. It
+    // hides nothing: the word is still the word.
+    /* copy-audit-ignore-start: a banned word typed on purpose, to see it caught */
+    expect(
+      checkOutgoing({ body: "No more cr\u0001amps" }).map(
+        (problem) => problem.found,
+      ),
+    ).toEqual(["cramps"]);
+    /* copy-audit-ignore-end */
   });
 
   it("only ever links to a plain web address", () => {
