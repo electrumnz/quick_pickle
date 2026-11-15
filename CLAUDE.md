@@ -485,6 +485,12 @@ go-live list shows when it last ran and what is stuck.
     away after two hours. The privacy page says so; change one and change the other.
   - A fourth count, `knock`, is not the shop's: an app registering with the connection
     for Claude, or handing it a code or a key. A real swap or renewal is given back.
+  - **Two more are the shop's own counts, and nobody is ever turned away for them:**
+    `seen` (600 steps of the visit counter) and `link` (300 follows of a short link). Past
+    the ceiling the page still answers and the link still leads where it leads. It is
+    simply not counted, so the numbers and a test's verdict cannot be padded out. The
+    ceilings sit well above a crowd on one wifi, because a busy ten minutes is when the
+    numbers matter. A link's ask is counted after the visitor has been sent on.
   - It is on whenever a database is connected, so never in the browser tests, which all
     come from one address. It is never why the shop fails: no address, or no count, and
     the answer is yes. `QP_LIMITS=off` stops it (the infra workflow's `limits-off`, then

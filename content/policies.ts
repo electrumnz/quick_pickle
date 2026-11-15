@@ -264,6 +264,7 @@ export function policies(offer: Offer): readonly Policy[] {
         heading: "Keeping the checkout safe",
         body: [
           "So that nobody can flood the checkout or sit there guessing at promo codes, we count a few things by internet address, ten minutes at a time: promo codes we don't know, code checks that come with an email address, tries at placing an order, and Pickle Crew sign-ups. Too many, and that address is asked to wait.",
+          "We count two more things the same way: how often our pages tell us they were looked at, and how often one of our short links is followed. That is only so nobody can pad out the shop's own numbers. Past a limit they stop being counted, and nothing else changes for you.",
           "We don't keep the address itself. We keep a scrambled mark in its place, which changes every ten minutes and is normally deleted within a few hours.",
         ],
       },

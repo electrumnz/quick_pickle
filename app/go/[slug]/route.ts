@@ -7,6 +7,7 @@ import {
   isCountedVisit,
   resolveLink,
 } from "@/lib/backstage/marketing/links";
+import { countAsk } from "@/lib/shop/caller";
 
 /**
  * /go/<slug>: one of our tracked short links.
@@ -30,7 +31,10 @@ import {
  *
  * A click is counted after the redirect has been sent, and only for a visit
  * that looks like a person: not a HEAD request, a link preview, a search
- * engine or a page fetched ahead of time. Anything that goes wrong (no such
+ * engine or a page fetched ahead of time. Nor past a ceiling from one
+ * internet address in ten minutes (lib/shop/limit.ts), so a link's count
+ * cannot be padded out by following it over and over: the visitor is still
+ * sent on, and the click is simply not counted. Anything that goes wrong (no such
  * link, switched off, the database out of reach) lands on the front page of
  * the shop. Nothing about the visitor is kept and no cookie is set.
  */
@@ -65,10 +69,16 @@ function logFailure(event: string, error: unknown): void {
   );
 }
 
-/** Count the click once the redirect is on its way. */
-async function countAfterwards(slug: string): Promise<void> {
+/**
+ * Count the click once the redirect is on its way. `from` is the request's
+ * own headers, copied, because the request itself is gone by then.
+ */
+async function countAfterwards(slug: string, from: Headers): Promise<void> {
   const count = async () => {
     try {
+      // Under the ceiling for one address? Asked here, after the visitor
+      // has been sent on, so it never slows a link down.
+      if (!(await countAsk("link", from)).allowed) return;
       await execute(countLinkClick, { slug }, VISITOR);
     } catch (error) {
       logFailure("link.count_failed", error);
@@ -96,7 +106,9 @@ async function follow(
         found.kind === "https"
           ? new URL(found.url).href
           : onThisSite(found.url);
-      if (isCountedVisit(request)) await countAfterwards(found.slug);
+      if (isCountedVisit(request)) {
+        await countAfterwards(found.slug, new Headers(request.headers));
+      }
     }
   } catch (error) {
     logFailure("link.follow_failed", error);

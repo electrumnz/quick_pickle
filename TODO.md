@@ -348,11 +348,10 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       code, and a form handed back to fix a field, count for nothing, so a crowd on one
       wifi never meets it. No address is kept. The go-live list says whether it is on, and
       the infra workflow's `limits-off` stops it without a change to the code.
-- [ ] **The visit counter and the short links' counts can still be flooded.** `/api/seen`
-      writes a row, and `/go/<slug>` adds one to a link's count, for whoever asks, as often
-      as they ask. No money and nothing about a person rides on either (a partner is
-      credited by orders, never by clicks), but it could pad out the numbers and a test's
-      verdict. The checkout's counter would fit both.
+- [x] **The visit counter and the short links' counts cannot be flooded.** One internet
+      address gets 600 steps of the visit counter and 300 follows of a short link every
+      ten minutes. Past that they stop being counted, and nothing else changes: the page
+      still loads and the link still leads on. The privacy page says so.
 - [x] **Refunds made from Stripe's own dashboard**, written back onto the order. When
       Stripe says a payment was refunded, the refunds it holds are read and any the order
       does not have are recorded: the order, the customer's records and the books all

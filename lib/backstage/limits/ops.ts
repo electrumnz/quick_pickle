@@ -43,7 +43,7 @@ export const countHit = defineOp({
   name: "limits.hit",
   title: "Count one ask of the shop, and say if it is one too many",
   description:
-    "Counts one ask of the checkout by one caller (`what`: code, order or crew) and says whether that caller is still under the ceiling for the current ten minutes. `who` is a scrambled mark of the caller, made by the shop, never an address. Called by the shop before it answers. It refuses nothing itself: the shop decides what to say.",
+    "Counts one ask of the shop by one caller (`what`: a promo code, an order, a Pickle Crew sign-up, a knock at the connection for Claude, a call from a connected Claude, a step of the visit counter, or a short link followed) and says whether that caller is still under the ceiling for the current ten minutes. `who` is a scrambled mark of the caller, made by the shop, never an address. Called by the shop before it answers. It refuses nothing itself: the shop decides what to say.",
   access: "read",
   input: asked,
   async run(ctx, input): Promise<{ allowed: boolean; hits: number }> {
