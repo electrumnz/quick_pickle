@@ -4,6 +4,7 @@ import { systemCaller } from "@/lib/backstage/core/actor";
 import { execute } from "@/lib/backstage/core/op";
 import { fromAPersonsBrowser } from "@/lib/backstage/marketing/links";
 import { recordSeen } from "@/lib/backstage/numbers/ops";
+import { countAsk } from "@/lib/shop/caller";
 
 /**
  * The shop's visit counter. A page tells it "viewed", "something went in the
@@ -20,7 +21,10 @@ import { recordSeen } from "@/lib/backstage/numbers/ops";
  *   - a browser that asks not to be tracked (the page does not even send in
  *     that case; this is the same check again, on the server);
  *   - an order. An order is counted by the server when it is placed, in the
- *     same transaction, and never on a browser's say-so.
+ *     same transaction, and never on a browser's say-so;
+ *   - more than a ceiling from one internet address in ten minutes
+ *     (lib/shop/limit.ts), so the numbers cannot be padded out by asking
+ *     over and over. Nobody is refused anything: it is just not counted.
  *
  * No cookie is read or set, and nothing here says who the visitor is.
  */
@@ -62,6 +66,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (typeof body !== "object" || body === null) return done();
     const step = body as Record<string, unknown>;
     if (step.kind === "order") return done();
+    // Last, so that what is turned away above costs nothing to turn away.
+    if (!(await countAsk("seen", request.headers)).allowed) return done();
 
     await execute(
       recordSeen,

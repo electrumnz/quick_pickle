@@ -25,6 +25,18 @@
  *   calls  a connected Claude calling the back end's tools, counted for
  *          each connection and not by address.
  *
+ * Two more are not questions at all. They are the shop's own counts, which
+ * anybody could otherwise pad out by asking over and over:
+ *
+ *   seen   a page saying it was looked at, or that something went in the
+ *          jar (the visit counter, lib/shop/seen.ts).
+ *   link   one of our short links being followed (/go/<slug>).
+ *
+ * Nobody is ever refused for these. Past the ceiling the page still loads
+ * and the link still leads where it leads: it is simply not counted. The
+ * ceilings are set well above a crowd on one wifi at a game, because a busy
+ * ten minutes is exactly when the numbers matter.
+ *
  * This file imports nothing, so anything may read the numbers.
  */
 
@@ -39,11 +51,23 @@ export const LIMITS = {
   // Nor this: how often one connection may call the back end's tools. A
   // person talking to Claude makes a few a minute. A loop makes thousands.
   calls: { most: 600, minutes: 10 },
+  // The shop's own counts. A visit is a handful of steps and a crowd on
+  // one address is a few dozen visits. A script is thousands.
+  seen: { most: 600, minutes: 10 },
+  link: { most: 300, minutes: 10 },
 } as const;
 
 export type Limited = keyof typeof LIMITS;
 
-export const LIMITED = ["code", "order", "crew", "knock", "calls"] as const;
+export const LIMITED = [
+  "code",
+  "order",
+  "crew",
+  "knock",
+  "calls",
+  "seen",
+  "link",
+] as const;
 
 /** The start of the stretch of time a moment falls in. */
 export function windowStartOf(now: Date, minutes: number): Date {

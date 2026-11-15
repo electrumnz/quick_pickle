@@ -165,9 +165,9 @@ export default async function GoLivePage({
     label: "The checkout's limit",
     detail:
       limits === "on"
-        ? `On. One internet address gets ${String(LIMITS.code.most)} wrong promo codes, ${String(LIMITS.order.most)} orders and ${String(LIMITS.crew.most)} Pickle Crew sign-ups every ten minutes. After that it is asked to wait.`
+        ? `On. One internet address gets ${String(LIMITS.code.most)} wrong promo codes, ${String(LIMITS.order.most)} orders and ${String(LIMITS.crew.most)} Pickle Crew sign-ups every ten minutes. After that it is asked to wait. Visits and short-link clicks from one address stop being counted past ${String(LIMITS.seen.most)} and ${String(LIMITS.link.most)}, and nobody is turned away for those.`
         : limits === "off"
-          ? "Switched off by hand (QP_LIMITS is off). Anybody can guess at promo codes and place orders as fast as they like."
+          ? "Switched off by hand (QP_LIMITS is off). Anybody can guess at promo codes and place orders as fast as they like, and pad out the visit and link counts."
           : "Not counting: there is no database, so no real records to protect.",
   });
 
