@@ -16,8 +16,14 @@ import {
   startPageTest,
   stopPageTest,
 } from "@/lib/backstage/pages/routing-ops";
+import {
+  publishTopLine,
+  resetTopLine,
+  saveTopLine,
+} from "@/lib/backstage/shop/top-line";
 import { formText, submit } from "@/lib/backstage/ui/submit";
 import type { RuleKind } from "@/lib/shop/routing";
+import { tidyTopLines } from "@/lib/shop/top-line";
 
 /** Every button on a landing page. */
 
@@ -194,5 +200,59 @@ export async function removePageTestAction(form: FormData): Promise<void> {
     removePageTest,
     { id: formText(form, "id") },
     { back: `${WHO}#test`, done: "Removed." },
+  );
+}
+
+/* ---- the line across the top of the shop ---------------------------------- */
+
+const TOP_LINE = `${LIST}/top-line`;
+
+export async function saveTopLineAction(form: FormData): Promise<void> {
+  await submit(
+    saveTopLine,
+    // A row to a line. Tidied here as well, so that a paste with a lot of
+    // empty rows in it is counted by its words and not by its rows.
+    { lines: tidyTopLines(formLines(form, "lines")) },
+    {
+      back: TOP_LINE,
+      done: (saved) =>
+        !saved.changed
+          ? "The draft is what the shop shows, so there is nothing to publish."
+          : saved.problems[0] !== undefined
+            ? `Draft saved. It does not fit yet. ${saved.problems[0]}`
+            : saved.verdict === "banned"
+              ? "Draft saved. The copy check found wording that cannot be published."
+              : saved.verdict === "restricted"
+                ? "Draft saved. The copy check wants a second look at some wording."
+                : "Draft saved. Nothing a customer sees has changed.",
+    },
+  );
+}
+
+export async function publishTopLineAction(form: FormData): Promise<void> {
+  await submit(
+    publishTopLine,
+    {
+      // The words that were on the screen beside the button.
+      lines: form
+        .getAll("shown")
+        .filter((line): line is string => typeof line === "string"),
+      acknowledgeRestricted: form.get("acknowledge") === "on",
+    },
+    {
+      back: `${TOP_LINE}#publish`,
+      done: "Published. The shop shows it within a minute.",
+    },
+  );
+}
+
+export async function resetTopLineAction(): Promise<void> {
+  await submit(
+    resetTopLine,
+    {},
+    {
+      back: `${TOP_LINE}#publish`,
+      done: "The standard line is back, and shows within a minute. Your words are kept as the draft.",
+    },
   );
 }

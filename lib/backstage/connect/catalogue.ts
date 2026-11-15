@@ -82,6 +82,7 @@ import * as plansQuestions from "../plans/questions";
 import * as plansStarterLoad from "../plans/starter/load";
 import * as plansTasks from "../plans/tasks";
 import * as shopOps from "../shop/ops";
+import * as shopTopLine from "../shop/top-line";
 import * as staffOps from "../staff/ops";
 import * as stockBatchStates from "../stock/batch-states";
 import * as stockBatches from "../stock/batches";
@@ -140,6 +141,7 @@ const MODULES: readonly Readonly<Record<string, unknown>>[] = [
   plansStarterLoad,
   plansTasks,
   shopOps,
+  shopTopLine,
   staffOps,
   stockBatchStates,
   stockBatches,
@@ -230,6 +232,7 @@ export const SYSTEM_ONLY: ReadonlySet<string> = new Set([
   "promoCodes.peek",
   "promoCodes.crewWelcome",
   "reviews.submit",
+  "shop.topLineNow",
   "specials.current",
   "specials.worth",
   // Who can sign in. People only, and owners at that.
@@ -281,6 +284,8 @@ export const PEOPLE_ONLY: Readonly<Record<string, string>> = {
   // wrote it, and that is for somebody who has it in front of them.
   "reviews.add": "under Marketing, Reviews",
   "specials.switchOn": "under Marketing, Promo codes, Specials",
+  "shop.publishTopLine":
+    "under Marketing, Landing pages, The line across the top",
 };
 
 /**

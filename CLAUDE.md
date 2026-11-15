@@ -201,6 +201,37 @@ between two pages. Both are optional and both start switched off.
   would be split. The split is covered by `tests/core/proxy.test.ts`; the browser test uses
   a rule for a link of its own.
 
+### The line across the top
+
+The line of words that runs across the top of the shop (`TopTicker`) is the site's own
+(`TICKER` in `content/site.ts`) unless the back end has published another: Marketing,
+Landing pages, The line across the top. `lib/backstage/shop/top-line.ts` is the
+operations and `lib/shop/top-line.ts` the part the shop shares with them.
+
+- **It has a draft and what is published, like a landing page.** Saving changes the draft
+  only. `shop.publishTopLine` is the one way words get out: outward, needs a yes, and runs
+  the copy rules over the finished words (`refuseUnsendable` and the marketing gate). The
+  shop only ever draws what is published.
+- **A yes is for the words that were on the screen.** Publishing is handed the lines it
+  was shown and refuses if the draft is something else by now. A bot may write the draft
+  and never publishes it (`PEOPLE_ONLY`).
+- **Nothing typed is thrown away for being a letter over.** A draft may be longer than
+  what can be published (8 lines, 60 letters each): the screen says what does not fit, and
+  the draft waits.
+- Putting the site's own line back is one press, and what was up is kept as the draft.
+- It is kept in one `settings` row. With no row, or one that cannot be read, the shop
+  shows its own line. A page asks through `topLineForPage()` (`lib/shop/top-line-now.ts`):
+  never while the site is being built, and with no answer the last one it had, so a line
+  somebody took down does not come back because the database blinked.
+- **The band is always full and runs at one pace**, however few or many the words
+  (`bandFit`, under "Design rules that came from measuring"). One short line is laid out
+  about sixty times to cross the widest screen, and far fewer of them are drawn on a
+  phone. Only the first copy is read out by a screen reader.
+- A special that is switched on still says itself first, in front of whichever line it is.
+- The preview is the real page: `/preview/home?line=draft`, behind `requireStaff()`.
+- **Never change the line from a browser test on the first server:** every other test
+  reads the top of the shop. `e2e/backstage-auth.spec.ts` does it on the sign-in server.
+
 ### The database
 
 - `DATABASE_URL` (or `POSTGRES_URL`, which the Vercel and Supabase integration writes) is a
@@ -894,6 +925,21 @@ screen. `lib/backstage/connect/` is all of it.
   words 0.16em, paragraphs 2em). `e2e/site.spec.ts` applies that and looks for clipped
   words, after proving it can see one. A box that is clipped on purpose says so with
   `data-marquee`.
+- **A running band is laid out to cross the widest screen.** A band slides its words by
+  half their width and starts again, so half the copies have to reach right across. With
+  four copies the olive band under the hero fell short on a 27 inch monitor (2,560 wide)
+  and showed bare band for a few seconds of every loop; the line across the top fell
+  short just past that. `bandFit` (`components/ui/ticker-fit.ts`) works out how many
+  copies from the letters, on the narrow side, and how long the loop takes from how far
+  it then goes, so the pace does not change.
+  - **A phone does not carry what only a big monitor needs.** There are two counts: what
+    a screen under 1,536 wide draws (the four copies each band always had) and what a
+    wider one draws, out to 3,840. The copies in between are in the page and not drawn
+    below `2xl`, and the loop's length is chosen by the same breakpoint.
+  - Nothing can measure the words where the page is drawn, so each band has its measures
+    beside it in `components/site/Sections.tsx`. `e2e/site.spec.ts` measures every band
+    in a browser either side of that line and out to the widest: change a band's face or
+    size and measure it again.
 - **Motion is transform and opacity only**, on the guide's durations, and everything
   collapses under `prefers-reduced-motion`. Content is visible without JavaScript; scroll
   reveal only hides blocks once its observer is actually running.
@@ -909,8 +955,8 @@ screen. `lib/backstage/connect/` is all of it.
   first paint, the estimate counts them as blocking it, and identical bytes scored 2.4 s or
   2.9 s for the largest paint depending on a 20 ms race. Measured properly it is the first
   paint: about 1.7 s on slow 4G.
-- **Lucky stays drawn into the page.** The home document is 266 kB before it is squeezed
-  (about 40 kB as Vercel sends it), and Lucky's drawing is 53 kB of that, twice over,
+- **Lucky stays drawn into the page.** The home document is about 280 kB before it is
+  squeezed (about 40 kB as Vercel sends it), and Lucky's drawing is 53 kB of that, twice over,
   because React sends its own copy of everything the server drew. It is tempting to move
   her to a separate image. Measured on 12 November 2026 and left alone: a drawing in the
   page paints with the first paint and is not counted as the largest one (the headline

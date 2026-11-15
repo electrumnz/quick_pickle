@@ -7,6 +7,7 @@ import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
 import { getPage, type PageRow } from "@/lib/backstage/pages/ops";
+import { shopTopLine } from "@/lib/backstage/shop/top-line";
 
 /**
  * A landing page as it will look, before anyone outside can see it.
@@ -20,6 +21,8 @@ import { getPage, type PageRow } from "@/lib/backstage/pages/ops";
  *   /preview/<id>            the draft
  *   /preview/<id>?show=live  the published words, when there are any
  *   /preview/home            the standard page, to compare against
+ *   /preview/home?line=draft the standard page with the draft of the line
+ *                            across the top (lib/backstage/shop/top-line.ts)
  *
  * Never cached, never indexed, and a visit here is not counted in the
  * numbers: it would be staff looking at their own work.
@@ -37,11 +40,29 @@ export default async function PreviewPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ show?: string }>;
+  searchParams: Promise<{ show?: string; line?: string }>;
 }) {
   await requireStaff();
   const { id } = await params;
-  const { show } = await searchParams;
+  const { show, line } = await searchParams;
+
+  // The standard page with the draft of the line across the top. The draft
+  // is read here, as the member of staff looking, and handed to the page:
+  // the public page only ever draws what is published.
+  if (id === "home" && line === "draft") {
+    const top = await execute(shopTopLine, {}, await staffCaller());
+    return (
+      <>
+        <PreviewRibbon
+          showing="draft"
+          name="The line across the top"
+          editHref="/backstage/marketing/pages/top-line"
+          otherHref="/preview/home"
+        />
+        <ShopPage preview line={top.draft} />
+      </>
+    );
+  }
 
   // The standard page, for comparing a landing page against.
   if (id === "home") {

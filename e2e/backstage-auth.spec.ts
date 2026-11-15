@@ -294,6 +294,134 @@ test("a notice box only ever says the back end's own words", async ({
 });
 
 /* ------------------------------------------------------------------------
+   The line across the top of the shop.
+
+   Every visitor to the shop reads it, on every page, so it is changed here,
+   on the server whose shop no other test looks at.
+   --------------------------------------------------------------------- */
+
+test("the line across the top is drafted, previewed, published and put back", async ({
+  page,
+  browser,
+}) => {
+  const editor = `${AUTH_URL}/backstage/marketing/pages/top-line`;
+  const SITES_OWN = "Never fear, Lucky is here";
+  const MINE = "Batch 002 is in";
+  const words = page.getByLabel("One line to a row");
+  /** The band across the top of a page of the shop. */
+  const band = (shop: Page) => shop.locator("[data-marquee]").first();
+
+  // A customer, on a screen as wide as they come: nobody signed in.
+  const outside = await browser.newContext({
+    viewport: { width: 3840, height: 900 },
+  });
+  const customer = await outside.newPage();
+  /** Load the shop afresh until its band says, or stops saying, a line. */
+  const shopSays = async (line: string, says = true) => {
+    await expect(async () => {
+      await customer.goto(AUTH_URL);
+      if (says) await expect(band(customer)).toContainText(line);
+      else await expect(band(customer)).not.toContainText(line);
+    }).toPass({ timeout: 30_000 });
+  };
+  /** How far the band's words reach, against how far they have to. */
+  const reach = () =>
+    band(customer).evaluate((element) => ({
+      words: element.firstElementChild?.scrollWidth ?? 0,
+      // The words slide by half their width, so they have to be twice
+      // as wide as the screen for the band never to show a gap.
+      needed: 2 * window.innerWidth,
+    }));
+
+  await shopSays(SITES_OWN);
+  const sitesOwn = await reach();
+  expect(sitesOwn.words).toBeGreaterThanOrEqual(sitesOwn.needed);
+
+  await signIn(page, OWNER.email, OWNER.password);
+  await page.goto(editor);
+  await expect(page.locator("main")).toContainText(
+    "The shop is showing its standard line.",
+  );
+  await expect(words).toHaveValue(/^Tiny package, big dill\n/);
+
+  // A draft changes nothing a customer sees.
+  await words.fill(`${MINE}\n\n  Lucky   you've got us  `);
+  await press(page, /save the draft/i);
+  await expect(page.locator("main [role=status]")).toHaveText(
+    "Draft saved. Nothing a customer sees has changed.",
+  );
+  // Tidied as it was saved: a row to a line, and the empty row gone.
+  await expect(words).toHaveValue(`${MINE}\nLucky you've got us`);
+  await shopSays(SITES_OWN);
+  await expect(band(customer)).not.toContainText(MINE);
+
+  // The preview beside it is the real page with the draft across the top,
+  // and says that it is a preview.
+  const preview = page.frameLocator('iframe[title^="The shop with the draft"]');
+  await expect(preview.locator("[data-marquee]").first()).toContainText(MINE);
+  await expect(preview.getByTestId("preview-ribbon")).toContainText(
+    "The draft of \u201cThe line across the top\u201d. Customers cannot see this.",
+  );
+  // Somebody who is not signed in cannot look at a draft.
+  await customer.goto(`${AUTH_URL}/preview/home?line=draft`);
+  await expect(customer).toHaveURL(/\/backstage\/sign-in/);
+
+  // Publishing is for the words on the screen, and the shop follows.
+  await expect(page.locator("#publish")).toContainText(
+    "These words will go across the top:",
+  );
+  await press(page, /publish this line/i);
+  await expect(page.locator("main [role=status]")).toHaveText(
+    "Published. The shop shows it within a minute.",
+  );
+  await expect(page.locator("main")).toContainText(
+    "The shop is showing the line you published.",
+  );
+  await shopSays(MINE);
+  await expect(band(customer)).not.toContainText(SITES_OWN);
+  // Two short lines still reach right across a wide screen.
+  const mine = await reach();
+  expect(mine.words).toBeGreaterThanOrEqual(mine.needed);
+  // And a screen reader is read them once, not once for each time round.
+  await expect(
+    band(customer).locator("ul:not([aria-hidden])").getByText(MINE),
+  ).toHaveCount(1);
+
+  // Wording the copy rules stop is kept as a draft and cannot be published.
+  /* copy-audit-ignore-start: a claim typed on purpose, to see it stopped */
+  await words.fill("No more cramps in the second half");
+  /* copy-audit-ignore-end */
+  await press(page, /save the draft/i);
+  await expect(page.locator("main [role=status]")).toHaveText(
+    "Draft saved. The copy check found wording that cannot be published.",
+  );
+  await expect(page.locator("#publish")).toContainText(
+    "This draft cannot be published as written.",
+  );
+  await expect(
+    page.getByRole("button", { name: /publish this line/i }),
+  ).toHaveCount(0);
+  await shopSays(MINE);
+
+  // One press puts the site's own line back. A draft being worked on stays.
+  await press(page, /put the standard line back/i);
+  await expect(page.locator("main [role=status]")).toHaveText(
+    "The standard line is back, and shows within a minute. Your words are kept as the draft.",
+  );
+  await shopSays(SITES_OWN);
+  await expect(band(customer)).not.toContainText(MINE);
+
+  // Left as it was found: an empty box is no draft at all.
+  await words.fill("");
+  await press(page, /save the draft/i);
+  await expect(page.locator("main [role=status]")).toHaveText(
+    "The draft is what the shop shows, so there is nothing to publish.",
+  );
+  await expect(words).toHaveValue(/^Tiny package, big dill\n/);
+  await outside.close();
+});
+
+/* ------------------------------------------------------------------------
    The shop's settings.
 
    These change what the shop charges, so they run here, on the server

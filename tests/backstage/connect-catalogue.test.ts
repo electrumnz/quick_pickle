@@ -114,7 +114,9 @@ describe("the list of every operation", () => {
       plans: 2,
       promoCodes: 3,
       reviews: 1,
-      shop: 1,
+      // An owner's confirming of a fact, and the shop's own read of the
+      // line across its top as it draws a page.
+      shop: 2,
       specials: 2,
       staff: 6,
     });
@@ -155,6 +157,8 @@ describe("the list of every operation", () => {
       "stock.releaseBatch",
       "reviews.unpublish",
       "crew.unsubscribe",
+      // Takes a person's words off the top of the shop.
+      "shop.resetTopLine",
     ]) {
       const op = offeredOp(name);
       expect(op, name).not.toBeNull();
@@ -173,6 +177,9 @@ describe("the list of every operation", () => {
       "pages.startTest",
       "reviews.add",
       "reviews.publish",
+      // The line across the top of the shop: a draft a bot may write,
+      // published by a person on the screen that shows the words.
+      "shop.publishTopLine",
       "social.approve",
       "specials.switchOn",
     ]);

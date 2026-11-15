@@ -17,6 +17,7 @@ import {
   updatePage,
 } from "@/lib/backstage/pages/ops";
 import { getOrder } from "@/lib/backstage/orders/ops";
+import { saveTopLine } from "@/lib/backstage/shop/top-line";
 import {
   closeDb,
   openEmbedded,
@@ -528,6 +529,74 @@ describe("landing pages", () => {
       expect(editor).toContain("This draft cannot be published as written.");
       expect(editor).not.toContain("Publish this page");
       expect(editor).toContain("rule TH-04");
+    });
+
+    it("draw the line across the top, with the words a yes would publish", async () => {
+      signedIn.role = "owner";
+      const { default: PagesPage } =
+        await import("@/app/backstage/(app)/marketing/pages/page");
+      const { default: TopLine } =
+        await import("@/app/backstage/(app)/marketing/pages/top-line/page");
+      const screen = () => draw(TopLine({ searchParams: nothing() }));
+
+      // Nothing changed: the site's own line, and nothing to press but save.
+      const plain = await screen();
+      expect(problemsIn(plain)).toEqual([]);
+      expect(plain).toContain("The shop is showing its standard line.");
+      expect(plain).toContain("The standard line");
+      expect(plain).not.toContain("Publish this line");
+      expect(plain).not.toContain("Put the standard line back");
+      // The preview is the real page in a frame, with the draft on it.
+      expect(plain).toMatch(
+        /<iframe[^>]+src="\/preview\/home\?line=draft"[^>]+title="The shop with the draft/,
+      );
+      // And the list of landing pages says where the line stands.
+      const list = await draw(PagesPage({ searchParams: nothing() }));
+      expect(list).toContain("The shop is showing its standard line.");
+      expect(list).toContain('href="/backstage/marketing/pages/top-line"');
+
+      // A draft: the words a yes would publish are on the screen, and they
+      // are what the button sends.
+      await execute(
+        saveTopLine,
+        { lines: ["Batch 002 is in", "Pickle Crew"] },
+        staff,
+      );
+      const drafted = await screen();
+      expect(problemsIn(drafted)).toEqual([]);
+      expect(drafted).toContain("Draft not published");
+      expect(drafted).toContain("These words will go across the top:");
+      expect(drafted).toMatch(
+        /<input type="hidden" name="shown" value="Batch 002 is in"\/><input type="hidden" name="shown" value="Pickle Crew"\/>/,
+      );
+      expect(drafted).toContain("Publish this line");
+      expect(await draw(PagesPage({ searchParams: nothing() }))).toContain(
+        "There is a draft that is not published.",
+      );
+
+      // One the copy check has stopped, and one that does not fit: each
+      // says why, and neither can be published from here.
+      await execute(saveTopLine, { lines: [A_CLAIM] }, staff);
+      const stopped = await screen();
+      expect(stopped).toContain("This draft cannot be published as written.");
+      expect(stopped).toContain("rule TH-04");
+      expect(stopped).not.toContain("Publish this line");
+      await execute(saveTopLine, { lines: ["x".repeat(61)] }, staff);
+      const tooLong = await screen();
+      expect(tooLong).toContain("This draft does not fit yet.");
+      expect(tooLong).toContain("Line 1 is 61 letters long.");
+      expect(tooLong).not.toContain("Publish this line");
+
+      // Somebody who may only look sees the words and nothing to press.
+      signedIn.role = "viewer";
+      const looking = await screen();
+      expect(looking).toContain("Your account can look but not change things.");
+      expect(looking).not.toMatch(/<button[^>]+type="submit"/);
+      expect(looking).not.toContain("<textarea");
+      signedIn.role = "owner";
+
+      // Left as it was found, for the screens drawn after this.
+      await execute(saveTopLine, { lines: [] }, staff);
     });
 
     it("give a viewer nothing to press", async () => {

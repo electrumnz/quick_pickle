@@ -131,7 +131,17 @@ These are on their own screen: [The label and the company](${LINK.label}), under
 20. [ ] For the company: the legal name (the company's registered name, or your own if you trade as yourself), the NZBN if there is one, the address, and whether it is registered for GST. With a GST number in, a receipt says how much of the total is GST. The two numbers are checked as you save them, so a slipped digit is caught.
 21. [ ] When both are right, an owner says so on the [go-live list](${LINK.goLive}).
 
-If the label changes (a new recipe, a new supplier), change it here the same day. Who checks the site against each new label: ____.`,
+If the label changes (a new recipe, a new supplier), change it here the same day. Who checks the site against each new label: ____.
+
+## The line of words across the top
+
+The line that runs across the very top of the shop has its own screen: [The line across the top](${LINK.topLine}), under Marketing, Landing pages. You do not have to change it. The shop comes with one.
+
+22. [ ] Type the lines, one to a row. Up to 8, each up to 60 letters. Keep them to things that stay true: a date or a price belongs on [The shop](${LINK.shop}), and a special says itself in the line by itself while it is switched on.
+23. [ ] Press **Save the draft**. Nothing a customer sees has changed. The preview beside it shows the shop with your words across the top.
+24. [ ] Read what the copy check says. Wording about what the drink does to a body cannot be published, here or anywhere.
+25. [ ] Press **Publish this line**. The shop shows it within a minute.
+26. [ ] To go back, press **Put the standard line back**. Your words are kept as the draft, so they can go up again.`,
 };
 
 const productionDay: StarterDocument = {

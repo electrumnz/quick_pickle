@@ -139,6 +139,60 @@ test.describe("the page", () => {
     }
   });
 
+  test("keeps every running band full, out to the widest screen", async ({
+    page,
+  }) => {
+    // A band slides its words by half their width and starts again. On a
+    // screen wider than that half, bare band shows behind the last word
+    // until the loop comes round: the olive band did, on a 27 inch monitor.
+    // So the words are laid out often enough to cross the screen
+    // (components/ui/ticker-fit.ts), with more copies drawn from 1536 wide
+    // than below it. This measures the real thing, with the real fonts,
+    // either side of that line and out to the widest screen laid out for.
+    const pace: Record<number, number[]> = {};
+    for (const width of [390, 1440, 1535, 1536, 2560, 3840]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+      await page.evaluate(() => document.fonts.ready);
+      const bands = await page.locator("[data-marquee]").evaluateAll((all) =>
+        all.map((band) => {
+          const words = band.firstElementChild;
+          return {
+            says: (band.textContent ?? "").slice(0, 24),
+            // How wide the band is, and how far its words reach once they
+            // have slid as far as they go.
+            wide: band.clientWidth,
+            reach: (words?.scrollWidth ?? 0) / 2,
+            seconds: Number.parseFloat(
+              words === null ? "0" : getComputedStyle(words).animationDuration,
+            ),
+          };
+        }),
+      );
+      // The line across the top, the olive band, and the rituals.
+      expect(bands.length, `at ${String(width)}px`).toBe(3);
+      for (const band of bands) {
+        expect(
+          band.reach,
+          `"${band.says}" at ${String(width)}px`,
+        ).toBeGreaterThanOrEqual(band.wide);
+        expect(band.seconds, `"${band.says}"`).toBeGreaterThan(0);
+      }
+      pace[width] = bands.map((band) => band.reach / band.seconds);
+    }
+    // More copies take longer to go past, so the words move as fast on a
+    // big monitor as on a laptop. (A phone sets the olive band smaller, so
+    // it is the laptop that is compared.)
+    const laptop = pace[1440] ?? [];
+    const monitor = pace[3840] ?? [];
+    expect(laptop).toHaveLength(3);
+    laptop.forEach((pxPerSecond, band) => {
+      const ratio = (monitor[band] ?? 0) / pxPerSecond;
+      expect(ratio, `band ${String(band + 1)}`).toBeGreaterThan(0.97);
+      expect(ratio, `band ${String(band + 1)}`).toBeLessThan(1.03);
+    });
+  });
+
   test("cuts nothing off when a reader spaces the text out", async ({
     page,
   }) => {

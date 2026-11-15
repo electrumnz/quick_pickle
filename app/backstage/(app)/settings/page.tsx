@@ -22,6 +22,13 @@ const SECTIONS = [
     ownerOnly: false,
   },
   {
+    href: "/backstage/marketing/pages/top-line",
+    label: "The line across the top",
+    blurb:
+      "The line of words that runs across the top of the shop. It is kept with the landing pages, under Marketing.",
+    ownerOnly: false,
+  },
+  {
     href: "/backstage/settings/staff",
     label: "Staff",
     blurb:

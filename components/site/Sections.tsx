@@ -12,6 +12,7 @@ import {
 } from "@/components/brand/Icons";
 import { LoopVideo } from "@/components/ui/LoopVideo";
 import { Ticker } from "@/components/ui/Ticker";
+import { bandFit, type BandFace } from "@/components/ui/ticker-fit";
 import { faqs, shipDateText } from "@/content/faq";
 import { MEDIA } from "@/content/media";
 import {
@@ -45,40 +46,85 @@ import { WhileOn } from "./WhileOn";
    only JavaScript any of them needs belongs to the buy box and the crew form,
    which are their own client components. */
 
+/*
+ * How each band's words measure, for laying it out so it is always full
+ * (components/ui/ticker-fit.ts). Measured in a browser with the real fonts
+ * on 15 November 2026: one copy of the words each band came with, and the
+ * pace it ran at. Change a band's face or size and measure it again:
+ * e2e/site.spec.ts fails if a band falls short on the widest screen.
+ */
+
+/**
+ * The line across the top: the label face at 1.05rem. Its words can be
+ * typed in the back end, so the narrow measure is the thinnest thing the
+ * face sets (a run of full stops and spaces came to 4.1 a letter, and words
+ * made of i, l and t to 5.3), not the thinnest sentence anybody is likely
+ * to write.
+ */
+const TOP_FACE: BandFace = {
+  narrowLetterPx: 4.1,
+  letterPx: 6.8,
+  betweenPx: 49,
+  pxPerSecond: 68.4,
+};
+
+/** The olive band under the hero: Varsity Senior at 2.2rem on a wide screen. */
+const BAND_FACE: BandFace = {
+  narrowLetterPx: 11.5,
+  letterPx: 13.15,
+  betweenPx: 97,
+  pxPerSecond: 98.2,
+};
+
+/** The rituals under the steps: the label face at 1.25rem. */
+const RITUALS_FACE: BandFace = {
+  narrowLetterPx: 6.6,
+  letterPx: 8.34,
+  betweenPx: 58,
+  pxPerSecond: 88.8,
+};
+
 export function TopTicker({
   special = null,
+  lines = null,
 }: {
   /** A special that is on goes first in the line, where it is seen at once. */
   readonly special?: SpecialNow | null;
+  /**
+   * The words to run, when the back end has published its own
+   * (lib/backstage/shop/top-line.ts). Otherwise the site's own line.
+   */
+  readonly lines?: readonly string[] | null;
 }) {
-  const line = (items: readonly string[]) => (
-    <Ticker
-      items={items}
-      seconds={36}
-      className="label bg-navy-deep text-cream py-2.5 text-[1.05rem]"
-      separator={<Sparkle className="text-pink size-3 shrink-0" />}
-    />
-  );
-  if (special === null) return line(TICKER);
+  const own = lines === null || lines.length === 0 ? TICKER : lines;
+  // However few or many the words, the band is full and runs at one pace.
+  const line = (items: readonly string[]) => {
+    return (
+      <Ticker
+        items={items}
+        {...bandFit(items, TOP_FACE)}
+        className="label bg-navy-deep text-cream py-2.5 text-[1.05rem]"
+        separator={<Sparkle className="text-pink size-3 shrink-0" />}
+      />
+    );
+  };
+  if (special === null) return line(own);
   return (
-    <WhileOn until={special.endsAt} otherwise={line(TICKER)}>
-      {line([specialLine(special, SPECIAL.tag), ...TICKER])}
+    <WhileOn until={special.endsAt} otherwise={line(own)}>
+      {line([specialLine(special, SPECIAL.tag), ...own])}
     </WhileOn>
   );
 }
 
 /** The tilted olive band under the hero. Pure brand noise, on purpose. */
 export function Band() {
+  const items = [OFFICIAL.tinyPackage, OFFICIAL.pickleCrew, OFFICIAL.neverFear];
   return (
     <div className="bg-cream relative z-10 -my-3 overflow-hidden py-3">
       <div className="-mx-4 -rotate-[1.6deg]">
         <Ticker
-          items={[
-            OFFICIAL.tinyPackage,
-            OFFICIAL.pickleCrew,
-            OFFICIAL.neverFear,
-          ]}
-          seconds={22}
+          items={items}
+          {...bandFit(items, BAND_FACE)}
           reverse
           className="varsity bg-olive text-navy border-navy border-y-[3px] py-3 text-[1.7rem] md:text-[2.2rem]"
           separator={<Sparkle className="text-pink size-5 shrink-0" />}
@@ -250,7 +296,7 @@ export function Ritual() {
       <div className="mt-12" data-reveal>
         <Ticker
           items={RITUAL.rituals}
-          seconds={30}
+          {...bandFit(RITUAL.rituals, RITUALS_FACE)}
           className="label text-navy border-navy bg-paper border-y-[3px] py-3 text-[1.25rem]"
           separator={<Sparkle className="text-olive-deep size-3.5 shrink-0" />}
         />
