@@ -1,8 +1,36 @@
 # Quick Pickle: what's done, what isn't
 
-Updated 15 November 2026. Honest status, not a summary.
+Updated 16 November 2026 (New Zealand time). Honest status, not a summary.
 
-`npm run prelaunch` checks the first two sections for you and fails until they are done.
+Taking this on? Read [HANDOVER.md](HANDOVER.md) first. This is the long version of its
+lists, with the reasons.
+
+`npm run prelaunch` checks what a machine can check of this, and fails until it is done.
+The go-live list in the back end (Settings, Go-live list) shows the same thing on a screen.
+
+## Handing it over
+
+Sam built this for Ash and is handing it to her (16 November 2026). Every step, in order,
+with each provider's own instructions, is in [docs/ACCOUNTS.md](docs/ACCOUNTS.md). The shop
+stays up throughout.
+
+- [ ] **Move the four accounts to Ash:** the database (Supabase), the code (GitHub), the
+      hosting (Vercel) and payments (Stripe), in that order.
+- [ ] **Tell the repository where the hosting went.** Three lines in
+      `.github/workflows/infra.yml` name the Vercel account the project is in. Until they
+      name the new one, the workflow that looks after the live settings cannot see the
+      project, and its run on each push to `main` will say so. Ask Claude to change them.
+- [ ] **Change what Sam has seen:** the set-up code and the PIN, the two access tokens in
+      the repository's secrets, Stripe's keys, and the database's main password.
+- [ ] **Ash makes the first login herself.** The login carries the name typed when it is
+      made, and that name goes beside everything done under it in the activity log.
+- [ ] **Ash tells Claude how much it may do without asking.** Sam let it merge its own
+      changes once the checks passed, and change the live site's settings. That was Sam's
+      call, and it does not pass on by being written down. `CLAUDE.md` has the rule, under
+      "Whose it is".
+- [ ] **Sam steps back:** deletes his two tokens, leaves the Supabase organisation and the
+      Stripe account, disconnects the old `half-sour` Vercel project, and clears what is
+      left on his Claude account.
 
 ## Needs a person. Nobody else can do these.
 
@@ -389,6 +417,37 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       on the day it left and back on the day it came back. A refund that was sent some
       other way can be written down on a card order, which sends nothing. Still to do by
       a person: nothing, until one happens. Then write to the customer first.
+
+## Known, and left for later
+
+- [ ] **The front page's speed score has little room on a slow machine.** The Lighthouse
+      check passes, and the bar is 0.95. Nearly all of what moves the score is one thing:
+      how long the page is too busy to answer a tap while its script starts. On a fast
+      test machine that is 100 to 130 ms and the score is 0.98 or better. On a slow one
+      it is 180 to 340 ms and single runs score 0.91 to 0.96, so the middle run can land
+      close to the bar. Looked into on 15 November 2026 and not started:
+  - There is no fat in the script. The page loads 164 kB of it over the wire, in ten
+    pieces. Unpacked, that is the framework's own (229 kB), the router's (137 kB) and
+    about 130 kB of small parts of ours.
+  - On a fast machine the whole of the wait is one task, the framework starting up.
+    That is not ours to cut.
+  - On a slow machine six more tasks cross the line after it, and three of those are
+    style and layout work, not script. The page has 1,133 elements, with Lucky drawn in.
+  - So the thing to try is the cost of style and layout: `content-visibility` on the
+    sections below the first screen (with a size hint, and checking that the links
+    within the page, the sticky buy bar and the browser tests' measurements of the
+    edges and the bands still hold), and what the scroll reveal touches as it starts.
+    Measure before and after with the processor slowed down. Do not loosen the budget.
+  - Each Lighthouse run in CI keeps its reports (the `lighthouse-reports` artifact),
+    and each report says how fast its machine was (`environment.benchmarkIndex`). Read
+    those before believing a small move either way.
+- [ ] **A staff member's name cannot be changed from a screen.** The operation takes one
+      (`staff.update`); Settings, Staff has no field for it. It matters for the first
+      login: whoever makes it, their name is on it.
+- [ ] **Nothing works on the code unless somebody asks.** While the site was being built
+      a Claude session looked at the brand pack's folder on the Drive every hour and
+      went over the site in a loop. Both have stopped. The checks still run on every
+      change, and the database still rings the site every five minutes.
 
 ## Would make it sell harder
 
