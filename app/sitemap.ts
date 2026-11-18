@@ -7,6 +7,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const base = siteUrl();
   return [
     { url: `${base}/`, changeFrequency: "weekly", priority: 1 },
+    { url: `${base}/reviews`, changeFrequency: "weekly", priority: 0.5 },
     ...POLICY_SLUGS.map((slug) => ({
       url: `${base}/${slug}`,
       changeFrequency: "yearly" as const,

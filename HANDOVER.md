@@ -140,6 +140,12 @@ checklist and the lines of a budget: [docs/starter](docs/starter/README.md). The
 has a line for each thing that will bill you once the shop is live (hosting, the domain,
 email, card fees). Every one is blank until you have the real figure.
 
+Reviews come in through a form on the shop (`/review`) and wait in the back end under
+Marketing, Reviews until you publish them. Publish the grumpy ones too: the stars on the
+shop are the average of every review it shows. The only ones you cannot publish are
+ones that say what the juice did to somebody's body, and the screen says which those
+are. Until the first is published the shop shows no reviews at all.
+
 The back end was made for one person. Anything you do not need every day is switched
 off until you start it: the morning email, landing pages for one advert, tests between
 two pages, specials, connecting Claude.

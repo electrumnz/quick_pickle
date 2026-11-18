@@ -151,6 +151,7 @@ import {
   listReviews,
   publishReview,
   rejectReview,
+  shownReviews,
   submitReview,
   unpublishReview,
 } from "@/lib/backstage/marketing/reviews";
@@ -3801,10 +3802,31 @@ describe("the rest of marketing", () => {
           (review) => review.displayName,
         ),
       ).toEqual(["Mere"]);
+      // The shop's stars and count are over the same reviews it can show,
+      // so the one that no longer passes is not counted either.
+      const without = await execute(shownReviews, {}, shop, run);
+      expect(without.count).toBe(1);
+      expect(without.average).toBe(4);
       await w.handle.db
         .update(reviews)
         .set({ body: "Sour, salty and gone in one gulp." })
         .where(eq(reviews.id, kind));
+    });
+
+    it("tells the shop how many there are and their average, over all of them", async () => {
+      const all = await execute(shownReviews, {}, shop, run);
+      expect(all.count).toBe(2);
+      // A 5 and a 4.
+      expect(all.average).toBe(4.5);
+      expect(all.reviews.map((review) => review.displayName)).toEqual([
+        "Mere",
+        "Priya, Auckland",
+      ]);
+      // Showing fewer never changes the count or the average.
+      const one = await execute(shownReviews, { limit: 1 }, shop, run);
+      expect(one.reviews).toHaveLength(1);
+      expect(one.count).toBe(2);
+      expect(one.average).toBe(4.5);
     });
 
     it("takes a review down, and keeps the ones waiting at the top", async () => {
@@ -4670,9 +4692,9 @@ describe("the demo data", () => {
       expect(page.get("social planner")).toContain(
         "Nothing here posts for you.",
       );
-      expect(page.get("reviews")).toContain(
-        "The shop does not show reviews yet.",
-      );
+      // The shop shows reviews now, so nothing says otherwise.
+      expect(page.get("reviews")).toContain("never for being unkind");
+      expect(page.get("reviews")).not.toContain("does not show reviews");
       expect(page.get("links")).toContain("The page is not built yet.");
 
       // The one review that breaks the rules has no button to publish it,

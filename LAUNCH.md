@@ -174,6 +174,9 @@ confirmed.
       Pickle Crew" (Plans) has the steps. **Who:** Ash
 - [ ] **Tell pre-order customers the ship date**, if it opened as a pre-order: one press
       on Settings, The shop, once email is connected. **Who:** Ash
+- [ ] **Ask your first customers for a review.** Send them to the shop's address with
+      `/review` on the end. Read each one in Marketing, Reviews and publish it, grumpy
+      or not. The shop shows the reviews from the first one published. **Who:** Ash
 - [ ] **Connect Claude to the back end**, only if you want to run the shop by chat
       (Settings, Claude). [TODO.md](TODO.md) says what to look at the first time.
       **Who:** Ash

@@ -226,7 +226,7 @@ export function policies(offer: Offer): readonly Policy[] {
       {
         heading: "What we collect",
         body: [
-          "When you order: your name, email, delivery address and, if you give it, a phone number for the courier. When you join the Pickle Crew: your email address.",
+          "When you order: your name, email, delivery address and, if you give it, a phone number for the courier. When you join the Pickle Crew: your email address. When you write a review: your rating, your words and the name you'd like shown, and, if you give them, your order number and the email you ordered with, which we only use to mark the review as from somebody who bought it.",
           "We don't see or store your card details. Payments are handled by a payment processor.",
         ],
       },
@@ -234,6 +234,7 @@ export function policies(offer: Offer): readonly Policy[] {
         heading: "What we use it for",
         body: [
           "To send what you ordered, to tell you about your order, and to answer you if you write to us. If you've joined the Pickle Crew, to email you news about new batches. You can leave the crew from any email.",
+          "If you write a review and we put it up, this site shows your rating, your words, the name you gave and the day it went up. Your order number and email are never shown. Want it taken down? Email us and we will.",
         ],
       },
       {
@@ -263,7 +264,7 @@ export function policies(offer: Offer): readonly Policy[] {
       {
         heading: "Keeping the checkout safe",
         body: [
-          "So that nobody can flood the checkout or sit there guessing at promo codes, we count a few things by internet address, ten minutes at a time: promo codes we don't know, code checks that come with an email address, tries at placing an order, and Pickle Crew sign-ups. Too many, and that address is asked to wait.",
+          "So that nobody can flood the checkout or sit there guessing at promo codes, we count a few things by internet address, ten minutes at a time: promo codes we don't know, code checks that come with an email address, tries at placing an order, Pickle Crew sign-ups and reviews. Too many, and that address is asked to wait.",
           "We count two more things the same way: how often our pages tell us they were looked at, and how often one of our short links is followed. That is only so nobody can pad out the shop's own numbers. Past a limit they stop being counted, and nothing else changes for you.",
           "We don't keep the address itself. We keep a scrambled mark in its place, which changes every ten minutes and is normally deleted within a few hours.",
         ],

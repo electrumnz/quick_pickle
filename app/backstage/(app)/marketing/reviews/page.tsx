@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ShopLink } from "@/components/backstage/ShopLink";
 import { SubmitButton } from "@/components/backstage/SubmitButton";
 import {
   Empty,
@@ -71,8 +72,11 @@ export default async function ReviewsPage({
         <Notice>
           Every review is read by a person before anyone else sees it. Once we
           publish a customer&rsquo;s words they count as ours, so one that says
-          what the product did to somebody&rsquo;s body cannot be published. The
-          shop does not show reviews yet.
+          what the product did to somebody&rsquo;s body cannot be published.
+          Turn one down for that, never for being unkind: the stars on the shop
+          are the average of every review it shows. A published review is on the
+          shop within a minute, and customers write them at{" "}
+          <ShopLink href="/review">/review</ShopLink>.
         </Notice>
       </div>
 

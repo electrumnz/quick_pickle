@@ -47,11 +47,11 @@ import {
   type CheckoutState,
 } from "@/components/checkout/actions";
 import { checkoutProblem, crewProblem } from "@/components/checkout/problem";
-import { joinCrew } from "@/components/site/actions";
+import { joinCrew, sendReview } from "@/components/site/actions";
 import { policies } from "@/content/policies";
 import { FILE_OFFER } from "@/lib/shop/offer";
 import { CHECKOUT, CODES, CREW } from "@/content/site";
-import { crewMembers, orders, rateHits } from "@/db/schema";
+import { crewMembers, orders, rateHits, reviews } from "@/db/schema";
 import { tick } from "@/lib/backstage/clock/tick";
 import { systemCaller } from "@/lib/backstage/core/actor";
 import { execute } from "@/lib/backstage/core/op";
@@ -129,6 +129,7 @@ beforeEach(async () => {
   await handle.db.delete(rateHits);
   await handle.db.delete(orders);
   await handle.db.delete(crewMembers);
+  await handle.db.delete(reviews);
   request.address = "203.0.113.9";
   request.cookies = [];
 });
@@ -684,6 +685,85 @@ describe("the shop, with the ceiling on", () => {
       });
       expect(await handle.db.select().from(rateHits)).toEqual([]);
       expect(await members()).toBe(0);
+    });
+  });
+
+  describe("the review form", () => {
+    const send = (fields: Record<string, string>) => {
+      const form = new FormData();
+      for (const [name, value] of Object.entries({
+        rating: "5",
+        body: "Sour as.",
+        name: "Sam, Ōtaki",
+        website: "",
+        ...fields,
+      })) {
+        form.set(name, value);
+      }
+      return sendReview({ status: "idle" }, form);
+    };
+    const waiting = async () =>
+      (await handle.db.select().from(reviews)).filter(
+        (review) => review.status === "pending",
+      ).length;
+
+    it("takes a crowd's reviews, then asks that address to wait", async () => {
+      for (let n = 0; n < LIMITS.review.most; n += 1) {
+        expect(await send({ body: `Sour as, ${String(n)}.` })).toEqual({
+          status: "sent",
+        });
+      }
+      expect(await waiting()).toBe(LIMITS.review.most);
+      // What was typed is handed back, so nothing has to be typed again.
+      expect(await send({ body: "One more." })).toMatchObject({
+        status: "slow",
+        typed: { rating: "5", body: "One more.", name: "Sam, Ōtaki" },
+      });
+      expect(await waiting()).toBe(LIMITS.review.most);
+
+      vi.setSystemTime(later(10));
+      expect((await send({ body: "One more." })).status).toBe("sent");
+    });
+
+    it("lands waiting for a person, never shown, as it was written", async () => {
+      await send({
+        rating: "4",
+        body: "  Tiny bottle,\r\nbig face.  ",
+        name: " Sam,   Ōtaki ",
+      });
+      const [saved] = await handle.db.select().from(reviews);
+      expect(saved).toMatchObject({
+        status: "pending",
+        rating: 4,
+        body: "Tiny bottle,\nbig face.",
+        displayName: "Sam, Ōtaki",
+        orderId: null,
+      });
+    });
+
+    it("hands back what needs putting right, and counts nothing for it or for the trap", async () => {
+      expect(await send({ rating: "", body: "x", name: "" })).toEqual({
+        status: "invalid",
+        problems: ["rating", "body", "name"],
+        typed: { rating: "", body: "x", name: "", order: "", email: "" },
+      });
+      expect(await send({ rating: "6" })).toMatchObject({
+        status: "invalid",
+        problems: ["rating"],
+      });
+      expect(await send({ body: "y".repeat(1501) })).toMatchObject({
+        status: "invalid",
+        problems: ["body"],
+      });
+      expect(await send({ name: "n".repeat(61) })).toMatchObject({
+        status: "invalid",
+        problems: ["name"],
+      });
+      expect(await send({ website: "http://spam.example" })).toEqual({
+        status: "sent",
+      });
+      expect(await handle.db.select().from(rateHits)).toEqual([]);
+      expect(await waiting()).toBe(0);
     });
   });
 });

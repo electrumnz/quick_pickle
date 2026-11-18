@@ -25,8 +25,21 @@ import { systemCaller } from "@/lib/backstage/core/actor";
 import { execute } from "@/lib/backstage/core/op";
 import { databaseUrl } from "@/lib/db/client";
 
+import type { ShownReviews } from "@/lib/backstage/marketing/reviews";
+
 import type { Offer } from "../offer";
 import type { Order } from "../order";
+
+/** A review as the shop's form hands it in. */
+export type ReviewInput = {
+  readonly rating: number;
+  readonly body: string;
+  readonly displayName: string;
+  readonly orderNumber?: string;
+  readonly email?: string;
+};
+
+export type { ShownReviews };
 
 export type CrewSignup = {
   readonly email: string;
@@ -158,6 +171,17 @@ export type Store = {
    * one to give.
    */
   currentTopLine?(): Promise<readonly string[] | null>;
+  /**
+   * The reviews the shop shows: the newest published ones (six, unless
+   * asked for more, up to 100), how many there are and their average. Only
+   * the database store has any.
+   */
+  currentReviews?(limit?: number): Promise<ShownReviews>;
+  /**
+   * A review from the shop's form. It lands waiting for a person to read
+   * it, and is never shown until somebody publishes it.
+   */
+  saveReview?(review: ReviewInput): Promise<void>;
   /**
    * The code somebody is given for joining the Pickle Crew, if one is set
    * up and could be used right now.
@@ -319,6 +343,24 @@ function dbStore(env: Record<string, string | undefined>): Store {
         systemCaller("The shop", "storefront"),
       );
       return shop.offer;
+    },
+    async currentReviews(limit = 6) {
+      const { shownReviews } =
+        await import("@/lib/backstage/marketing/reviews");
+      return execute(
+        shownReviews,
+        { limit },
+        systemCaller("The shop", "storefront"),
+      );
+    },
+    async saveReview(review) {
+      const { submitReview } =
+        await import("@/lib/backstage/marketing/reviews");
+      await execute(
+        submitReview,
+        review,
+        systemCaller("The shop", "storefront"),
+      );
     },
     async currentTopLine() {
       const { topLineNow } = await import("@/lib/backstage/shop/top-line");

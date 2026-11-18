@@ -34,11 +34,12 @@ import {
 
 import type { Offer } from "@/lib/shop/offer";
 import { specialLine } from "@/lib/shop/special-now";
-import type { SpecialNow } from "@/lib/shop/store";
+import type { ShownReviews, SpecialNow } from "@/lib/shop/store";
 
 import { BuyBox } from "./BuyBox";
 import { CrewForm } from "./CrewForm";
 import { Reels } from "./Reels";
+import { RatingLine } from "./Reviews";
 import { SpecialTicket } from "./SpecialTicket";
 import { WhileOn } from "./WhileOn";
 
@@ -154,10 +155,13 @@ export function Band() {
 export function Shop({
   offer,
   special = null,
+  reviews = null,
 }: {
   /** What is on sale: the line over the packs and the ship date. */
   readonly offer: Offer;
   readonly special?: SpecialNow | null;
+  /** The rating, said in one line under the heading. Nothing with none. */
+  readonly reviews?: ShownReviews | null;
 }) {
   return (
     <section
@@ -177,6 +181,7 @@ export function Shop({
             {BUY.title}
           </h2>
           <p className="mt-3 max-w-[34rem]">{BUY.body}</p>
+          {reviews === null ? null : <RatingLine shown={reviews} />}
         </div>
         {special === null ? null : (
           <SpecialTicket special={special} className="mt-6" />

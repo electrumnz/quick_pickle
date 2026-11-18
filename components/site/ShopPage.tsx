@@ -1,4 +1,5 @@
 import { Hero, type HeroWords } from "@/components/site/Hero";
+import { ReviewsSection } from "@/components/site/Reviews";
 import {
   Band,
   Crew,
@@ -15,6 +16,7 @@ import {
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { StickyBuyBar } from "@/components/site/StickyBuyBar";
 import { offerForPage } from "@/lib/shop/offer-now";
+import { reviewsForPage } from "@/lib/shop/reviews-now";
 import { specialForPage } from "@/lib/shop/special-now";
 import { topLineForPage } from "@/lib/shop/top-line-now";
 
@@ -28,6 +30,8 @@ import { topLineForPage } from "@/lib/shop/top-line-now";
  *   truths     the three things we can stand behind
  *   ritual     where it fits in a game day
  *   reels      the film: the sour face, seen (content/media.ts)
+ *   reviews    what customers said, once a person has published it. With
+ *              none published the section is not there at all
  *   lucky      who is asking
  *   crew       not ready to buy? stay close
  *   faq        the fair questions
@@ -69,6 +73,9 @@ export async function ShopPage({
   // The line across the top is the site's own unless the back end has
   // published another (null is the site's own).
   const topLine = line ?? (await topLineForPage());
+  // What customers said: the newest few, how many and the average. Shown
+  // beside the packs as one line and in full further down.
+  const reviews = await reviewsForPage();
   return (
     <>
       <TopTicker special={special} lines={topLine} />
@@ -81,10 +88,11 @@ export async function ShopPage({
       >
         <Hero offer={offer} words={words} />
         <Band />
-        <Shop offer={offer} special={special} />
+        <Shop offer={offer} special={special} reviews={reviews} />
         <Truths />
         <Ritual />
         <ReelsSection />
+        <ReviewsSection shown={reviews} />
         <MeetLucky />
         <Crew />
         <Faq offer={offer} />

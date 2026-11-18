@@ -147,6 +147,24 @@ export function HeartIcon({ className }: IconProps) {
   );
 }
 
+/**
+ * A star for a rating. `filled` is a star given, in pink; an empty one is
+ * cream. The rating itself is said in words beside the stars.
+ */
+export function StarIcon({
+  className,
+  filled = true,
+}: IconProps & { readonly filled?: boolean }) {
+  return (
+    <Svg className={className}>
+      <path
+        d="M16 3.8l3.7 7.6 8.3 1.2-6 5.9 1.4 8.3L16 22.9l-7.4 3.9 1.4-8.3-6-5.9 8.3-1.2z"
+        className={filled ? "fill-pink" : "fill-cream"}
+      />
+    </Svg>
+  );
+}
+
 export function CalendarIcon({ className }: IconProps) {
   return (
     <Svg className={className}>

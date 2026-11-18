@@ -275,6 +275,9 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 - [x] **Marketing.** Campaigns to the crew with approval before sending, a social planner,
       reviews read by a person before anyone sees them, and partners with a written yes on
       file before they are named.
+- [x] **Reviews on the shop.** A form at `/review`, a person reads and publishes each one
+      in the back end, and the shop shows the average, the newest six and a page of all
+      of them. Nothing shows until the first is published, and none are invented.
 - [x] **Campaigns really go.** A campaign that is sent goes out a few dozen emails at a
       time, the first few as send is pressed and the rest every five minutes, and one
       given a time is queued when the time comes. Each email says who it is from and
@@ -510,7 +513,11 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       vectors and list where they differ. The site keeps what it has: her own paths where
       she drew them as vectors, and the official pictures elsewhere. Worth a look only if a
       sharper full-colour Lucky is wanted at a large size.
-- [ ] Reviews, once there are real ones. None are invented.
+- [ ] **Ask the first customers for a review.** The form is at `/review` and the shop
+      shows nothing until one is published, so the section appears with the first.
+      Nothing asks by email yet: a request for a review is not part of an order's
+      emails, which may carry nothing promotional. A line in a Pickle Crew email, a card
+      in the box, or a word at a stall all lead to the same form.
 - [ ] Subscribe and save, once there is a second batch to subscribe to.
 
 ## Built and verified

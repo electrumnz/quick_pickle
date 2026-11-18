@@ -62,7 +62,7 @@ function Decide({
         {review.status === "pending"
           ? "Waiting to be read. Nobody outside the back end can see it."
           : review.status === "published"
-            ? `Published${decided}. The shop does not show reviews yet.`
+            ? `Published${decided}. It is on the shop.`
             : `Rejected${decided}${review.rejectedReason ? `: ${review.rejectedReason}` : "."}`}
       </p>
 

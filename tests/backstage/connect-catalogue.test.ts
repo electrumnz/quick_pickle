@@ -116,7 +116,9 @@ describe("the list of every operation", () => {
       pages: 2,
       plans: 2,
       promoCodes: 3,
-      reviews: 1,
+      // A review from the shop's form, and the shop's own read of the
+      // published ones as it draws a page.
+      reviews: 2,
       // An owner's confirming of a fact, and the shop's own read of the
       // line across its top as it draws a page.
       shop: 2,
