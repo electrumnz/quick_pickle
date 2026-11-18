@@ -118,6 +118,7 @@ export async function planBatchAction(form: FormData): Promise<void> {
   await submit(
     planBatch,
     {
+      flavour: formText(form, "flavour"),
       code: optionalText(form, "code"),
       name: optionalText(form, "name"),
       plannedFor: optionalText(form, "plannedFor"),
@@ -126,6 +127,7 @@ export async function planBatchAction(form: FormData): Promise<void> {
     },
     {
       back: withValues(`${STOCK}/batches/new`, form, [
+        "flavour",
         "code",
         "name",
         "plannedFor",
@@ -146,6 +148,7 @@ export async function updateBatchAction(form: FormData): Promise<void> {
       code,
       newCode: optionalText(form, "newCode"),
       name: form.has("name") ? formText(form, "name") : undefined,
+      flavour: optionalText(form, "flavour"),
       madeOn: changedText(form, "madeOn"),
       bestBefore: changedText(form, "bestBefore"),
       shotsPlanned: changedCount(form, "shotsPlanned"),

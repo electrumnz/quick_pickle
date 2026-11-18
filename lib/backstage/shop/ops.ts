@@ -33,6 +33,8 @@ import { digitsOf, formatGstNumber } from "@/lib/shop/company-numbers";
 import { formatNzd } from "@/lib/shop/money";
 import {
   FILE_OFFER,
+  labelOf,
+  labelsOf,
   type Company,
   type Label,
   type Offer,
@@ -139,6 +141,18 @@ function differing(next: Offer, confirmed: OfferChanges["confirmed"]) {
     if (next.label[key] !== file.label[key]) label[key] = next.label[key];
   }
   if (Object.keys(label).length > 0) changes.label = label;
+  const flavourLabels: NonNullable<OfferChanges["flavourLabels"]> = {};
+  for (const [key, nextLabel] of Object.entries(next.flavourLabels)) {
+    const fileLabel = labelOf(file, key);
+    const differs: NonNullable<OfferChanges["label"]> = {};
+    for (const line of LABEL_KEYS) {
+      if (nextLabel[line] !== fileLabel[line]) differs[line] = nextLabel[line];
+    }
+    if (Object.keys(differs).length > 0) flavourLabels[key] = differs;
+  }
+  if (Object.keys(flavourLabels).length > 0) {
+    changes.flavourLabels = flavourLabels;
+  }
   const company: NonNullable<OfferChanges["company"]> = {};
   for (const key of COMPANY_KEYS) {
     if (next.company[key] !== file.company[key]) {
@@ -207,9 +221,16 @@ const changeInput = z.object({
       freeOverCents: cents.nullable().optional(),
     })
     .optional(),
-  /** What the label says, word for word. */
+  /** What the first flavour's label says, word for word. */
   label: z
     .object({ ingredients: typed, contains: typed, storage: typed })
+    .optional(),
+  /** What each other flavour's label says, by the flavour's key. */
+  flavourLabels: z
+    .record(
+      z.string(),
+      z.object({ ingredients: typed, contains: typed, storage: typed }),
+    )
     .optional(),
   /** Who is behind the shop. */
   company: z
@@ -313,13 +334,16 @@ export function whatChanged(before: Offer, after: Offer): string[] {
     if (was === now) return;
     said.push(now === null ? `${name} taken off` : `${name} to "${now}"`);
   };
-  words(
-    "the ingredients list",
-    before.label.ingredients,
-    after.label.ingredients,
-  );
-  words("the allergen line", before.label.contains, after.label.contains);
-  words("the storage line", before.label.storage, after.label.storage);
+  for (const { flavour, label } of labelsOf(after)) {
+    const was = labelOf(before, flavour.key);
+    for (const line of LABEL_KEYS) {
+      words(
+        labelLineSaid(line, flavour.name, after.flavours.length),
+        was[line],
+        label[line],
+      );
+    }
+  }
   words("the legal name", before.company.legalName, after.company.legalName);
   if (before.company.nzbn !== after.company.nzbn) {
     said.push(
@@ -379,6 +403,20 @@ const LABEL_SAID: Readonly<Record<keyof Label, string>> = {
 };
 
 /**
+ * A label line's name, with its flavour once there is more than one:
+ * "the Mango Chilli Lime ingredients list".
+ */
+export function labelLineSaid(
+  line: keyof Label,
+  flavour: string,
+  flavours: number,
+): string {
+  return flavours > 1
+    ? LABEL_SAID[line].replace(/^the /, `the ${flavour} `)
+    : LABEL_SAID[line];
+}
+
+/**
  * The copy rules, over each of the label's lines that is changing.
  *
  * A banned word refuses the change, like anywhere else. A word that needs a
@@ -387,18 +425,25 @@ const LABEL_SAID: Readonly<Record<keyof Label, string>> = {
  * person says the lines are word for word what the printed label says.
  */
 function readTheLabel(
-  before: Label,
-  after: Label,
+  before: Offer,
+  after: Offer,
   checked: boolean,
   actor: Actor | null,
 ): string[] {
   const parts: Record<string, string> = {};
-  for (const key of LABEL_KEYS) {
-    const now = after[key];
-    if (now !== null && now !== before[key]) parts[LABEL_SAID[key]] = now;
+  const lists: string[] = [];
+  for (const { flavour, label } of labelsOf(after)) {
+    const was = labelOf(before, flavour.key);
+    const said = (line: keyof Label) =>
+      labelLineSaid(line, flavour.name, after.flavours.length);
+    lists.push(said("ingredients"));
+    for (const key of LABEL_KEYS) {
+      const now = label[key];
+      if (now !== null && now !== was[key]) parts[said(key)] = now;
+    }
   }
   if (Object.keys(parts).length === 0) return [];
-  const options = { labelList: [LABEL_SAID.ingredients] };
+  const options = { labelList: lists };
   const problems = checkOutgoing(parts, options);
   const needsCheck = problems.filter(
     (problem) => problem.kind === "restricted",
@@ -441,6 +486,19 @@ function proposed(
   input: ChangeInput,
   actor: Actor | null,
 ): { after: Offer; changed: string[]; labelConfirmed: string[] } {
+  // So is a label for a flavour that is not on the shelf, or for the
+  // first flavour under its key (its label is `label`).
+  for (const key of Object.keys(input.flavourLabels ?? {})) {
+    if (before.flavourLabels[key] === undefined) {
+      throw new OpError(
+        "invalid_input",
+        `There is no flavour ${key} to label.`,
+        {
+          flavourLabels: `There is no flavour ${key} to label`,
+        },
+      );
+    }
+  }
   // Unknown packs are refused out loud here. A stored change for a pack
   // that no longer exists is dropped quietly when it is read.
   for (const sku of Object.keys(input.prices ?? {})) {
@@ -505,6 +563,26 @@ function proposed(
               : { storage: tidy(input.label.storage) }),
           },
         }),
+    ...(input.flavourLabels === undefined
+      ? {}
+      : {
+          flavourLabels: Object.fromEntries(
+            Object.entries(input.flavourLabels).map(([key, label]) => [
+              key,
+              {
+                ...(label.ingredients === undefined
+                  ? {}
+                  : { ingredients: tidy(label.ingredients) }),
+                ...(label.contains === undefined
+                  ? {}
+                  : { contains: tidy(label.contains) }),
+                ...(label.storage === undefined
+                  ? {}
+                  : { storage: tidy(label.storage) }),
+              },
+            ]),
+          ),
+        }),
     ...(input.company === undefined
       ? {}
       : {
@@ -564,12 +642,7 @@ function proposed(
     refuseUnsendable({ "the batch's name": after.batchName });
   }
   // So are the label's lines, each as it changes.
-  const labelConfirmed = readTheLabel(
-    before.label,
-    after.label,
-    input.labelChecked,
-    actor,
-  );
+  const labelConfirmed = readTheLabel(before, after, input.labelChecked, actor);
   // A GST number on a business that says it is not registered is one of
   // the two typed wrong. Nothing a customer reads may say both.
   if (after.gstRegistered === false && after.company.gstNumber !== null) {
@@ -657,9 +730,21 @@ function askedFor(input: ChangeInput): string[] {
           : "not registered for GST",
     );
   }
-  words("the ingredients list", input.label?.ingredients);
-  words("the allergen line", input.label?.contains);
-  words("the storage line", input.label?.storage);
+  // Each flavour's label, named for its flavour once there is more than one.
+  const [firstFlavour, ...otherFlavours] = FILE_OFFER.flavours;
+  const count = FILE_OFFER.flavours.length;
+  const labelWords = (
+    flavourName: string,
+    label: ChangeInput["label"] | undefined,
+  ) => {
+    for (const line of LABEL_KEYS) {
+      words(labelLineSaid(line, flavourName, count), label?.[line]);
+    }
+  };
+  labelWords(firstFlavour?.name ?? "", input.label);
+  for (const flavour of otherFlavours) {
+    labelWords(flavour.name, input.flavourLabels?.[flavour.key]);
+  }
   words("the legal name", input.company?.legalName);
   words("the NZBN", input.company?.nzbn);
   words("the business address", input.company?.address);
@@ -762,10 +847,16 @@ const CONFIRMABLE: Readonly<Record<string, (offer: Offer) => string | null>> = {
   "contact-email": (offer) =>
     offer.contactEmail === null ? "Set the contact address first." : null,
   // The allergen and storage lines are only there if the label has them.
-  ingredients: (offer) =>
-    offer.label.ingredients === null
+  // Every flavour's label: one flavour's list never stands for another's.
+  ingredients: (offer) => {
+    const missing = labelsOf(offer).filter(
+      ({ label }) => label.ingredients === null,
+    );
+    if (missing.length === 0) return null;
+    return offer.flavours.length === 1
       ? "Put the ingredients list in first."
-      : null,
+      : `Put the ingredients list in first for ${missing.map(({ flavour }) => flavour.name).join(" and ")}.`;
+  },
   // A sole trader has no NZBN to give, so only the name is asked for.
   "legal-entity": (offer) =>
     offer.company.legalName === null
@@ -837,20 +928,34 @@ export function factNow(key: string, offer: Offer): string | null {
     return offer.contactEmail ?? "No address set: the site shows none";
   }
   if (key === "ingredients") {
-    const { ingredients, contains, storage } = offer.label;
-    if (ingredients === null && contains === null && storage === null) {
+    const labels = labelsOf(offer);
+    const typed = (label: Label) =>
+      label.ingredients !== null ||
+      label.contains !== null ||
+      label.storage !== null;
+    if (!labels.some(({ label }) => typed(label))) {
       return "Nothing is in yet: the site says the list is on its way";
     }
     const bare = (text: string) => text.replace(/[.\s]+$/, "");
-    return [
-      ingredients === null
-        ? "No ingredients list yet"
-        : `Ingredients: ${bare(ingredients)}`,
-      contains === null
-        ? "No allergen line"
-        : `Allergen line: ${bare(contains)}`,
-      storage === null ? "No storage line" : `Storage: ${bare(storage)}`,
-    ].join(". ");
+    const said = ({ ingredients, contains, storage }: Label) =>
+      [
+        ingredients === null
+          ? "No ingredients list yet"
+          : `Ingredients: ${bare(ingredients)}`,
+        contains === null
+          ? "No allergen line"
+          : `Allergen line: ${bare(contains)}`,
+        storage === null ? "No storage line" : `Storage: ${bare(storage)}`,
+      ].join(". ");
+    // A label for each flavour, each said in full.
+    return labels.length === 1
+      ? said(labels[0]?.label ?? offer.label)
+      : labels
+          .map(
+            ({ flavour, label }) =>
+              `${flavour.name}: ${typed(label) ? said(label) : "nothing in yet"}`,
+          )
+          .join(". ");
   }
   if (key === "legal-entity") return companySaid(offer);
   return null;

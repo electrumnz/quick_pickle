@@ -17,8 +17,9 @@
 
 import type { OpContext } from "../core/op";
 import { daysAwayText, formatDateKey } from "./dates";
+import { flavourShots } from "./flavours";
 import { countText, shotsText } from "./movements";
-import { stockPicture, type StockPicture } from "./picture";
+import { stockPicture, type FlavourStock, type StockPicture } from "./picture";
 import { LOW_STOCK_SHOTS, NEAR_BEST_BEFORE_DAYS } from "./status";
 
 export type StockNeed = {
@@ -72,12 +73,25 @@ export function needsFromPicture(picture: StockPicture): StockNeed[] {
   const past = dated.filter((batch) => !batch.good);
   const near = dated.filter((batch) => batch.good);
 
+  // A flavour at a time: each is its own pool. With one flavour in play the
+  // sentences read as they always did.
+  const counted = picture.flavours.filter((flavour) => flavour.tracking);
+  const named = (flavour: FlavourStock, count: number) =>
+    picture.namesFlavours
+      ? flavourShots(count, flavour.flavour, true)
+      : shotsText(count);
   if (flagged("short-for-orders")) {
+    const short = counted.filter((flavour) => flavour.promised > flavour.ready);
     needs.push({
       key: "short-for-orders",
       urgent: true,
       title: "Orders are waiting on more stock than there is",
-      detail: `They need ${shotsText(picture.promised)} and ${picture.ready === 0 ? "none are" : `only ${countText(picture.ready)} ${picture.ready === 1 ? "is" : "are"}`} ready to sell.`,
+      detail: short
+        .map(
+          (flavour) =>
+            `They need ${named(flavour, flavour.promised)} and ${flavour.ready === 0 ? "none are" : `only ${countText(flavour.ready)} ${flavour.ready === 1 ? "is" : "are"}`} ready to sell.`,
+        )
+        .join(" "),
       href: STOCK,
     });
   }
@@ -109,15 +123,24 @@ export function needsFromPicture(picture: StockPicture): StockNeed[] {
   }
 
   if (flagged("low-stock")) {
-    const free = `${shotsText(picture.available)} ${picture.available === 1 ? "is" : "are"} free to sell`;
+    const low = counted.filter(
+      (flavour) => flavour.low && flavour.promised <= flavour.ready,
+    );
     needs.push({
       key: "low-stock",
       urgent: false,
-      title: "Stock is running low",
-      detail:
-        picture.promised === 0
-          ? `${free}.`
-          : `${free} once the ${countText(picture.promised)} promised to orders are packed.`,
+      title:
+        picture.namesFlavours && low.length === 1 && low[0] !== undefined
+          ? `${low[0].name} is running low`
+          : "Stock is running low",
+      detail: low
+        .map((flavour) => {
+          const free = `${named(flavour, flavour.available)} ${flavour.available === 1 ? "is" : "are"} free to sell`;
+          return flavour.promised === 0
+            ? `${free}.`
+            : `${free} once the ${countText(flavour.promised)} promised to orders are packed.`;
+        })
+        .join(" "),
       href: STOCK,
     });
   }

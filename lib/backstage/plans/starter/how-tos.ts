@@ -157,7 +157,7 @@ const productionDay: StarterDocument = {
 
 ## The day before
 
-1. [ ] Decide the size of the batch and its batch code. The next code is: ____.
+1. [ ] Decide the flavour, the size of the batch and its batch code. One batch is one flavour. The next code is: ____.
 2. [ ] Count what is going into it: juice or ingredients, bottles, caps, labels, cartons. Count, do not guess.
 3. [ ] Check the labels are the current version, with room for the date mark and the batch code.
 4. [ ] Check the supplier's details are on file for everything going into this batch: who it came from, their lot numbers, their dates.
@@ -184,7 +184,7 @@ const productionDay: StarterDocument = {
 ## Fill, cap, label
 
 15. [ ] Fill and cap as your plan says: ____.
-16. [ ] Label every bottle. Check the first one against the approved label: the name, the ingredients, the date mark, the batch code, the storage line.
+16. [ ] Label every bottle. Check the first one against the approved label for this flavour: the name, the ingredients, the date mark, the batch code, the storage line.
 17. [ ] Check bottles through the run: cap tight, nothing leaking, label straight, code readable. How many and how often: ____.
 18. [ ] Count the finished shots. Count what was wasted, and say why.
 
@@ -194,7 +194,7 @@ const productionDay: StarterDocument = {
 20. [ ] Keep samples of the batch if your plan asks for them. How many: ____. Where: ____. How long: ____.
 21. [ ] Clean down as your plan says. Write down that it was done.
 22. [ ] Finish the batch record: shots made, shots wasted, anything unusual, who signed it off.
-23. [ ] Enter the batch in the back end: the code, the date made, the date mark, the shots counted. Do not release it for sale until every check in the plan is done and written down.
+23. [ ] Enter the batch in the back end: the flavour, the code, the date made, the date mark, the shots counted. Do not release it for sale until every check in the plan is done and written down.
 24. [ ] File the paper record: ____. Your plan says how long records are kept: ____.
 
 ## What the batch record holds

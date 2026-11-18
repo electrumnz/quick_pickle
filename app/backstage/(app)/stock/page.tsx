@@ -5,6 +5,7 @@ import { OrderStatusPill } from "@/components/backstage/orders";
 import { Empty, PageHeader, Panel, Stat } from "@/components/backstage/ui";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { execute } from "@/lib/backstage/core/op";
+import { flavourName } from "@/lib/backstage/stock/flavours";
 import {
   listOrdersWithoutBatch,
   stockPicture,
@@ -66,14 +67,24 @@ export default async function StockPage({
   const canWrite = staff.role !== "viewer";
 
   // The number that matters is what could still be sold: what is on hand
-  // and in date, less what paid orders are already waiting for.
+  // and in date, less what paid orders are already waiting for. A flavour
+  // at a time once there is more than one.
+  const counted = picture.flavours.filter((flavour) => flavour.tracking);
   const lead = !picture.tracking
     ? picture.planned > 0
       ? `${count(picture.planned)} ${picture.planned === 1 ? "batch is" : "batches are"} planned and none made yet. Shots are counted from the first batch you record as made.`
       : "Nothing has been made yet. Shots are counted from the first batch you record as made."
-    : picture.promised === 0
-      ? `${shots(picture.ready)} on hand and ready to sell.`
-      : `${shots(picture.ready)} on hand and ready to sell. ${count(picture.promised)} of them ${picture.promised === 1 ? "is" : "are"} promised to orders waiting to be packed, which leaves ${count(picture.available)} free.`;
+    : picture.namesFlavours
+      ? // Each flavour is its own pool: one sentence each.
+        counted
+          .map(
+            (flavour) =>
+              `${flavour.name}: ${count(flavour.available)} free to sell${flavour.promised === 0 ? "" : `, once the ${count(flavour.promised)} promised to orders are packed`}.`,
+          )
+          .join(" ")
+      : picture.promised === 0
+        ? `${shots(picture.ready)} on hand and ready to sell.`
+        : `${shots(picture.ready)} on hand and ready to sell. ${count(picture.promised)} of them ${picture.promised === 1 ? "is" : "are"} promised to orders waiting to be packed, which leaves ${count(picture.available)} free.`;
 
   return (
     <>
@@ -81,11 +92,22 @@ export default async function StockPage({
       <FormNotice notice={notice} tone={tone} />
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*]:min-w-0">
-        <Stat
-          label="Free to sell"
-          value={count(picture.available)}
-          note={`${count(picture.ready)} on hand, less ${count(picture.promised)} promised`}
-        />
+        {picture.namesFlavours ? (
+          counted.map((flavour) => (
+            <Stat
+              key={flavour.flavour}
+              label={`${flavour.name}, free`}
+              value={count(flavour.available)}
+              note={`${count(flavour.ready)} on hand, less ${count(flavour.promised)} promised`}
+            />
+          ))
+        ) : (
+          <Stat
+            label="Free to sell"
+            value={count(picture.available)}
+            note={`${count(picture.ready)} on hand, less ${count(picture.promised)} promised`}
+          />
+        )}
         <Stat
           label="Promised"
           value={count(picture.promised)}
@@ -167,6 +189,9 @@ export default async function StockPage({
                         </span>
                         <span className="bk-muted block text-[0.9375rem] leading-snug">
                           {batch.name}
+                          {picture.namesFlavours
+                            ? ` · ${flavourName(batch.flavour)}`
+                            : ""}
                           {" · "}
                           {bestBeforeText(
                             batch.bestBefore,

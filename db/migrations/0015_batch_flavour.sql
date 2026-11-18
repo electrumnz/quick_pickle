@@ -1,0 +1,1 @@
+ALTER TABLE "batches" ADD COLUMN "flavour" text DEFAULT 'original' NOT NULL;

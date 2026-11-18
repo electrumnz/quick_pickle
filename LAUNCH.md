@@ -94,9 +94,10 @@ confirmed.
       Squad) are stand-ins. Settings, The shop. Every pack comes in Original and Mango
       Chilli Lime at the same price: check the two names are written exactly as the
       labels print them. **Who:** Ash
-- [ ] **What the label says:** the ingredients list, the allergen line if there is one,
-      and the storage line, typed word for word with the printed label in your hand.
-      Settings, The label and the company. **Who:** Ash
+- [ ] **What each label says:** for Original and for Mango Chilli Lime, the ingredients
+      list, the allergen line if there is one, and the storage line, typed word for word
+      with that flavour's printed label in your hand. Settings, The label and the
+      company. **Who:** Ash
 - [ ] **The ship date**, if it opens as a pre-order. Settings, The shop. **Who:** Ash
 - [ ] **Delivery:** where you send to and the three rates ($7 flat, $4.50 rural, free over
       $60 are stand-ins). Settings, The shop. **Who:** Ash
@@ -153,9 +154,10 @@ confirmed.
 - [ ] **Retire the PIN.** Whoever comes in with it swaps it for an email and a password
       (Settings, Staff, the panel at the top). It asks for the set-up code. Then switch
       off any login that is not yours. **Who:** Ash
-- [ ] **Record the first real batch** in Stock, with the best-before date printed on its
-      bottles, before the first order is packed. An order packed with no batch on sale
-      is on no recall list. **Who:** Ash
+- [ ] **Record the first real batch of each flavour** in Stock, with the best-before
+      date printed on its bottles, before the first order is packed. Pick the flavour
+      when you plan it: orders of that flavour are filled from it. An order packed with
+      no batch on sale is on no recall list. **Who:** Ash
 - [ ] **One test purchase by a person**, on the live site with Stripe's test card
       (4242 4242 4242 4242, any future date, any three digits). Stripe's payment page
       will not let a robot press Pay, so nobody has seen this work end to end. Then

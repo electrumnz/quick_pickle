@@ -117,32 +117,68 @@ export async function batchOnHand(
  * mirrors in SQL). Stock in a batch that is past its best-before date,
  * recalled, closed or not yet released is never counted as sellable.
  */
-export async function readyShots(db: DbOrTx, today: string): Promise<number> {
+export async function readyShots(
+  db: DbOrTx,
+  today: string,
+  flavour?: string,
+): Promise<number> {
   const [row] = await db
     .select({
       shots: sql<number>`coalesce(sum(${stockMovements.shots}), 0)::int`,
     })
     .from(stockMovements)
     .innerJoin(batches, eq(batches.id, stockMovements.batchId))
-    .where(and(eq(batches.status, "released"), gte(batches.bestBefore, today)));
+    .where(
+      and(
+        eq(batches.status, "released"),
+        gte(batches.bestBefore, today),
+        flavour === undefined ? undefined : eq(batches.flavour, flavour),
+      ),
+    );
   return row?.shots ?? 0;
 }
 
 /**
  * Shots promised and not yet taken out of stock: every shot in an order
- * that is paid and still waiting to be packed. An order's packs all draw on
- * the one pool of shots, so this is the order's total across its lines. Test
- * orders are left out: nobody paid for them and they are never sent.
+ * that is paid and still waiting to be packed, of one flavour or of all.
+ * An order's packs of a flavour all draw on that flavour's pool, so this is
+ * a total across lines, never a line at a time. Test orders are left out:
+ * nobody paid for them and they are never sent.
  */
-export async function promisedShots(db: DbOrTx): Promise<number> {
+export async function promisedShots(
+  db: DbOrTx,
+  flavour?: string,
+): Promise<number> {
   const [row] = await db
     .select({
       shots: sql<number>`coalesce(sum(${orderLines.qty} * ${orderLines.shots}), 0)::int`,
     })
     .from(orderLines)
     .innerJoin(orders, eq(orders.id, orderLines.orderId))
-    .where(and(eq(orders.status, "paid"), eq(orders.isTest, false)));
+    .where(
+      and(
+        eq(orders.status, "paid"),
+        eq(orders.isTest, false),
+        flavour === undefined ? undefined : eq(orderLines.flavour, flavour),
+      ),
+    );
   return row?.shots ?? 0;
+}
+
+/** Shots promised to paid orders waiting to be packed, by flavour. */
+export async function promisedByFlavour(
+  db: DbOrTx,
+): Promise<Map<string, number>> {
+  const rows = await db
+    .select({
+      flavour: orderLines.flavour,
+      shots: sql<number>`coalesce(sum(${orderLines.qty} * ${orderLines.shots}), 0)::int`,
+    })
+    .from(orderLines)
+    .innerJoin(orders, eq(orders.id, orderLines.orderId))
+    .where(and(eq(orders.status, "paid"), eq(orders.isTest, false)))
+    .groupBy(orderLines.flavour);
+  return new Map(rows.map((row) => [row.flavour, row.shots]));
 }
 
 /** Write one movement down. `shots` is positive in, negative out. */
@@ -190,6 +226,8 @@ export async function flagIfLow(
     readonly because: string;
     readonly code?: string;
     readonly order?: string;
+    /** The flavour whose pool this is. Each flavour runs low on its own. */
+    readonly flavour?: string;
   },
 ): Promise<boolean> {
   if (change.before < change.threshold || change.after >= change.threshold) {
@@ -199,7 +237,8 @@ export async function flagIfLow(
     type: "stock.low",
     payload: {
       onHand: change.after,
-      promised: await promisedShots(ctx.db),
+      promised: await promisedShots(ctx.db, change.flavour),
+      ...(change.flavour === undefined ? {} : { flavour: change.flavour }),
       threshold: change.threshold,
       because: change.because,
       ...(change.code === undefined ? {} : { code: change.code }),

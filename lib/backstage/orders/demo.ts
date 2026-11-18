@@ -121,7 +121,11 @@ const DEMO: readonly DemoOrder[] = [
     region: "Otago",
     postcode: "9016",
     line1: "5 Kit Bag Close",
-    packs: [["QP-SHOT-12", 2]],
+    // A box of both flavours, so packing asks which batch for each.
+    packs: [
+      ["QP-SHOT-12", 1],
+      ["QP-SHOT-12-MCL", 1],
+    ],
   },
   {
     number: "QP-WAYT99",

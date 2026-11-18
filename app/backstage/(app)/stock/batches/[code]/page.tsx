@@ -17,7 +17,9 @@ import { listActivity } from "@/lib/backstage/activity/ops";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { OpError } from "@/lib/backstage/core/errors";
 import { execute } from "@/lib/backstage/core/op";
+import { FLAVOURS } from "@/content/offer";
 import { daysAwayText, formatDateKey } from "@/lib/backstage/stock/dates";
+import { flavourName } from "@/lib/backstage/stock/flavours";
 import { getBatch, type BatchDetail } from "@/lib/backstage/stock/ops";
 import { RECORD_FIELDS, recordIsEmpty } from "@/lib/backstage/stock/record";
 import {
@@ -390,7 +392,7 @@ export default async function BatchPage({
       <PageHeader
         title={batch.code}
         back={{ href: "/backstage/stock/batches", label: "Batches" }}
-        lead={batch.name}
+        lead={`${batch.name} · ${flavourName(batch.flavour)}`}
         actions={
           planned ? null : (
             <Link href={recallListHref} className="bk-btn bk-btn-quiet">
@@ -757,6 +759,8 @@ export default async function BatchPage({
               <dd className="font-semibold tabular-nums">{batch.code}</dd>
               <dt>Name</dt>
               <dd>{batch.name}</dd>
+              <dt>Flavour</dt>
+              <dd>{flavourName(batch.flavour)}</dd>
               <dt>{planned ? "Planned for" : "Made on"}</dt>
               <dd>
                 <DateText date={batch.madeOn} none="No date yet" />
@@ -828,6 +832,20 @@ export default async function BatchPage({
                           maxLength={80}
                           defaultValue={batch.name}
                         />
+                        {planned ? (
+                          <Choice
+                            form="details"
+                            name="flavour"
+                            label="Flavour"
+                            required
+                            defaultValue={batch.flavour}
+                            hint="What goes in its bottles. It cannot be changed once the batch is made."
+                            options={FLAVOURS.map((flavour) => ({
+                              value: flavour.key,
+                              label: flavour.name,
+                            }))}
+                          />
+                        ) : null}
                         <Field
                           form="details"
                           name="madeOn"

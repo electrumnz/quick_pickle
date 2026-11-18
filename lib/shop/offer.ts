@@ -107,7 +107,16 @@ export type Offer = {
    */
   readonly flavours: readonly Flavour[];
   readonly shipping: Shipping;
+  /**
+   * What the first flavour's label says. Before there were two flavours
+   * this was the one juice's label, which is the first flavour's.
+   */
   readonly label: Label;
+  /**
+   * What each other flavour's label says, by the flavour's key. Every
+   * flavour but the first has an entry. Read a label with `labelOf`.
+   */
+  readonly flavourLabels: Readonly<Record<string, Label>>;
   readonly company: Company;
   /** The facts that are still stand-ins. Empty means ready for search. */
   readonly unconfirmed: readonly Unconfirmed[];
@@ -183,6 +192,32 @@ export function versioned(offer: Omit<Offer, "version">): Offer {
   return { ...offer, version: offerVersion(offer) };
 }
 
+/** A label nobody has typed yet. */
+export const NO_LABEL: Label = {
+  ingredients: null,
+  contains: null,
+  storage: null,
+};
+
+/** What one flavour's label says. */
+export function labelOf(
+  offer: Pick<Offer, "label" | "flavourLabels" | "flavours">,
+  flavourKey: string,
+): Label {
+  if (offer.flavours[0]?.key === flavourKey) return offer.label;
+  return offer.flavourLabels[flavourKey] ?? NO_LABEL;
+}
+
+/** Every flavour with its label, in the catalogue's order. */
+export function labelsOf(
+  offer: Pick<Offer, "label" | "flavourLabels" | "flavours">,
+): { readonly flavour: Flavour; readonly label: Label }[] {
+  return offer.flavours.map((flavour) => ({
+    flavour,
+    label: labelOf(offer, flavour.key),
+  }));
+}
+
 /** The offer exactly as `content/offer.ts` has it. */
 export const FILE_OFFER: Offer = versioned({
   open: true,
@@ -199,6 +234,14 @@ export const FILE_OFFER: Offer = versioned({
     contains: PRODUCT.contains,
     storage: PRODUCT.storage,
   },
+  // Nothing about what is in a flavour is ever guessed: the file starts
+  // every other flavour's label blank.
+  flavourLabels: Object.fromEntries(
+    FLAVOURS.slice(1).map((flavour) => [
+      flavour.key,
+      { ingredients: null, contains: null, storage: null },
+    ]),
+  ),
   company: { ...COMPANY },
   unconfirmed: UNCONFIRMED,
 });

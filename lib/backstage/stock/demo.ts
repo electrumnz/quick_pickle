@@ -1,6 +1,7 @@
 /**
  * Invented stock for a deployment with no database, so the Stock screens
- * have something to show: four batches at different points in their lives,
+ * have something to show: five batches at different points in their lives
+ * (four of Original and one of Mango Chilli Lime),
  * three suppliers whose names say they are made up, the materials bought
  * from them and three purchase orders (one in, one late, one still a draft).
  *
@@ -221,6 +222,7 @@ export async function seedStockDemo(db: Db, now: Date): Promise<void> {
   await execute(
     planBatch,
     {
+      flavour: "original",
       code: "B001",
       name: "Trial run",
       plannedFor: addDays(today, -56),
@@ -270,6 +272,7 @@ export async function seedStockDemo(db: Db, now: Date): Promise<void> {
   await execute(
     planBatch,
     {
+      flavour: "original",
       code: "B002",
       name: "First run",
       plannedFor: addDays(today, -21),
@@ -313,6 +316,7 @@ export async function seedStockDemo(db: Db, now: Date): Promise<void> {
   await execute(
     planBatch,
     {
+      flavour: "original",
       code: "B003",
       name: "Second run",
       plannedFor: addDays(today, -6),
@@ -344,6 +348,7 @@ export async function seedStockDemo(db: Db, now: Date): Promise<void> {
   await execute(
     planBatch,
     {
+      flavour: "original",
       code: "B004",
       name: "Third run",
       plannedFor: addDays(today, 10),
@@ -352,6 +357,38 @@ export async function seedStockDemo(db: Db, now: Date): Promise<void> {
     demo,
     at(2),
   );
+
+  // The first run of the second flavour, released, so a box can hold both.
+  await execute(
+    planBatch,
+    {
+      flavour: "mango-chilli-lime",
+      code: "B005",
+      name: "First Mango Chilli Lime run",
+      plannedFor: addDays(today, -4),
+      shotsPlanned: 300,
+    },
+    demo,
+    at(9),
+  );
+  await execute(
+    recordMade,
+    {
+      code: "B005",
+      shots: 300,
+      bestBefore: addDays(today, 120),
+      costCents: 34000,
+      record: {
+        madeBy: "Ashleigh (demo)",
+        madeAt: "The test kitchen (invented)",
+        checks: "Demo entry. The real checks come from the food control plan.",
+        lots: "Demo entry. Lot numbers go here, one to a line.",
+      },
+    },
+    demo,
+    at(4),
+  );
+  await execute(releaseBatch, { code: "B005" }, demo, at(3));
 
   /* ---- the demo orders that are already packed or gone ----------------- */
 

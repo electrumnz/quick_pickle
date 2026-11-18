@@ -19,16 +19,19 @@ import { defineOp } from "../core/op";
 import { loadOrder } from "../orders/load";
 import {
   orderHoldings,
-  orderShots,
+  orderShotsByFlavour,
   planTakes,
   releasedShelf,
   sellable,
   takesText,
+  type ShelfBatch,
 } from "./allocation";
 import { daysBetween, todayKey } from "./dates";
+import { flavourName, flavourShots, namesFlavours } from "./flavours";
 import {
   batchCodeSchema,
   lowStockAtSchema,
+  packedBatchCodesSchema,
   packedBatchesSchema,
 } from "./inputs";
 import { countText, shotsText, stockIsCounted } from "./movements";
@@ -48,6 +51,40 @@ const PACKED_STATUSES: readonly OrderStatus[] = [
   "delivered",
 ];
 
+/** A batch an order's shots of one flavour could come from. */
+export type OrderStockChoice = {
+  readonly code: string;
+  readonly name: string;
+  readonly flavour: string;
+  readonly bestBefore: string | null;
+  readonly daysToBestBefore: number | null;
+  readonly onHand: number;
+  /** True when this batch could fill what the order still needs of its flavour by itself. */
+  readonly enough: boolean;
+};
+
+/**
+ * One flavour of an order, as stock sees it. Each flavour is its own pool,
+ * so everything about choosing a batch is said a flavour at a time.
+ */
+export type OrderStockPart = {
+  readonly flavour: string;
+  /** "Mango Chilli Lime". */
+  readonly flavourName: string;
+  /** Shots of this flavour in the order. */
+  readonly shots: number;
+  /** Shots of it still to be given a batch. */
+  readonly need: number;
+  readonly choices: readonly OrderStockChoice[];
+  readonly plan:
+    readonly { readonly code: string; readonly shots: number }[] | null;
+  readonly mustChoose: boolean;
+  readonly onHandIfShort: number | null;
+  readonly blocked: boolean;
+  /** Where this flavour stands, in one sentence. */
+  readonly summary: string;
+};
+
 export type OrderStock = {
   readonly number: string;
   /**
@@ -64,6 +101,7 @@ export type OrderStock = {
   readonly filled: readonly {
     readonly code: string;
     readonly name: string;
+    readonly flavour: string;
     readonly status: BatchStatus;
     readonly shots: number;
   }[];
@@ -74,92 +112,148 @@ export type OrderStock = {
   readonly missing: number;
   /**
    * Shots that still have to be given a batch: the whole order before it is
-   * packed, whatever is missing afterwards. A mix of batches has to add up
-   * to this.
+   * packed, whatever is missing afterwards. Across every flavour; each
+   * flavour's own is in `parts`.
    */
   readonly need: number;
   /**
    * The batches it could be filled from: released, within their best-before
-   * date, with shots on hand. Earliest best-before date first.
+   * date, with shots on hand, of a flavour the order needs. Earliest
+   * best-before date first, a flavour at a time.
    */
-  readonly choices: readonly {
-    readonly code: string;
-    readonly name: string;
-    readonly bestBefore: string | null;
-    readonly daysToBestBefore: number | null;
-    readonly onHand: number;
-    /** True when this batch could fill what the order still needs by itself. */
-    readonly enough: boolean;
-  }[];
+  readonly choices: readonly OrderStockChoice[];
   /**
    * The suggestion: which batches to take from, first expired first out. A
    * suggestion only. What goes on record is what the person packing says is
-   * in the box. Null when there is nothing to suggest: nothing is needed,
-   * nothing is released, or there is not enough.
+   * in the box. Null when there is nothing to suggest for a flavour that
+   * needs something: nothing is released, or there is not enough.
    */
   readonly plan:
     readonly { readonly code: string; readonly shots: number }[] | null;
   /**
-   * True when more than one batch could be in the box, so the batch has to
-   * be named when the order is marked packed.
+   * True when more than one batch of a flavour could be in the box, so the
+   * batch has to be named when the order is marked packed.
    */
   readonly mustChoose: boolean;
   /** Set when there is good stock but too little: how many shots there are. */
   readonly onHandIfShort: number | null;
   /**
-   * True when packing would be refused as things stand: there is stock but
-   * too little of it, or only stock past its date. (No stock at all is not
-   * a block: the order packs and no batch is recorded.)
+   * True when packing would be refused as things stand: there is stock of a
+   * flavour but too little of it, or only stock past its date. (No stock of
+   * a flavour at all is not a block: it packs and no batch is recorded.)
    */
   readonly blocked: boolean;
-  /** Where the order stands with stock, in one sentence. */
+  /** Where the order stands with stock, in a sentence or one a flavour. */
   readonly summary: string;
+  /**
+   * The order a flavour at a time, in the catalogue's order. One part for an
+   * order of one flavour, and then the fields above are that part's.
+   */
+  readonly parts: readonly OrderStockPart[];
+  /** True when there is more than one flavour in play, so sentences name them. */
+  readonly namesFlavours: boolean;
 };
 
 export const orderStock = defineOp({
   name: "stock.orderStock",
   title: "See which batch an order is filled from",
   description:
-    "For one order, by its number (QP-7K2M9X): which batches its shots came from, whether any of it has no batch recorded, which batches it could be filled from (released, within their best-before date, with shots on hand), and `plan`, the suggestion of which to use first (the earliest best-before batch that can cover it, split across batches only when no one batch can). `mustChoose` is true when there is more than one batch it could be, in which case packing has to name the batch. `summary` says where the order stands in a sentence. `tracking` is false until a first batch has been recorded as made: stock is not being counted yet, and none of this needs saying to anybody. Read-only. To change it, pack the order (orders.markPacked, with `batchCode` or `batches`) or, for an order already packed or sent, use stock.recordOrderBatch.",
+    "For one order, by its number (QP-7K2M9X): which batches its shots came from, whether any of it has no batch recorded, which batches it could be filled from (released, within their best-before date, with shots on hand, of the same flavour), and `plan`, the suggestion of which to use first (the earliest best-before batch that can cover it, split across batches only when no one batch can). Each flavour is its own pool: `parts` says all of this a flavour at a time. `mustChoose` is true when there is more than one batch of a flavour it could be, in which case packing has to name the batch. `summary` says where the order stands in a sentence. `tracking` is false until a first batch has been recorded as made: stock is not being counted yet, and none of this needs saying to anybody. Read-only. To change it, pack the order (orders.markPacked, with `batchCode`, `batchCodes` (one for each flavour) or `batches`) or, for an order already packed or sent, use stock.recordOrderBatch.",
   access: "read",
   input: z.object({ number: orderNumber }),
   async run(ctx, input): Promise<OrderStock> {
     const order = await loadOrder(ctx.db, input.number);
-    const shots = await orderShots(ctx.db, order.id);
+    const byFlavour = await orderShotsByFlavour(ctx.db, order.id);
+    const shots = [...byFlavour.values()].reduce((sum, n) => sum + n, 0);
     const holdings = await orderHoldings(ctx.db, order.id);
     const held = holdings.reduce((sum, holding) => sum + holding.shots, 0);
-    const filled = holdings.map(({ code, name, status, shots: n }) => ({
-      code,
-      name,
-      status,
-      shots: n,
-    }));
+    const filled = holdings.map(
+      ({ code, name, flavour, status, shots: n }) => ({
+        code,
+        name,
+        flavour,
+        status,
+        shots: n,
+      }),
+    );
 
     const packed = PACKED_STATUSES.includes(order.status);
     const open = order.status === "pending" || order.status === "paid";
-    const need = order.isTest || !(packed || open) ? 0 : shots - held;
+    const counts = !order.isTest && (packed || open);
     const today = todayKey(ctx.now);
     const shelf = await releasedShelf(ctx.db, { today });
-    const good = sellable(shelf);
-    const choices = good.map((batch) => ({
+    const sayFlavour = namesFlavours([
+      ...byFlavour.keys(),
+      ...holdings.map((holding) => holding.flavour),
+    ]);
+    const choiceOf = (batch: ShelfBatch, need: number): OrderStockChoice => ({
       code: batch.code,
       name: batch.name,
+      flavour: batch.flavour,
       bestBefore: batch.bestBefore,
       daysToBestBefore:
         batch.bestBefore === null ? null : daysBetween(today, batch.bestBefore),
       onHand: batch.onHand,
       enough: batch.onHand >= need,
-    }));
-    const planned = need > 0 ? planTakes(shelf, need) : null;
-    const plan =
-      planned !== null && planned.ok
-        ? planned.takes.map(({ code, shots: n }) => ({ code, shots: n }))
-        : null;
-    const onHandIfShort =
-      planned !== null && !planned.ok && planned.reason === "short"
-        ? planned.onHand
-        : null;
-    const mustChoose = need > 0 && good.length > 1;
+    });
+
+    const parts: OrderStockPart[] = [...byFlavour].map(([flavour, total]) => {
+      const heldOf = holdings
+        .filter((holding) => holding.flavour === flavour)
+        .reduce((sum, holding) => sum + holding.shots, 0);
+      const need = counts ? Math.max(0, total - heldOf) : 0;
+      const ofFlavour = shelf.filter((batch) => batch.flavour === flavour);
+      const good = sellable(ofFlavour);
+      const planned = need > 0 ? planTakes(ofFlavour, need) : null;
+      const mustChoose = need > 0 && good.length > 1;
+      const name = flavourName(flavour);
+      const needText = sayFlavour
+        ? flavourShots(need, flavour, true)
+        : countText(need);
+      let summary: string;
+      if (planned === null) {
+        summary = "";
+      } else if (planned.ok) {
+        summary = !mustChoose
+          ? `Packing takes ${takesText(planned.takes)}.`
+          : planned.takes.length === 1
+            ? `Take ${takesText(planned.takes)} if you can: of the batches${sayFlavour ? ` of ${name}` : ""} that can fill it, that one has the earliest best-before date. Say which batch is in the box when it is packed.`
+            : `No one batch${sayFlavour ? ` of ${name}` : ""} can fill it. Take ${takesText(planned.takes)}, and say so when it is packed.`;
+      } else if (planned.reason === "nothing-released") {
+        summary = sayFlavour
+          ? `No batch of ${name} has stock released for sale, so no batch will be recorded for its shots when this is packed.`
+          : "No batch has stock released for sale, so no batch will be recorded when this is packed.";
+      } else if (planned.reason === "past-date") {
+        summary = sayFlavour
+          ? `The only ${name} shots on hand are past their best-before date, so this cannot be packed from them. Release a batch of it that is in date first.`
+          : "The only shots on hand are past their best-before date, so this cannot be packed from them. Release a batch that is in date first.";
+      } else {
+        summary = `Only ${sayFlavour ? flavourShots(planned.onHand, flavour, true) : shotsText(planned.onHand)} on hand in released batches, and this order needs ${needText}. Release another batch${sayFlavour ? " of it" : ""} or correct the count before packing it.`;
+      }
+      return {
+        flavour,
+        flavourName: name,
+        shots: total,
+        need,
+        choices: good.map((batch) => choiceOf(batch, need)),
+        plan:
+          planned !== null && planned.ok
+            ? planned.takes.map(({ code, shots: n }) => ({ code, shots: n }))
+            : null,
+        mustChoose,
+        onHandIfShort:
+          planned !== null && !planned.ok && planned.reason === "short"
+            ? planned.onHand
+            : null,
+        blocked:
+          planned !== null &&
+          !planned.ok &&
+          planned.reason !== "nothing-released",
+        summary,
+      };
+    });
+    const needing = parts.filter((part) => part.need > 0);
+    const need = needing.reduce((sum, part) => sum + part.need, 0);
 
     const from = takesText(
       holdings.map(({ batchId, code, shots: n }) => ({
@@ -180,24 +274,20 @@ export const orderStock = defineOp({
           : held < shots
             ? `Filled with ${from}. No batch is recorded for the other ${countText(shots - held)}.`
             : `Filled with ${from}.`;
-    } else if (planned === null) {
+    } else if (needing.length === 0) {
       summary = held > 0 ? `Filled with ${from}.` : "It has no shots to pack.";
-    } else if (planned.ok) {
-      summary = !mustChoose
-        ? `Packing takes ${takesText(planned.takes)}.`
-        : planned.takes.length === 1
-          ? `Take ${takesText(planned.takes)} if you can: of the batches that can fill it, that one has the earliest best-before date. Say which batch is in the box when it is packed.`
-          : `No one batch can fill it. Take ${takesText(planned.takes)}, and say so when it is packed.`;
-    } else if (planned.reason === "nothing-released") {
-      summary =
-        "No batch has stock released for sale, so no batch will be recorded when this is packed.";
-    } else if (planned.reason === "past-date") {
-      summary =
-        "The only shots on hand are past their best-before date, so this cannot be packed from them. Release a batch that is in date first.";
+    } else if (needing.length === 1) {
+      summary = needing[0]?.summary ?? "";
     } else {
-      summary = `Only ${shotsText(planned.onHand)} on hand in released batches, and this order needs ${countText(need)}. Release another batch or correct the count before packing it.`;
+      summary = needing
+        .map((part) => `${part.flavourName}: ${part.summary}`)
+        .join(" ");
     }
 
+    // A flavour with nothing released suggests nothing; the order's plan is
+    // whatever the flavours that can be planned suggest.
+    const planned = needing.flatMap((part) => part.plan ?? []);
+    const short = needing.find((part) => part.onHandIfShort !== null);
     return {
       number: order.number,
       tracking: await stockIsCounted(ctx.db),
@@ -205,16 +295,18 @@ export const orderStock = defineOp({
       isTest: order.isTest,
       filled,
       missing: packed && !order.isTest ? Math.max(0, shots - held) : 0,
-      need: Math.max(0, need),
-      choices,
-      plan,
-      mustChoose,
-      onHandIfShort,
-      blocked:
-        planned !== null &&
-        !planned.ok &&
-        planned.reason !== "nothing-released",
+      need,
+      choices: needing.flatMap((part) => part.choices),
+      plan:
+        needing.length === 0 || needing.every((part) => part.plan === null)
+          ? null
+          : planned,
+      mustChoose: needing.some((part) => part.mustChoose),
+      onHandIfShort: short?.onHandIfShort ?? null,
+      blocked: needing.some((part) => part.blocked),
       summary,
+      parts,
+      namesFlavours: sayFlavour,
     };
   },
 });
@@ -230,6 +322,7 @@ export const recordOrderBatch = defineOp({
       number: orderNumber,
       batchCode: batchCodeSchema.optional(),
       batches: packedBatchesSchema.optional(),
+      batchCodes: packedBatchCodesSchema.optional(),
       lowStockAt: lowStockAtSchema,
     })
     .refine(
@@ -262,6 +355,7 @@ export const recordOrderBatch = defineOp({
 
     const note = await takeOrderStock(ctx, order, {
       batchCode: input.batchCode,
+      batchCodes: input.batchCodes,
       batches: input.batches,
       lowStockAt: input.lowStockAt,
     });

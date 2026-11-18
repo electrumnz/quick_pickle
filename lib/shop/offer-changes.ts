@@ -55,6 +55,15 @@ const line = (most: number) =>
     .max(most)
     .regex(/^[^\n\r\t]*$/, "One line, with no line breaks");
 
+/** Changes to one label: any of its three lines, null to take it off. */
+const labelChanges = z
+  .object({
+    ingredients: line(MOST_INGREDIENTS).nullable(),
+    contains: line(MOST_LINE).nullable(),
+    storage: line(MOST_LINE).nullable(),
+  })
+  .partial();
+
 /**
  * What is kept in the database: only what differs from the file. A key that
  * is absent means "as the file has it", so a later change to the file shows
@@ -84,14 +93,13 @@ export const offerChangesSchema = z
           .nullable(),
       })
       .partial(),
-    /** What the label says, word for word. Null takes a line off the site. */
-    label: z
-      .object({
-        ingredients: line(MOST_INGREDIENTS).nullable(),
-        contains: line(MOST_LINE).nullable(),
-        storage: line(MOST_LINE).nullable(),
-      })
-      .partial(),
+    /**
+     * What the first flavour's label says, word for word. Null takes a line
+     * off the site.
+     */
+    label: labelChanges,
+    /** The same for each other flavour, by the flavour's key. */
+    flavourLabels: z.record(z.string(), labelChanges),
     /** Who is behind the shop. The two numbers are digits only. */
     company: z
       .object({
@@ -171,6 +179,14 @@ export function offerWith(
           : changes.shipping.freeOverCents,
     },
     label: { ...base.label, ...defined(changes.label) },
+    // A label for a flavour that is not on the shelf is dropped: a change
+    // writes what a label says, it never makes a flavour.
+    flavourLabels: Object.fromEntries(
+      Object.entries(base.flavourLabels).map(([key, label]) => [
+        key,
+        { ...label, ...defined(changes.flavourLabels?.[key]) },
+      ]),
+    ),
     company: { ...base.company, ...defined(changes.company) },
     unconfirmed: base.unconfirmed.filter(
       (fact) => confirmed[fact.key] === undefined,

@@ -229,7 +229,7 @@ export const closeBatch = defineOp({
       );
     }
     const today = todayKey(ctx.now);
-    const ready = await readyShots(ctx.db, today);
+    const ready = await readyShots(ctx.db, today, batch.flavour);
     // What this batch was adding to "ready to sell" until now.
     const leaving = isGoodOn(batch.bestBefore, today) ? onHand : 0;
 
@@ -268,6 +268,7 @@ export const closeBatch = defineOp({
       threshold: input.lowStockAt,
       because: "closed",
       code: batch.code,
+      flavour: batch.flavour,
     });
     return { code: batch.code, status: "closed", writtenOff: onHand };
   },
@@ -314,7 +315,9 @@ export const recallBatch = defineOp({
     const today = todayKey(ctx.now);
     const wasReleased =
       batch.status === "released" && isGoodOn(batch.bestBefore, today);
-    const ready = wasReleased ? await readyShots(ctx.db, today) : 0;
+    const ready = wasReleased
+      ? await readyShots(ctx.db, today, batch.flavour)
+      : 0;
     await ctx.db
       .update(batches)
       .set({
@@ -357,6 +360,7 @@ export const recallBatch = defineOp({
         threshold: input.lowStockAt,
         because: "recalled",
         code: batch.code,
+        flavour: batch.flavour,
       });
     }
     return { code: batch.code, status: "recalled", ...holders, onHand };

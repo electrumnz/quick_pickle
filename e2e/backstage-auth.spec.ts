@@ -986,7 +986,14 @@ test("what the label says is typed with the label in hand, checked, and shown on
 }) => {
   await signIn(page, OWNER.email, OWNER.password);
   await page.goto(`${AUTH_URL}/backstage/settings/label`);
-  const list = page.getByLabel("The ingredients list");
+  // Each flavour has its own label. These are Original's boxes.
+  const list = page.locator("#ingredients");
+  await expect(
+    page.getByRole("group", { name: "What the Original label says" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "What the Mango Chilli Lime label says" }),
+  ).toBeVisible();
 
   // A claim is refused in the rules' own words, with nothing saved.
   await list.fill("Water, salt, electrolytes");
@@ -999,7 +1006,7 @@ test("what the label says is typed with the label in hand, checked, and shown on
   // A word the Food Standards Code puts on a label itself waits for a
   // person to say the printed label has it.
   await list.fill("Water, vinegar, salt, mineral salt (509)");
-  await page.getByLabel("The storage line").fill("Refrigerate after opening");
+  await page.locator("#storage").fill("Refrigerate after opening");
   await press(page, /see what changes/i);
   await expect(page.locator("main [role=alert]")).toContainText(
     /check this against the printed label/i,
@@ -1007,7 +1014,7 @@ test("what the label says is typed with the label in hand, checked, and shown on
   await page.getByTestId("label-tick").getByRole("checkbox").check();
   await press(page, /see what changes/i);
   await expect(page.getByTestId("label-checked")).toContainText(
-    'The ingredients list to "Water, vinegar, salt, mineral salt (509)"',
+    'The Original ingredients list to "Water, vinegar, salt, mineral salt (509)"',
   );
 
   // The tick is for those words. Change one and it is asked for again.
@@ -1032,7 +1039,7 @@ test("what the label says is typed with the label in hand, checked, and shown on
   await expect(page.getByTestId("label-checked")).toBeVisible();
   await press(page, /change the site/i);
   await expect(page.getByTestId("label-done")).toContainText(
-    'The storage line to "Refrigerate after opening"',
+    'The Original storage line to "Refrigerate after opening"',
   );
 
   // The shop says exactly that, under its own question, and adds nothing.
@@ -1086,11 +1093,17 @@ test("what the label says is typed with the label in hand, checked, and shown on
   await page.goto(`${AUTH_URL}/backstage/settings/go-live`);
   const label = page.getByTestId("fact-ingredients");
   await expect(label).toContainText(
-    "Ingredients: Water, vinegar, salt, mineral salt (509)",
+    "Original: Ingredients: Water, vinegar, salt, mineral salt (509)",
+  );
+  // One flavour's list never stands for the other's: Mango Chilli Lime's
+  // is still to come, so there is nothing to say yes to yet.
+  await expect(label).toContainText("Mango Chilli Lime: nothing in yet");
+  await expect(label).toContainText(
+    "Put the ingredients list in first for Mango Chilli Lime.",
   );
   await expect(
     label.getByRole("button", { name: /this is right/i }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(page.getByTestId("fact-legal-entity")).toContainText(
     "Quick Pickle Limited, NZBN 9429040402543; registered for GST, number 49-091-850",
   );

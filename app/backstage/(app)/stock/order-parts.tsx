@@ -5,7 +5,7 @@ import { SubmitButton } from "@/components/backstage/SubmitButton";
 import { Panel, Pill } from "@/components/backstage/ui";
 import type { OrderStatus } from "@/db/schema";
 import { formatDateKey } from "@/lib/backstage/stock/dates";
-import type { OrderStock } from "@/lib/backstage/stock/ops";
+import type { OrderStock, OrderStockPart } from "@/lib/backstage/stock/ops";
 import { mixFieldName } from "@/lib/backstage/stock/pack-form";
 
 import { recordOrderBatchAction } from "./actions";
@@ -25,6 +25,9 @@ import { count, Hint, shots } from "./parts";
  */
 
 type Choice = OrderStock["choices"][number];
+
+/** What the boxes for one flavour (or for an order of one) are drawn from. */
+type InBox = Pick<OrderStockPart, "choices" | "plan" | "need">;
 
 /*
  * The word that matters comes first: on a phone the closed list only has
@@ -51,10 +54,13 @@ function choiceLabel(choice: Choice, suggested: boolean): string {
 function BatchInBox({
   form,
   stock,
+  flavour,
 }: {
   /** A word for the form, so two on a page never share an id. */
   readonly form: string;
-  readonly stock: OrderStock;
+  readonly stock: InBox;
+  /** For a box of two flavours: which one these boxes are for. */
+  readonly flavour?: string;
 }) {
   const plan = stock.plan ?? [];
   const suggested = plan.length === 1 ? plan[0]?.code : undefined;
@@ -97,7 +103,11 @@ function BatchInBox({
   if (split) {
     return (
       <fieldset className="flex flex-col gap-3">
-        <legend className="field-label">Which batches are in the box?</legend>
+        <legend className="field-label">
+          {flavour === undefined
+            ? "Which batches are in the box?"
+            : `Which batches of ${flavour} are in the box?`}
+        </legend>
         <p className="leading-snug">
           No one batch can fill this order, so it has to be a mix. Check the
           codes on the bottles and change the numbers if the box is different.
@@ -111,7 +121,9 @@ function BatchInBox({
     <div className="flex flex-col gap-2">
       <div>
         <label htmlFor={`${form}-batch`} className="field-label">
-          Which batch is in the box?
+          {flavour === undefined
+            ? "Which batch is in the box?"
+            : `Which batch of ${flavour} is in the box?`}
         </label>
         <select
           id={`${form}-batch`}
@@ -180,6 +192,33 @@ export function PackFrom({
           Open Stock
         </Link>
       </p>
+    );
+  }
+  // A box of two flavours: a question for each flavour that has batches to
+  // choose from, and a sentence for one that has none on sale.
+  const needing = stock.parts.filter((part) => part.need > 0);
+  if (needing.length > 1) {
+    return (
+      <>
+        {needing.map((part) =>
+          part.choices.length === 0 ? (
+            <p
+              key={part.flavour}
+              className="bk-muted text-[0.9375rem] leading-snug"
+            >
+              {part.summary}
+            </p>
+          ) : (
+            <BatchInBox
+              key={part.flavour}
+              form={`pack-${part.flavour}`}
+              stock={part}
+              flavour={part.flavourName}
+            />
+          ),
+        )}
+        {children}
+      </>
     );
   }
   return (
@@ -321,7 +360,20 @@ export function OrderStockPanel({
               className="flex flex-col gap-3"
             >
               <input type="hidden" name="number" value={number} />
-              <BatchInBox form="record" stock={stock} />
+              {stock.parts.filter((part) => part.need > 0).length > 1 ? (
+                stock.parts
+                  .filter((part) => part.need > 0 && part.choices.length > 0)
+                  .map((part) => (
+                    <BatchInBox
+                      key={part.flavour}
+                      form={`record-${part.flavour}`}
+                      stock={part}
+                      flavour={part.flavourName}
+                    />
+                  ))
+              ) : (
+                <BatchInBox form="record" stock={stock} />
+              )}
               <SubmitButton
                 pending="Saving"
                 className="bk-btn bk-btn-quiet w-full"

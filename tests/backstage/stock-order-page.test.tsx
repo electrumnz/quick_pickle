@@ -28,6 +28,7 @@ import {
   PackFrom,
 } from "@/app/backstage/(app)/stock/order-parts";
 import type { OrderStock } from "@/lib/backstage/stock/ops";
+import { packedFromForm } from "@/lib/backstage/stock/pack-form";
 
 /**
  * Stock on an order's own page, which is a screen somebody is on every day.
@@ -54,6 +55,8 @@ function order(over: Partial<OrderStock> = {}): OrderStock {
     blocked: false,
     summary:
       "No batch has stock released for sale, so no batch will be recorded when this is packed.",
+    parts: [],
+    namesFlavours: false,
     ...over,
   };
 }
@@ -127,6 +130,7 @@ describe("stock on an order's page", () => {
           {
             code: "B001",
             name: "First run",
+            flavour: "original",
             bestBefore: "2027-01-10",
             daysToBestBefore: 59,
             onHand: 30,
@@ -143,5 +147,94 @@ describe("stock on an order's page", () => {
     );
     // The button comes after the question, not before it.
     expect(html.indexOf("Which batch")).toBeLessThan(html.indexOf(BUTTON));
+  });
+});
+
+describe("a box of two flavours", () => {
+  const choice = (code: string, flavour: string) => ({
+    code,
+    name: `Run ${code}`,
+    flavour,
+    bestBefore: "2027-01-10",
+    daysToBestBefore: 59,
+    onHand: 30,
+    enough: true,
+  });
+  const part = (
+    flavour: string,
+    flavourName: string,
+    choices: ReturnType<typeof choice>[],
+  ) => ({
+    flavour,
+    flavourName,
+    shots: 12,
+    need: 12,
+    choices,
+    plan: [{ code: choices[0]?.code ?? "", shots: 12 }],
+    mustChoose: choices.length > 1,
+    onHandIfShort: null,
+    blocked: false,
+    summary: "",
+  });
+
+  it("asks which batch of each flavour is in the box", () => {
+    const original = [choice("B002", "original"), choice("B003", "original")];
+    const mcl = [choice("B005", "mango-chilli-lime")];
+    const html = packing(
+      order({
+        shots: 24,
+        need: 24,
+        choices: [...original, ...mcl],
+        mustChoose: true,
+        namesFlavours: true,
+        parts: [
+          part("original", "Original", original),
+          part("mango-chilli-lime", "Mango Chilli Lime", mcl),
+        ],
+      }),
+    );
+    expect(html).toContain("Which batch of Original is in the box?");
+    expect(html).toContain("Which batch of Mango Chilli Lime is in the box?");
+    // One pick-one for each, both read back by the same name.
+    expect(html.match(/<select[^>]*name="batchCode"/g)).toHaveLength(2);
+    // A flavour offers only its own batches.
+    const [first, second] = html.split("Which batch of Mango Chilli Lime");
+    expect(first).toContain(">B002");
+    expect(second).toContain(">B005");
+    expect(second).not.toContain(">B002");
+  });
+});
+
+describe("reading the batch out of the packing form", () => {
+  const form = (fields: [string, string][]) => {
+    const data = new FormData();
+    for (const [name, value] of fields) data.append(name, value);
+    return packedFromForm(data);
+  };
+
+  it("takes one pick for a box of one flavour and one each for two", () => {
+    expect(form([["batchCode", "B002"]])).toEqual({ batchCode: "B002" });
+    expect(
+      form([
+        ["batchCode", "B002"],
+        ["batchCode", "B005"],
+      ]),
+    ).toEqual({ batchCodes: ["B002", "B005"] });
+    // A flavour whose mix boxes are filled in is the mix; the other keeps
+    // its pick.
+    expect(
+      form([
+        ["batchCode", "B002"],
+        ["batchCode", "B005"],
+        ["mix-B002", "6"],
+        ["mix-B003", "6"],
+      ]),
+    ).toEqual({
+      batches: [
+        { code: "B002", shots: 6 },
+        { code: "B003", shots: 6 },
+      ],
+      batchCodes: ["B002", "B005"],
+    });
   });
 });

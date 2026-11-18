@@ -83,8 +83,8 @@ you rather than guess.
   Starter and The Squad, are all stand-ins. Each comes in both flavours, Original and
   Mango Chilli Lime, at the same price. Check the two names match the printed labels
   exactly.
-- **What the label says.** The ingredients list, the allergen line if there is one, and
-  the storage line, word for word from the printed label. And whether you want the
+- **What each label says.** For each flavour, the ingredients list, the allergen line if
+  there is one, and the storage line, word for word from that flavour's printed label. And whether you want the
   nutrition panel on the site as well as on the bottle: it is not there today.
 - **The ship date**, if this opens as a pre-order.
 - **Delivery.** Where you send to and what it costs.

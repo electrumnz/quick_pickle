@@ -54,7 +54,11 @@ import {
   type Promo,
 } from "../marketing/promo";
 import { readShop } from "../shop/ops";
-import { batchCodeSchema, packedBatchesSchema } from "../stock/inputs";
+import {
+  batchCodeSchema,
+  packedBatchCodesSchema,
+  packedBatchesSchema,
+} from "../stock/inputs";
 import { putBackOrderStock, takeOrderStock } from "../stock/order-moves";
 import { loadOrder } from "./load";
 import { paymentStatusAfter, refundsThroughStripe } from "./refunds";
@@ -679,6 +683,8 @@ export const markPacked = defineOp({
       batchCode: batchCodeSchema.optional(),
       /** For a box that mixes batches: how many shots from each. */
       batches: packedBatchesSchema.optional(),
+      /** For a box of two flavours: the batch each flavour came from. */
+      batchCodes: packedBatchCodesSchema.optional(),
     })
     .refine(
       (value) => value.batchCode === undefined || value.batches === undefined,
@@ -712,6 +718,7 @@ export const markPacked = defineOp({
         })
       : await takeOrderStock(ctx, order, {
           batchCode: input.batchCode,
+          batchCodes: input.batchCodes,
           batches: input.batches,
         });
     const entity = { type: "order", id: order.id };

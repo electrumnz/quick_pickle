@@ -7,7 +7,16 @@ import { execute } from "@/lib/backstage/core/op";
 import { suggestBatchCode } from "@/lib/backstage/stock/ops";
 
 import { planBatchAction } from "../../actions";
-import { Field, FormNotice, Hint, LookOnly, TextArea } from "../../parts";
+import { FLAVOURS } from "@/content/offer";
+
+import {
+  Choice,
+  Field,
+  FormNotice,
+  Hint,
+  LookOnly,
+  TextArea,
+} from "../../parts";
 
 export const metadata: Metadata = { title: "Plan a batch" };
 
@@ -20,6 +29,7 @@ export default async function NewBatchPage({
   searchParams,
 }: {
   searchParams: Promise<{
+    flavour?: string;
     code?: string;
     name?: string;
     plannedFor?: string;
@@ -46,6 +56,24 @@ export default async function NewBatchPage({
       <Panel className="max-w-[40rem]">
         {canWrite ? (
           <form action={planBatchAction} className="flex flex-col gap-4">
+            {/* A select only reads its starting value once: the key makes a
+                handed-back form show what was picked. */}
+            <Choice
+              key={params.flavour ?? ""}
+              form="plan"
+              name="flavour"
+              label="Flavour"
+              required
+              defaultValue={params.flavour}
+              hint="What goes in its bottles. Orders of this flavour are filled from it, and a recall goes by it."
+              options={[
+                { value: "", label: "Pick a flavour" },
+                ...FLAVOURS.map((flavour) => ({
+                  value: flavour.key,
+                  label: flavour.name,
+                })),
+              ]}
+            />
             <Field
               form="plan"
               name="code"
@@ -91,7 +119,10 @@ export default async function NewBatchPage({
               <SubmitButton pending="Saving" className="bk-btn w-full">
                 Plan the batch
               </SubmitButton>
-              <Hint>You can change any of this until the batch is made.</Hint>
+              <Hint>
+                You can change any of this, the flavour included, until the
+                batch is made.
+              </Hint>
             </div>
           </form>
         ) : (

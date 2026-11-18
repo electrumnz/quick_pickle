@@ -11,7 +11,7 @@
  * typed and nothing is added to them.
  */
 
-import type { Offer } from "@/lib/shop/offer";
+import { labelsOf, type Label, type Offer } from "@/lib/shop/offer";
 
 import { deliveryAnswer } from "./delivery";
 import { PRODUCT } from "./offer";
@@ -68,32 +68,44 @@ export function withStop(text: string): string {
  * a list alone, and a list with an allergen line, a storage line or both.
  * With no allergen line nothing is said about allergens either way.
  */
-function labelAnswer({
-  label,
-  flavours,
-}: Pick<Offer, "label" | "flavours">): readonly string[] {
-  if (label.ingredients === null) {
-    return [
-      "The full ingredients list will be right here before the first bottle ships, exactly as it is printed on the label.",
-      ...(label.contains === null ? [] : [withStop(label.contains)]),
-      ...(label.storage === null ? [] : [withStop(label.storage)]),
-    ];
-  }
-  // The label kept today was typed for the one juice there was, which is
-  // the first flavour. It is never shown as if it were every flavour's.
-  const [first, ...others] = flavours;
-  return [
-    ...(others.length === 0 || first === undefined
-      ? []
-      : [`The ${first.name} label says:`]),
-    withStop(label.ingredients),
+function labelAnswer(
+  offer: Pick<Offer, "label" | "flavourLabels" | "flavours">,
+): readonly string[] {
+  const lines = (label: Label) => [
+    ...(label.ingredients === null ? [] : [withStop(label.ingredients)]),
     ...(label.contains === null ? [] : [withStop(label.contains)]),
     ...(label.storage === null ? [] : [withStop(label.storage)]),
-    ...others.map(
-      (flavour) =>
-        `The ${flavour.name} list will be right here before its first bottle ships, exactly as it is printed on its label.`,
-    ),
   ];
+  const labels = labelsOf(offer);
+  const [only] = labels;
+  // One flavour: its label, as it always was.
+  if (labels.length === 1 && only !== undefined) {
+    return only.label.ingredients === null
+      ? [
+          "The full ingredients list will be right here before the first bottle ships, exactly as it is printed on the label.",
+          ...lines(only.label),
+        ]
+      : lines(only.label);
+  }
+  // Nothing typed for any flavour: one promise for them all.
+  if (labels.every(({ label }) => label.ingredients === null)) {
+    return [
+      "The full ingredients list will be right here before the first bottle ships, exactly as it is printed on the label.",
+      ...labels.flatMap(({ label }) => [
+        ...(label.contains === null ? [] : [withStop(label.contains)]),
+        ...(label.storage === null ? [] : [withStop(label.storage)]),
+      ]),
+    ];
+  }
+  // Each flavour's own label, said as its own. One flavour's list never
+  // stands for another's.
+  return labels.flatMap(({ flavour, label }) =>
+    label.ingredients === null
+      ? [
+          `The ${flavour.name} list will be right here before its first bottle ships, exactly as it is printed on its label.`,
+        ]
+      : [`The ${flavour.name} label says:`, ...lines(label)],
+  );
 }
 
 function sizeAnswer(offer: Offer): readonly string[] {

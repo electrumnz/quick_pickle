@@ -74,7 +74,7 @@ async function readyBefore(
 ): Promise<number | null> {
   const today = todayKey(ctx.now);
   return batch.status === "released" && isGoodOn(batch.bestBefore, today)
-    ? readyShots(ctx.db, today)
+    ? readyShots(ctx.db, today, batch.flavour)
     : null;
 }
 
@@ -125,6 +125,7 @@ export const recordSample = defineOp({
         threshold: input.lowStockAt,
         because: "sample",
         code: batch.code,
+        flavour: batch.flavour,
       });
     }
     return { code: batch.code, onHand: onHand - input.shots };
@@ -194,6 +195,7 @@ export const recordWaste = defineOp({
         threshold: input.lowStockAt,
         because: "waste",
         code: batch.code,
+        flavour: batch.flavour,
       });
     }
     return { code: batch.code, onHand: onHand - input.shots };
@@ -291,6 +293,7 @@ export const adjustCount = defineOp({
         threshold: input.lowStockAt,
         because: "adjust",
         code: batch.code,
+        flavour: batch.flavour,
       });
     }
     return { code: batch.code, onHand: onHand + change, change };

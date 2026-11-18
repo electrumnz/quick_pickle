@@ -34,6 +34,15 @@ export const packedBatchesSchema = z
   .max(12, "That is more batches than one box holds");
 
 /** Money, in whole cents. */
+/**
+ * One batch for each flavour in a box: the code of the batch every shot of
+ * that flavour came from.
+ */
+export const packedBatchCodesSchema = z
+  .array(batchCodeSchema)
+  .min(1, "Name a batch")
+  .max(8, "That is more batches than there are flavours");
+
 export const centsSchema = z
   .number({ error: "Give an amount in dollars and cents" })
   .int("Money is kept in whole cents")
