@@ -112,9 +112,9 @@ In rough order. Each is spelt out in [TODO.md](TODO.md).
 
 1. Answer what is yours to decide, above, and confirm each on the go-live list.
 2. Finish Stripe's sign-up with the business's details and bank account.
-3. Buy a domain. The name only: not the web hosting or the email hosting a registrar
-   will offer beside it. Then tell Claude the name and add the two records it hands
-   back. [docs/ACCOUNTS.md](docs/ACCOUNTS.md) has it under "The shop's own domain".
+3. Point your domain at the shop. `quickpickle.co.nz` is yours, at 1st Domains. Add the
+   two records Claude hands you: [docs/ACCOUNTS.md](docs/ACCOUNTS.md) has it, screen by
+   screen, under "The shop's own domain". The shop needs nothing else from the registrar.
 4. Make a Resend account for the domain and connect email, so receipts are really sent.
 5. Move the hosting off Vercel's free plan. It is not for a business that takes money.
 6. Retire the PIN, as under Getting in above.
@@ -181,7 +181,8 @@ In short:
 | The code, on GitHub | Sam transfers the repository to you                       |
 | The hosting, Vercel | Sam transfers the project to you                          |
 | Payments, Stripe    | Sam transfers ownership, then you finish Stripe's sign-up |
-| Email and a domain  | Not made yet. You make them, in the business's name       |
+| The domain          | Yours already, at 1st Domains                             |
+| Email               | Not made yet. You make it, in the business's name         |
 | Xero and a courier  | Yours to set up. The back end makes files for both        |
 
 Then a few things change so that only you know them: who can sign in to the back end,

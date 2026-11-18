@@ -1289,9 +1289,13 @@ for whom.
 - **A domain's name is only ever taken from a commit.** The form that starts the
   workflow by hand has no box for one, and `tests/infra/domain.test.ts` holds it there,
   with the order above.
-- Only the name is bought at a registrar. A registrar's web hosting (PHP, WordPress)
-  cannot run this site, and its email hosting is not needed: the shop sends and reads
-  its own mail through Resend.
+- The domain is `quickpickle.co.nz`, Ash's, at 1st Domains. Only the name is needed
+  from a registrar. Its web hosting (PHP, WordPress) cannot run this site, its database
+  is not the kind the site is written for, and the site keeps its files in its own
+  database. A mailbox there is the owner's choice: the shop sends and reads its own mail
+  through Resend, and `TODO.md` says how the inbox sits beside a mailbox elsewhere.
+- **Registrars do not agree on how the bare name is written.** The script prints `@`.
+  1st Domains wants that box left blank. Say which when handing records to a person.
 - None of this could be tried against the host from a session: only the workflow on
   `main` holds the token. The first real `add-domain` is the test of what the host
   answers, so read its log before believing it.

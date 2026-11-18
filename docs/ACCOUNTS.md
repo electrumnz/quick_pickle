@@ -17,7 +17,7 @@ provider's own instructions. Read theirs before pressing anything.
 | Supabase project                | The database                         | Sam, in an organisation that holds only Quick Pickle      | Make Ash an owner of the organisation               |
 | Stripe account                  | Payments. Test keys only so far      | Sam. Stripe's own sign-up is not finished                 | Transfer ownership, then Ash finishes the sign-up   |
 | Resend                          | Sends and receives the shop's email  | Nobody. Not made yet                                      | Ash makes it, in the business's name                |
-| A domain                        | The shop's own address               | Nobody. Not bought yet                                    | Ash buys it                                         |
+| The domain `quickpickle.co.nz`  | The shop's own address               | Ash, at 1st Domains                                       | Hers already. Nothing to transfer                   |
 | Xero, and a courier account     | The books, and sending parcels       | Not linked, on purpose. The back end makes files for both | Ash's own. Nothing to transfer                      |
 | The brand pack, on Google Drive | Print masters, logos, Lucky, video   | Whoever owns the shared folder                            | Stays where it is. See the note below               |
 | Claude                          | Wrote the code and looks after it    | Sam's Claude account                                      | Ash uses her own. See [HANDOVER.md](../HANDOVER.md) |
@@ -250,29 +250,40 @@ request is then reviewed and merged like any other change.
 
 ## The shop's own domain
 
-Not bought yet, as far as this file knows. It is the business's name on the internet, so
-it should be registered to the business, in an account Ash holds.
+`quickpickle.co.nz`, registered by Ash at [1st Domains](https://1stdomains.nz/). It is
+hers already, so there is nothing to hand over. On 18 November 2026 its pricing page
+listed a `.co.nz` at $39.50 plus GST a year to renew. Check the page: prices move.
 
-**What to buy.** The name, and nothing else. Any registrar will do. For a `.nz` or
-`.co.nz` name, [1st Domains](https://1stdomains.nz/) is one: on 18 November 2026 its
-pricing page listed either at $24.50 plus GST for the first year, on a sale it said ended
-30 November, and $39.50 plus GST a year after that. Check the page: prices move.
+**Nothing else is needed from the registrar for the shop.** Its web hosting is for
+WordPress and PHP sites and cannot run this one, which is a different kind of site with
+its own back end. The database it offers is a different kind from the one the shop is
+written for, and the shop keeps its files in its own database, so there is no storage to
+buy either. The site stays on its host, its database stays where it is, and the domain is
+pointed at the site.
 
-**What not to buy.** A registrar's web hosting is for WordPress and PHP sites and cannot
-run this one, which is a different kind of site with its own back end and database. The
-site stays on its host and the domain is pointed at it. A registrar's email hosting is
-not needed either: the shop sends its own email and has its own inbox once Resend is
-connected (`TODO.md` has the steps). The free forwarding that comes with a domain is
-enough for a personal address in the meantime.
+**Email hosting there is Ash's choice, not something the shop needs.** The shop sends
+its own email and has its own inbox once Resend is connected. An ordinary mailbox on the
+domain does no harm beside that and is handy for her own business email. It decides one
+thing: mail sent to the domain then arrives in that mailbox, not in the back end's inbox.
+`TODO.md`, under "Connect the inbox", says the ways the two can sit side by side.
 
-**Connecting it.** Three steps, and only the middle one is yours.
+**Connecting it.** Three steps, and only the middle one is Ash's.
 
-1. Tell Claude the name. It asks for `add-domain`, which puts the name on the site and
-   answers with two DNS records.
-2. Add those two records where the domain's DNS is kept: at the registrar, on the
-   domain's DNS page. If the registrar has put a parking page on the name, its records
-   for the same two hosts have to be removed, or the two fight. It can take from a few
-   minutes to a day to spread.
+1. Claude asks for `add-domain`, which puts the name on the site and answers with two
+   DNS records. Asked for on 18 November 2026: the infra run's log has the records, and
+   `status` says where the name stands.
+2. Ash adds those two records at 1st Domains. Their help pages said this on 18 November
+   2026:
+   - Log in, **Manage Domains & Services**, choose the domain, **Manage DNS Zone
+     Records**. That link only shows while the domain uses 1st Domains' own name
+     servers, which is how a new domain starts.
+   - Delete the records tagged **[Parking]** for the bare name and for `www`. They are
+     what shows the registrar's holding page, and they fight with ours. Leave anything
+     to do with email alone: an MX record, or a TXT record that starts `v=spf1`.
+   - **Add Record** twice. An **A** record with the hostname left blank (1st Domains
+     does not use `@` for the bare name) and the address from the run. A **CNAME**
+     record with the hostname `www` and the name from the run.
+   - They say to allow up to an hour.
 3. Claude asks for `status` until the name is answering, then for `use-domain`. From
    then the shop's links, its emails and its QR codes use the new name.
 
