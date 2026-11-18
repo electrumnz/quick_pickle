@@ -66,6 +66,8 @@ const PAGES = [
   "/backstage/marketing/pages/who",
   "/backstage/marketing/pages/who?asked=1&via=clubs",
   "/backstage/marketing/pages/top-line",
+  // Every promo film, each one playable, none of them on the shop.
+  "/backstage/marketing/pages/films",
   "/backstage/marketing/reviews",
   "/backstage/marketing/partners",
   "/backstage/numbers",

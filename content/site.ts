@@ -210,6 +210,10 @@ export const RITUAL = {
 export const REELS = {
   eyebrow: "On the sideline",
   title: "See it in action.",
+  /** Under the strip while a film made with AI is in it. */
+  madeWithAi: "Made with AI.",
+  /** The same, while one of them shows people. */
+  notRealPeople: "Made with AI. The people in them are not real.",
 } as const;
 
 export const LUCKY = {

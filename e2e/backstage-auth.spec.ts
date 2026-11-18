@@ -714,6 +714,80 @@ test("the line across the top is drafted, previewed, published and put back", as
 });
 
 /* ------------------------------------------------------------------------
+   The films on the shop.
+
+   They play on the front page for every visitor, so they are switched on
+   here, on the server whose shop no other test looks at.
+   --------------------------------------------------------------------- */
+
+test("the films are watched in the back end, switched on, played on the shop and taken off", async ({
+  page,
+  browser,
+}) => {
+  const screen = `${AUTH_URL}/backstage/marketing/pages/films`;
+  // A customer: nobody signed in.
+  const outside = await browser.newContext();
+  const customer = await outside.newPage();
+  const strip = customer.locator('section[aria-labelledby="reels-title"]');
+  /** Load the shop afresh until its strip plays so many films. */
+  const shopPlays = async (count: number) => {
+    await expect(async () => {
+      await customer.goto(AUTH_URL);
+      await expect(strip.locator("video")).toHaveCount(count);
+    }).toPass({ timeout: 30_000 });
+  };
+
+  // Every film starts off, and with none on there is no strip at all.
+  await shopPlays(0);
+  await expect(strip).toHaveCount(0);
+
+  await signIn(page, OWNER.email, OWNER.password);
+  await page.goto(screen);
+  await expect(page.locator("main")).toContainText(
+    "No film is on the shop. Watch them here, tick the ones you want, and save.",
+  );
+  // Each one can be played here, as it would play on the shop.
+  expect(await page.locator("main video[controls]").count()).toBeGreaterThan(1);
+  await expectNoAxeViolations(page);
+
+  await page.locator("#film-the-face").check();
+  await page.locator("#film-lucky").check();
+  await press(page, /save which films play/i);
+  await expect(page.locator("main [role=status]")).toHaveText(
+    "Done. The shop plays them within a minute.",
+  );
+  await expect(page.locator("main")).toContainText(
+    "The shop is playing 2 films: Lucky and The Face.",
+  );
+
+  // The shop plays them, in the catalogue's order, and says how they
+  // were made.
+  await shopPlays(2);
+  await expect(strip.locator("figcaption")).toHaveText([
+    "Everyone's got a thing. This is ours.",
+    "The Face. A field guide.",
+  ]);
+  await expect(strip).toContainText(
+    "Made with AI. The people in them are not real.",
+  );
+  // Nothing in the strip fails the accessibility rules. (Scanned once the
+  // page has finished fading in, like every other page: e2e/a11y.spec.ts.)
+  await customer.waitForTimeout(900);
+  await expectNoAxeViolations(customer);
+
+  // Unticked and saved, they come off, and the strip goes with them.
+  await page.locator("#film-the-face").uncheck();
+  await page.locator("#film-lucky").uncheck();
+  await press(page, /save which films play/i);
+  await expect(page.locator("main [role=status]")).toHaveText(
+    "Done. Every film comes off the shop within a minute.",
+  );
+  await shopPlays(0);
+  await expect(strip).toHaveCount(0);
+  await outside.close();
+});
+
+/* ------------------------------------------------------------------------
    The shop's settings.
 
    These change what the shop charges, so they run here, on the server

@@ -2,7 +2,7 @@
 /**
  * Encode a clip for the site.
  *
- *   node scripts/build-media.mjs <input> <slug> [--portrait|--landscape|--square] [--max-kb 800]
+ *   node scripts/build-media.mjs <input> <slug> [--portrait|--landscape|--square] [--max-kb 800] [--poster-at 0]
  *
  * Writes into public/media/:
  *   <slug>.mp4          H.264, muted, faststart. Plays everywhere.
@@ -10,6 +10,10 @@
  *   <slug>-poster.webp  The first frame, shown before (or instead of) the clip.
  *
  * and prints the entry to paste into content/media.ts.
+ *
+ * The poster is the first frame unless `--poster-at` names the second to take
+ * it from. A clip that opens on black, or on a title, wants a later one: the
+ * poster is all a visitor with reduced motion or a data saver ever sees.
  *
  * The brand guide's budget for a looping clip is 800 kB. The encoder aims
  * under it by stepping the quality down until the MP4 fits, and says so if it
@@ -24,15 +28,16 @@ import { join, resolve } from "node:path";
 
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((arg) => arg.startsWith("--")));
+const VALUED = new Set(["--max-kb", "--poster-at"]);
 const positional = args.filter((arg, index) => {
   if (arg.startsWith("--")) return false;
-  return args[index - 1] !== "--max-kb";
+  return !VALUED.has(args[index - 1] ?? "");
 });
 const [input, slug] = positional;
 
 if (!input || !slug || !/^[a-z0-9-]+$/.test(slug)) {
   console.error(
-    "usage: node scripts/build-media.mjs <input> <slug> [--portrait|--landscape|--square] [--max-kb 800]\n" +
+    "usage: node scripts/build-media.mjs <input> <slug> [--portrait|--landscape|--square] [--max-kb 800] [--poster-at 0]\n" +
       "       slug is lowercase letters, digits and dashes",
   );
   process.exit(2);
@@ -40,6 +45,16 @@ if (!input || !slug || !/^[a-z0-9-]+$/.test(slug)) {
 
 const maxKbIndex = args.indexOf("--max-kb");
 const maxKb = maxKbIndex === -1 ? 800 : Number(args[maxKbIndex + 1]);
+const posterAtIndex = args.indexOf("--poster-at");
+const posterAt = posterAtIndex === -1 ? 0 : Number(args[posterAtIndex + 1]);
+if (!Number.isFinite(maxKb) || maxKb <= 0) {
+  console.error("--max-kb wants a number of kilobytes");
+  process.exit(2);
+}
+if (!Number.isFinite(posterAt) || posterAt < 0) {
+  console.error("--poster-at wants a number of seconds into the clip");
+  process.exit(2);
+}
 
 // Long edge in CSS pixels x2 is plenty for a phone; these are the short edges.
 const shape = flags.has("--landscape")
@@ -123,7 +138,19 @@ ffmpeg([
   webm,
 ]);
 
-ffmpeg(["-i", input, "-vf", scale, "-frames:v", "1", "-q:v", "82", poster]);
+ffmpeg([
+  "-ss",
+  String(posterAt),
+  "-i",
+  input,
+  "-vf",
+  scale,
+  "-frames:v",
+  "1",
+  "-q:v",
+  "82",
+  poster,
+]);
 
 // WebM is listed first in the markup, so a browser that can play it will.
 // That is only a win if it is actually the smaller file; on flat, simple

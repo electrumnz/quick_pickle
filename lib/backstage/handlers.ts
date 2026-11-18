@@ -75,4 +75,9 @@ export function registerHandlers(): void {
     "show the new line across the top at once",
     showShopChange(),
   );
+  on(
+    "shop.films_changed",
+    "show the films, or stop showing them, at once",
+    showShopChange(),
+  );
 }

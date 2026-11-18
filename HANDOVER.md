@@ -91,6 +91,11 @@ you rather than guess.
 - **Who the business is.** The legal name, the NZBN, the address, and whether it is
   registered for GST.
 - **A customer email address.**
+- **The films.** The six promo films made on 16 November are in the shared Drive folder,
+  with sound. They are on the site too, switched off: under **Marketing, Landing pages,
+  Films on the shop** each one plays as it would on the shop, silent and on a loop, and a
+  tick puts it on the front page. Watch them first. They were made with AI, and the
+  lucky undies is the cheeky one.
 - **Two Lucky poses.** Celebrating (on the "order's in" page) and sleeping (the empty jar
   and the page-not-found page) were generated from your art and are marked as proposed.
   They need your nod, or replacing.
