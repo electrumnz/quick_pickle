@@ -31,11 +31,13 @@
 
 import {
   COMPANY,
+  FLAVOURS,
   PACKS,
   PRODUCT,
   SHIPPING,
   STORE,
   UNCONFIRMED,
+  type Flavour,
   type LaunchMode,
   type Pack,
   type Unconfirmed,
@@ -99,6 +101,11 @@ export type Offer = {
   readonly gstRegistered: boolean | null;
   /** Smallest first. The page and the jar both rely on that order. */
   readonly packs: readonly Pack[];
+  /**
+   * The flavours on the shelf, in the order the page offers them. Every
+   * pack comes in every one, at the pack's price.
+   */
+  readonly flavours: readonly Flavour[];
   readonly shipping: Shipping;
   readonly label: Label;
   readonly company: Company;
@@ -121,7 +128,13 @@ export type Offer = {
  */
 export type OfferOnPage = Pick<
   Offer,
-  "open" | "launchMode" | "batchName" | "packs" | "shipping" | "version"
+  | "open"
+  | "launchMode"
+  | "batchName"
+  | "packs"
+  | "flavours"
+  | "shipping"
+  | "version"
 >;
 
 export function forPage(offer: Offer): OfferOnPage {
@@ -130,6 +143,7 @@ export function forPage(offer: Offer): OfferOnPage {
     launchMode: offer.launchMode,
     batchName: offer.batchName,
     packs: offer.packs,
+    flavours: offer.flavours,
     shipping: offer.shipping,
     version: offer.version,
   };
@@ -156,6 +170,7 @@ export function offerVersion(offer: Omit<Offer, "version">): string {
       offer.open,
       offer.launchMode,
       offer.packs.map((pack) => [pack.sku, pack.shots, pack.priceCents]),
+      offer.flavours.map((flavour) => [flavour.key, flavour.skuSuffix]),
       offer.shipping.standardCents,
       offer.shipping.ruralSurchargeCents,
       offer.shipping.freeOverCents,
@@ -177,6 +192,7 @@ export const FILE_OFFER: Offer = versioned({
   contactEmail: STORE.contactEmail,
   gstRegistered: STORE.gstRegistered,
   packs: PACKS,
+  flavours: FLAVOURS,
   shipping: { ...SHIPPING },
   label: {
     ingredients: PRODUCT.ingredients,

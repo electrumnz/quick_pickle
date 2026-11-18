@@ -619,7 +619,8 @@ describe("the courier, with orders", () => {
         status: "packed",
         isTest: false,
         name: "=Aroha Ngata",
-        items: "1 x The Trial (6 shots), 2 x The Starter (12 shots)",
+        items:
+          "1 x The Trial, Original (6 shots), 2 x The Starter, Original (12 shots)",
       });
     });
 
@@ -661,7 +662,8 @@ describe("the courier, with orders", () => {
         "Country Code": "NZ",
         "Destination Phone": "+64 21 123 4567",
         Instructions: 'Gate code 4411, by the "blue" shed',
-        "Item Name": "1 x The Trial (6 shots), 2 x The Starter (12 shots)",
+        "Item Name":
+          "1 x The Trial, Original (6 shots), 2 x The Starter, Original (12 shots)",
         Qty: "1",
         Reference: packed,
       });
@@ -752,7 +754,7 @@ describe("the courier, with orders", () => {
       expect(checks[0]?.order).toMatchObject({
         name: "Aroha Ngata",
         city: "Wellington",
-        items: "1 x The Starter",
+        items: "1 x The Starter, Original",
       });
       expect(checks[3]?.order).toBeNull();
     });
@@ -772,7 +774,7 @@ describe("the courier, with orders", () => {
           number: first,
           tracking: "00794210392605965283",
           who: "Aroha Ngata, Wellington",
-          items: "1 x The Starter",
+          items: "1 x The Starter, Original",
           test: false,
           link: "https://www.nzpost.co.nz/tools/tracking?trackid=00794210392605965283",
           problem: null,
@@ -781,7 +783,7 @@ describe("the courier, with orders", () => {
           number: second,
           tracking: "00794210392605965284",
           who: "Aroha Ngata, Wellington",
-          items: "1 x The Starter",
+          items: "1 x The Starter, Original",
           test: false,
           link: "https://www.nzpost.co.nz/tools/tracking?trackid=00794210392605965284",
           problem: null,

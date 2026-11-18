@@ -69,7 +69,7 @@ test("a packed order goes out in the courier's file and comes back shipped", asy
   expect(mine).toContain(
     'Aroha Ngata,,"Flat 2, 12 Sideline Road",Wellington,Wellington,6011,Wellington,New Zealand,NZ,',
   );
-  expect(mine).toContain("1 x The Starter (12 shots),1,48.00,");
+  expect(mine).toContain('"1 x The Starter, Original (12 shots)",1,48.00,');
   // Making it is written down.
   await page.goto("/backstage/settings/activity");
   await expect(

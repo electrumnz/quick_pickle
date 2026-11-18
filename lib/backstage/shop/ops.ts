@@ -803,12 +803,14 @@ function companySaid(offer: Offer): string {
  */
 export function factNow(key: string, offer: Offer): string | null {
   if (key === "packs") {
-    return offer.packs
+    const packs = offer.packs
       .map(
         (pack) =>
           `${pack.name}: ${String(pack.shots)} shots, ${formatNzd(pack.priceCents)}`,
       )
       .join(". ");
+    const flavours = offer.flavours.map((flavour) => flavour.name);
+    return `${packs}. In ${flavours.length === 1 ? "one flavour" : `${String(flavours.length)} flavours`}: ${flavours.join(" and ")}`;
   }
   if (key === "shipping-rates") {
     const { standardCents, ruralSurchargeCents, freeOverCents } =

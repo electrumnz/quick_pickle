@@ -228,7 +228,9 @@
     block-size: 1.6rem;
     padding-inline: 0.4rem;
     border-radius: 9999px;
-    background-color: var(--color-pink);
+    /* White on the brand pink is 4.25:1, which only passes at 1.2rem bold
+       and up. The count is smaller, so it sits on the deeper pink (6.3:1). */
+    background-color: var(--color-pink-deep);
     color: var(--color-white);
     font-family: var(--font-label);
     font-weight: 700;

@@ -428,6 +428,7 @@ export function CheckoutForm({
                 {line.qty} × {line.pack.name}
               </span>
               <span className="text-navy-muted text-[0.875rem]">
+                {offer.flavours.length > 1 ? `${line.flavour.name} · ` : ""}
                 {line.pack.shots * line.qty} {JAR.shots}
               </span>
             </span>

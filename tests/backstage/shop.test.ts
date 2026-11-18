@@ -568,7 +568,7 @@ describe("the shop, run from the back end", () => {
 
   it("spells out what each open fact stands at, for whoever confirms it", async () => {
     expect(factNow("packs", FILE_OFFER)).toBe(
-      "The Trial: 6 shots, $27. The Starter: 12 shots, $48. The Squad: 24 shots, $84",
+      "The Trial: 6 shots, $27. The Starter: 12 shots, $48. The Squad: 24 shots, $84. In 2 flavours: Original and Mango Chilli Lime",
     );
     expect(factNow("shipping-rates", FILE_OFFER)).toBe(
       "Standard delivery $7, free on orders of $60 or more; $4.50 extra for a rural address. New Zealand only",

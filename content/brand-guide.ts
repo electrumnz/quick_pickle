@@ -486,7 +486,12 @@ export const CHANGES = [
   {
     from: "Flavour A, B and C placeholders.",
     to: "One juice in three pack sizes: The Trial, The Starter, The Squad.",
-    why: "No flavours exist yet. Three sizes of one product is an honest offer and a better price ladder.",
+    why: "No flavours existed yet. Three sizes of one product was an honest offer and a better price ladder.",
+  },
+  {
+    from: "One juice in three pack sizes.",
+    to: "Two flavours, Original and Mango Chilli Lime, each in the same three sizes at the same prices. Picked with a chip each, Original in the olive and Mango Chilli Lime in the pink.",
+    why: "Two flavours are made now (18 November 2026). The chips and one accent a flavour come from the flavour system in the brand pack. A flavour never moves a price, so the price ladder stays as it was.",
   },
   {
     from: "Display type at 2.75 to 5.5rem.",

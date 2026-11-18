@@ -80,7 +80,9 @@ you rather than guess.
   a conversation with a food lawyer or MPI first. [legal/COPY-RULES.md](legal/COPY-RULES.md)
   has the detail.
 - **The packs and prices.** 6, 12 and 24 at $27, $48 and $84, called The Trial, The
-  Starter and The Squad, are all stand-ins.
+  Starter and The Squad, are all stand-ins. Each comes in both flavours, Original and
+  Mango Chilli Lime, at the same price. Check the two names match the printed labels
+  exactly.
 - **What the label says.** The ingredients list, the allergen line if there is one, and
   the storage line, word for word from the printed label. And whether you want the
   nutrition panel on the site as well as on the bottle: it is not there today.

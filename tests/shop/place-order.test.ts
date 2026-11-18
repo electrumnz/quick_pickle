@@ -104,6 +104,34 @@ describe("placing an order", () => {
     );
   });
 
+  it("names each line by its pack and its flavour, on the order and the payment page", async () => {
+    const h = harness();
+    const result = await placeOrder(
+      good({
+        lines: [
+          { sku: `${big.sku}-MCL`, qty: 1 },
+          { sku: small.sku, qty: 2 },
+        ],
+      }),
+      h.deps,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.order.lines).toMatchObject([
+      { sku: small.sku, name: `${small.name}, Original`, qty: 2 },
+      {
+        sku: `${big.sku}-MCL`,
+        name: `${big.name}, Mango Chilli Lime`,
+        unitCents: big.priceCents,
+        qty: 1,
+      },
+    ]);
+    expect(h.charges[0]?.lines.map((line) => line.name)).toEqual([
+      `${small.name}, Original`,
+      `${big.name}, Mango Chilli Lime`,
+    ]);
+  });
+
   it("cannot be talked into a different price", async () => {
     const h = harness();
     const result = await placeOrder(

@@ -91,7 +91,9 @@ No code. Each is set on its screen, then confirmed with your name beside it on
 confirmed.
 
 - [ ] **Packs and prices.** 6, 12 and 24 at $27, $48 and $84 (The Trial, The Starter, The
-      Squad) are stand-ins. Settings, The shop. **Who:** Ash
+      Squad) are stand-ins. Settings, The shop. Every pack comes in Original and Mango
+      Chilli Lime at the same price: check the two names are written exactly as the
+      labels print them. **Who:** Ash
 - [ ] **What the label says:** the ingredients list, the allergen line if there is one,
       and the storage line, typed word for word with the printed label in your hand.
       Settings, The label and the company. **Who:** Ash

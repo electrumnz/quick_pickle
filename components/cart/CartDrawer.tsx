@@ -15,7 +15,7 @@ import {
 } from "@/components/brand/Icons";
 import { MAX_PACKS_PER_LINE } from "@/content/offer";
 import { JAR, SHOP } from "@/content/site";
-import { nextSizeUp, perShotCents } from "@/lib/shop/catalogue";
+import { itemName, nextItemUp, perShotCents } from "@/lib/shop/catalogue";
 import { freeDeliveryFrom } from "@/lib/shop/pricing";
 import { formatNzd } from "@/lib/shop/money";
 
@@ -69,15 +69,17 @@ export function CartDrawer() {
   // The smallest line that has a bigger, cheaper-per-shot size above it.
   const upgrade = (() => {
     for (const line of quote.lines) {
-      const bigger = nextSizeUp(offer, line.pack);
+      // The next size up in the same flavour: a swap never changes flavour.
+      const bigger = nextItemUp(offer, line);
       if (bigger === null) continue;
-      if (perShotCents(bigger) >= perShotCents(line.pack)) continue;
+      if (perShotCents(bigger.pack) >= perShotCents(line.pack)) continue;
       // Only offer the swap when the bigger size is not already in the jar.
       if (quote.lines.some((other) => other.sku === bigger.sku)) continue;
       return {
-        from: line.pack,
-        to: bigger,
-        extraCents: (bigger.priceCents - line.pack.priceCents) * line.qty,
+        fromSku: line.sku,
+        toSku: bigger.sku,
+        to: bigger.pack,
+        extraCents: (bigger.pack.priceCents - line.pack.priceCents) * line.qty,
       };
     }
     return null;
@@ -192,6 +194,11 @@ export function CartDrawer() {
                             <p className="label text-[1.35rem] leading-none">
                               {line.pack.name}
                             </p>
+                            {offer.flavours.length > 1 ? (
+                              <p className="mt-1 text-[0.9375rem] font-semibold">
+                                {line.flavour.name}
+                              </p>
+                            ) : null}
                             <p className="text-navy-muted text-small mt-1">
                               {line.pack.shots} {JAR.shots} ·{" "}
                               {formatNzd(line.unitCents)} {JAR.each}
@@ -206,7 +213,7 @@ export function CartDrawer() {
                           <div className="border-navy bg-paper flex items-center rounded-full border-2">
                             <button
                               type="button"
-                              aria-label={`${JAR.less}: ${line.pack.name}`}
+                              aria-label={`${JAR.less}: ${itemName(line)}`}
                               onClick={() => setQty(line.sku, line.qty - 1)}
                               className="grid size-11 place-items-center rounded-full active:scale-90"
                             >
@@ -215,13 +222,13 @@ export function CartDrawer() {
                             <span
                               className="label w-7 text-center text-[1.25rem]"
                               aria-live="polite"
-                              aria-label={`${String(line.qty)} of ${line.pack.name}`}
+                              aria-label={`${String(line.qty)} of ${itemName(line)}`}
                             >
                               {line.qty}
                             </span>
                             <button
                               type="button"
-                              aria-label={`${JAR.more}: ${line.pack.name}`}
+                              aria-label={`${JAR.more}: ${itemName(line)}`}
                               disabled={line.qty >= MAX_PACKS_PER_LINE}
                               onClick={() => setQty(line.sku, line.qty + 1)}
                               className="grid size-11 place-items-center rounded-full active:scale-90 disabled:opacity-35"
@@ -232,7 +239,7 @@ export function CartDrawer() {
                           <button
                             type="button"
                             onClick={() => remove(line.sku)}
-                            aria-label={`${JAR.remove} ${line.pack.name}`}
+                            aria-label={`${JAR.remove} ${itemName(line)}`}
                             className="link text-small text-navy-muted"
                           >
                             {JAR.remove}
@@ -255,7 +262,7 @@ export function CartDrawer() {
                     </p>
                     <button
                       type="button"
-                      onClick={() => swap(upgrade.from.sku, upgrade.to.sku)}
+                      onClick={() => swap(upgrade.fromSku, upgrade.toSku)}
                       className="btn btn-sm btn-olive shrink-0"
                     >
                       <span className="cap-trim">{JAR.upgradeCta}</span>

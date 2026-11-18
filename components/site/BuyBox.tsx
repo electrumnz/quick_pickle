@@ -21,14 +21,19 @@ import { BUY, SHOP } from "@/content/site";
 import {
   bestValuePack,
   featuredPack,
-  packBySku,
+  firstFlavour,
+  itemBySku,
+  itemOf,
+  itemSku,
   perShotCents,
   savingCents,
 } from "@/lib/shop/catalogue";
 import { formatNzd } from "@/lib/shop/money";
 
+import { lookOf } from "./flavour-look";
+
 /**
- * The buy box: pick a pack, pick how many, put it in the jar.
+ * The buy box: pick a flavour and a pack, pick how many, put it in the jar.
  *
  * This is the part of the page that earns its keep, so it is built around a
  * thumb. Each pack is one big radio card (the whole card is the target), the
@@ -36,6 +41,10 @@ import { formatNzd } from "@/lib/shop/money";
  * pressed three things happen inside 100ms: the label flips to "In the jar!",
  * burst lines pop off the button, and the jar in the header jumps. Then the
  * jar opens, with the total and the checkout button in it.
+ *
+ * A flavour never changes a price: each pack costs the same in every
+ * flavour, so picking one only changes which item goes in the jar, and the
+ * accent the box wears (./flavour-look.ts).
  *
  * Every figure here (per-shot price, saving, "best value") is computed from
  * the offer on each render. None of it is typed in. The offer is the jar's
@@ -56,19 +65,27 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const packs = useRef<HTMLFieldSetElement>(null);
+  const picker = useRef<HTMLDivElement>(null);
 
-  // A pack picked before the page came alive: the browser ticked the radio
-  // and the card showed it, but nothing was listening yet. Take the pick the
-  // buyer can see, so the button never offers one pack while another looks
-  // chosen.
+  // A flavour or a pack picked before the page came alive: the browser
+  // ticked the radio and the card showed it, but nothing was listening yet.
+  // Take the pick the buyer can see, so the button never offers one thing
+  // while another looks chosen.
   useEffect(() => {
-    const picked = packs.current?.querySelector<HTMLInputElement>(
-      'input[name="pack"]:checked',
-    )?.value;
-    if (picked !== undefined && packBySku(offer, picked) !== null) {
-      select(picked);
-    }
+    const checked = (name: string) =>
+      picker.current?.querySelector<HTMLInputElement>(
+        `input[name="${name}"]:checked`,
+      )?.value;
+    const packPicked = itemBySku(offer, checked("pack") ?? "");
+    const flavourPicked = offer.flavours.find(
+      (flavour) => flavour.key === checked("flavour"),
+    );
+    if (packPicked === null && flavourPicked === undefined) return;
+    // Before the page is alive the radios are all there is to go on: a
+    // pack's radio names it in the flavour the page was drawn with.
+    const pack = packPicked?.pack ?? featuredPack(offer);
+    const flavour = flavourPicked ?? firstFlavour(offer);
+    select(itemSku(pack, flavour));
   }, [offer, select]);
 
   useEffect(() => {
@@ -78,7 +95,11 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
     };
   }, []);
 
-  const pack = packBySku(offer, selectedSku) ?? featuredPack(offer);
+  const item =
+    itemBySku(offer, selectedSku) ??
+    itemOf(featuredPack(offer), firstFlavour(offer));
+  const { pack, flavour } = item;
+  const look = lookOf(flavour.key);
   const best = bestValuePack(offer);
   const pick = featuredPack(offer);
   const totalCents = pack.priceCents * qty;
@@ -87,7 +108,7 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
 
   function handleAdd() {
     if (!offer.open) return;
-    add(pack.sku, qty);
+    add(item.sku, qty);
     setJustAdded(true);
     for (const timer of timers.current) clearTimeout(timer);
     timers.current = [
@@ -104,7 +125,9 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
     <div className="mt-8 grid gap-8 md:grid-cols-2 md:items-start md:gap-12 [&>*]:min-w-0">
       {/* The product, illustrated. Sticks beside the picker on wide screens. */}
       <div className="md:sticky md:top-24">
-        <div className="card bg-olive-wash relative overflow-hidden px-6 pt-8 pb-5">
+        <div
+          className={`card relative overflow-hidden px-6 pt-8 pb-5 ${look.wash}`}
+        >
           <div
             aria-hidden="true"
             className="pattern-dots absolute inset-0 opacity-[0.07]"
@@ -144,8 +167,45 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
         </div>
       </div>
 
-      <div>
-        <fieldset ref={packs}>
+      <div ref={picker}>
+        {offer.flavours.length > 1 ? (
+          <fieldset className="mb-6">
+            <legend className="label text-[1.25rem]">
+              {BUY.flavourLegend}
+            </legend>
+            <div className="mt-3 flex flex-wrap gap-3">
+              {offer.flavours.map((option) => {
+                const selected = option.key === flavour.key;
+                const chip = lookOf(option.key);
+                return (
+                  <label
+                    key={option.key}
+                    className={`label border-navy has-checked:shadow-hard-sm relative flex min-h-12 cursor-pointer items-center rounded-full border-[3px] px-5 text-[1.2rem] leading-none transition-transform duration-100 active:scale-[0.97] ${chip.chip} ${
+                      ready && selected
+                        ? `${chip.chipLit} shadow-hard-sm`
+                        : "bg-paper text-navy"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="flavour"
+                      value={option.key}
+                      checked={selected}
+                      onChange={() => select(itemSku(pack, option))}
+                      className="peer sr-only"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="focus-proxy pointer-events-none absolute -inset-[3px] rounded-full"
+                    />
+                    <span className="cap-trim inline-block">{option.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+        ) : null}
+        <fieldset>
           <legend className="label text-[1.25rem]">{BUY.packLegend}</legend>
           <div className="mt-3 flex flex-col gap-3.5">
             {offer.packs.map((option) => {
@@ -177,9 +237,9 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
                   <input
                     type="radio"
                     name="pack"
-                    value={option.sku}
+                    value={itemSku(option, flavour)}
                     checked={selected}
-                    onChange={() => select(option.sku)}
+                    onChange={() => select(itemSku(option, flavour))}
                     className="peer sr-only"
                   />
                   {/* The focus ring belongs to the card, not the hidden input. */}
@@ -210,7 +270,7 @@ export function BuyBox({ shipDate, productLoop, luckyOnPage }: Props) {
                       }`}
                     >
                       <span
-                        className={`bg-olive size-2.5 rounded-full transition-transform duration-150 group-has-checked:scale-100 ${
+                        className={`size-2.5 rounded-full transition-transform duration-150 group-has-checked:scale-100 ${look.dot} ${
                           lit ? "scale-100" : "scale-0"
                         }`}
                       />

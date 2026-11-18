@@ -156,6 +156,8 @@ export function offerWith(
       const price = prices[pack.sku];
       return price === undefined ? pack : { ...pack, priceCents: price };
     }),
+    // The flavours are the file's: the back end cannot add one.
+    flavours: base.flavours,
     shipping: {
       ...base.shipping,
       standardCents:

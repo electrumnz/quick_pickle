@@ -122,7 +122,7 @@ test("buys a pack, start to finish", async ({ page }) => {
   await expect(page.getByText("Test, not charged")).toBeVisible();
   await expect(page.getByText("12 Sideline Road")).toBeVisible();
   await expect(
-    page.getByText(`New test order ${number}: 1 × The Squad, $88.50`),
+    page.getByText(`New test order ${number}: 1 × The Squad, Original, $88.50`),
   ).toBeVisible();
 
   const reply = () =>
@@ -187,6 +187,63 @@ test("buys a pack, start to finish", async ({ page }) => {
     page.getByText("24 shots", { exact: false }).first(),
   ).toBeVisible();
   await expect(page.getByText("$88.50")).toHaveCount(0);
+});
+
+test("picks a flavour, and it is named all the way to the order", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.locator("#shop").scrollIntoViewIfNeeded();
+
+  // The page opens on Original. Picking a flavour never moves a price.
+  const original = page.getByRole("radio", { name: "Original" });
+  const mcl = page.getByRole("radio", { name: "Mango Chilli Lime" });
+  await expect(original).toBeChecked();
+  const add = page.getByTestId("add-to-jar");
+  await expect(add).toContainText("$48");
+  await page.locator("label", { hasText: "Mango Chilli Lime" }).click();
+  await expect(mcl).toBeChecked();
+  await expect(add).toContainText("$48");
+
+  await page.getByText("The Trial", { exact: true }).click();
+  await expect(add).toContainText("$27");
+  await add.click();
+  const jar = page.getByRole("dialog");
+  await expect(jar.getByText("Mango Chilli Lime")).toBeVisible();
+  await expect(
+    jar.getByRole("button", { name: "One more: The Trial, Mango Chilli Lime" }),
+  ).toBeVisible();
+  // A bigger size is offered in the same flavour.
+  await jar.getByRole("button", { name: "Swap" }).click();
+  await expect(jar.getByText("The Starter")).toBeVisible();
+  await expect(jar.getByText("Mango Chilli Lime")).toBeVisible();
+
+  await jar.getByRole("link", { name: /checkout/i }).click();
+  await expect(page).toHaveURL(/\/checkout$/);
+  // In the order's summary (folded away on a phone, open beside the form
+  // on a wide screen).
+  await expect(
+    page.getByText("Mango Chilli Lime · 12 shots").first(),
+  ).toBeAttached();
+
+  await page.fill("#co-email", "flavour@example.co.nz");
+  await page.fill("#co-firstName", "Mere");
+  await page.fill("#co-lastName", "Tester");
+  await page.fill("#co-line1", "4 Touchline Street");
+  await page.fill("#co-city", "Ōtaki");
+  await page.selectOption("#co-region", "Wellington");
+  await page.fill("#co-postcode", "5512");
+  await page.getByTestId("place-order").click();
+
+  await expect(page).toHaveURL(/\/order\/thanks$/);
+  await expect(
+    page.getByText("The Starter, Mango Chilli Lime", { exact: false }),
+  ).toBeVisible();
+  const number = await page.getByTestId("order-number").innerText();
+  await page.goto(`/backstage/orders/${number}`);
+  await expect(
+    page.getByText("The Starter, Mango Chilli Lime").first(),
+  ).toBeVisible();
 });
 
 test("a code takes its saving off before the button is pressed", async ({
