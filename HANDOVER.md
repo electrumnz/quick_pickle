@@ -112,21 +112,10 @@ Plans, Questions, where you can answer them.
 
 ## Before it takes real money
 
-In rough order. Each is spelt out in [TODO.md](TODO.md).
-
-1. Answer what is yours to decide, above, and confirm each on the go-live list.
-2. Finish Stripe's sign-up with the business's details and bank account.
-3. Point your domain at the shop. `quickpickle.co.nz` is yours, at 1st Domains. Add the
-   two records Claude hands you: [docs/ACCOUNTS.md](docs/ACCOUNTS.md) has it, screen by
-   screen, under "The shop's own domain". The shop needs nothing else from the registrar.
-4. Make a Resend account for the domain and connect email, so receipts are really sent.
-5. Move the hosting off Vercel's free plan before the shop opens to the public. That plan
-   is for personal projects, not a business's shop. It is US$20 a month to stay with
-   Vercel, or US$5 at Cloudflare with the site moved and tested again.
-6. Retire the PIN, as under Getting in above.
-7. Make one test purchase yourself, start to finish. Stripe's payment page will not let
-   a robot press Pay, so it is the one step nobody has watched work end to end.
-8. Switch Stripe from test keys to live ones.
+[LAUNCH.md](LAUNCH.md) is the checklist, in order: handing the accounts over, what you
+decide and type into the back end, the accounts the shop runs on (the domain, hosting,
+backups, email, Stripe), and the last checks before real money. It says who does each
+one, you or your AI helper. Hand it to your AI and say "work through LAUNCH.md with me".
 
 ## Running it day to day
 
@@ -243,8 +232,9 @@ what it may do.
 - **There is no direct line to Xero or to a courier.** The back end makes a file for
   each. A direct line waits on having an account to try it with.
 - **The nutrition panel** is not on the site.
-- **The video slots** on the page are empty. The brand pack's own notes mark its motion
-  files as superseded, waiting on a rebuild, so nothing from there is used yet.
+- **The hero has no video.** One film, The Face, plays further down the page. The brand
+  pack's own notes mark its motion files as superseded, waiting on a rebuild, so nothing
+  from there is used yet.
 - **A box's weight** is not in the courier's file, because nobody has weighed one.
 - **The front page is close to its speed limit on a slow machine.** It passes. The next
   improvement is written up in [TODO.md](TODO.md).
@@ -254,6 +244,7 @@ what it may do.
 | File                                       | What it is                                               |
 | :----------------------------------------- | :------------------------------------------------------- |
 | [HANDOVER.md](HANDOVER.md)                 | This page                                                |
+| [LAUNCH.md](LAUNCH.md)                     | The go-live checklist, for you and your AI helper        |
 | [TODO.md](TODO.md)                         | What is done and what is not, with the reasons           |
 | [docs/ACCOUNTS.md](docs/ACCOUNTS.md)       | Every account, setting and key by name, and the handover |
 | [docs/starter](docs/starter/README.md)     | The how-to sheets, plans, questions and checklists       |

@@ -28,7 +28,8 @@ can see.
 Sam had this built, for Ash. On 16 November 2026 (New Zealand time) he said the build was
 done and asked for everything to be written into the repository so it could be handed to
 her. `HANDOVER.md` is her way in, `docs/ACCOUNTS.md` is how each account moves, and
-`TODO.md` starts with the list for the handover itself.
+`TODO.md` starts with the list for the handover itself, and `LAUNCH.md` is the go-live
+checklist she and her AI work through, in order.
 
 **What Sam allowed, Sam allowed.** Two things this file says are his own say-so, given
 for the build: Claude merges its own pull requests once CI is green, and Claude changes
@@ -1154,6 +1155,11 @@ see: `--poster-at` takes it from a moment that shows what the film is.
   **Keep the three true** when something they describe changes: a new setting on the
   host, a new infra action, a job crossed off. `tests/core/handover-docs.test.ts` fails
   on a link in them that leads nowhere, and on anything in them shaped like a key.
+- **`LAUNCH.md` is the go-live checklist**, for Ash and whichever AI she works with. Its
+  first section is written to that AI, and `AGENTS.md` sends any agent that does not read
+  this file here and to it. Tick an item, with the date, in the pull request that
+  finishes it, and keep it in step with the go-live list in the back end: that screen is
+  what it defers to.
 - **`docs/starter` is written by a script.** The drafts the back end starts with (the
   how-to sheets, the plans, the policies, the questions, the compliance list, the lines
   of the budget) are data in `lib/backstage/plans/starter`. `npm run docs:export` writes

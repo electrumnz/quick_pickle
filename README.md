@@ -10,13 +10,15 @@ online: the shop, and the back end that runs it.
   the shop. Accounting is the one thing it leaves to Xero.
 
 It is **not launched**. The checkout runs in Stripe's test mode and nobody can be
-charged. [TODO.md](TODO.md) says what stands between this and taking money.
+charged. [LAUNCH.md](LAUNCH.md) is the checklist of what stands between this and
+taking money, in order.
 
 ## Which page to read
 
 | If you are                          | Read                                                                            |
 | :---------------------------------- | :------------------------------------------------------------------------------ |
 | Taking the business on              | [HANDOVER.md](HANDOVER.md). Start there                                         |
+| Getting it ready to launch          | [LAUNCH.md](LAUNCH.md): the go-live checklist, for you and your AI helper       |
 | Moving the accounts to a new owner  | [docs/ACCOUNTS.md](docs/ACCOUNTS.md)                                            |
 | Running the shop day to day         | The how-to sheets: [docs/starter](docs/starter/README.md)                       |
 | Deciding what the site may say      | [legal/COPY-RULES.md](legal/COPY-RULES.md)                                      |
