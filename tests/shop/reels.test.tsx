@@ -24,7 +24,8 @@ describe("the strip of films", () => {
     expect(html.match(/<video\b/g)).toHaveLength(MEDIA.reels.length);
     for (const reel of MEDIA.reels) {
       expect(html).toContain(`poster="${reel.src}-poster.webp"`);
-      expect(html).toContain(`>${reel.caption}</figcaption>`);
+      // One film is a feature, with its caption among the words beside it.
+      expect(html).toContain(`>${reel.caption}</p>`);
     }
     // Muted, looping and inline: nothing plays a sound at anybody.
     expect(html).not.toMatch(/<video(?![^>]*\bmuted\b)/);

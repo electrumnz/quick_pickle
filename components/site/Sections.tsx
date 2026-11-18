@@ -408,38 +408,84 @@ export function MeetLucky() {
 }
 
 /**
- * The swipeable rail of clips. Not rendered until there is a clip to show.
- * While a film made with AI is in it, a line under it says so.
+ * The films. Not rendered until there is one to show. While a film made
+ * with AI is in it, a line under the words says so.
+ *
+ * One film is a feature: the words and the film side by side on a wide
+ * screen, one above the other on a phone. A narrow card alone in the middle
+ * of a wide band looked lost (Sam, 18 November 2026). More than one is the
+ * swipeable rail.
  */
 export function ReelsSection() {
   const { reels } = MEDIA;
-  if (reels.length === 0) return null;
+  const [first] = reels;
+  if (first === undefined) return null;
   const aiNote = reels.some((reel) => reel.people === true)
     ? REELS.notRealPeople
     : reels.some((reel) => reel.madeWithAi === true)
       ? REELS.madeWithAi
       : null;
+  const note =
+    aiNote === null ? null : (
+      <p className="text-navy-muted text-[0.9375rem] leading-snug">{aiNote}</p>
+    );
+  const heading = (
+    <>
+      <p className="label text-pink-deep text-[1.2rem]">{REELS.eyebrow}</p>
+      <h2
+        id="reels-title"
+        className="varsity mt-2 text-[clamp(2.6rem,13vw,4.75rem)] leading-[0.95]"
+      >
+        {REELS.title}
+      </h2>
+    </>
+  );
+
+  if (reels.length === 1) {
+    return (
+      <section
+        aria-labelledby="reels-title"
+        className="bg-olive-wash border-navy overflow-hidden border-y-[3px] py-14 md:py-24"
+      >
+        <div className="max-w-page-gutters px-gutter mx-auto md:grid md:grid-cols-2 md:items-center md:gap-14">
+          <div data-reveal>
+            {heading}
+            <p className="label mt-4 text-[1.45rem] leading-tight md:text-[1.7rem]">
+              {first.caption}
+            </p>
+            <div className="mt-6 hidden md:block">{note}</div>
+          </div>
+          <div
+            data-reveal
+            className="mx-auto mt-8 w-[72vw] max-w-[19rem] md:mt-0 md:w-[22rem] md:max-w-full md:rotate-[1.5deg] lg:w-[24rem]"
+          >
+            <div className="border-navy shadow-hard bg-navy overflow-hidden rounded-[20px] border-[3px]">
+              <LoopVideo
+                media={first}
+                playAt={0.5}
+                className="aspect-[9/16] h-auto w-full object-cover"
+              />
+            </div>
+          </div>
+          <div className="mt-6 text-center md:hidden">{note}</div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
       aria-labelledby="reels-title"
       className="bg-olive-wash border-navy overflow-hidden border-y-[3px] py-14 md:py-20"
     >
       <div className="max-w-page-gutters px-gutter mx-auto" data-reveal>
-        <p className="label text-pink-deep text-[1.2rem]">{REELS.eyebrow}</p>
-        <h2
-          id="reels-title"
-          className="varsity mt-2 text-[clamp(2.6rem,13vw,4.75rem)] leading-[0.95]"
-        >
-          {REELS.title}
-        </h2>
+        {heading}
       </div>
       <div className="mt-8">
         <Reels reels={reels} label={REELS.title} />
       </div>
-      {aiNote === null ? null : (
-        <p className="max-w-page-gutters px-gutter text-navy-muted mx-auto mt-6 text-[0.9375rem] leading-snug">
-          {aiNote}
-        </p>
+      {note === null ? null : (
+        <div className="max-w-page-gutters px-gutter mx-auto mt-6">{note}</div>
       )}
     </section>
   );
@@ -501,15 +547,19 @@ export function Faq({ offer }: { readonly offer: Offer }) {
       aria-labelledby="faq-title"
       className="bg-cream px-gutter scroll-mt-16 py-16 md:py-24"
     >
-      <div className="mx-auto max-w-[46rem]">
+      {/* On a wide screen the heading stands beside the questions, on the
+          page's two edges like every other section. It used to sit in a
+          narrow column of its own in the middle (desktop look, 18 November
+          2026). */}
+      <div className="max-w-page mx-auto lg:grid lg:grid-cols-[0.8fr_1.2fr] lg:items-start lg:gap-14">
         <h2
           id="faq-title"
           data-reveal
-          className="varsity text-[clamp(2.6rem,13vw,4.75rem)] leading-[0.95]"
+          className="varsity text-[clamp(2.6rem,13vw,4.75rem)] leading-[0.95] lg:sticky lg:top-28"
         >
           {FAQ.title}
         </h2>
-        <div className="mt-8 flex flex-col gap-3.5">
+        <div className="mt-8 flex flex-col gap-3.5 lg:mt-0">
           {items.map((item) => (
             <details
               key={item.q}
