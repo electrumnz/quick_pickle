@@ -12,7 +12,6 @@ import {
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { execute } from "@/lib/backstage/core/op";
 import { listPages } from "@/lib/backstage/pages/ops";
-import { shopFilms } from "@/lib/backstage/shop/films";
 import { shopTopLine } from "@/lib/backstage/shop/top-line";
 import { siteUrl } from "@/lib/site";
 
@@ -36,12 +35,10 @@ export default async function PagesPage({
   const staff = await requireStaff();
   const { notice, tone } = await searchParams;
   const caller = await staffCaller();
-  const [rows, topLine, films] = await Promise.all([
+  const [rows, topLine] = await Promise.all([
     execute(listPages, {}, caller),
     execute(shopTopLine, {}, caller),
-    execute(shopFilms, {}, caller),
   ]);
-  const filmsOn = films.films.filter((film) => film.on);
   const canWrite = staff.role !== "viewer";
   const site = siteUrl();
 
@@ -130,25 +127,6 @@ export default async function PagesPage({
           >
             <span className="cap-trim">
               {canWrite ? "Change the line" : "See the line"}
-            </span>
-          </Link>
-        </p>
-      </Panel>
-
-      <Panel title="Films on the shop" className="mt-6">
-        <p className="leading-snug">
-          The promo films can play on the front page, in a strip of their own.{" "}
-          {filmsOn.length === 0
-            ? "None is on the shop."
-            : `The shop is playing ${filmsOn.map((film) => film.name).join(", ")}.`}
-        </p>
-        <p className="mt-4">
-          <Link
-            href="/backstage/marketing/pages/films"
-            className="bk-btn bk-btn-quiet"
-          >
-            <span className="cap-trim">
-              {canWrite ? "Watch them and choose" : "See the films"}
             </span>
           </Link>
         </p>

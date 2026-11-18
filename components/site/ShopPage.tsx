@@ -14,7 +14,6 @@ import {
 } from "@/components/site/Sections";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { StickyBuyBar } from "@/components/site/StickyBuyBar";
-import { filmsForPage } from "@/lib/shop/films-now";
 import { offerForPage } from "@/lib/shop/offer-now";
 import { specialForPage } from "@/lib/shop/special-now";
 import { topLineForPage } from "@/lib/shop/top-line-now";
@@ -28,7 +27,7 @@ import { topLineForPage } from "@/lib/shop/top-line-now";
  *   shop       pick a pack, put it in the jar
  *   truths     the three things we can stand behind
  *   ritual     where it fits in a game day
- *   reels      the films, once one is switched on in the back end
+ *   reels      the film: the sour face, seen (content/media.ts)
  *   lucky      who is asking
  *   crew       not ready to buy? stay close
  *   faq        the fair questions
@@ -70,9 +69,6 @@ export async function ShopPage({
   // The line across the top is the site's own unless the back end has
   // published another (null is the site's own).
   const topLine = line ?? (await topLineForPage());
-  // The films somebody has watched and put on the shop. Usually none, and
-  // then the strip is not drawn at all.
-  const films = await filmsForPage();
   return (
     <>
       <TopTicker special={special} lines={topLine} />
@@ -88,7 +84,7 @@ export async function ShopPage({
         <Shop offer={offer} special={special} />
         <Truths />
         <Ritual />
-        <ReelsSection films={films} />
+        <ReelsSection />
         <MeetLucky />
         <Crew />
         <Faq offer={offer} />

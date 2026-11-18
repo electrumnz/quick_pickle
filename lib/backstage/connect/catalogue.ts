@@ -82,7 +82,6 @@ import * as plansQuestions from "../plans/questions";
 import * as plansStarterLoad from "../plans/starter/load";
 import * as plansTasks from "../plans/tasks";
 import * as shopOps from "../shop/ops";
-import * as shopFilms from "../shop/films";
 import * as shopTopLine from "../shop/top-line";
 import * as staffOps from "../staff/ops";
 import * as stockBatchStates from "../stock/batch-states";
@@ -142,7 +141,6 @@ const MODULES: readonly Readonly<Record<string, unknown>>[] = [
   plansStarterLoad,
   plansTasks,
   shopOps,
-  shopFilms,
   shopTopLine,
   staffOps,
   stockBatchStates,
@@ -235,7 +233,6 @@ export const SYSTEM_ONLY: ReadonlySet<string> = new Set([
   "promoCodes.crewWelcome",
   "reviews.submit",
   "shop.topLineNow",
-  "shop.filmsNow",
   "specials.current",
   "specials.worth",
   // Who can sign in. People only, and owners at that.
@@ -292,9 +289,6 @@ export const PEOPLE_ONLY: Readonly<Record<string, string>> = {
   "specials.switchOn": "under Marketing, Promo codes, Specials",
   "shop.publishTopLine":
     "under Marketing, Landing pages, The line across the top",
-  // The films are only seen by playing them, and a bot cannot watch for
-  // the person saying yes.
-  "shop.showFilms": "under Marketing, Landing pages, Films on the shop",
 };
 
 /**
