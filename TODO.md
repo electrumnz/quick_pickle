@@ -174,14 +174,24 @@ stays up throughout.
 - [ ] **Vercel's free plan is not for a business taking money.** At launch: Vercel Pro
       (US$20 a month), or move hosting to Cloudflare. Decide then.
 - [ ] **Point the domain at the shop.** `quickpickle.co.nz` is Ash's, registered at 1st
-      Domains. `add-domain` was asked for on 18 November 2026. What is left, in order:
-      Ash adds the two DNS records that run printed
-      ([docs/ACCOUNTS.md](docs/ACCOUNTS.md) says where, screen by screen, under "The
-      shop's own domain"); once `status` says the name is answering, `use-domain` with
-      `redeploy`; then `LIVE_SITE` in `lib/backstage/plans/starter/export.ts` with
-      `npm run docs:export`; everybody connects their Claude again; and email (above)
-      can be set up, because Resend wants the domain. Nothing else is needed from the
-      registrar for the shop: not its web hosting, its database or its storage.
+      Domains. `add-domain` ran on 18 November 2026 and the name is on the site, waiting
+      for its DNS. What is left, in order: Ash adds the two DNS records
+      ([docs/ACCOUNTS.md](docs/ACCOUNTS.md) has them, and where they go screen by
+      screen, under "The shop's own domain"); once `status` says the name is answering,
+      `use-domain` with `redeploy`; then `LIVE_SITE` in
+      `lib/backstage/plans/starter/export.ts` with `npm run docs:export`; everybody
+      connects their Claude again; and email (above) can be set up, because Resend
+      wants the domain. Nothing else is needed from the registrar for the shop: not its
+      web hosting, its database or its storage.
+- [ ] **Have the database backed up before it holds real orders.** Supabase's own pages
+      say it backs up projects on its paid plans every day, and that a project on the
+      free plan is not backed up for you and can be paused when it is quiet. Nothing in
+      the repository says which plan this project is on, and the infra run does not
+      print it: look in Supabase, the organisation's Billing page. If it is the free
+      plan, the orders, the customers and every file the back end keeps exist in one
+      place only. Before the shop takes money, move the organisation to the paid plan
+      ([Supabase: database backups](https://supabase.com/docs/guides/platform/backups)),
+      and check afterwards that the project's Backups page lists one.
 - [ ] **Open the site to search at launch.** It happens on its own when the last open fact
       is confirmed. An owner does that on the go-live list, for all seven: prices, delivery,
       the ship date, the contact address, the fine print, what the label says and who the
