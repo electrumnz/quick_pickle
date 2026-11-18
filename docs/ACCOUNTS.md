@@ -216,7 +216,7 @@ are missing:
 | `MAIL_FROM`             | The address email is sent from, on a domain Resend has checked |
 | `RESEND_WEBHOOK_SECRET` | Mail arriving in the inbox, and hearing about bounces          |
 | `MAIL_TOKEN_SECRET`     | A reply address of its own for each conversation               |
-| `NEXT_PUBLIC_SITE_URL`  | The shop's own domain, once there is one                       |
+| `NEXT_PUBLIC_SITE_URL`  | The address the shop calls itself by. Made by `add-domain`     |
 
 `TODO.md` has the steps for email and the inbox, in order.
 
@@ -239,11 +239,53 @@ setting needs a written yes.
 | `disconnect-clock`  | Stops the clock                                                                       |
 | `limits-off`        | Switches off the checkout's limit on asks from one address                            |
 | `limits-on`         | Switches it back on                                                                   |
+| `add-domain`        | Puts a domain on the site and says which DNS records to add at the registrar          |
+| `use-domain`        | Makes that domain the address the shop calls itself by, once it is answering          |
+| `leave-domain`      | The way back: the shop calls itself by the host's own address again                   |
 | `redeploy`          | Builds the live site again so a changed setting takes effect                          |
 
 Some can be started by hand from GitHub's Actions tab. All of them can be asked for in a
 commit, by changing `.github/infra-request.json`, which is how Claude does it: the
 request is then reviewed and merged like any other change.
+
+## The shop's own domain
+
+Not bought yet, as far as this file knows. It is the business's name on the internet, so
+it should be registered to the business, in an account Ash holds.
+
+**What to buy.** The name, and nothing else. Any registrar will do. For a `.nz` or
+`.co.nz` name, [1st Domains](https://1stdomains.nz/) is one: on 18 November 2026 its
+pricing page listed either at $24.50 plus GST for the first year, on a sale it said ended
+30 November, and $39.50 plus GST a year after that. Check the page: prices move.
+
+**What not to buy.** A registrar's web hosting is for WordPress and PHP sites and cannot
+run this one, which is a different kind of site with its own back end and database. The
+site stays on its host and the domain is pointed at it. A registrar's email hosting is
+not needed either: the shop sends its own email and has its own inbox once Resend is
+connected (`TODO.md` has the steps). The free forwarding that comes with a domain is
+enough for a personal address in the meantime.
+
+**Connecting it.** Three steps, and only the middle one is yours.
+
+1. Tell Claude the name. It asks for `add-domain`, which puts the name on the site and
+   answers with two DNS records.
+2. Add those two records where the domain's DNS is kept: at the registrar, on the
+   domain's DNS page. If the registrar has put a parking page on the name, its records
+   for the same two hosts have to be removed, or the two fight. It can take from a few
+   minutes to a day to spread.
+3. Claude asks for `status` until the name is answering, then for `use-domain`. From
+   then the shop's links, its emails and its QR codes use the new name.
+
+Three things to know.
+
+- **Keep it paid.** If the registration lapses, the name stops working. Turn on
+  auto-renew at the registrar. The site itself goes on answering at the host's own
+  address (`quickpickle.vercel.app` today), and `leave-domain` points the shop's links
+  back at it.
+- **Stripe and the clock do not use the domain**, on purpose. They call the host's own
+  address, so a mistake in the DNS can never stop a payment being recorded.
+- **Everybody connects their Claude again** after `use-domain`. A connection is good for
+  one address.
 
 ## Claude's own environment
 

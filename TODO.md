@@ -173,7 +173,17 @@ stays up throughout.
       panel lists whose orders they are.
 - [ ] **Vercel's free plan is not for a business taking money.** At launch: Vercel Pro
       (US$20 a month), or move hosting to Cloudflare. Decide then.
-- [ ] **A domain.**
+- [ ] **A domain.** Buy the name only: a registrar's web hosting cannot run this site,
+      and its email hosting is not needed. Register it to the business. Then two commits
+      to `.github/infra-request.json`, each naming it: `add-domain`, which answers with
+      the two DNS records to add at the registrar, and once `status` says the name is
+      answering, `use-domain` with `redeploy`. After that: `LIVE_SITE` in
+      `lib/backstage/plans/starter/export.ts` with `npm run docs:export`, everybody
+      connects their Claude again, and email (above) can be set up, because Resend wants
+      the domain. [docs/ACCOUNTS.md](docs/ACCOUNTS.md) has it under "The shop's own
+      domain". On 18 November 2026 `quickpickle.co.nz` was already registered by
+      somebody and parked at 1st Domains: find out whether that is the business's before
+      choosing another name.
 - [ ] **Open the site to search at launch.** It happens on its own when the last open fact
       is confirmed. An owner does that on the go-live list, for all seven: prices, delivery,
       the ship date, the contact address, the fine print, what the label says and who the

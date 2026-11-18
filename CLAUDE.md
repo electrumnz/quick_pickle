@@ -1257,6 +1257,45 @@ Production today: the app has its own database login (`qp_app`, made by `connect
 through the pooler in transaction mode) as `DATABASE_URL`, so it owns its tables;
 `BACKSTAGE_SETUP_CODE` was made by `ensure-setup-code` and can be read in Vercel's settings.
 
+### The shop's own domain
+
+The site answers at two kinds of address, and `scripts/infra/domain.mjs` says which is
+for whom.
+
+- **The host's own address** (`quickpickle.vercel.app`) is for machines. Stripe's news of
+  a payment and the database's clock both call it, and go on calling it whatever domain
+  the shop is given, so no DNS of ours can stop a payment being recorded or the clock
+  being rung. **Never set it to send people on to the domain:** a machine that is
+  redirected gives up. `status` says so if it ever is.
+- **The domain is for people**, and it is connected in two commits to
+  `.github/infra-request.json`, each naming it (`"domain": "example.co.nz"`).
+  `add-domain` puts the name on the project, with `www.` beside it sending people on to
+  it, and prints the DNS records a person adds at the registrar. Once `status` says the
+  name is answering, `use-domain` makes it the address the shop calls itself by.
+  `leave-domain` is the way back. Each of those two is followed by `redeploy`, because
+  the address is built into the site.
+- **The address the shop calls itself by is held, never left to the host.** `add-domain`
+  sets `NEXT_PUBLIC_SITE_URL` to the host's own address before the name goes on the
+  project. Left alone, the host names a new domain as the project's address at the next
+  deployment, before one record points at it, and every link in an email and every
+  return from Stripe would lead to a registrar's parking page.
+- **`use-domain` moves nothing until the shop answers at the name:** the host has to say
+  its DNS is right, and the front page has to come back from it when asked as a visitor
+  would ask.
+- A new address ends every Claude connection, because a key is good for one address:
+  people connect again. `LIVE_SITE` in `lib/backstage/plans/starter/export.ts` follows
+  it, with `npm run docs:export`. QR codes printed before it still lead to the host's
+  own address, which goes on working.
+- **A domain's name is only ever taken from a commit.** The form that starts the
+  workflow by hand has no box for one, and `tests/infra/domain.test.ts` holds it there,
+  with the order above.
+- Only the name is bought at a registrar. A registrar's web hosting (PHP, WordPress)
+  cannot run this site, and its email hosting is not needed: the shop sends and reads
+  its own mail through Resend.
+- None of this could be tried against the host from a session: only the workflow on
+  `main` holds the token. The first real `add-domain` is the test of what the host
+  answers, so read its log before believing it.
+
 The site is not launched. See `TODO.md` for what stands between this and taking money.
 
 ## History
