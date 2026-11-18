@@ -1225,9 +1225,12 @@ repository is his: "Whose it is", near the top, says what holds after.
 
 Quick Pickle has its own free Vercel account and its own Supabase organisation, both
 apart from Keece. Production needs `DATABASE_URL` or `POSTGRES_URL` (Production
-environment only) and `BACKSTAGE_SETUP_CODE`. Vercel's free plan does not allow a business
-that takes money, so launch means either Vercel Pro or moving hosting to Cloudflare: keep
-the app free of Vercel-only services in its core paths so that move stays cheap.
+environment only) and `BACKSTAGE_SETUP_CODE`. Vercel's terms keep its free plan to
+"personal or non-commercial use" and let it switch a free project off without notice (read
+18 November 2026). The line is a shop open to the public, not the first sale. So before
+launch it is either Vercel Pro or moving hosting to Cloudflare, and `TODO.md` sets the two
+side by side: keep the app free of Vercel-only services in its core paths so that move
+stays as small as it can be.
 
 ### The repository's own hands
 

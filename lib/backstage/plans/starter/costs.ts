@@ -101,7 +101,7 @@ export const STARTER_COSTS: readonly StarterCost[] = [
     name: "Hosting and database",
     basis: "month",
     notes:
-      "What the site's hosting and database cost a month once they are on a plan that allows taking money.",
+      "What the site's hosting and database cost a month once they are on the plans a live shop needs.",
   },
   {
     key: "email",

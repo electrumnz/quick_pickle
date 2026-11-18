@@ -41,7 +41,7 @@ A percentage of everything the customer pays, delivery included.
 
 Paid every month whether anything sells or not.
 
-- **Hosting and database.** What the site's hosting and database cost a month once they are on a plan that allows taking money.
+- **Hosting and database.** What the site's hosting and database cost a month once they are on the plans a live shop needs.
 - **Email service.** The monthly charge for sending and receiving the business's email, if there is one.
 - **Domain name.** The yearly cost of the domain name, divided by 12.
 - **Accounting software.** The monthly cost of Xero, or whatever keeps the books.

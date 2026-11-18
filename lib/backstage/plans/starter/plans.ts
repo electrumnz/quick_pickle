@@ -282,7 +282,7 @@ const launchChecklist: StarterDocument = {
 26. [ ] A courier account, for real rates and pick-ups.
 27. [ ] Xero set up, and an accountant who knows it is coming.
 28. [ ] Insurance: ask a broker. It is not required by law, but some events and stockists ask for it.
-29. [ ] A hosting plan that allows a business to take money. The site's host does not on its free plan: move to its paid plan, or to another host, before the first real sale. Ask whoever looks after the site.
+29. [ ] A hosting plan that is meant for a business. The site's host keeps its free plan for personal projects: move to its paid plan, or to another host, before the shop opens to the public. Ask whoever looks after the site.
 30. [ ] Your own login to the back end, if you do not have one. The first owner is made once, with the set-up code: ask whoever looks after the site.
 
 ## 6. Make the first batch

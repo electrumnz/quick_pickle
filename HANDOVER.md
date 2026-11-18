@@ -116,7 +116,9 @@ In rough order. Each is spelt out in [TODO.md](TODO.md).
    two records Claude hands you: [docs/ACCOUNTS.md](docs/ACCOUNTS.md) has it, screen by
    screen, under "The shop's own domain". The shop needs nothing else from the registrar.
 4. Make a Resend account for the domain and connect email, so receipts are really sent.
-5. Move the hosting off Vercel's free plan. It is not for a business that takes money.
+5. Move the hosting off Vercel's free plan before the shop opens to the public. That plan
+   is for personal projects, not a business's shop. It is US$20 a month to stay with
+   Vercel, or US$5 at Cloudflare with the site moved and tested again.
 6. Retire the PIN, as under Getting in above.
 7. Make one test purchase yourself, start to finish. Stripe's payment page will not let
    a robot press Pay, so it is the one step nobody has watched work end to end.

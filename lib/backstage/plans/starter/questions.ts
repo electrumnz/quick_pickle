@@ -464,7 +464,7 @@ const TOPICS: readonly Topic[] = [
       {
         key: "hosting-plan",
         question: "Vercel Pro, or move the hosting to Cloudflare?",
-        why: "The free hosting plan is not for a business that takes money. One or the other has to be in place on the day the checkout goes live.",
+        why: "The free hosting plan is for personal projects, not a business's shop. One or the other has to be in place before the shop opens to the public. In November 2026 Vercel Pro was US$20 a month with nothing to move, and Cloudflare US$5 a month with the site moved and tested again.",
         askOf: SAM,
         source: "To-do list",
         blocksLaunch: true,
