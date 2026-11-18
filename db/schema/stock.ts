@@ -39,6 +39,12 @@ export const batches = pgTable(
     /** What is printed on the bottle: "B001". */
     code: text().notNull(),
     name: text().notNull(),
+    /**
+     * The flavour in its bottles (a key from content/offer.ts). An order's
+     * shots of a flavour only ever come from a batch of that flavour. Every
+     * batch from before there were two flavours was the first.
+     */
+    flavour: text().notNull().default("original"),
     status: text().$type<BatchStatus>().notNull().default("planned"),
     /** New Zealand calendar dates. */
     madeOn: date({ mode: "string" }),

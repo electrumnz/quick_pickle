@@ -367,5 +367,12 @@ export const MIGRATIONS: readonly Migration[] = [
     "statements": [
       "ALTER TABLE \"order_lines\" ADD COLUMN \"flavour\" text DEFAULT 'original' NOT NULL;"
     ]
+  },
+  {
+    "tag": "0015_batch_flavour",
+    "hash": "0903c8ba46fdf2fa",
+    "statements": [
+      "ALTER TABLE \"batches\" ADD COLUMN \"flavour\" text DEFAULT 'original' NOT NULL;"
+    ]
   }
 ];

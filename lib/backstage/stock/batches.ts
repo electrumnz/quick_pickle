@@ -38,6 +38,7 @@ import {
   isGoodOn,
   todayKey,
 } from "./dates";
+import { flavourName, flavourSchema, namesFlavours } from "./flavours";
 import {
   batchCodeSchema,
   centsSchema,
@@ -74,6 +75,8 @@ export type BatchSummary = {
   /** What is printed on the bottle: "B001". */
   readonly code: string;
   readonly name: string;
+  /** The flavour in its bottles (a key from content/offer.ts). */
+  readonly flavour: string;
   readonly status: BatchStatus;
   /** The day it was made. For a planned batch, the day it is planned for. */
   readonly madeOn: string | null;
@@ -97,7 +100,7 @@ export const listBatches = defineOp({
   name: "stock.listBatches",
   title: "List batches",
   description:
-    "Batches, newest first, each with its state (planned, made, released, closed or recalled), its dates and how many shots are on hand, worked out from its movements. `status` narrows to one state. Use stock.picture for what is ready to sell right now.",
+    "Batches, newest first, each with its flavour, its state (planned, made, released, closed or recalled), its dates and how many shots are on hand, worked out from its movements. `status` narrows to one state. Use stock.picture for what is ready to sell right now.",
   access: "read",
   input: z.object({
     status: z.enum([...BATCH_STATUSES, "all"]).default("all"),
@@ -109,6 +112,7 @@ export const listBatches = defineOp({
         id: batches.id,
         code: batches.code,
         name: batches.name,
+        flavour: batches.flavour,
         status: batches.status,
         madeOn: batches.madeOn,
         bestBefore: batches.bestBefore,
@@ -282,6 +286,7 @@ export const getBatch = defineOp({
       id: batch.id,
       code: batch.code,
       name: batch.name,
+      flavour: batch.flavour,
       status: batch.status,
       madeOn: batch.madeOn,
       bestBefore: batch.bestBefore,
@@ -351,9 +356,11 @@ export const planBatch = defineOp({
   name: "stock.planBatch",
   title: "Plan a batch",
   description:
-    "Puts a new batch on the list as planned: a code (what will be printed on the bottle; the next in the B001 run if none is given), a name, and if known the day it is planned for and how many shots it should make. Nothing goes into stock until stock.recordMade says it was made.",
+    "Puts a new batch on the list as planned: its flavour (a batch is one flavour, and orders of that flavour are filled from it), a code (what will be printed on the bottle; the next in the B001 run if none is given), a name, and if known the day it is planned for and how many shots it should make. Nothing goes into stock until stock.recordMade says it was made.",
   access: "write",
   input: z.object({
+    /** The flavour it will be. Never assumed: it is what a recall goes by. */
+    flavour: flavourSchema,
     code: batchCodeSchema.optional(),
     name: batchName.optional(),
     /** The day it is planned for, as a New Zealand date. */
@@ -372,6 +379,7 @@ export const planBatch = defineOp({
         id,
         code,
         name,
+        flavour: input.flavour,
         status: "planned",
         madeOn: input.plannedFor ?? null,
         shotsPlanned: input.shotsPlanned ?? null,
@@ -393,9 +401,10 @@ export const planBatch = defineOp({
     ].filter((part) => part !== null);
     await ctx.audit({
       entity: { type: "batch", id },
-      summary: `Planned batch ${code}${name === `Batch ${code}` ? "" : ` (${name})`}${details.length === 0 ? "" : `: ${details.join(", ")}`}`,
+      summary: `Planned batch ${code}${name === `Batch ${code}` ? "" : ` (${name})`}${namesFlavours([input.flavour]) ? ` of ${flavourName(input.flavour)}` : ""}${details.length === 0 ? "" : `: ${details.join(", ")}`}`,
       data: {
         code,
+        flavour: input.flavour,
         plannedFor: input.plannedFor ?? null,
         shotsPlanned: input.shotsPlanned ?? null,
       },
@@ -408,12 +417,13 @@ export const updateBatch = defineOp({
   name: "stock.updateBatch",
   title: "Change a batch's details",
   description:
-    "Corrects a batch's name, dates, cost, notes or production record. Only what is given changes. The code can be changed until the batch is released; the planned number of shots only while it is still planned (after that the count is corrected with stock.adjustCount). `madeOn` is the planned day while a batch is planned and the day it was made afterwards. The best-before date can be corrected at any time but not cleared once the batch is released. Once a batch is recalled only its notes can be changed. It does not move the batch from one state to another. Once a batch has been made, its dates are for a person to correct: a bot is refused.",
+    "Corrects a batch's name, flavour, dates, cost, notes or production record. Only what is given changes. The flavour can be changed only while the batch is still planned. The code can be changed until the batch is released; the planned number of shots only while it is still planned (after that the count is corrected with stock.adjustCount). `madeOn` is the planned day while a batch is planned and the day it was made afterwards. The best-before date can be corrected at any time but not cleared once the batch is released. Once a batch is recalled only its notes can be changed. It does not move the batch from one state to another. Once a batch has been made, its dates are for a person to correct: a bot is refused.",
   access: "write",
   input: z.object({
     code: batchCodeSchema,
     newCode: batchCodeSchema.optional(),
     name: batchName.optional(),
+    flavour: flavourSchema.optional(),
     madeOn: dateKeySchema.nullable().optional(),
     bestBefore: dateKeySchema.nullable().optional(),
     shotsPlanned: shotsSchema.nullable().optional(),
@@ -441,6 +451,19 @@ export const updateBatch = defineOp({
 
     const name = input.name ?? batch.name;
     if (name !== batch.name) changed.push("name");
+
+    // What is in the bottles is settled once they are made.
+    const flavour = input.flavour ?? batch.flavour;
+    if (flavour !== batch.flavour) {
+      if (!planned) {
+        throw conflict(
+          `${batch.code} has been made, so what is in its bottles is settled and its flavour cannot be changed.`,
+        );
+      }
+      changed.push(
+        `flavour ${flavourName(batch.flavour)} to ${flavourName(flavour)}`,
+      );
+    }
 
     const madeOn = input.madeOn === undefined ? batch.madeOn : input.madeOn;
     if (madeOn !== batch.madeOn) {
@@ -559,6 +582,7 @@ export const updateBatch = defineOp({
         .set({
           code,
           name,
+          flavour,
           madeOn,
           bestBefore,
           shotsPlanned,

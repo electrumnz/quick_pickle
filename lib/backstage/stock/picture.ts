@@ -10,6 +10,10 @@
  *   promised   shots in paid orders still waiting to be packed
  *   available  ready less promised: what a new order could really have
  *
+ * Each flavour is its own pool, so all three are also said a flavour at a
+ * time (`flavours`), and a shortage of one is never hidden by plenty of the
+ * other.
+ *
  * Nothing in a batch that is past its date, recalled, closed or not yet
  * released is ever counted as sellable. Alongside the numbers, the things
  * worth acting on, each as a sentence with somewhere to go.
@@ -38,7 +42,14 @@ import {
 } from "./dates";
 import { lowStockAtSchema } from "./inputs";
 import {
+  byFlavour,
+  flavourName,
+  flavourShots,
+  namesFlavours,
+} from "./flavours";
+import {
   onHandSql,
+  promisedByFlavour,
   promisedShots,
   readyShots,
   shotsText,
@@ -51,6 +62,7 @@ export type PictureBatch = {
   readonly id: string;
   readonly code: string;
   readonly name: string;
+  readonly flavour: string;
   readonly status: BatchStatus;
   readonly bestBefore: string | null;
   /** Days until the best-before date. Negative once it has passed. */
@@ -77,6 +89,20 @@ export type AttentionItem = {
   readonly href: string;
 };
 
+/** One flavour's pool. */
+export type FlavourStock = {
+  readonly flavour: string;
+  /** "Mango Chilli Lime". */
+  readonly name: string;
+  /** False until a batch of this flavour has been recorded as made. */
+  readonly tracking: boolean;
+  readonly ready: number;
+  readonly promised: number;
+  readonly available: number;
+  /** True when this flavour is counted and what is available is under `lowStockAt`. */
+  readonly low: boolean;
+};
+
 export type StockPicture = {
   /**
    * False until a batch has been recorded as made. Before that no shots are
@@ -92,6 +118,13 @@ export type StockPicture = {
   readonly promised: number;
   /** Ready less promised, never below nothing: what is really free to sell. */
   readonly available: number;
+  /**
+   * The same a flavour at a time, in the catalogue's order: every flavour
+   * that has a batch or a promise. Each is its own pool.
+   */
+  readonly flavours: readonly FlavourStock[];
+  /** True when there is more than one flavour in play, so sentences name them. */
+  readonly namesFlavours: boolean;
   /** Released batches, earliest best-before date first, past-date ones too. */
   readonly byBatch: readonly PictureBatch[];
   /** Shots still on hand in released batches that are past their date. */
@@ -108,7 +141,7 @@ export type StockPicture = {
    */
   readonly nearBestBefore: readonly PictureBatch[];
   readonly nearDays: number;
-  /** True when what is available is under `lowStockAt`. */
+  /** True when what is available of any counted flavour is under `lowStockAt`. */
   readonly low: boolean;
   readonly lowStockAt: number;
   /** Materials at or under their reorder level. */
@@ -139,7 +172,7 @@ export const stockPicture = defineOp({
   name: "stock.picture",
   title: "See what is in stock",
   description:
-    "The stock picture in one call. `ready` is shots on hand in batches that are released and still within their best-before date; `promised` is shots in paid orders waiting to be packed; `available` is the first less the second, which is what can really still be sold. Also: each released batch with its shots, shots on hand that are past their date (never sellable), shots made but not yet released, batches at or near their best-before date (`nearDays`, 30 unless given), materials to reorder, purchase orders that are overdue, and orders that went out with no batch recorded. `attention` is the same things as sentences with a link each, most pressing first: show those where someone will see them. `tracking` is false until a first batch has been recorded as made.",
+    "The stock picture in one call. `ready` is shots on hand in batches that are released and still within their best-before date; `promised` is shots in paid orders waiting to be packed; `available` is the first less the second, which is what can really still be sold. Each flavour is its own pool: `flavours` says the same three a flavour at a time, and that is what to go by for whether an order of one flavour can be met. Also: each released batch with its shots, shots on hand that are past their date (never sellable), shots made but not yet released, batches at or near their best-before date (`nearDays`, 30 unless given), materials to reorder, purchase orders that are overdue, and orders that went out with no batch recorded. `attention` is the same things as sentences with a link each, most pressing first: show those where someone will see them. `tracking` is false until a first batch has been recorded as made.",
   access: "read",
   input: z.object({
     nearDays: z.number().int().min(0).max(365).default(NEAR_BEST_BEFORE_DAYS),
@@ -153,6 +186,7 @@ export const stockPicture = defineOp({
       id: string;
       code: string;
       name: string;
+      flavour: string;
       bestBefore: string | null;
       onHand: number;
       status: BatchStatus;
@@ -160,6 +194,7 @@ export const stockPicture = defineOp({
       id: row.id,
       code: row.code,
       name: row.name,
+      flavour: row.flavour,
       status: row.status,
       bestBefore: row.bestBefore,
       daysToBestBefore:
@@ -175,6 +210,7 @@ export const stockPicture = defineOp({
         id: batches.id,
         code: batches.code,
         name: batches.name,
+        flavour: batches.flavour,
         status: batches.status,
         bestBefore: batches.bestBefore,
         onHand: onHandSql,
@@ -203,13 +239,42 @@ export const stockPicture = defineOp({
       )
       .sort((a, b) => (a.daysToBestBefore ?? 0) - (b.daysToBestBefore ?? 0));
 
-    const [states] = await ctx.db
+    const states = await ctx.db
       .select({
+        flavour: batches.flavour,
         planned: sql<number>`count(*) filter (where ${batches.status} = 'planned')::int`,
         everMade: sql<number>`count(*) filter (where ${batches.status} <> 'planned')::int`,
       })
-      .from(batches);
-    const tracking = (states?.everMade ?? 0) > 0;
+      .from(batches)
+      .groupBy(batches.flavour);
+    const tracking = states.some((row) => row.everMade > 0);
+    const planned = states.reduce((sum, row) => sum + row.planned, 0);
+
+    // A flavour at a time: every flavour with a batch or a promise.
+    const promisedOf = await promisedByFlavour(ctx.db);
+    const keys = [
+      ...new Set([...states.map((row) => row.flavour), ...promisedOf.keys()]),
+    ].sort(byFlavour);
+    const flavours: FlavourStock[] = keys.map((flavour) => {
+      const readyOf = byBatch
+        .filter((batch) => batch.flavour === flavour && batch.good)
+        .reduce((sum, batch) => sum + batch.onHand, 0);
+      const promisedHere = promisedOf.get(flavour) ?? 0;
+      const availableOf = Math.max(0, readyOf - promisedHere);
+      const counted = states.some(
+        (row) => row.flavour === flavour && row.everMade > 0,
+      );
+      return {
+        flavour,
+        name: flavourName(flavour),
+        tracking: counted,
+        ready: readyOf,
+        promised: promisedHere,
+        available: availableOf,
+        low: counted && availableOf < input.lowStockAt,
+      };
+    });
+    const sayFlavour = namesFlavours(keys);
 
     const lowMaterials = await ctx.db
       .select({
@@ -265,7 +330,7 @@ export const stockPicture = defineOp({
       : [{ n: 0 }];
     const noBatchRecorded = unrecorded?.n ?? 0;
 
-    const low = tracking && available < input.lowStockAt;
+    const low = flavours.some((flavour) => flavour.low);
     const batchHref = (code: string) => `/backstage/stock/batches/${code}`;
     const attention: AttentionItem[] = [];
     for (const batch of nearBestBefore) {
@@ -276,21 +341,32 @@ export const stockPicture = defineOp({
         href: batchHref(batch.code),
       });
     }
-    if (tracking && promised > ready) {
-      attention.push({
-        kind: "short-for-orders",
-        text: `Orders waiting to be packed need ${shotsText(promised)} and only ${ready.toLocaleString("en-NZ")} ${ready === 1 ? "is" : "are"} ready to sell.`,
-        href: "/backstage/stock/batches",
-      });
-    } else if (low) {
-      attention.push({
-        kind: "low-stock",
-        text:
-          promised === 0
-            ? `Stock is running low: ${shotsText(available)} free to sell.`
-            : `Stock is running low: ${shotsText(available)} free to sell, once the ${promised.toLocaleString("en-NZ")} promised to orders are packed.`,
-        href: "/backstage/stock/batches",
-      });
+    // A flavour at a time: plenty of one never hides a shortage of another.
+    // A flavour with no batch ever made is not being counted yet, so it is
+    // never short and never low.
+    for (const flavour of flavours) {
+      if (!flavour.tracking) continue;
+      const of = sayFlavour ? ` ${flavour.name}` : "";
+      const n = (count: number) =>
+        sayFlavour
+          ? flavourShots(count, flavour.flavour, true)
+          : shotsText(count);
+      if (flavour.promised > flavour.ready) {
+        attention.push({
+          kind: "short-for-orders",
+          text: `Orders waiting to be packed need ${n(flavour.promised)} and only ${flavour.ready.toLocaleString("en-NZ")} ${flavour.ready === 1 ? "is" : "are"} ready to sell.`,
+          href: "/backstage/stock/batches",
+        });
+      } else if (flavour.low) {
+        attention.push({
+          kind: "low-stock",
+          text:
+            flavour.promised === 0
+              ? `${sayFlavour ? `${flavour.name} is` : "Stock is"} running low: ${shotsText(flavour.available)} free to sell.`
+              : `${sayFlavour ? `${flavour.name} is` : "Stock is"} running low: ${shotsText(flavour.available)} free to sell, once the ${flavour.promised.toLocaleString("en-NZ")}${of} promised to orders are packed.`,
+          href: "/backstage/stock/batches",
+        });
+      }
     }
     for (const purchase of purchasesOverdue) {
       attention.push({
@@ -337,11 +413,13 @@ export const stockPicture = defineOp({
       ready,
       promised,
       available,
+      flavours,
+      namesFlavours: sayFlavour,
       byBatch,
       pastDate,
       notReleased,
       waiting,
-      planned: states?.planned ?? 0,
+      planned,
       nearBestBefore,
       nearDays: input.nearDays,
       low,
@@ -363,23 +441,52 @@ export type Availability = {
   readonly promised: number;
   /** Ready less promised, never below nothing. */
   readonly available: number;
+  /** The same a flavour at a time: each flavour is its own pool. */
+  readonly flavours: readonly {
+    readonly flavour: string;
+    readonly name: string;
+    readonly ready: number;
+    readonly promised: number;
+    readonly available: number;
+  }[];
 };
 
 export const stockAvailable = defineOp({
   name: "stock.available",
   title: "See how many shots are free to sell",
   description:
-    "How many shots could still be sold right now: on hand in batches that are released and within their best-before date, less the shots already promised to paid orders waiting to be packed. Packs share one pool of shots, so to ask whether an order can be met, compare its total shots across all its lines with `available`, never one line at a time. The quick answer for anything deciding whether to take an order; stock.picture has the detail. While `tracking` is false no batch has been recorded yet and the numbers are all nothing: that means stock is not being counted, not that the shelf is empty.",
+    "How many shots could still be sold right now: on hand in batches that are released and within their best-before date, less the shots already promised to paid orders waiting to be packed. Each flavour is its own pool, and the packs of a flavour share it, so to ask whether an order can be met, compare its total shots of each flavour across all its lines with that flavour's `available` in `flavours`, never one line at a time. The quick answer for anything deciding whether to take an order; stock.picture has the detail. While `tracking` is false no batch has been recorded yet and the numbers are all nothing: that means stock is not being counted, not that the shelf is empty.",
   access: "read",
   input: z.object({}),
   async run(ctx): Promise<Availability> {
-    const ready = await readyShots(ctx.db, todayKey(ctx.now));
+    const today = todayKey(ctx.now);
+    const ready = await readyShots(ctx.db, today);
     const promised = await promisedShots(ctx.db);
+    const promisedOf = await promisedByFlavour(ctx.db);
+    const counted = await ctx.db
+      .selectDistinct({ flavour: batches.flavour })
+      .from(batches);
+    const keys = [
+      ...new Set([...counted.map((row) => row.flavour), ...promisedOf.keys()]),
+    ].sort(byFlavour);
+    const flavours = [];
+    for (const flavour of keys) {
+      const readyOf = await readyShots(ctx.db, today, flavour);
+      const promisedHere = promisedOf.get(flavour) ?? 0;
+      flavours.push({
+        flavour,
+        name: flavourName(flavour),
+        ready: readyOf,
+        promised: promisedHere,
+        available: Math.max(0, readyOf - promisedHere),
+      });
+    }
     return {
       tracking: await stockIsCounted(ctx.db),
       ready,
       promised,
       available: Math.max(0, ready - promised),
+      flavours,
     };
   },
 });

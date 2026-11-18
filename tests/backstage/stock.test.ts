@@ -150,17 +150,25 @@ function nextOrderNumber(): string {
  */
 async function buy(
   world: World,
-  shots: number | readonly (readonly [shots: number, qty: number])[],
+  shots:
+    | number
+    | readonly (readonly [shots: number, qty: number, flavour?: "mcl"])[],
   over: { test?: boolean; first?: string; pending?: boolean } = {},
 ): Promise<string> {
   const number = nextOrderNumber();
   const first = over.first ?? "Sam";
   const options = world.run();
   // Made-up packs of the sizes the test wants, so nothing here leans on
-  // what the catalogue happens to sell today.
-  const packs = typeof shots === "number" ? [[shots, 1] as const] : shots;
-  const lines = packs.map(([size, qty]) => ({
-    sku: `TEST-${String(size)}`,
+  // what the catalogue happens to sell today. A line of Mango Chilli Lime
+  // carries that flavour's own SKU, which is what the order's line takes
+  // its flavour from.
+  const packs: readonly (readonly [number, number, "mcl"?])[] =
+    typeof shots === "number" ? [[shots, 1]] : shots;
+  const lines = packs.map(([size, qty, flavour]) => ({
+    sku:
+      flavour === "mcl"
+        ? `QP-SHOT-${String(size).padStart(2, "0")}-MCL`
+        : `TEST-${String(size)}`,
     name: packs.length === 1 ? "Test pack" : `Test pack of ${String(size)}`,
     shots: size,
     qty,
@@ -227,13 +235,16 @@ async function makeBatch(
     bestBefore?: string | null;
     upTo?: "planned" | "made" | "released";
     at?: Date;
+    /** The first flavour unless said. */
+    flavour?: string;
   } = {},
 ): Promise<void> {
+  const flavour = options.flavour ?? "original";
   const when = () =>
     options.at === undefined
       ? world.run()
       : { db: world.handle.db, now: options.at };
-  await execute(planBatch, { code }, world.staff, when());
+  await execute(planBatch, { flavour, code }, world.staff, when());
   if (options.upTo === "planned") return;
   await execute(
     recordMade,
@@ -339,7 +350,12 @@ describe("batches, from a plan to the last bottle", () => {
     expect(await execute(suggestBatchCode, {}, viewer, run())).toEqual({
       code: "B001",
     });
-    const first = await execute(planBatch, {}, staff, run());
+    const first = await execute(
+      planBatch,
+      { flavour: "original" },
+      staff,
+      run(),
+    );
     expect(first.code).toBe("B001");
     expect(
       await execute(getBatch, { code: "b001" }, viewer, run()),
@@ -354,6 +370,7 @@ describe("batches, from a plan to the last bottle", () => {
     await execute(
       planBatch,
       {
+        flavour: "original",
         code: "b007",
         name: "Summer run",
         plannedFor: "2026-12-01",
@@ -374,14 +391,19 @@ describe("batches, from a plan to the last bottle", () => {
     });
 
     await expect(
-      execute(planBatch, { code: "B007" }, staff, run()),
+      execute(planBatch, { flavour: "original", code: "B007" }, staff, run()),
     ).rejects.toMatchObject({
       code: "conflict",
       message: "There is already a batch B007. Every batch needs its own code.",
       fields: { code: "B007 is already used" },
     });
     await expect(
-      execute(planBatch, { code: "not a code!" }, staff, run()),
+      execute(
+        planBatch,
+        { flavour: "original", code: "not a code!" },
+        staff,
+        run(),
+      ),
     ).rejects.toMatchObject({ code: "invalid_input" });
     await expect(
       execute(getBatch, { code: "B999" }, viewer, run()),
@@ -543,7 +565,12 @@ describe("batches, from a plan to the last bottle", () => {
 
   it("will not take dates that cannot be right", async () => {
     const { staff, run } = world;
-    await execute(planBatch, { code: "B020" }, staff, run());
+    await execute(
+      planBatch,
+      { flavour: "original", code: "B020" },
+      staff,
+      run(),
+    );
     await expect(
       execute(
         recordMade,
@@ -926,6 +953,15 @@ describe("best-before dates", () => {
       ready: 0,
       promised: 6,
       available: 0,
+      flavours: [
+        {
+          flavour: "original",
+          name: "Original",
+          ready: 0,
+          promised: 6,
+          available: 0,
+        },
+      ],
     });
     expect(
       await execute(orderStock, { number: tomorrow }, viewer, afterMidnight()),
@@ -1294,6 +1330,7 @@ describe("shots on hand", () => {
       threshold: 48,
       because: "sample",
       code: "B001",
+      flavour: "original",
     });
     // Already under: going lower is not news.
     await execute(recordSample, { code: "B001", shots: 5 }, staff, run());
@@ -1320,6 +1357,7 @@ describe("shots on hand", () => {
       threshold: 50,
       because: "waste",
       code: "B001",
+      flavour: "original",
     });
 
     // A batch that is not for sale yet does not count towards "ready".
@@ -1350,6 +1388,7 @@ describe("shots on hand", () => {
       threshold: 48,
       because: "recalled",
       code: "B003",
+      flavour: "original",
     });
 
     await makeBatch(world, "B004", 50);
@@ -1362,6 +1401,7 @@ describe("shots on hand", () => {
       threshold: 48,
       because: "closed",
       code: "B004",
+      flavour: "original",
     });
     expect((await eventsOf(world, "batch.closed")).at(-1)?.payload).toEqual({
       code: "B004",
@@ -1379,6 +1419,7 @@ describe("working out where an order's shots come from", () => {
     rows.map(([code, onHandNow, past], index) => ({
       id: code,
       code,
+      flavour: "original",
       name: code,
       bestBefore: addDays(TODAY, past === "past" ? -1 - index : 30 + index),
       madeOn: addDays(TODAY, -30),
@@ -2084,6 +2125,7 @@ describe("filling orders from batches", () => {
       threshold: 48,
       because: "order",
       order: number,
+      flavour: "original",
     });
     // What the event says is what the picture says.
     expect(await execute(stockAvailable, {}, viewer, run())).toEqual({
@@ -2091,6 +2133,15 @@ describe("filling orders from batches", () => {
       ready: 14,
       promised: 48,
       available: 0,
+      flavours: [
+        {
+          flavour: "original",
+          name: "Original",
+          ready: 14,
+          promised: 48,
+          available: 0,
+        },
+      ],
     });
   });
 
@@ -2174,6 +2225,15 @@ describe("one pool of shots, taken when the order is packed", () => {
       ready: 100,
       promised: 24,
       available: 76,
+      flavours: [
+        {
+          flavour: "original",
+          name: "Original",
+          ready: 100,
+          promised: 24,
+          available: 76,
+        },
+      ],
     });
 
     // Packed: the shots leave now, at this moment and in the packer's name.
@@ -2197,6 +2257,15 @@ describe("one pool of shots, taken when the order is packed", () => {
       ready: 76,
       promised: 0,
       available: 76,
+      flavours: [
+        {
+          flavour: "original",
+          name: "Original",
+          ready: 76,
+          promised: 0,
+          available: 76,
+        },
+      ],
     });
   });
 
@@ -2223,6 +2292,15 @@ describe("one pool of shots, taken when the order is packed", () => {
       ready: 76,
       promised: 90,
       available: 0,
+      flavours: [
+        {
+          flavour: "original",
+          name: "Original",
+          ready: 76,
+          promised: 90,
+          available: 0,
+        },
+      ],
     });
     await expect(
       execute(markPacked, { number }, staff, run()),
@@ -2288,6 +2366,15 @@ describe("one pool of shots, taken when the order is packed", () => {
       ready: 46,
       promised: 24,
       available: 22,
+      flavours: [
+        {
+          flavour: "original",
+          name: "Original",
+          ready: 46,
+          promised: 24,
+          available: 22,
+        },
+      ],
     });
     // NEXT is the only batch with anything in it, so nothing has to be said.
     await execute(markPacked, { number: small }, staff, run());
@@ -2305,6 +2392,173 @@ describe("one pool of shots, taken when the order is packed", () => {
     ).toEqual([
       [number, 14],
       [small, 24],
+    ]);
+  });
+});
+
+describe("two flavours, each its own pool", () => {
+  let world: World;
+  beforeAll(async () => {
+    world = await openWorld();
+  });
+  afterAll(async () => {
+    await world.handle.close();
+  });
+
+  it("asks for a flavour when a batch is planned, and settles it once made", async () => {
+    const { staff, run } = world;
+    await expect(
+      execute(planBatch, { code: "NOPE" } as never, staff, run()),
+    ).rejects.toMatchObject({ code: "invalid_input" });
+    await execute(
+      planBatch,
+      { flavour: "original", code: "SWAP" },
+      staff,
+      run(),
+    );
+    // A slip while it is only planned is put right.
+    await execute(
+      updateBatch,
+      { code: "SWAP", flavour: "mango-chilli-lime" },
+      staff,
+      run(),
+    );
+    expect(
+      (await execute(getBatch, { code: "SWAP" }, staff, run())).flavour,
+    ).toBe("mango-chilli-lime");
+    await execute(
+      recordMade,
+      { code: "SWAP", shots: 10, bestBefore: GOOD_UNTIL },
+      staff,
+      run(),
+    );
+    await expect(
+      execute(updateBatch, { code: "SWAP", flavour: "original" }, staff, run()),
+    ).rejects.toMatchObject({
+      code: "conflict",
+      message:
+        "SWAP has been made, so what is in its bottles is settled and its flavour cannot be changed.",
+    });
+  });
+
+  it("packs a box of both from a batch of each, and never one from the other", async () => {
+    const { staff, viewer, run } = world;
+    await makeBatch(world, "OR1", 100);
+    await makeBatch(world, "MC1", 100, { flavour: "mango-chilli-lime" });
+    const number = await buy(world, [
+      [24, 1],
+      [12, 1, "mcl"],
+    ]);
+
+    const stock = await execute(orderStock, { number }, viewer, run());
+    expect(stock.namesFlavours).toBe(true);
+    expect(
+      stock.parts.map((part) => [part.flavourName, part.need, part.plan]),
+    ).toEqual([
+      ["Original", 24, [{ code: "OR1", shots: 24 }]],
+      ["Mango Chilli Lime", 12, [{ code: "MC1", shots: 12 }]],
+    ]);
+
+    // A batch of a flavour the box has none of cannot be in it.
+    await makeBatch(world, "OR2", 100);
+    await expect(
+      execute(markPacked, { number, batchCode: "MC1" }, staff, run()),
+    ).rejects.toMatchObject({
+      code: "conflict",
+      message: expect.stringContaining(
+        "More than one batch of Original is on sale",
+      ),
+    });
+    // Two of the same flavour is one too many.
+    await expect(
+      execute(markPacked, { number, batchCodes: ["OR1", "OR2"] }, staff, run()),
+    ).rejects.toMatchObject({ code: "invalid_input" });
+
+    await execute(
+      markPacked,
+      { number, batchCodes: ["OR2", "MC1"] },
+      staff,
+      run(),
+    );
+    expect(
+      (await movementsFor(world, number)).map((move) => move.shots).sort(),
+    ).toEqual([-12, -24]);
+    expect(await onHand(world, "OR2")).toBe(76);
+    expect(await onHand(world, "MC1")).toBe(88);
+    expect(await onHand(world, "OR1")).toBe(100);
+    // Each batch's recall list has its own flavour's shots on it.
+    expect(
+      (await execute(recallList, { code: "MC1" }, viewer, run())).orders.map(
+        (row) => [row.number, row.shots],
+      ),
+    ).toEqual([[number, 12]]);
+  });
+
+  it("refuses a batch of the wrong flavour for the box", async () => {
+    const { staff, run } = world;
+    const number = await buy(world, [[12, 2, "mcl"]]);
+    await expect(
+      execute(markPacked, { number, batchCode: "OR1" }, staff, run()),
+    ).rejects.toMatchObject({
+      code: "conflict",
+      message: `OR1 is Original, and ${number} has none of it.`,
+    });
+    // Its own flavour has one batch on sale: no need to name it.
+    await execute(markPacked, { number }, staff, run());
+    expect(await onHand(world, "MC1")).toBe(64);
+  });
+
+  it("is short of one flavour whatever there is of the other", async () => {
+    const { viewer, run } = world;
+    // 64 of Mango Chilli Lime on hand. Orders for 72 of it come in.
+    await buy(world, [[24, 3, "mcl"]]);
+    const picture = await execute(stockPicture, {}, viewer, run());
+    const mcl = picture.flavours.find(
+      (flavour) => flavour.flavour === "mango-chilli-lime",
+    );
+    expect(mcl).toMatchObject({ ready: 64, promised: 72, available: 0 });
+    expect(
+      picture.attention
+        .filter((item) => item.kind === "short-for-orders")
+        .map((item) => item.text),
+    ).toEqual([
+      "Orders waiting to be packed need 72 Mango Chilli Lime shots and only 64 are ready to sell.",
+    ]);
+    // Plenty of Original does not hide it.
+    expect(picture.available).toBeGreaterThan(72);
+    const needs = await execute(needsYou, {}, viewer, run());
+    expect(JSON.stringify(needs)).toContain(
+      "They need 72 Mango Chilli Lime shots and only 64 are ready to sell.",
+    );
+  });
+
+  it("says which flavour is low when an order takes it under the line", async () => {
+    const { staff, run } = world;
+    // 64 in MC1 and 50 more in MC2: 114 of Mango Chilli Lime ready.
+    await makeBatch(world, "MC2", 50, { flavour: "mango-chilli-lime" });
+    const before = (await eventsOf(world, "stock.low")).length;
+    const number = await buy(world, [[24, 3, "mcl"]]);
+    // A box that mixes the two batches of it: 72 out leaves 42, under 48.
+    await execute(
+      markPacked,
+      {
+        number,
+        batches: [
+          { code: "MC1", shots: 64 },
+          { code: "MC2", shots: 8 },
+        ],
+      },
+      staff,
+      run(),
+    );
+    const low = (await eventsOf(world, "stock.low")).slice(before);
+    expect(low.map((event) => event.payload)).toMatchObject([
+      {
+        onHand: 42,
+        flavour: "mango-chilli-lime",
+        because: "order",
+        order: number,
+      },
     ]);
   });
 });
@@ -2803,6 +3057,7 @@ describe("the stock picture", () => {
       ready: 0,
       promised: 0,
       available: 0,
+      flavours: [],
     });
   });
 
@@ -2855,6 +3110,15 @@ describe("the stock picture", () => {
       ready: 130,
       promised: 30,
       available: 100,
+      flavours: [
+        {
+          flavour: "original",
+          name: "Original",
+          ready: 130,
+          promised: 30,
+          available: 100,
+        },
+      ],
     });
     // First expired first, the one past its date too, marked as not good.
     expect(
@@ -4429,7 +4693,13 @@ describe("who may do what", () => {
   it("refuses a viewer every change, and changes nothing", async () => {
     const { viewer, run } = world;
     const attempts: readonly (() => Promise<unknown>)[] = [
-      () => execute(planBatch, { code: "B009" }, viewer, run()),
+      () =>
+        execute(
+          planBatch,
+          { flavour: "original", code: "B009" },
+          viewer,
+          run(),
+        ),
       () => execute(updateBatch, { code: "B001", name: "Mine" }, viewer, run()),
       () => execute(recordMade, { code: "B002", shots: 5 }, viewer, run()),
       () => execute(releaseBatch, { code: "B002" }, viewer, run()),
@@ -4624,10 +4894,15 @@ describe("the invented stock a demo starts with", () => {
         batches.map((batch) => [batch.code, batch.status, batch.onHand]),
       ).toEqual([
         ["B004", "planned", 0],
+        ["B005", "released", 300],
         ["B003", "released", 600],
         ["B002", "released", 210],
         ["B001", "closed", 0],
       ]);
+      // Four runs of Original and one of Mango Chilli Lime.
+      expect(
+        batches.filter((batch) => batch.flavour === "mango-chilli-lime"),
+      ).toMatchObject([{ code: "B005" }]);
       const suppliers = await execute(listSuppliers, {}, demo, at);
       expect(suppliers).toHaveLength(3);
       // Nobody could mistake them for real companies.
@@ -4660,7 +4935,8 @@ describe("the invented stock a demo starts with", () => {
       const picture = await execute(stockPicture, {}, demo, at);
       expect(picture).toMatchObject({
         tracking: true,
-        ready: 810,
+        // 600 and 210 of Original, 300 of Mango Chilli Lime.
+        ready: 1110,
         planned: 1,
         noBatchRecorded: 0,
       });
@@ -4672,7 +4948,7 @@ describe("the invented stock a demo starts with", () => {
 
       // A second go finds stock already there and leaves it alone.
       await seedStockDemo(handle.db, NOW);
-      expect(await execute(listBatches, {}, demo, at)).toHaveLength(4);
+      expect(await execute(listBatches, {}, demo, at)).toHaveLength(5);
       expect(await execute(listSuppliers, {}, demo, at)).toHaveLength(3);
     } finally {
       await handle.close();
@@ -4716,16 +4992,26 @@ describe("the invented stock a demo starts with", () => {
       expect(toPack.length).toBeGreaterThan(0);
       const promised = toPack.reduce((sum, order) => sum + order.shots, 0);
       const picture = await execute(stockPicture, {}, demo, at);
+      // B002 and B003 are Original, B005 is 300 of Mango Chilli Lime.
       expect(picture).toMatchObject({
-        ready: 810 - sold,
+        ready: 1110 - sold,
         promised,
-        available: 810 - sold - promised,
+        available: 1110 - sold - promised,
         pastDate: 0,
         noBatchRecorded: 0,
+        namesFlavours: true,
       });
+      expect(picture.flavours.map((flavour) => flavour.name)).toEqual([
+        "Original",
+        "Mango Chilli Lime",
+      ]);
 
-      // Two batches are on sale, so each order to pack asks which is in the
-      // box and suggests the older run. Taking the suggestion works.
+      // Two batches of Original are on sale, so each order to pack asks
+      // which is in the box and suggests the older run. One box holds both
+      // flavours: its Mango Chilli Lime can only come from B005, which is
+      // the one batch of it, so that needs no choosing. Taking the
+      // suggestion works.
+      let both = 0;
       for (const order of toPack) {
         const stock = await execute(
           orderStock,
@@ -4736,13 +5022,31 @@ describe("the invented stock a demo starts with", () => {
         expect(stock, order.number).toMatchObject({
           mustChoose: true,
           blocked: false,
-          plan: [{ code: "B002", shots: order.shots }],
         });
-        expect(stock.choices.map((choice) => choice.code)).toEqual([
+        const original = stock.parts.find(
+          (part) => part.flavour === "original",
+        );
+        expect(original, order.number).toMatchObject({
+          mustChoose: true,
+          plan: [{ code: "B002", shots: original?.shots }],
+        });
+        expect(original?.choices.map((choice) => choice.code)).toEqual([
           "B002",
           "B003",
         ]);
+        const mcl = stock.parts.find(
+          (part) => part.flavour === "mango-chilli-lime",
+        );
+        if (mcl !== undefined) {
+          both += 1;
+          expect(mcl).toMatchObject({
+            mustChoose: false,
+            plan: [{ code: "B005", shots: mcl.shots }],
+          });
+          expect(mcl.choices.map((choice) => choice.code)).toEqual(["B005"]);
+        }
       }
+      expect(both).toBe(1);
       const [first] = toPack;
       if (first === undefined) throw new Error("no order to pack");
       await expect(

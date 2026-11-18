@@ -936,7 +936,12 @@ describe("what a connected Claude may do", () => {
 
     it("does not let a bot correct the dates of a batch that has been made", async () => {
       const claude = await connect();
-      await execute(planBatch, { code: "B900" }, staff, at(T0));
+      await execute(
+        planBatch,
+        { flavour: "original", code: "B900" },
+        staff,
+        at(T0),
+      );
       // While it is only a plan, the dates are plans too.
       const [planned] = await change(claude, [
         {

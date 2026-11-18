@@ -275,6 +275,10 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 - [x] **Marketing.** Campaigns to the crew with approval before sending, a social planner,
       reviews read by a person before anyone sees them, and partners with a written yes on
       file before they are named.
+- [x] **Stock by flavour.** A batch is one flavour, chosen when it is planned. Packing
+      takes each flavour's shots from a batch of that flavour (asking which batch for
+      each in a box of both), and the stock picture, Today and the low-stock warning
+      say which flavour is short.
 - [x] **Two flavours on the shop.** Original and Mango Chilli Lime, every pack in each at
       the same price, picked with a chip on the page, and named on every line of an
       order, a receipt, Stripe's page and the courier's file.
@@ -516,10 +520,6 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       vectors and list where they differ. The site keeps what it has: her own paths where
       she drew them as vectors, and the official pictures elsewhere. Worth a look only if a
       sharper full-colour Lucky is wanted at a large size.
-- [ ] **Stock and packing by flavour.** A batch is one flavour, and packing has to take
-      each flavour's shots from a batch of that flavour. Until that lands, stock still
-      counts every shot in one pool, so record no batch of Mango Chilli Lime yet.
-      Production has no batches recorded, so nothing can go wrong in the meantime.
 - [ ] **A label for each flavour.** The ingredients, allergen and storage lines are kept
       once for the shop today; Mango Chilli Lime's label will say something else.
 - [ ] **Ask the first customers for a review.** The form is at `/review` and the shop

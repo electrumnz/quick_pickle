@@ -760,13 +760,21 @@ go-live list shows when it last ran and what is stuck.
   is the sum of a batch's rows in `stock_movements`. A wrong count is put right with another
   movement and a reason, never by writing a number over it. Anything that takes stock locks
   the batch rows first, in id order, and counts after.
-- **One pool.** An order is its total shots across every line (`orderShots` in
-  `lib/backstage/stock/allocation.ts`). Packs of 6, 12 and 24 draw on the same shots;
-  nothing is checked, promised or taken a pack at a time.
+- **One pool a flavour.** A batch is one flavour (`batches.flavour`, chosen when it is
+  planned and settled once it is made), and an order is its total shots of each flavour
+  across every line (`orderShotsByFlavour` in `lib/backstage/stock/allocation.ts`). Packs
+  of 6, 12 and 24 of a flavour draw on that flavour's shots; nothing is checked, promised
+  or taken a pack at a time, and **an order's shots of a flavour only ever come from a
+  batch of that flavour**. Every rule below is applied a flavour at a time: the picture,
+  Today's lines and the low-stock flag each say which flavour (`flavours.ts`), so plenty
+  of one never hides a shortage of the other. Sentences name a flavour only once more
+  than one is in play, so a shop that has made one reads as it always did.
 - **The batch is confirmed at packing, never guessed.** Placing or paying for an order
   writes no movement: its shots only count as promised. `orders.markPacked` takes them, from
-  the batch the person packing names (`batchCode`, or `batches` for a box that mixes them).
-  With one batch on sale that one is used; with a choice and no name it refuses. First
+  the batch the person packing names (`batchCode`, `batchCodes` with one for each flavour
+  in a box of two, or `batches` for a box that mixes them). With one batch of a flavour on
+  sale that one is used; with a choice and no name it refuses. A batch of a flavour the
+  box has none of is refused. First
   expired, first out is only the suggestion on the screen. Unpacking puts the shots back;
   cancelling a packed order writes them off unless told they went back on the shelf. A test
   order takes no stock. That is what makes a batch's recall list one query, and true.
@@ -775,7 +783,8 @@ go-live list shows when it last ran and what is stuck.
   through the end of its best-before day here: ask `isGoodOn` with `todayKey(ctx.now)`
   (`lib/backstage/stock/dates.ts`), and never compare one with an instant.
 - **With no batch recorded, nothing happens.** Until a first batch has been recorded as
-  made (`tracking`), orders pack exactly as they did, Today lists nothing about shots, and
+  made (`tracking`; and for each flavour, until one of it has), orders pack exactly as
+  they did, Today lists nothing about shots, and
   an order's page says nothing about batches. Once there is one, an order packed while no
   batch is on sale says so, because it is on no recall list.
 

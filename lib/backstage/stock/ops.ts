@@ -117,10 +117,16 @@ export type {
 } from "./batches";
 export type { HandMovementResult } from "./hand-movements";
 export type { MaterialDetail, MaterialRow } from "./materials";
-export type { OrderStock, UnrecordedOrder } from "./order-stock";
+export type {
+  OrderStock,
+  OrderStockChoice,
+  OrderStockPart,
+  UnrecordedOrder,
+} from "./order-stock";
 export type {
   AttentionItem,
   Availability,
+  FlavourStock,
   PictureBatch,
   StockPicture,
 } from "./picture";

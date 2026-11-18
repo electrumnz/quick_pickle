@@ -10,10 +10,12 @@
  *
  * Four things it holds to:
  *
- *   One pool. An order's packs all draw on the same shots, so every check
- *   uses the order's total across its lines, never one line at a time. A box
- *   of six, a dozen and a box of twenty-four are 42 shots, and that is all
- *   stock ever knows about them.
+ *   One pool a flavour. An order's packs of a flavour all draw on the same
+ *   shots, so every check uses the order's total of that flavour across its
+ *   lines, never one line at a time. A box of six, a dozen and a box of
+ *   twenty-four, all Original, are 42 Original shots, and that is all stock
+ *   ever knows about them. A flavour's shots only ever come from a batch of
+ *   that flavour (./flavours.ts).
  *
  *   Confirmed at packing. Nothing is taken, and no batch is written down,
  *   when an order is placed or paid for. The shots leave stock when the
@@ -47,6 +49,12 @@ import type { DbOrTx } from "@/lib/db/types";
 import type { Actor } from "../core/actor";
 import { conflict, notFound, OpError } from "../core/errors";
 import { formatDateKey, isGoodOn, todayKey } from "./dates";
+import {
+  byFlavour,
+  flavourName,
+  flavourShots,
+  namesFlavours,
+} from "./flavours";
 import { countText, shotsText, writeMovement } from "./movements";
 import { BATCH_STATUS_IS } from "./status";
 
@@ -55,6 +63,8 @@ export type ShelfBatch = {
   readonly id: string;
   readonly code: string;
   readonly name: string;
+  /** The flavour in its bottles. */
+  readonly flavour: string;
   readonly bestBefore: string | null;
   readonly madeOn: string | null;
   readonly createdAt: Date;
@@ -91,6 +101,7 @@ export async function releasedShelf(
       id: batches.id,
       code: batches.code,
       name: batches.name,
+      flavour: batches.flavour,
       bestBefore: batches.bestBefore,
       madeOn: batches.madeOn,
       createdAt: batches.createdAt,
@@ -221,6 +232,31 @@ export function takesText(
 }
 
 /**
+ * How many shots of each flavour an order holds: for every line of that
+ * flavour, packs times the shots in a pack, added up. A flavour at a time,
+ * never a line at a time. Flavours in the catalogue's order.
+ */
+export async function orderShotsByFlavour(
+  db: DbOrTx,
+  orderId: string,
+): Promise<Map<string, number>> {
+  const rows = await db
+    .select({
+      flavour: orderLines.flavour,
+      shots: sql<number>`coalesce(sum(${orderLines.qty} * ${orderLines.shots}), 0)::int`,
+    })
+    .from(orderLines)
+    .where(eq(orderLines.orderId, orderId))
+    .groupBy(orderLines.flavour);
+  return new Map(
+    rows
+      .filter((row) => row.shots > 0)
+      .sort((a, b) => byFlavour(a.flavour, b.flavour))
+      .map((row) => [row.flavour, row.shots]),
+  );
+}
+
+/**
  * How many shots an order holds in all: for every line, packs times the
  * shots in a pack, added up. The whole order, never a line at a time.
  */
@@ -241,6 +277,7 @@ export type OrderHolding = {
   readonly batchId: string;
   readonly code: string;
   readonly name: string;
+  readonly flavour: string;
   readonly status: BatchStatus;
   readonly shots: number;
 };
@@ -255,6 +292,7 @@ export async function orderHoldings(
       batchId: stockMovements.batchId,
       code: batches.code,
       name: batches.name,
+      flavour: batches.flavour,
       status: batches.status,
       shots: sql<number>`(-sum(${stockMovements.shots}))::int`,
     })
@@ -266,7 +304,13 @@ export async function orderHoldings(
         inArray(stockMovements.kind, ["sold", "returned"]),
       ),
     )
-    .groupBy(stockMovements.batchId, batches.code, batches.name, batches.status)
+    .groupBy(
+      stockMovements.batchId,
+      batches.code,
+      batches.name,
+      batches.flavour,
+      batches.status,
+    )
     .orderBy(batches.code);
   return rows.filter((row) => row.shots > 0);
 }
@@ -276,14 +320,21 @@ export type Allocation = {
   readonly takes: readonly Take[];
   /**
    * Why nothing was taken, when nothing was:
-   *   nothing-released  no released batch has any stock, so there is nothing
-   *                     to record against. Not an error.
+   *   nothing-released  no released batch of the order's flavours has any
+   *                     stock, so there is nothing to record against. Not
+   *                     an error.
    *   already-recorded  the order already holds all its shots.
    */
   readonly skipped: "nothing-released" | "already-recorded" | null;
-  /** Shots ready to sell (released and good), before and after. */
-  readonly readyBefore: number;
-  readonly readyAfter: number;
+  /**
+   * Shots ready to sell (released and good) of each flavour this call took
+   * from, before and after.
+   */
+  readonly ready: readonly {
+    readonly flavour: string;
+    readonly before: number;
+    readonly after: number;
+  }[];
 };
 
 /** Say why a named batch cannot have orders filled from it. */
@@ -316,21 +367,30 @@ const choiceText = (batch: ShelfBatch) =>
  * Take an order's shots out of stock, inside the caller's transaction. Each
  * batch taken from gets a `sold` movement carrying the order's id.
  *
+ * A flavour at a time: an order's shots of a flavour only ever come from
+ * batches of that flavour, and every rule below is applied to each flavour
+ * in the order on its own.
+ *
  * Which batch:
- *   `from`     exactly these amounts from these batches: a box that mixes
- *              batches. They must add up to what the order needs.
- *   `batchId`  everything from this one batch, or the call is refused.
- *   neither    only when there is a single batch it could be, which is then
- *              used. If there is a choice the call is refused and names the
- *              choices, so the batch on record is never a guess. (planTakes
- *              works out which to suggest; it is a suggestion and no more.)
+ *   `from`      exactly these amounts from these batches: a box that mixes
+ *               batches. For each flavour they must add up to what the
+ *               order needs of it.
+ *   `batchIds`  everything of a flavour from this one batch of it, or the
+ *               call is refused. One batch for each flavour at most.
+ *   neither     only when there is a single batch of the flavour it could
+ *               be, which is then used. If there is a choice the call is
+ *               refused and names the choices, so the batch on record is
+ *               never a guess. (planTakes works out which to suggest; it is
+ *               a suggestion and no more.)
  *
- * Only a batch that is released and still good today can be taken from.
+ * A named batch must be of a flavour the order still needs. Only a batch
+ * that is released and still good today can be taken from.
  *
- * If no released batch has any stock at all, nothing is written and nothing
- * is refused: until real batches are recorded, orders must still be packable.
- * Once there is stock, an order that cannot be covered is refused with the
- * number on hand, so the count gets put right while it is fresh.
+ * If no released batch of a flavour has any stock at all, nothing is written
+ * for that flavour and nothing is refused: until real batches of it are
+ * recorded, orders must still be packable. Once there is stock of it, an
+ * order that cannot be covered is refused with the number on hand, so the
+ * count gets put right while it is fresh.
  *
  * Safe to call twice: shots the order already holds are not taken again.
  */
@@ -338,10 +398,10 @@ export async function allocateOrderStock(
   tx: DbOrTx,
   input: {
     readonly orderId: string;
-    /** How many shots the order holds in all, across every line. */
-    readonly shots: number;
-    /** Take everything from this batch and no other. */
-    readonly batchId?: string;
+    /** How many shots of each flavour the order holds, across every line. */
+    readonly shots: ReadonlyMap<string, number>;
+    /** Take everything of a flavour from this batch and no other. */
+    readonly batchIds?: readonly string[];
     /** Take exactly these amounts from these batches. */
     readonly from?: readonly {
       readonly batchId: string;
@@ -354,17 +414,11 @@ export async function allocateOrderStock(
   },
 ): Promise<Allocation> {
   // Lock first, count after: whoever waited here sees the other's movements.
+  // Every released batch, whatever its flavour, in one go and in one order,
+  // so two transactions can never wait on each other.
   const shelf = await releasedShelf(tx, {
     today: todayKey(input.now),
     lock: true,
-  });
-  const good = sellable(shelf);
-  const readyBefore = good.reduce((sum, batch) => sum + batch.onHand, 0);
-  const nothing = (skipped: Allocation["skipped"]): Allocation => ({
-    takes: [],
-    skipped,
-    readyBefore,
-    readyAfter: readyBefore,
   });
   const usable = async (batchId: string): Promise<ShelfBatch> => {
     const batch = shelf.find((row) => row.id === batchId && row.good);
@@ -380,72 +434,135 @@ export async function allocateOrderStock(
       named.set(part.batchId, (named.get(part.batchId) ?? 0) + part.shots);
     }
   }
-  const chosen =
-    input.batchId === undefined ? undefined : await usable(input.batchId);
+  const chosen: ShelfBatch[] = [];
+  for (const batchId of input.batchIds ?? []) {
+    const batch = await usable(batchId);
+    if (chosen.some((other) => other.id === batch.id)) continue;
+    if (chosen.some((other) => other.flavour === batch.flavour)) {
+      throw new OpError(
+        "invalid_input",
+        `Name one batch for each flavour: ${chosen.map((other) => other.code).join(" and ")} and ${batch.code} are both ${flavourName(batch.flavour)}.`,
+        { batchCodes: "One batch for each flavour" },
+      );
+    }
+    chosen.push(batch);
+  }
   const mix: { batch: ShelfBatch; shots: number }[] = [];
   for (const [batchId, shots] of named) {
     mix.push({ batch: await usable(batchId), shots });
   }
 
-  const held = (await orderHoldings(tx, input.orderId)).reduce(
-    (sum, holding) => sum + holding.shots,
-    0,
-  );
-  const need = input.shots - held;
-  if (need <= 0) return nothing("already-recorded");
+  // What the order still needs of each flavour, after what it holds.
+  const holdings = await orderHoldings(tx, input.orderId);
+  const need = new Map<string, number>();
+  for (const [flavour, shots] of input.shots) {
+    const held = holdings
+      .filter((holding) => holding.flavour === flavour)
+      .reduce((sum, holding) => sum + holding.shots, 0);
+    if (shots - held > 0) need.set(flavour, shots - held);
+  }
+  const ready = (flavour: string) =>
+    sellable(shelf.filter((batch) => batch.flavour === flavour)).reduce(
+      (sum, batch) => sum + batch.onHand,
+      0,
+    );
+  if (need.size === 0) {
+    return { takes: [], skipped: "already-recorded", ready: [] };
+  }
 
-  let takes: readonly Take[];
-  if (mix.length > 0) {
-    const total = mix.reduce((sum, part) => sum + part.shots, 0);
-    if (total !== need) {
-      throw new OpError(
-        "invalid_input",
-        `Those add up to ${shotsText(total)} and ${who} needs ${countText(need)}.`,
-        { batches: `They have to add up to ${countText(need)}` },
-      );
-    }
-    for (const part of mix) {
-      if (part.batch.onHand < part.shots) {
-        throw conflict(
-          `${part.batch.code} has ${shotsText(part.batch.onHand)} on hand, so ${countText(part.shots)} cannot be taken from it.`,
+  // Sentences name the flavour only when there is more than one in play.
+  const sayFlavour = namesFlavours([
+    ...input.shots.keys(),
+    ...chosen.map((batch) => batch.flavour),
+    ...mix.map((part) => part.batch.flavour),
+  ]);
+  const needText = (count: number, flavour: string) =>
+    sayFlavour ? flavourShots(count, flavour, true) : countText(count);
+  const shotsOf = (count: number, flavour: string) =>
+    sayFlavour ? flavourShots(count, flavour, true) : shotsText(count);
+
+  // A batch named for a flavour the order does not need cannot be in its box.
+  for (const batch of [...chosen, ...mix.map((part) => part.batch)]) {
+    if (need.has(batch.flavour)) continue;
+    throw conflict(
+      input.shots.has(batch.flavour)
+        ? `${who} already holds all its ${flavourName(batch.flavour)} shots, so none can come from ${batch.code}.`
+        : `${batch.code} is ${flavourName(batch.flavour)}, and ${who} has none of it.`,
+    );
+  }
+
+  const takes: Take[] = [];
+  const moved: { flavour: string; before: number; after: number }[] = [];
+  for (const [flavour, needed] of need) {
+    const ofFlavour = shelf.filter((batch) => batch.flavour === flavour);
+    const parts = mix.filter((part) => part.batch.flavour === flavour);
+    const one = chosen.find((batch) => batch.flavour === flavour);
+    let taken: readonly Take[];
+    if (parts.length > 0) {
+      const total = parts.reduce((sum, part) => sum + part.shots, 0);
+      if (total !== needed) {
+        throw new OpError(
+          "invalid_input",
+          `Those add up to ${shotsOf(total, flavour)} and ${who} needs ${needText(needed, flavour)}.`,
+          { batches: `They have to add up to ${needText(needed, flavour)}` },
         );
       }
-    }
-    takes = mix
-      .sort((a, b) => byFirstExpired(a.batch, b.batch))
-      .map((part) => ({
-        batchId: part.batch.id,
-        code: part.batch.code,
-        shots: part.shots,
-      }));
-  } else if (chosen !== undefined) {
-    if (chosen.onHand < need) {
-      throw conflict(
-        `${chosen.code} has ${shotsText(chosen.onHand)} on hand and ${who} needs ${countText(need)}. Pick another batch, or split it across batches.`,
-      );
-    }
-    takes = [{ batchId: chosen.id, code: chosen.code, shots: need }];
-  } else {
-    const plan = planTakes(shelf, need);
-    if (!plan.ok) {
-      if (plan.reason === "nothing-released") return nothing(plan.reason);
-      if (plan.reason === "past-date") {
+      for (const part of parts) {
+        if (part.batch.onHand < part.shots) {
+          throw conflict(
+            `${part.batch.code} has ${shotsText(part.batch.onHand)} on hand, so ${countText(part.shots)} cannot be taken from it.`,
+          );
+        }
+      }
+      taken = parts
+        .sort((a, b) => byFirstExpired(a.batch, b.batch))
+        .map((part) => ({
+          batchId: part.batch.id,
+          code: part.batch.code,
+          shots: part.shots,
+        }));
+    } else if (one !== undefined) {
+      if (one.onHand < needed) {
         throw conflict(
-          `The only shots on hand are past their best-before date, so ${who} cannot be packed from them. Release a batch that is in date first.`,
+          `${one.code} has ${shotsText(one.onHand)} on hand and ${who} needs ${needText(needed, flavour)}. Pick another batch, or split it across batches.`,
         );
       }
-      throw conflict(
-        `Only ${shotsText(plan.onHand)} on hand in released batches, and ${who} needs ${countText(need)}. Release another batch or correct the count, then try again.`,
-      );
+      taken = [{ batchId: one.id, code: one.code, shots: needed }];
+    } else {
+      const plan = planTakes(ofFlavour, needed);
+      if (!plan.ok) {
+        // No stock of this flavour has been recorded: nothing to take it
+        // from, and nothing to refuse.
+        if (plan.reason === "nothing-released") continue;
+        if (plan.reason === "past-date") {
+          throw conflict(
+            sayFlavour
+              ? `The only ${flavourName(flavour)} shots on hand are past their best-before date, so ${who} cannot be packed from them. Release a batch of it that is in date first.`
+              : `The only shots on hand are past their best-before date, so ${who} cannot be packed from them. Release a batch that is in date first.`,
+          );
+        }
+        throw conflict(
+          sayFlavour
+            ? `Only ${flavourShots(plan.onHand, flavour, true)} on hand in released batches, and ${who} needs ${needText(needed, flavour)}. Release another batch of it or correct the count, then try again.`
+            : `Only ${shotsText(plan.onHand)} on hand in released batches, and ${who} needs ${countText(needed)}. Release another batch or correct the count, then try again.`,
+        );
+      }
+      // More than one batch it could be: which one is in the box is for the
+      // person packing to say, never for this to pick.
+      const good = sellable(ofFlavour);
+      if (good.length > 1) {
+        throw conflict(
+          sayFlavour
+            ? `More than one batch of ${flavourName(flavour)} is on sale, so say which one is in the box for ${who}: ${good.map(choiceText).join(" or ")}.`
+            : `More than one batch is on sale, so say which one is in the box for ${who}: ${good.map(choiceText).join(" or ")}.`,
+        );
+      }
+      taken = plan.takes;
     }
-    // More than one batch it could be: which one is in the box is for the
-    // person packing to say, never for this to pick.
-    if (good.length > 1) {
-      throw conflict(
-        `More than one batch is on sale, so say which one is in the box for ${who}: ${good.map(choiceText).join(" or ")}.`,
-      );
-    }
-    takes = plan.takes;
+    const before = ready(flavour);
+    const sum = taken.reduce((total, take) => total + take.shots, 0);
+    moved.push({ flavour, before, after: before - sum });
+    takes.push(...taken);
   }
 
   for (const take of takes) {
@@ -459,12 +576,10 @@ export async function allocateOrderStock(
       actor: input.actor,
     });
   }
-  const taken = takes.reduce((sum, take) => sum + take.shots, 0);
   return {
     takes,
-    skipped: null,
-    readyBefore,
-    readyAfter: readyBefore - taken,
+    skipped: takes.length === 0 ? "nothing-released" : null,
+    ready: moved,
   };
 }
 

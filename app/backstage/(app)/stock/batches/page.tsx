@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Empty, PageHeader, Panel } from "@/components/backstage/ui";
 import { requireStaff, staffCaller } from "@/lib/backstage/auth/current";
 import { execute } from "@/lib/backstage/core/op";
+import { flavourName } from "@/lib/backstage/stock/flavours";
 import { listBatches } from "@/lib/backstage/stock/ops";
 import { NEAR_BEST_BEFORE_DAYS } from "@/lib/backstage/stock/status";
 
@@ -118,6 +119,9 @@ export default async function BatchesPage({
                       </span>
                       <span className="row-start-2 min-w-0 md:row-auto">
                         <span className="block truncate">{batch.name}</span>
+                        <span className="bk-muted block truncate text-[0.9375rem]">
+                          {flavourName(batch.flavour)}
+                        </span>
                       </span>
                       <span className="bk-muted col-span-2 row-start-3 text-[0.9375rem] md:col-span-1 md:row-auto">
                         {batch.status === "planned" ? "Planned for " : "Made "}

@@ -153,9 +153,10 @@ confirmed.
 - [ ] **Retire the PIN.** Whoever comes in with it swaps it for an email and a password
       (Settings, Staff, the panel at the top). It asks for the set-up code. Then switch
       off any login that is not yours. **Who:** Ash
-- [ ] **Record the first real batch** in Stock, with the best-before date printed on its
-      bottles, before the first order is packed. An order packed with no batch on sale
-      is on no recall list. **Who:** Ash
+- [ ] **Record the first real batch of each flavour** in Stock, with the best-before
+      date printed on its bottles, before the first order is packed. Pick the flavour
+      when you plan it: orders of that flavour are filled from it. An order packed with
+      no batch on sale is on no recall list. **Who:** Ash
 - [ ] **One test purchase by a person**, on the live site with Stripe's test card
       (4242 4242 4242 4242, any future date, any three digits). Stripe's payment page
       will not let a robot press Pay, so nobody has seen this work end to end. Then

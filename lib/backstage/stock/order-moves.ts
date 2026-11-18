@@ -13,7 +13,7 @@
 import type { OpContext } from "../core/op";
 import {
   allocateOrderStock,
-  orderShots,
+  orderShotsByFlavour,
   returnOrderStock,
   takesText,
   type Take,
@@ -58,8 +58,10 @@ function nothingMoved(skipped: OrderStockNote["skipped"]): OrderStockNote {
 
 /** Which batch an order was packed from, as an operation is told it. */
 export type PackedFrom = {
-  /** The code of the one batch everything came from. */
+  /** The code of the one batch everything (of its flavour) came from. */
   readonly batchCode?: string;
+  /** Or one batch for each flavour in the box. */
+  readonly batchCodes?: readonly string[];
   /** Or, for a box that mixes batches, how many shots from each. */
   readonly batches?: readonly {
     readonly code: string;
@@ -79,7 +81,7 @@ export type PackedFrom = {
  *
  * A test order takes nothing: nobody paid for it and it is never sent. With
  * no released stock at all nothing is recorded and the order still packs.
- * Raises `stock.low` if this is the order that takes ready stock under
+ * Raises `stock.low` for each flavour this is the order that takes under
  * `lowStockAt`.
  */
 export async function takeOrderStock(
@@ -88,12 +90,15 @@ export async function takeOrderStock(
   options: PackedFrom & { readonly lowStockAt?: number } = {},
 ): Promise<OrderStockNote> {
   if (order.isTest) return nothingMoved("test-order");
-  const shots = await orderShots(ctx.db, order.id);
+  const shots = await orderShotsByFlavour(ctx.db, order.id);
 
-  const batchId =
-    options.batchCode === undefined
-      ? undefined
-      : (await loadBatch(ctx.db, options.batchCode)).id;
+  const batchIds: string[] = [];
+  for (const code of [
+    ...(options.batchCode === undefined ? [] : [options.batchCode]),
+    ...(options.batchCodes ?? []),
+  ]) {
+    batchIds.push((await loadBatch(ctx.db, code)).id);
+  }
   const from: { batchId: string; shots: number }[] = [];
   for (const part of options.batches ?? []) {
     from.push({
@@ -105,7 +110,7 @@ export async function takeOrderStock(
   const allocation = await allocateOrderStock(ctx.db, {
     orderId: order.id,
     shots,
-    batchId,
+    batchIds,
     from: from.length === 0 ? undefined : from,
     now: ctx.now,
     actor: ctx.actor,
@@ -113,13 +118,17 @@ export async function takeOrderStock(
   });
   if (allocation.takes.length === 0) return nothingMoved(allocation.skipped);
 
-  await flagIfLow(ctx, {
-    before: allocation.readyBefore,
-    after: allocation.readyAfter,
-    threshold: options.lowStockAt ?? LOW_STOCK_SHOTS,
-    because: "order",
-    order: order.number,
-  });
+  // Each flavour is its own pool, so each runs low on its own.
+  for (const flavour of allocation.ready) {
+    await flagIfLow(ctx, {
+      before: flavour.before,
+      after: flavour.after,
+      threshold: options.lowStockAt ?? LOW_STOCK_SHOTS,
+      because: "order",
+      order: order.number,
+      flavour: flavour.flavour,
+    });
+  }
   return {
     moves: allocation.takes,
     words: takesText(allocation.takes),
