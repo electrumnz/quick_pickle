@@ -300,6 +300,7 @@ describe("what a page in the browser is handed", () => {
     );
     expect(Object.keys(handed).sort()).toEqual([
       "batchName",
+      "flavours",
       "launchMode",
       "open",
       "packs",

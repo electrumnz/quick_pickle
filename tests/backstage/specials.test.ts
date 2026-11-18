@@ -569,7 +569,7 @@ describe("specials", () => {
     expect(
       said.some((line) =>
         line.includes(
-          `order ${beaten.number}: 1 × The Starter, $47.80 with the special LAUNCH (the code SIDE10 was typed, and the special took more off)`,
+          `order ${beaten.number}: 1 × The Starter, Original, $47.80 with the special LAUNCH (the code SIDE10 was typed, and the special took more off)`,
         ),
       ),
       said.filter((line) => line.includes(beaten.number)).join(" | "),

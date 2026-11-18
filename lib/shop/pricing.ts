@@ -9,18 +9,20 @@
  * so there is nothing to tamper with.
  */
 
-import type { Pack } from "@/content/offer";
+import type { Flavour, Pack } from "@/content/offer";
 
 import { normaliseCart, type Cart } from "./cart";
-import { packBySku } from "./catalogue";
+import { itemBySku } from "./catalogue";
 import type { Offer } from "./offer";
 
 /** The part of the offer a total depends on. */
-export type Priced = Pick<Offer, "packs" | "shipping">;
+export type Priced = Pick<Offer, "packs" | "flavours" | "shipping">;
 
 export type QuoteLine = {
   readonly sku: string;
   readonly pack: Pack;
+  /** A flavour never moves a price: the pack's is the line's. */
+  readonly flavour: Flavour;
   readonly qty: number;
   readonly unitCents: number;
   readonly lineCents: number;
@@ -107,11 +109,13 @@ export function quote(
 
   const lines: QuoteLine[] = [];
   for (const line of cart.lines) {
-    const pack = packBySku(offer, line.sku);
-    if (pack === null) continue;
+    const item = itemBySku(offer, line.sku);
+    if (item === null) continue;
+    const { pack, flavour } = item;
     lines.push({
       sku: line.sku,
       pack,
+      flavour,
       qty: line.qty,
       unitCents: pack.priceCents,
       lineCents: pack.priceCents * line.qty,

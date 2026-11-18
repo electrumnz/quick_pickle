@@ -4,7 +4,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { useCart } from "@/components/cart/CartProvider";
 import { BUY, BUYBAR } from "@/content/site";
-import { featuredPack, packBySku } from "@/lib/shop/catalogue";
+import {
+  featuredPack,
+  firstFlavour,
+  itemBySku,
+  itemOf,
+} from "@/lib/shop/catalogue";
 import { formatNzd } from "@/lib/shop/money";
 
 /**
@@ -62,12 +67,15 @@ export function StickyBuyBar() {
     };
   }, []);
 
-  const pack = packBySku(offer, selectedSku) ?? featuredPack(offer);
+  const item =
+    itemBySku(offer, selectedSku) ??
+    itemOf(featuredPack(offer), firstFlavour(offer));
+  const { pack, flavour } = item;
   // Shut for now: there is nothing to add, so there is no bar.
   if (!offer.open) return null;
 
   function handleAdd() {
-    add(pack.sku, 1);
+    add(item.sku, 1);
     setJustAdded(true);
     for (const timer of timers.current) clearTimeout(timer);
     timers.current = [
@@ -93,8 +101,11 @@ export function StickyBuyBar() {
             <span className="label block truncate text-[1.3rem] leading-none">
               {pack.name}
             </span>
-            <span className="label text-cream mt-1.5 block text-[1.05rem] leading-none">
-              {pack.shots} {BUY.shots} · {formatNzd(pack.priceCents)}
+            <span className="label text-cream mt-1.5 block truncate text-[1.05rem] leading-none">
+              {offer.flavours.length > 1
+                ? flavour.name
+                : `${String(pack.shots)} ${BUY.shots}`}{" "}
+              · {formatNzd(pack.priceCents)}
             </span>
           </a>
           <button

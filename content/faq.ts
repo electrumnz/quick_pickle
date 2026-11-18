@@ -68,13 +68,31 @@ export function withStop(text: string): string {
  * a list alone, and a list with an allergen line, a storage line or both.
  * With no allergen line nothing is said about allergens either way.
  */
-function labelAnswer({ label }: Pick<Offer, "label">): readonly string[] {
+function labelAnswer({
+  label,
+  flavours,
+}: Pick<Offer, "label" | "flavours">): readonly string[] {
+  if (label.ingredients === null) {
+    return [
+      "The full ingredients list will be right here before the first bottle ships, exactly as it is printed on the label.",
+      ...(label.contains === null ? [] : [withStop(label.contains)]),
+      ...(label.storage === null ? [] : [withStop(label.storage)]),
+    ];
+  }
+  // The label kept today was typed for the one juice there was, which is
+  // the first flavour. It is never shown as if it were every flavour's.
+  const [first, ...others] = flavours;
   return [
-    label.ingredients === null
-      ? "The full ingredients list will be right here before the first bottle ships, exactly as it is printed on the label."
-      : withStop(label.ingredients),
+    ...(others.length === 0 || first === undefined
+      ? []
+      : [`The ${first.name} label says:`]),
+    withStop(label.ingredients),
     ...(label.contains === null ? [] : [withStop(label.contains)]),
     ...(label.storage === null ? [] : [withStop(label.storage)]),
+    ...others.map(
+      (flavour) =>
+        `The ${flavour.name} list will be right here before its first bottle ships, exactly as it is printed on its label.`,
+    ),
   ];
 }
 
@@ -88,8 +106,13 @@ function sizeAnswer(offer: Offer): readonly string[] {
     PRODUCT.shotVolumeMl === null
       ? "Each one is a single shot."
       : `Each shot is ${String(PRODUCT.shotVolumeMl)} ml.`;
+  const flavours = offer.flavours.map((flavour) => flavour.name);
+  const each =
+    flavours.length > 1
+      ? ` Every pack comes in ${flavours.slice(0, -1).join(", ")} or ${flavours[flavours.length - 1] ?? ""}, at the same price.`
+      : "";
   return [
-    `Packs of ${list}. ${volume} The bigger the pack, the less each shot costs.`,
+    `Packs of ${list}. ${volume} The bigger the pack, the less each shot costs.${each}`,
   ];
 }
 
@@ -121,7 +144,7 @@ export function faqs(offer: Offer): readonly Faq[] {
     {
       q: "What does it taste like?",
       a: [
-        "Like the last sip from the pickle jar. Sour first, salty after. Most people pull a face on their first one. That's half the fun.",
+        "Original is like the last sip from the pickle jar. Sour first, salty after. Mango Chilli Lime is what it says on the bottle. Most people pull a face on their first one of either. That's half the fun.",
       ],
     },
     {

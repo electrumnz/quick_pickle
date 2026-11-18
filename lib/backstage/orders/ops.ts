@@ -35,6 +35,7 @@ import {
 import { CODES, SHOP } from "@/content/site";
 import { newId } from "@/lib/db/id";
 import type { DbOrTx } from "@/lib/db/types";
+import { firstFlavour, flavourBySku } from "@/lib/shop/catalogue";
 import { formatNzd } from "@/lib/shop/money";
 import { NZ_REGIONS, ORDER_NUMBER_PATTERN } from "@/lib/shop/order";
 import { standardDeliveryCents } from "@/lib/shop/pricing";
@@ -361,6 +362,8 @@ export const recordOrder = defineOp({
         orderId: id,
         sku: line.sku,
         name: line.name,
+        // Worked out from the SKU, never taken from the request.
+        flavour: (flavourBySku(offer, line.sku) ?? firstFlavour(offer)).key,
         shots: line.shots,
         qty: line.qty,
         unitCents: line.unitCents,

@@ -23,6 +23,7 @@
 import { CODES, SHOP, SPECIAL } from "@/content/site";
 
 import { normaliseCart } from "./cart";
+import { itemName } from "./catalogue";
 import { normalisePromoCode } from "./code";
 import { forPage, type Offer, type OfferOnPage } from "./offer";
 import {
@@ -259,7 +260,7 @@ export async function placeOrder(
     currency: "NZD",
     email: input.email,
     lines: priced.lines.map((line) => ({
-      name: line.pack.name,
+      name: itemName(line),
       qty: line.qty,
       unitCents: line.unitCents,
     })),
@@ -297,7 +298,7 @@ export async function placeOrder(
     },
     lines: priced.lines.map((line) => ({
       sku: line.sku,
-      name: line.pack.name,
+      name: itemName(line),
       shots: line.pack.shots,
       qty: line.qty,
       unitCents: line.unitCents,

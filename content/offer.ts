@@ -49,6 +49,24 @@ export type Pack = {
   readonly featured?: boolean;
 };
 
+/**
+ * A flavour. Every pack size comes in every flavour on the shelf, at the
+ * pack's own price: a flavour never changes what a pack costs.
+ */
+export type Flavour = {
+  /** Stable key. Kept on orders and batches; never reused for another flavour. */
+  readonly key: string;
+  /** As the label prints it. */
+  readonly name: string;
+  /**
+   * What a pack's SKU gains for this flavour ("QP-SHOT-12-MCL"), or "" for
+   * the first flavour, whose SKUs are the packs' own. That is what keeps
+   * every order and jar from before there were two flavours meaning what it
+   * meant.
+   */
+  readonly skuSuffix: string;
+};
+
 export const STORE = {
   name: "Quick Pickle",
   currency: "NZD",
@@ -138,6 +156,18 @@ export const PACKS: readonly Pack[] = [
   },
 ];
 
+/**
+ * The flavours, in the order the page offers them. The first is the one the
+ * page opens on. Named by Sam on 18 November 2026: "Only two flavours right
+ * now, original, and mango chilli lime". Both are as clear as water. The
+ * names wait on the go-live list with the packs, to be checked against the
+ * printed labels.
+ */
+export const FLAVOURS: readonly Flavour[] = [
+  { key: "original", name: "Original", skuSuffix: "" },
+  { key: "mango-chilli-lime", name: "Mango Chilli Lime", skuSuffix: "MCL" },
+];
+
 export const SHIPPING = {
   /** Flat rate to an urban New Zealand address, cents. */
   standardCents: 700,
@@ -149,7 +179,7 @@ export const SHIPPING = {
   country: "NZ",
 } as const;
 
-/** Most packs of one size a single order may hold. */
+/** Most packs of one size and flavour a single order may hold. */
 export const MAX_PACKS_PER_LINE = 10;
 
 export type Unconfirmed = {
@@ -167,7 +197,7 @@ export type Unconfirmed = {
 export const UNCONFIRMED: readonly Unconfirmed[] = [
   {
     key: "packs",
-    what: "Pack sizes, names and prices (The Trial, The Starter and The Squad, in 6, 12 and 24, started as stand-ins)",
+    what: "Pack sizes, names and prices (The Trial, The Starter and The Squad, in 6, 12 and 24, started as stand-ins), and the two flavours' names exactly as their labels print them",
     ask: "Ashleigh",
   },
   {

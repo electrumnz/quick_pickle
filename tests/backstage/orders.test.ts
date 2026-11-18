@@ -138,7 +138,8 @@ describe("orders, from the checkout to the doorstep", () => {
     expect(order.lines).toHaveLength(1);
     expect(order.lines[0]).toMatchObject({
       sku: "QP-SHOT-24",
-      name: "The Squad",
+      name: "The Squad, Original",
+      flavour: "original",
       qty: 1,
     });
 
@@ -170,7 +171,7 @@ describe("orders, from the checkout to the doorstep", () => {
       via: "storefront",
     });
     expect(line?.summary).toBe(
-      `New order ${first}: 1 × The Squad, $88.50, for Sam Tester in Ōtaki`,
+      `New order ${first}: 1 × The Squad, Original, $88.50, for Sam Tester in Ōtaki`,
     );
     const types = (
       await handle.db.select().from(events).where(eq(events.entityId, order.id))
@@ -179,10 +180,19 @@ describe("orders, from the checkout to the doorstep", () => {
   });
 
   it("a second order from the same address is the same customer", async () => {
-    await buy({
-      lines: [{ sku: "QP-SHOT-06", qty: 2 }],
+    const second = await buy({
+      lines: [{ sku: "QP-SHOT-06-MCL", qty: 2 }],
       rural: false,
       joinCrew: false,
+    });
+    // The flavour is kept on the line, worked out from the SKU, so packing
+    // can take its shots from a batch of the same flavour.
+    const placed = await execute(getOrder, { number: second }, viewer);
+    expect(placed.lines[0]).toMatchObject({
+      sku: "QP-SHOT-06-MCL",
+      name: "The Trial, Mango Chilli Lime",
+      flavour: "mango-chilli-lime",
+      unitCents: 2700,
     });
     expect(await handle.db.select().from(customers)).toHaveLength(1);
     const [customer] = await execute(listCustomers, {}, viewer);

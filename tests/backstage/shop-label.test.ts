@@ -154,9 +154,13 @@ describe("the label and the company, set from the back end", () => {
     expect(done.offer.version).toBe(FILE_OFFER.version);
 
     // The site says exactly that, each line with its full stop.
+    // The label kept is the one the juice had before there were two
+    // flavours, which is Original's, and it is never shown as both.
     expect(answer(done.offer)).toEqual([
+      "The Original label says:",
       "Water, vinegar, salt, dill, garlic.",
       "Refrigerate after opening.",
+      "The Mango Chilli Lime list will be right here before its first bottle ships, exactly as it is printed on its label.",
     ]);
   });
 
@@ -173,8 +177,10 @@ describe("the label and the company, set from the back end", () => {
       staff,
     );
     expect(answer(withLine.offer)).toEqual([
+      "The Original label says:",
       "Water, vinegar, salt.",
       "Contains: sulphites.",
+      "The Mango Chilli Lime list will be right here before its first bottle ships, exactly as it is printed on its label.",
     ]);
   });
 

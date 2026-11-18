@@ -162,8 +162,14 @@ export const orderLines = pgTable(
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
     sku: text().notNull(),
-    /** As it read on the day. */
+    /** As it read on the day: the pack and the flavour. */
     name: text().notNull(),
+    /**
+     * The flavour's key (content/offer.ts), kept so that packing takes the
+     * shots from a batch of the same flavour. Every order from before there
+     * were two flavours was the first.
+     */
+    flavour: text().notNull().default("original"),
     /** Shots in one pack of this line. */
     shots: integer().notNull(),
     qty: integer().notNull(),

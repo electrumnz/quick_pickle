@@ -464,6 +464,25 @@ go-live list shows when it last ran and what is stuck.
 ### Commerce
 
 - `content/offer.ts` is the catalogue. Money is integer cents; never a float in a price path.
+- **Two flavours, every pack in each, at the pack's price** (`FLAVOURS`: Original and
+  Mango Chilli Lime, named by Sam on 18 November 2026; both clear). What goes in the jar
+  is an item, a pack size in a flavour (`Item` in `lib/shop/catalogue.ts`), named by its
+  SKU: Original's are the packs' own (`QP-SHOT-12`) and the others gain the flavour's
+  mark (`QP-SHOT-12-MCL`), so every jar and order from before keeps its meaning.
+  `packBySku` still answers with the size, which is what a price and a number of shots
+  come from; `itemBySku` gives the flavour too.
+  - A flavour never moves a price, and the back end cannot add one. A size-up in the jar
+    keeps the flavour (`nextItemUp`).
+  - A line is always named with its flavour (`itemName`: "The Starter, Mango Chilli
+    Lime"): on the order, the receipt, Stripe's page and the courier's file. Each order
+    line keeps the flavour's key (`order_lines.flavour`), worked out from the SKU inside
+    `orders.record`, never taken from the request.
+  - Each flavour has one accent from the brand's three colours
+    (`components/site/flavour-look.ts`, after the flavour system in the brand pack):
+    Original the olive, Mango Chilli Lime the pink. Olive is never small type, so the
+    olive chip's words are navy.
+  - The flavours' names wait on the go-live list with the packs, to be checked against
+    the printed labels. Nothing about what is in a flavour is said beyond its name.
 - **The offer is a value, not a constant.** `content/offer.ts` is where every commercial
   fact starts, and with no database it is the whole story. The back end lays a short, closed
   list of changes over it with no deploy (Settings, The shop): a pack's price, the delivery

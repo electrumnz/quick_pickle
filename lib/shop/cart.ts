@@ -11,7 +11,7 @@
 
 import { MAX_PACKS_PER_LINE } from "@/content/offer";
 
-import { isKnownSku, packBySku, type Shelf } from "./catalogue";
+import { isKnownSku, packBySku, shelfItems, type Shelf } from "./catalogue";
 
 export type CartLine = { readonly sku: string; readonly qty: number };
 export type Cart = { readonly lines: readonly CartLine[] };
@@ -25,7 +25,8 @@ function clampQty(qty: number): number {
 
 /**
  * Make any value safe to treat as a cart: unknown SKUs dropped, duplicate
- * lines merged, quantities clamped to 1..MAX, catalogue order restored.
+ * lines merged, quantities clamped to 1..MAX, the shelf's order restored (a
+ * flavour at a time, smallest pack first).
  * This is what stands between localStorage (or a hand-built request) and
  * everything else.
  */
@@ -48,11 +49,9 @@ export function normaliseCart(offer: Shelf, input: unknown): Cart {
     const clamped = clampQty(qty);
     if (clamped > 0) lines.push({ sku, qty: clamped });
   }
-  lines.sort(
-    (a, b) =>
-      (packBySku(offer, a.sku)?.shots ?? 0) -
-      (packBySku(offer, b.sku)?.shots ?? 0),
-  );
+  // The shelf's own order: a flavour at a time, smallest pack first.
+  const order = new Map(shelfItems(offer).map((item, at) => [item.sku, at]));
+  lines.sort((a, b) => (order.get(a.sku) ?? 0) - (order.get(b.sku) ?? 0));
   return { lines };
 }
 
@@ -83,7 +82,7 @@ export function removeFromCart(cart: Cart, sku: string): Cart {
   return { lines: cart.lines.filter((line) => line.sku !== sku) };
 }
 
-/** Swap every pack of one size for the same number of another. */
+/** Swap every pack of one size and flavour for the same number of another. */
 export function swapPack(
   offer: Shelf,
   cart: Cart,

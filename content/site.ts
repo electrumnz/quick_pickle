@@ -129,7 +129,8 @@ export const BUY = {
       ? `Pre-order ${sale.batchName}`
       : "The line-up",
   title: "Pick your pack.",
-  body: "One juice, three sizes. Sour, salty, and not a pickle in sight.",
+  body: "Two flavours, three sizes, and not a pickle in sight.",
+  flavourLegend: "Flavour",
   packLegend: "Pack size",
   perShot: "a shot",
   shots: "shots",

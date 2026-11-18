@@ -360,5 +360,12 @@ export const MIGRATIONS: readonly Migration[] = [
     "statements": [
       "ALTER TABLE \"refunds\" ADD COLUMN \"returned_at\" timestamp with time zone;"
     ]
+  },
+  {
+    "tag": "0014_order_line_flavour",
+    "hash": "953ee6715b38ed6c",
+    "statements": [
+      "ALTER TABLE \"order_lines\" ADD COLUMN \"flavour\" text DEFAULT 'original' NOT NULL;"
+    ]
   }
 ];

@@ -6,8 +6,9 @@
  * on each one reads the way a real one would.
  */
 
-import { PACKS } from "@/content/offer";
 import type { Db } from "@/lib/db/types";
+import { itemBySku, itemName } from "@/lib/shop/catalogue";
+import { FILE_OFFER } from "@/lib/shop/offer";
 import type { NzRegion } from "@/lib/shop/order";
 
 import { systemCaller } from "../core/actor";
@@ -210,17 +211,17 @@ export async function placeDemoOrders(
     });
 
     const lines = order.packs.flatMap(([sku, qty]) => {
-      const pack = PACKS.find((item) => item.sku === sku);
-      return pack === undefined
+      const item = itemBySku(FILE_OFFER, sku);
+      return item === null
         ? []
         : [
             {
               sku,
-              name: pack.name,
-              shots: pack.shots,
+              name: itemName(item),
+              shots: item.pack.shots,
               qty,
-              unitCents: pack.priceCents,
-              lineCents: pack.priceCents * qty,
+              unitCents: item.pack.priceCents,
+              lineCents: item.pack.priceCents * qty,
             },
           ];
     });

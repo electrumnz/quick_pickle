@@ -1,0 +1,1 @@
+ALTER TABLE "order_lines" ADD COLUMN "flavour" text DEFAULT 'original' NOT NULL;
