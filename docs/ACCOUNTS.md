@@ -270,8 +270,15 @@ thing: mail sent to the domain then arrives in that mailbox, not in the back end
 **Connecting it.** Three steps, and only the middle one is Ash's.
 
 1. Claude asks for `add-domain`, which puts the name on the site and answers with two
-   DNS records. Asked for on 18 November 2026: the infra run's log has the records, and
-   `status` says where the name stands.
+   DNS records. Done on 18 November 2026. `status` says where the name stands, and
+   asking for `add-domain` again prints the records as the host recommends them that
+   day. That day they were:
+
+   | Record type | Hostname at 1st Domains | Value                                 |
+   | :---------- | :---------------------- | :------------------------------------ |
+   | A           | left blank              | `216.198.79.1`                        |
+   | CNAME       | `www`                   | `ac78968fe6d00efc.vercel-dns-017.com` |
+
 2. Ash adds those two records at 1st Domains. Their help pages said this on 18 November
    2026:
    - Log in, **Manage Domains & Services**, choose the domain, **Manage DNS Zone
@@ -280,9 +287,8 @@ thing: mail sent to the domain then arrives in that mailbox, not in the back end
    - Delete the records tagged **[Parking]** for the bare name and for `www`. They are
      what shows the registrar's holding page, and they fight with ours. Leave anything
      to do with email alone: an MX record, or a TXT record that starts `v=spf1`.
-   - **Add Record** twice. An **A** record with the hostname left blank (1st Domains
-     does not use `@` for the bare name) and the address from the run. A **CNAME**
-     record with the hostname `www` and the name from the run.
+   - **Add Record** twice, with the two rows of the table above. The **A** record's
+     hostname is left blank, because 1st Domains does not use `@` for the bare name.
    - They say to allow up to an hour.
 3. Claude asks for `status` until the name is answering, then for `use-domain`. From
    then the shop's links, its emails and its QR codes use the new name.
