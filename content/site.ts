@@ -216,6 +216,56 @@ export const REELS = {
   notRealPeople: "Made with AI. The people shown are not real.",
 } as const;
 
+/**
+ * Reviews: what customers said, once a person has read it and published it
+ * (Marketing, Reviews, in the back end). Nothing here is a review. With none
+ * published the shop shows none, and never makes one up.
+ */
+export const REVIEWS = {
+  eyebrow: "Reviews",
+  title: "What people reckon.",
+  /** "4.5 out of 5, from 12 reviews". */
+  summary: (average: string, count: number) =>
+    `${average} out of 5, from ${String(count)} ${count === 1 ? "review" : "reviews"}`,
+  /** One review's stars, for a screen reader. */
+  stars: (rating: number) => `${String(rating)} out of 5`,
+  /** Tied to a real order by its number and the email it was placed with. */
+  verified: "Bought it",
+  write: "Write a review",
+  readAll: (count: number) => `Read all ${String(count)} reviews`,
+  pageTitle: "Reviews",
+  pageLead: "Everything people have told us, newest first.",
+  none: "No reviews yet. Tried it? Tell us what you reckon.",
+  form: {
+    metaTitle: "Write a review",
+    back: "Back to the shop",
+    leaveEmpty: "Leave this empty",
+    title: "Tell us what you reckon.",
+    lead: "A person reads every review before it goes up.",
+    rating: "Your rating",
+    star: (n: number) => `${String(n)} ${n === 1 ? "star" : "stars"}`,
+    body: "What you thought",
+    name: "Your name, as you'd like it shown",
+    nameHint: "First name and town is plenty. Like Sam, Ōtaki.",
+    bought: "Bought some? (you don't have to say)",
+    boughtHint:
+      "Add your order number and the email you ordered with and we'll mark your review as from somebody who bought it. Neither is shown.",
+    order: "Order number",
+    email: "Email you ordered with",
+    submit: "Send my review",
+    pending: "Sending",
+    thanks:
+      "Thanks for that. A person reads every review before it goes up, so give it a day or two.",
+    problems: {
+      rating: "Pick from one to five stars.",
+      body: "Say a few words about it, up to 1,500 letters.",
+      name: "Say how you'd like to be named, up to 60 letters.",
+      failed: "That didn't go through. Give it another go in a minute.",
+      slow: "That's a lot of reviews from one place in a short time. Give it ten minutes and try again.",
+    },
+  },
+} as const;
+
 export const LUCKY = {
   title: "Meet Lucky.",
   /** Her Meet Lucky page, minus the lines the law will not let a food say. */

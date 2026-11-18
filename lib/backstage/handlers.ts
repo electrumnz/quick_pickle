@@ -75,4 +75,6 @@ export function registerHandlers(): void {
     "show the new line across the top at once",
     showShopChange(),
   );
+  on("review.published", "show the review at once", showShopChange());
+  on("review.unpublished", "stop showing the review at once", showShopChange());
 }

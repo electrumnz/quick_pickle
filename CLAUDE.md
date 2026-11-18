@@ -281,6 +281,39 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
 - **Never change the line from a browser test on the first server:** every other test
   reads the top of the shop. `e2e/backstage-auth.spec.ts` does it on the sign-in server.
 
+### Reviews
+
+What customers say about it, on the shop (`components/site/Reviews.tsx`) and in the back
+end (Marketing, Reviews). `lib/backstage/marketing/reviews.ts` is the operations.
+
+- **Every review is read by a person before anybody sees it.** The form at `/review`
+  (`sendReview` in `components/site/actions.ts`) only ever saves one as waiting.
+  `reviews.publish` is the one way out: a person's, outward, and the copy rules run on
+  the customer's words first. Once published, they count as ours, so a review that
+  says what the product did to a body is refused however kind it is.
+- **A review is turned down for what the law will not let us say, never for being
+  unkind.** The stars on the shop are the average of every review it shows, worked out
+  over the same reviews it can show (`reviews.shown`): nothing is left out of the sum
+  and nothing is counted that is not on the page. Each is checked again against
+  today's rules on its way out, so a rule that arrives later takes an old review off
+  by itself.
+- **With none published the shop shows none.** No empty box, no stars, no "be the
+  first". Nothing is ever made up to fill the space. The demo's two reviews say
+  "Sample review." in their own words, because the demo is drawn by the shop's own
+  pages.
+- A customer's words are drawn as text, as typed: never markup, never tidied.
+  "Bought it" means the order number and the email given match a real order; neither
+  is ever shown.
+- The rating sits under "Pick your pack" as one line, linking down to the section
+  under the film. `/reviews` lists them all (up to 100) and is the one page of them in
+  the sitemap.
+- Pages are kept like the rest of the shop (`reviewsForPage()`, never while the site
+  is being built, the last answer when the database blinks). Publishing or taking one
+  down throws the kept pages away.
+- The form counts sends by address (`review` in `lib/shop/limit.ts`, 10 in ten
+  minutes), because a person reads every one. The privacy page says what a review
+  keeps and what it shows: change one and change the other.
+
 ### The database
 
 - `DATABASE_URL` (or `POSTGRES_URL`, which the Vercel and Supabase integration writes) is a

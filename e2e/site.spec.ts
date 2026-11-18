@@ -101,6 +101,8 @@ test.describe("the page", () => {
       "pick your pack.",
       "clear as a whistle.",
       "move over, oranges.",
+      // The demo has two published reviews. With none, there is no section.
+      "what people reckon.",
       "meet lucky.",
       "join the pickle crew.",
       "fair questions.",
@@ -344,6 +346,8 @@ test.describe("the page", () => {
       "/delivery",
       "/privacy",
       "/for/clubs",
+      "/review",
+      "/reviews",
     ]) {
       await page.goto(path);
       await page.addStyleTag({ content: SPACED });
@@ -382,6 +386,40 @@ test.describe("the page", () => {
     // React empties a form when its action answers. The typo is still
     // there to fix, not gone.
     await expect(crew).toHaveValue("not-an-email");
+  });
+
+  test("takes a review, and says a person reads it first", async ({ page }) => {
+    await page.goto("/");
+    // The rating beside the packs leads down to the reviews.
+    await page
+      .getByRole("link", { name: /out of 5, from/ })
+      .first()
+      .click();
+    await expect(page.locator("#reviews")).toBeInViewport();
+    await page
+      .locator("#reviews")
+      .getByRole("link", { name: "Write a review" })
+      .click();
+    await expect(page).toHaveURL(/\/review$/);
+
+    // Sent with nothing picked: handed back with what was typed.
+    await page
+      .getByRole("textbox", { name: "What you thought" })
+      .fill("Sour as.");
+    await page
+      .getByRole("textbox", { name: "Your name, as you'd like it shown" })
+      .fill("Test, Ōtaki");
+    await page.getByRole("button", { name: "Send my review" }).click();
+    await expect(page.locator("#rv-rating-error")).toBeVisible();
+    await expect(
+      page.getByRole("textbox", { name: "What you thought" }),
+    ).toHaveValue("Sour as.");
+
+    await page.getByRole("radio", { name: "4 stars" }).check({ force: true });
+    await page.getByRole("button", { name: "Send my review" }).click();
+    await expect(page.getByRole("status")).toContainText(
+      "A person reads every review before it goes up",
+    );
   });
 
   test("reads whole with JavaScript switched off", async ({ browser }) => {

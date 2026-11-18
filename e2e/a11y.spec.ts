@@ -15,6 +15,9 @@ const PAGES = [
   "/terms",
   "/privacy",
   "/order/thanks",
+  // Reviews: the form, and every published one (the demo has two).
+  "/review",
+  "/reviews",
   // A landing page: the demo's clubs page, which is live.
   "/for/clubs",
   // Where an email's unsubscribe link leads, for a link that is not ours.

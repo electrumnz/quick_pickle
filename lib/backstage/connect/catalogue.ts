@@ -232,6 +232,7 @@ export const SYSTEM_ONLY: ReadonlySet<string> = new Set([
   "promoCodes.peek",
   "promoCodes.crewWelcome",
   "reviews.submit",
+  "reviews.shown",
   "shop.topLineNow",
   "specials.current",
   "specials.worth",

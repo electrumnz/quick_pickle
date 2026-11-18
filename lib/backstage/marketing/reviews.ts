@@ -200,7 +200,7 @@ export const submitReview = defineOp({
   name: "reviews.submit",
   title: "Take a review from the shop",
   description:
-    "For the shop's review form (not built yet). Takes a rating from 1 to 5, a few words, and the name the customer wants shown. If they give an order number and the email it was placed with and the two match a real order, the review is tied to that order. It always lands as pending and is never shown until a person publishes it. The copy check runs on it straight away so the person reading it can see what it found.",
+    "For the shop's review form (/review). Takes a rating from 1 to 5, a few words, and the name the customer wants shown. If they give an order number and the email it was placed with and the two match a real order, the review is tied to that order. It always lands as pending and is never shown until a person publishes it. The copy check runs on it straight away so the person reading it can see what it found.",
   access: "write",
   input: z.object(reviewFields),
   run: (ctx, input) => receive(ctx, input, "form"),
@@ -376,7 +376,7 @@ export const publishReview = defineOp({
   name: "reviews.publish",
   title: "Publish a review",
   description:
-    "Puts a review where the shop can show it. Only a person may decide this. The copy check runs again first, and a banned finding refuses it: a review that says what the product did to someone's body cannot be published, however kind, because publishing makes it our claim. So does one that names a partner who has not agreed to be named. A restricted finding needs `acknowledgeRestricted: true`. The words are never changed. The shop does not show reviews yet. Needs a yes from a person.",
+    "Puts a review where the shop can show it. Only a person may decide this. The copy check runs again first, and a banned finding refuses it: a review that says what the product did to someone's body cannot be published, however kind, because publishing makes it our claim. So does one that names a partner who has not agreed to be named. A restricted finding needs `acknowledgeRestricted: true`. The words are never changed. The shop shows it within a minute. Needs a yes from a person.",
   access: "write",
   effect: "outward",
   input: z.object({ id: recordId, acknowledgeRestricted }),
@@ -516,17 +516,29 @@ export async function listPublishedReviews(
   now: Date = new Date(),
 ): Promise<PublishedReview[]> {
   const wanted = Math.max(1, Math.min(100, Math.trunc(limit)));
-  const rows = await db
+  // A few spare, in case some no longer pass.
+  return (await passingReviews(db, now, wanted * 2)).slice(0, wanted);
+}
+
+/**
+ * The published reviews that pass today's rules, newest first, out of the
+ * newest `rows` published. Checking is pure work once the partners who have
+ * not agreed to be named are loaded, so a shop's worth costs very little.
+ */
+async function passingReviews(
+  db: DbOrTx,
+  now: Date,
+  rows: number,
+): Promise<PublishedReview[]> {
+  const published = await db
     .select()
     .from(reviews)
     .where(eq(reviews.status, "published"))
     .orderBy(desc(reviews.decidedAt), desc(reviews.createdAt))
-    // A few spare, in case some no longer pass.
-    .limit(wanted * 2);
+    .limit(rows);
   const unpermitted = await loadUnpermittedPartners(db);
   const out: PublishedReview[] = [];
-  for (const review of rows) {
-    if (out.length === wanted) break;
+  for (const review of published) {
     const check = await checkPublicCopy(
       db,
       [review.body, review.displayName],
@@ -545,3 +557,40 @@ export async function listPublishedReviews(
   }
   return out;
 }
+
+/** How many reviews the shop's numbers are worked out over, at most. */
+const COUNTED = 2000;
+
+export type ShownReviews = {
+  /** The newest published reviews that pass today's rules, newest first. */
+  readonly reviews: readonly PublishedReview[];
+  /** How many published reviews pass today's rules, all of them. */
+  readonly count: number;
+  /**
+   * Their average rating, to one decimal, or null with none. Worked out over
+   * every review the shop can show, never a chosen few: a review is turned
+   * down for what the law will not let us say, and never for being unkind.
+   */
+  readonly average: number | null;
+};
+
+export const shownReviews = defineOp({
+  name: "reviews.shown",
+  title: "The reviews the shop shows",
+  description:
+    "For the shop itself, as it draws a page: the newest published reviews, how many there are and their average rating. Each is checked once more against today's rules, and the count and the average are over the same reviews the shop can show.",
+  access: "read",
+  input: z.object({
+    limit: z.number().int().min(1).max(100).default(6),
+  }),
+  async run(ctx, input): Promise<ShownReviews> {
+    const all = await passingReviews(ctx.db, ctx.now, COUNTED);
+    const total = all.reduce((sum, review) => sum + review.rating, 0);
+    return {
+      reviews: all.slice(0, input.limit),
+      count: all.length,
+      average:
+        all.length === 0 ? null : Math.round((total / all.length) * 10) / 10,
+    };
+  },
+});

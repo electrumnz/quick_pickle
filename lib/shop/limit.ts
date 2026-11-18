@@ -20,6 +20,8 @@
  *          checks, or that was told something about a code. A form handed
  *          back to have a field put right counts for nothing.
  *   crew   a sign-up to the Pickle Crew.
+ *   review a review sent from the shop's form. A person reads every one, so
+ *          a flood of them is a flood of reading.
  *   knock  an app registering with, or handing a code or a key to, the
  *          back end's connection for Claude. Nothing a customer does.
  *   calls  a connected Claude calling the back end's tools, counted for
@@ -44,6 +46,7 @@ export const LIMITS = {
   code: { most: 20, minutes: 10 },
   order: { most: 30, minutes: 10 },
   crew: { most: 20, minutes: 10 },
+  review: { most: 10, minutes: 10 },
   // Not the shop's: an app knocking at the back end's connection for
   // Claude (registering, or handing in a code or a key). No customer does
   // this, and real apps do it a handful of times.
@@ -63,6 +66,7 @@ export const LIMITED = [
   "code",
   "order",
   "crew",
+  "review",
   "knock",
   "calls",
   "seen",
