@@ -2,8 +2,9 @@
 
 Updated 16 November 2026 (New Zealand time). Honest status, not a summary.
 
-Taking this on? Read [HANDOVER.md](HANDOVER.md) first. This is the long version of its
-lists, with the reasons.
+Taking this on? Read [HANDOVER.md](HANDOVER.md) first. The go-live checklist, in order
+and saying who does each step, is [LAUNCH.md](LAUNCH.md). This is the long version, with
+the reasons.
 
 `npm run prelaunch` checks what a machine can check of this, and fails until it is done.
 The go-live list in the back end (Settings, Go-live list) shows the same thing on a screen.

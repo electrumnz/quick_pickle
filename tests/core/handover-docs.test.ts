@@ -8,8 +8,9 @@ import { STARTER_HOW_TOS } from "@/lib/backstage/plans/starter/how-tos";
 import { STARTER_QUESTIONS } from "@/lib/backstage/plans/starter/questions";
 
 /**
- * The documents a new owner is handed: HANDOVER.md, the accounts guide, the
- * to-do list and the two indexes.
+ * The documents a new owner is handed: HANDOVER.md, the go-live checklist,
+ * the accounts guide, the to-do list, the two indexes, and AGENTS.md, which
+ * sends an AI that does not read CLAUDE.md to it.
  *
  * They are written by hand, so nothing stops them going stale but this. It
  * holds three things: a link in one of them leads to a file that is there,
@@ -23,7 +24,9 @@ import { STARTER_QUESTIONS } from "@/lib/backstage/plans/starter/questions";
 const ROOT = process.cwd();
 const DOCUMENTS = [
   "README.md",
+  "AGENTS.md",
   "HANDOVER.md",
+  "LAUNCH.md",
   "TODO.md",
   "docs/README.md",
   "docs/ACCOUNTS.md",

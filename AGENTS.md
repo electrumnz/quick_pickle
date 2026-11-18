@@ -7,3 +7,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# Quick Pickle
+
+Read [CLAUDE.md](CLAUDE.md) before changing anything. It is this repository's rulebook
+for any AI agent, not only Claude: how the site is built, the rules that come from the
+law, and every decision made so far with its reason.
+
+[LAUNCH.md](LAUNCH.md) is the go-live checklist, in order, and its first section is
+written for the AI working through it with the owner.
