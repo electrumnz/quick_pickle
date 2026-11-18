@@ -16,6 +16,7 @@ import {
   startPageTest,
   stopPageTest,
 } from "@/lib/backstage/pages/routing-ops";
+import { showFilms } from "@/lib/backstage/shop/films";
 import {
   publishTopLine,
   resetTopLine,
@@ -253,6 +254,35 @@ export async function resetTopLineAction(): Promise<void> {
     {
       back: `${TOP_LINE}#publish`,
       done: "The standard line is back, and shows within a minute. Your words are kept as the draft.",
+    },
+  );
+}
+
+const FILMS_PAGE = `${LIST}/films`;
+
+/** Every value a form sent under one name. */
+const formAll = (form: FormData, key: string): string[] =>
+  form
+    .getAll(key)
+    .filter((value): value is string => typeof value === "string");
+
+export async function showFilmsAction(form: FormData): Promise<void> {
+  await submit(
+    showFilms,
+    {
+      // The boxes ticked, and the films that were on when the screen was
+      // drawn: the yes is for what was on the screen.
+      on: formAll(form, "on"),
+      shown: formAll(form, "shown"),
+    },
+    {
+      back: FILMS_PAGE,
+      done: (saved) =>
+        !saved.changed
+          ? "Nothing changed. The shop is playing the same films."
+          : saved.on.length === 0
+            ? "Done. Every film comes off the shop within a minute."
+            : "Done. The shop plays them within a minute.",
     },
   );
 }

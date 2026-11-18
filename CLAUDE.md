@@ -280,6 +280,35 @@ operations and `lib/shop/top-line.ts` the part the shop shares with them.
 - **Never change the line from a browser test on the first server:** every other test
   reads the top of the shop. `e2e/backstage-auth.spec.ts` does it on the sign-in server.
 
+### The films on the shop
+
+The six promo films made on 16 November 2026 can play on the front page, whole, silent
+and looping, in the strip of reels ("See it in action.", `ReelsSection`). They are in the
+repository (`FILMS` in `content/media.ts`, the files in `public/media/`), and every one
+starts switched off. `lib/backstage/shop/films.ts` is the operations, `lib/shop/films-now.ts`
+the shop's read: Marketing, Landing pages, Films on the shop.
+
+- **A person chooses, after watching them.** The screen plays each film exactly as the
+  shop would, with a box to tick. `shop.showFilms` is outward, needs a yes, and is
+  never a bot's (`PEOPLE_ONLY`): a bot cannot watch a film for the person saying yes.
+- **A yes is for what was on the screen.** The form sends which films were on when it
+  was drawn, and the change is refused if that is not so any more.
+- They show in the catalogue's order, whatever order they were ticked in. A key the
+  catalogue no longer has is simply not on, and a row that cannot be read is none.
+- **The strip says how they were made.** While a film is in it, a line under it says
+  made with AI, and that the people are not real when one with people in it is showing
+  (`REELS` in `content/site.ts`). The platforms ask for their own label on a post.
+- Each film's caption and description are read by the copy rules as it is switched on,
+  as well as by the scanner. The words burnt into a film were read when it was made.
+- The strip is not drawn at all with nothing in it, and a page asks through
+  `filmsForPage()` like the line across the top: never while the site is being built,
+  and with no answer the last one it had.
+- A film plays only while it is on screen and never under reduced motion or a data
+  saver (`LoopVideo`), so its poster is all some visitors see: `--poster-at` in
+  `scripts/build-media.mjs` takes it from a moment that shows what the film is.
+- **Never switch films on from a browser test on the first server:** every other test
+  reads the front page. `e2e/backstage-auth.spec.ts` does it on the sign-in server.
+
 ### The database
 
 - `DATABASE_URL` (or `POSTGRES_URL`, which the Vercel and Supabase integration writes) is a
@@ -1139,6 +1168,8 @@ The asset pack itself (200 MB of print masters) is not in the repository. Both b
 scripts take its path as an argument.
 
 Video and reels go in the slots in `content/media.ts`, encoded by `scripts/build-media.mjs`.
+The promo films are there too, switched off until the owner puts them on (under "The films
+on the shop" above).
 
 ### The documents
 

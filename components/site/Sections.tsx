@@ -14,7 +14,7 @@ import { LoopVideo } from "@/components/ui/LoopVideo";
 import { Ticker } from "@/components/ui/Ticker";
 import { bandFit, type BandFace } from "@/components/ui/ticker-fit";
 import { faqs, shipDateText } from "@/content/faq";
-import { MEDIA } from "@/content/media";
+import { MEDIA, type Reel } from "@/content/media";
 import {
   BUY,
   CREW,
@@ -407,9 +407,23 @@ export function MeetLucky() {
   );
 }
 
-/** The swipeable rail of clips. Not rendered until there is a clip to show. */
-export function ReelsSection() {
-  if (MEDIA.reels.length === 0) return null;
+/**
+ * The swipeable rail of clips: any the site carries itself, then the films
+ * switched on in the back end. Not rendered until there is one to show.
+ * While a film made with AI is in it, a line under it says so.
+ */
+export function ReelsSection({
+  films = [],
+}: {
+  readonly films?: readonly Reel[];
+}) {
+  const reels = [...MEDIA.reels, ...films];
+  if (reels.length === 0) return null;
+  const aiNote = reels.some((reel) => reel.people === true)
+    ? REELS.notRealPeople
+    : reels.some((reel) => reel.madeWithAi === true)
+      ? REELS.madeWithAi
+      : null;
   return (
     <section
       aria-labelledby="reels-title"
@@ -425,8 +439,13 @@ export function ReelsSection() {
         </h2>
       </div>
       <div className="mt-8">
-        <Reels reels={MEDIA.reels} label={REELS.title} />
+        <Reels reels={reels} label={REELS.title} />
       </div>
+      {aiNote === null ? null : (
+        <p className="max-w-page-gutters px-gutter text-navy-muted mx-auto mt-6 text-[0.9375rem] leading-snug">
+          {aiNote}
+        </p>
+      )}
     </section>
   );
 }

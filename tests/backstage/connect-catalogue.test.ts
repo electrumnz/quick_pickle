@@ -117,9 +117,9 @@ describe("the list of every operation", () => {
       plans: 2,
       promoCodes: 3,
       reviews: 1,
-      // An owner's confirming of a fact, and the shop's own read of the
-      // line across its top as it draws a page.
-      shop: 2,
+      // An owner's confirming of a fact, and the shop's own reads of the
+      // line across its top and of the films it plays, as it draws a page.
+      shop: 3,
       specials: 2,
       // Every one of them. Three are the PIN door's (15 November 2026):
       // making the first owner with a PIN, a new PIN by the set-up code,
@@ -186,6 +186,9 @@ describe("the list of every operation", () => {
       // The line across the top of the shop: a draft a bot may write,
       // published by a person on the screen that shows the words.
       "shop.publishTopLine",
+      // The films on the shop are only seen by playing them, so they are
+      // chosen by a person on the screen that plays them (18 November 2026).
+      "shop.showFilms",
       "social.approve",
       "specials.switchOn",
     ]);

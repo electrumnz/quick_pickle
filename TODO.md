@@ -495,13 +495,17 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 ## Would make it sell harder
 
 - [ ] Real product photography or approved illustration of the bottle and the packs.
-- [ ] A hero loop and reels. The slots are in `content/media.ts`; the encoder is
-      `scripts/build-media.mjs`. Nothing on the Drive is to be used yet: on 13 November
-      (New Zealand time) the brand pack marked every motion file it holds (the hero loop,
-      the films, the stingers) as superseded, pending a rebuild. Never the films that carry
-      "for the quads" or "performance with pickles", whatever state they are in. That was
-      still so at the last look at the Drive (11:00am on 13 November, New Zealand time),
-      after which the hourly watch was switched off.
+- [ ] **The promo films are on the site, switched off.** The six made on 16 November play
+      in the shop's strip of reels once an owner has watched them and ticked them, under
+      Marketing, Landing pages, Films on the shop. None is on yet. Ash should see all six
+      first: they were made with AI, and one of them is a streaker.
+- [ ] A hero loop. The slot is in `content/media.ts`; the encoder is
+      `scripts/build-media.mjs`. Nothing in the brand pack is to be used yet: on 13
+      November (New Zealand time) it marked every motion file it holds (the hero loop,
+      its films, the stingers) as superseded, pending a rebuild. Never the films that
+      carry "for the quads" or "performance with pickles", whatever state they are in.
+      That was still so at the last look at the Drive (11:00am on 13 November, New
+      Zealand time), after which the hourly watch was switched off.
 - [ ] **Vector copies of the three official marks are on the Drive** (`02 Logos/vector/`,
       13 November): the stacked lockup, Lucky flying and the round lockup, drawn in-house
       from the official pictures. The pack's own notes say they are not Ashleigh's original
