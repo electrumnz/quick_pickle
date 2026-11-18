@@ -1,6 +1,7 @@
 {
-  "actions": ["stripe-events", "status"],
+  "actions": ["add-domain", "redeploy", "status"],
+  "domain": "quickpickle.co.nz",
   "confirm": "yes",
-  "asked": "2026-11-15T02:30Z",
-  "why": "Have Stripe send news of a refund that changes after it was made (refund.updated and refund.failed), so one that comes back is taken off the order and put on Today."
+  "asked": "2026-11-18T02:18Z",
+  "why": "Ash has bought quickpickle.co.nz at 1st Domains. Put it on the site, with www beside it, and say which DNS records point it here. The shop goes on calling itself by the host's own address, held in place, until use-domain."
 }

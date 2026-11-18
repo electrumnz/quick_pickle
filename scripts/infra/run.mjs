@@ -858,12 +858,44 @@ async function sayRecords(entries, apex) {
   }
   console.log("");
   console.log(
+    '  "@" is the bare name. Some registrars want that box left blank, or the',
+  );
+  console.log("  name typed in full.");
+  console.log(
     "  A record already at the same host (a parking page's, say) has to go, or",
   );
   console.log(
     '  the two fight. DNS takes from minutes to a day to spread. Then "status"',
   );
   console.log('  says "answering", and "use-domain" can be asked for.');
+}
+
+/**
+ * Waits for the host to finish building what the asking push started.
+ *
+ * A request arrives in a push to main, and the host starts building that same
+ * push at the same moment. Changing which names a project answers to while
+ * it is being built is asking for a refusal, and the deployment made next
+ * should be the first to carry what was just set. Gives up after four
+ * minutes and says where things stood, so it can never be why a run hangs.
+ */
+async function productionSettled() {
+  const started = Date.now();
+  // The push that asked, when there was one. The host may not have made its
+  // deployment yet when this first looks, and the one before it is no answer.
+  const asking = (env.GITHUB_SHA ?? "").trim();
+  for (;;) {
+    const list = await vercel(
+      `/v6/deployments?projectId=${encodeURIComponent(vercelProject)}&target=production&limit=1`,
+    );
+    const latest = (list?.deployments ?? [])[0];
+    const state = String(latest?.state ?? latest?.readyState ?? "UNKNOWN");
+    const busy = ["BUILDING", "QUEUED", "INITIALIZING"].includes(state);
+    const ours =
+      asking === "" || String(latest?.meta?.githubCommitSha ?? "") === asking;
+    if ((ours && !busy) || Date.now() - started > 4 * 60 * 1000) return state;
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+  }
 }
 
 /**
@@ -903,6 +935,11 @@ async function addDomain() {
     );
     changedSettings = true;
   }
+
+  const settled = await productionSettled();
+  console.log(
+    `  the host's own build of this push: ${settled.toLowerCase()}. Going on.`,
+  );
 
   const added = await nameOnProject(name, existing);
   const apex = typeof added.apexName === "string" ? added.apexName : name;

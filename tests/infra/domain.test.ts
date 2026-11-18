@@ -232,10 +232,25 @@ describe("the order the script does things in", () => {
     // the site goes on calling itself by the address that works.
     const body = written("addDomain");
     const held = body.indexOf("await holdAddress(");
+    const waited = body.indexOf("await productionSettled()");
     const added = body.indexOf("await nameOnProject(");
     expect(held).toBeGreaterThan(-1);
-    expect(added).toBeGreaterThan(held);
+    // Then it lets the host finish building the push that asked, so the
+    // project is not changed under a build and the next one carries the hold.
+    expect(waited).toBeGreaterThan(held);
+    expect(added).toBeGreaterThan(waited);
     expect(body).toContain("hostsOwnAddress(existing)");
+  });
+
+  it("never waits on the host for ever", () => {
+    const body = written("productionSettled");
+    expect(body).toContain("4 * 60 * 1000");
+    expect(body).toContain(
+      "Date.now() - started > 4 * 60 * 1000) return state;",
+    );
+    // And it waits for the build of the push that asked, not the one before.
+    expect(body).toContain("env.GITHUB_SHA");
+    expect(body).toContain("(ours && !busy) ||");
   });
 
   it("moves the shop to a domain only once the shop answers there", () => {
