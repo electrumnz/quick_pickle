@@ -7,6 +7,7 @@ import { SubmitButton } from "@/components/backstage/SubmitButton";
 import type { ShopFormState } from "../shop/flow";
 
 import { labelAction } from "./actions";
+import { labelField } from "./values";
 
 /**
  * What the label says and who the company is: one form, two presses, like
@@ -73,11 +74,14 @@ const sentence = (line: string) => line.charAt(0).toUpperCase() + line.slice(1);
 export function LabelForm({
   start,
   canChange,
+  flavours,
 }: {
   /** The boxes as the shop has them now (./values.ts). */
   readonly start: Readonly<Record<string, string>>;
   /** False for somebody who can only look. */
   readonly canChange: boolean;
+  /** Each flavour has a label of its own, first flavour first. */
+  readonly flavours: readonly { readonly key: string; readonly name: string }[];
 }) {
   const empty: ShopFormState = {
     step: "idle",
@@ -118,32 +122,50 @@ export function LabelForm({
         </div>
       ) : null}
 
-      <fieldset className="flex flex-col gap-5">
-        <legend className="bk-h2 mb-4">
-          <span className="cap-trim">What the label says</span>
-        </legend>
-        <Line
-          name="ingredients"
-          label="The ingredients list"
-          hint="Word for word, as the printed label has it. Leave it empty until the label is in your hand: until then the site says the list is on its way, and never guesses."
-          rows={4}
-          maxLength={800}
-          state={state}
-        />
-        <Line
-          name="contains"
-          label="The allergen line"
-          hint="Only if the label has one, exactly as printed. Empty says nothing about allergens either way."
-          maxLength={200}
-          state={state}
-        />
-        <Line
-          name="storage"
-          label="The storage line"
-          hint="As printed. Empty shows none."
-          maxLength={200}
-          state={state}
-        />
+      {flavours.map((flavour, index) => {
+        const first = index === 0;
+        const field = (line: "ingredients" | "contains" | "storage") =>
+          labelField(line, flavour.key, first);
+        return (
+          <fieldset key={flavour.key} className="flex flex-col gap-5">
+            <legend className="bk-h2 mb-4">
+              <span className="cap-trim">
+                {flavours.length === 1
+                  ? "What the label says"
+                  : `What the ${flavour.name} label says`}
+              </span>
+            </legend>
+            <Line
+              name={field("ingredients")}
+              label="The ingredients list"
+              hint={
+                flavours.length === 1
+                  ? "Word for word, as the printed label has it. Leave it empty until the label is in your hand: until then the site says the list is on its way, and never guesses."
+                  : `Word for word, as the printed ${flavour.name} label has it. Leave it empty until that label is in your hand: until then the site says its list is on its way, and never guesses.`
+              }
+              rows={4}
+              maxLength={800}
+              state={state}
+            />
+            <Line
+              name={field("contains")}
+              label="The allergen line"
+              hint="Only if the label has one, exactly as printed. Empty says nothing about allergens either way."
+              maxLength={200}
+              state={state}
+            />
+            <Line
+              name={field("storage")}
+              label="The storage line"
+              hint="As printed. Empty shows none."
+              maxLength={200}
+              state={state}
+            />
+          </fieldset>
+        );
+      })}
+
+      <div className="flex flex-col gap-5">
         {askTick ? (
           <label
             data-testid="label-tick"
@@ -169,7 +191,7 @@ export function LabelForm({
           </label>
         ) : null}
         <input type="hidden" name="tickFor" value={state.tickFor ?? ""} />
-      </fieldset>
+      </div>
 
       <fieldset className="flex flex-col gap-5">
         <legend className="bk-h2 mb-4">

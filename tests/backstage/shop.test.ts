@@ -361,7 +361,7 @@ describe("the shop, run from the back end", () => {
           company: { legalName: "Quick Pickle Limited" },
         }),
       ).toBe(
-        'This changes what every customer sees and is charged from now on: the ship date to 2026-12-01; the shop to live; the batch\'s name to "Batch 002"; not taking orders; the contact address taken off; the ingredients list to "Water, salt"; the storage line taken off; the legal name to "Quick Pickle Limited".',
+        'This changes what every customer sees and is charged from now on: the ship date to 2026-12-01; the shop to live; the batch\'s name to "Batch 002"; not taking orders; the contact address taken off; the Original ingredients list to "Water, salt"; the Original storage line taken off; the legal name to "Quick Pickle Limited".',
       );
       // A figure that makes no sense is said as it was sent, not dressed up.
       expect(await said({ prices: { "QP-SHOT-06": -5 } })).toContain(
@@ -468,7 +468,7 @@ describe("the shop, run from the back end", () => {
       // What the label says and who the company is are typed in the back
       // end first (tests/backstage/shop-label.test.ts).
       expect(canConfirm("ingredients", FILE_OFFER)).toBe(
-        "Put the ingredients list in first.",
+        "Put the ingredients list in first for Original and Mango Chilli Lime.",
       );
       expect(canConfirm("legal-entity", FILE_OFFER)).toBe(
         "Put the legal name in first.",

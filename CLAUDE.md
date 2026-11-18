@@ -540,6 +540,13 @@ go-live list shows when it last ran and what is stuck.
     not taken, and the screen's tick only counts for the words it was shown beside. With
     no allergen line the site says nothing about allergens, and never that there are
     none. Nothing drafts, tidies or guesses these.
+  - **Each flavour has a label of its own.** `label` is the first flavour's (it was the one
+    juice's before there were two), and `flavourLabels` holds every other flavour's by
+    key; read one with `labelOf`. They are typed on one screen, each under its flavour's
+    name, and every sentence about a line names the flavour ("the Mango Chilli Lime
+    ingredients list"). "What's in it?" shows each flavour's own label under its name and
+    never one as the other's. The ingredients fact is only confirmed once every flavour's
+    list is in.
   - **Who the company is** (`company`: legal name, NZBN, address, GST number) is a fact
     about us and not words of ours, so it is not put through the copy rules, the way a
     customer's own address is not: a registered name is whatever it is. The two numbers

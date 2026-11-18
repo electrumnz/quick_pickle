@@ -49,6 +49,7 @@ export default async function LabelSettingsPage() {
           <LabelForm
             start={labelFormValues(offer)}
             canChange={staff.role !== "viewer"}
+            flavours={offer.flavours.map(({ key, name }) => ({ key, name }))}
           />
         </Panel>
         <div className="flex flex-col gap-6">

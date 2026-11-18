@@ -275,6 +275,8 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 - [x] **Marketing.** Campaigns to the crew with approval before sending, a social planner,
       reviews read by a person before anyone sees them, and partners with a written yes on
       file before they are named.
+- [x] **A label for each flavour.** Settings, The label and the company has the three
+      lines for each flavour, and "What's in it?" shows each flavour's own label.
 - [x] **Stock by flavour.** A batch is one flavour, chosen when it is planned. Packing
       takes each flavour's shots from a batch of that flavour (asking which batch for
       each in a box of both), and the stock picture, Today and the low-stock warning
@@ -520,8 +522,6 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       vectors and list where they differ. The site keeps what it has: her own paths where
       she drew them as vectors, and the official pictures elsewhere. Worth a look only if a
       sharper full-colour Lucky is wanted at a large size.
-- [ ] **A label for each flavour.** The ingredients, allergen and storage lines are kept
-      once for the shop today; Mango Chilli Lime's label will say something else.
 - [ ] **Ask the first customers for a review.** The form is at `/review` and the shop
       shows nothing until one is published, so the section appears with the first.
       Nothing asks by email yet: a request for a review is not part of an order's

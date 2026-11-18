@@ -124,8 +124,8 @@ describe("the label and the company, set from the back end", () => {
     };
     const shown = await execute(checkShopChange, asked, staff);
     expect(shown.changed).toEqual([
-      'the ingredients list to "Water, vinegar, salt, dill, garlic"',
-      'the storage line to "Refrigerate after opening."',
+      'the Original ingredients list to "Water, vinegar, salt, dill, garlic"',
+      'the Original storage line to "Refrigerate after opening."',
     ]);
     // Checking saved nothing.
     expect(await stored()).toBeUndefined();
@@ -144,7 +144,7 @@ describe("the label and the company, set from the back end", () => {
       },
     });
     expect(await log()).toEqual([
-      'Changed the shop: the ingredients list to "Water, vinegar, salt, dill, garlic"; the storage line to "Refrigerate after opening."',
+      'Changed the shop: the Original ingredients list to "Water, vinegar, salt, dill, garlic"; the Original storage line to "Refrigerate after opening."',
     ]);
     // Words a customer reads moved, so the kept pages are thrown away.
     expect(
@@ -196,13 +196,93 @@ describe("the label and the company, set from the back end", () => {
       staff,
     );
     expect(done.changed).toEqual([
-      "the ingredients list taken off",
-      "the storage line taken off",
+      "the Original ingredients list taken off",
+      "the Original storage line taken off",
     ]);
     expect(done.offer.label).toEqual(FILE_OFFER.label);
     expect(await stored()).toEqual({});
   });
 
+  it("keeps a label for each flavour, and never shows one as the other's", async () => {
+    const asked = {
+      flavourLabels: {
+        "mango-chilli-lime": {
+          ingredients: "Water, vinegar, salt, mango puree",
+          storage: "Refrigerate after opening.",
+        },
+      },
+    };
+    const shown = await execute(checkShopChange, asked, staff);
+    expect(shown.changed).toEqual([
+      'the Mango Chilli Lime ingredients list to "Water, vinegar, salt, mango puree"',
+      'the Mango Chilli Lime storage line to "Refrigerate after opening."',
+    ]);
+    const done = await execute(changeShop, asked, staff);
+    // Kept apart from Original's.
+    expect(await stored()).toEqual({
+      flavourLabels: {
+        "mango-chilli-lime": {
+          ingredients: "Water, vinegar, salt, mango puree",
+          storage: "Refrigerate after opening.",
+        },
+      },
+    });
+    expect(done.offer.label).toEqual(FILE_OFFER.label);
+    // The site promises Original's list and shows Mango Chilli Lime's.
+    expect(answer(done.offer)).toEqual([
+      "The Original list will be right here before its first bottle ships, exactly as it is printed on its label.",
+      "The Mango Chilli Lime label says:",
+      "Water, vinegar, salt, mango puree.",
+      "Refrigerate after opening.",
+    ]);
+
+    // A flavour that is not on the shelf has no label to write.
+    expect(
+      (
+        await refusal(
+          execute(
+            changeShop,
+            { flavourLabels: { gherkin: { ingredients: "Water" } } },
+            staff,
+          ),
+        )
+      ).message,
+    ).toBe("There is no flavour gherkin to label.");
+
+    // Taken off again, and forgotten.
+    await execute(
+      changeShop,
+      {
+        flavourLabels: {
+          "mango-chilli-lime": { ingredients: "", storage: "" },
+        },
+      },
+      staff,
+    );
+    expect(await stored()).toEqual({});
+  });
+
+  it("reads each flavour's list against the same rules", async () => {
+    // The Code's own words for an additive wait for a person's check on
+    // any flavour's list.
+    const asked = {
+      flavourLabels: {
+        "mango-chilli-lime": {
+          ingredients: "Water, mango, mineral salt (509)",
+        },
+      },
+    };
+    expect((await refusal(execute(changeShop, asked, staff))).message).toBe(
+      'Check this against the printed label: "mineral" in the Mango Chilli Lime ingredients list. If the label says exactly that, tick the box to say so.',
+    );
+    await execute(changeShop, { ...asked, labelChecked: true }, staff);
+    await execute(
+      changeShop,
+      { flavourLabels: { "mango-chilli-lime": { ingredients: "" } } },
+      staff,
+    );
+    expect(await stored()).toEqual({});
+  });
   it("refuses a claim in any of the label's lines", async () => {
     for (const label of [
       { ingredients: "Water, salt, electrolytes" },
@@ -231,7 +311,7 @@ describe("the label and the company, set from the back end", () => {
     it("waits for a person to check it against the printed label", async () => {
       const error = await refusal(execute(checkShopChange, { label }, staff));
       expect(error.message).toBe(
-        'Check this against the printed label: "mineral" in the ingredients list. If the label says exactly that, tick the box to say so.',
+        'Check this against the printed label: "mineral" in the Original ingredients list. If the label says exactly that, tick the box to say so.',
       );
       expect(error.fields).toHaveProperty("labelChecked");
       expect(
@@ -248,7 +328,7 @@ describe("the label and the company, set from the back end", () => {
       );
       expect(done.offer.label.ingredients).toBe(label.ingredients);
       expect(await log()).toEqual([
-        'Changed the shop: the ingredients list to "Water, vinegar, salt, mineral salt (509)". Said to be word for word what the printed label says: "mineral" in the ingredients list (NCC-18)',
+        'Changed the shop: the Original ingredients list to "Water, vinegar, salt, mineral salt (509)". Said to be word for word what the printed label says: "mineral" in the Original ingredients list (NCC-18)',
       ]);
       const [entry] = await handle.db.select().from(auditLog);
       expect(entry?.actorName).toBe("human staff");
@@ -281,7 +361,9 @@ describe("the label and the company, set from the back end", () => {
         { label: { storage: "Keep cold" } },
         staff,
       );
-      expect(done.changed).toEqual(['the storage line to "Keep cold"']);
+      expect(done.changed).toEqual([
+        'the Original storage line to "Keep cold"',
+      ]);
     });
 
     it("does not let a tick clear the same word anywhere else", async () => {
@@ -404,24 +486,40 @@ describe("the label and the company, set from the back end", () => {
 
   describe("confirming them", () => {
     it("needs the ingredients list to be in first", async () => {
-      expect(canConfirm("ingredients", FILE_OFFER)).toBe(
-        "Put the ingredients list in first.",
-      );
+      // Every flavour's own list: one never stands for the other.
+      const both =
+        "Put the ingredients list in first for Original and Mango Chilli Lime.";
+      expect(canConfirm("ingredients", FILE_OFFER)).toBe(both);
       await expect(
         execute(confirmFact, { key: "ingredients" }, owner),
-      ).rejects.toThrow("Put the ingredients list in first.");
+      ).rejects.toThrow(both);
       expect(factNow("ingredients", FILE_OFFER)).toBe(
         "Nothing is in yet: the site says the list is on its way",
       );
 
-      const { offer } = await execute(
+      const first = await execute(
         changeShop,
         { label: { ingredients: "Water, vinegar, salt." } },
         staff,
       );
+      // Original's alone is not enough.
+      expect(canConfirm("ingredients", first.offer)).toBe(
+        "Put the ingredients list in first for Mango Chilli Lime.",
+      );
+      const { offer } = await execute(
+        changeShop,
+        {
+          flavourLabels: {
+            "mango-chilli-lime": {
+              ingredients: "Water, vinegar, salt, mango.",
+            },
+          },
+        },
+        staff,
+      );
       // Whoever confirms it is shown exactly what they are confirming.
       expect(factNow("ingredients", offer)).toBe(
-        "Ingredients: Water, vinegar, salt. No allergen line. No storage line",
+        "Original: Ingredients: Water, vinegar, salt. No allergen line. No storage line. Mango Chilli Lime: Ingredients: Water, vinegar, salt, mango. No allergen line. No storage line",
       );
       // Putting the words in did not confirm them.
       expect(offer.unconfirmed.map((fact) => fact.key)).toContain(
