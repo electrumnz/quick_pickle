@@ -14,7 +14,7 @@ import { LoopVideo } from "@/components/ui/LoopVideo";
 import { Ticker } from "@/components/ui/Ticker";
 import { bandFit, type BandFace } from "@/components/ui/ticker-fit";
 import { faqs, shipDateText } from "@/content/faq";
-import { MEDIA, type Reel } from "@/content/media";
+import { MEDIA } from "@/content/media";
 import {
   BUY,
   CREW,
@@ -408,16 +408,11 @@ export function MeetLucky() {
 }
 
 /**
- * The swipeable rail of clips: any the site carries itself, then the films
- * switched on in the back end. Not rendered until there is one to show.
+ * The swipeable rail of clips. Not rendered until there is a clip to show.
  * While a film made with AI is in it, a line under it says so.
  */
-export function ReelsSection({
-  films = [],
-}: {
-  readonly films?: readonly Reel[];
-}) {
-  const reels = [...MEDIA.reels, ...films];
+export function ReelsSection() {
+  const { reels } = MEDIA;
   if (reels.length === 0) return null;
   const aiNote = reels.some((reel) => reel.people === true)
     ? REELS.notRealPeople

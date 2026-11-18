@@ -159,11 +159,6 @@ export type Store = {
    */
   currentTopLine?(): Promise<readonly string[] | null>;
   /**
-   * The keys of the films the back end has put on the shop, in the order
-   * they show. Only the database store has any: with any other, none is on.
-   */
-  currentFilms?(): Promise<readonly string[]>;
-  /**
    * The code somebody is given for joining the Pickle Crew, if one is set
    * up and could be used right now.
    */
@@ -333,15 +328,6 @@ function dbStore(env: Record<string, string | undefined>): Store {
         systemCaller("The shop", "storefront"),
       );
       return line.lines;
-    },
-    async currentFilms() {
-      const { filmsNow } = await import("@/lib/backstage/shop/films");
-      const films = await execute(
-        filmsNow,
-        {},
-        systemCaller("The shop", "storefront"),
-      );
-      return films.keys;
     },
     async welcomeCode() {
       const { crewWelcomeCode } =
