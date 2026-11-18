@@ -13,10 +13,14 @@
 //   a push to main    "status", unless that push changed
 //                     .github/infra-request.json, in which case the file
 //                     says: { "actions": ["status", ...], "confirm": "yes" }
+//                     and, for the two actions that take one, the name of
+//                     a domain: "domain": "example.co.nz"
 //
 // Rules this file keeps:
 //   - It prints names and states. It never prints a value, and anything it
-//     generates is masked in the log before it is used.
+//     generates is masked in the log before it is used. (A DNS record is not
+//     a secret: it is public the moment it is added, and a person has to be
+//     able to read it here to add it.)
 //   - It is pinned to Quick Pickle's own project and team. A personal token
 //     can reach every project its owner can, and another business shares the
 //     owner, so nothing here lists projects or takes an id from an input.
@@ -28,6 +32,14 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import {
+  hostsOwnAddress,
+  readDomainName,
+  recordFor,
+  STATE_SAID,
+  stateOf,
+} from "./domain.mjs";
 
 /** Never to be touched, whatever a token can reach. */
 const NOT_OURS = new Set(["ogayhxewacfwohxgwzuz"]);
@@ -70,11 +82,12 @@ function whatWasAsked() {
       actions: [(env.INFRA_ACTION ?? "").trim() || "status"],
       confirmed: (env.INFRA_CONFIRM ?? "").trim().toLowerCase() === "yes",
       rotate: false,
+      domain: "",
     };
   }
   const request = readRequest();
   if (request === null) {
-    return { actions: ["status"], confirmed: false, rotate: false };
+    return { actions: ["status"], confirmed: false, rotate: false, domain: "" };
   }
   const list = Array.isArray(request.actions)
     ? request.actions.filter((item) => typeof item === "string")
@@ -83,10 +96,12 @@ function whatWasAsked() {
     actions: list.length > 0 ? list : ["status"],
     confirmed: String(request.confirm ?? "").toLowerCase() === "yes",
     rotate: request.rotate === true,
+    // A domain is only ever named in a commit, never typed into a form.
+    domain: typeof request.domain === "string" ? request.domain : "",
   };
 }
 
-const { actions, confirmed, rotate } = whatWasAsked();
+const { actions, confirmed, rotate, domain: askedDomain } = whatWasAsked();
 
 /** Set when an action changed a setting that only a new deployment picks up. */
 let changedSettings = false;
@@ -182,6 +197,41 @@ async function vercel(path, options = {}) {
   });
 }
 
+/** Every address on the project, as the host lists them. */
+async function projectDomains() {
+  const result = await vercel(`/v9/projects/${vercelProject}/domains`);
+  return Array.isArray(result?.domains) ? result.domains : [];
+}
+
+/**
+ * How the host sees one name's DNS, and what it recommends. Null for the
+ * host's own address, which has no DNS of ours, and when it cannot be read.
+ */
+async function domainConfig(name) {
+  if (name.endsWith(".vercel.app")) return null;
+  try {
+    return await vercel(
+      `/v6/domains/${encodeURIComponent(name)}/config?projectIdOrName=${encodeURIComponent(vercelProject)}`,
+    );
+  } catch {
+    return null;
+  }
+}
+
+/** One address and where it stands, for the log. */
+async function addressSaid(domain) {
+  const name = String(domain.name);
+  if (name.endsWith(".vercel.app")) {
+    return `${name}: the host's own${domain.redirect ? `, BUT it sends people on to ${String(domain.redirect)}` : ""}`;
+  }
+  const config = await domainConfig(name);
+  const state =
+    config === null && domain.verified !== false
+      ? "could not be read"
+      : STATE_SAID[stateOf(domain, config)];
+  return `${name}: ${state}${domain.redirect ? `, sends people on to ${String(domain.redirect)}` : ""}`;
+}
+
 async function vercelEnvNames() {
   const result = await vercel(`/v10/projects/${vercelProject}/env`);
   const list = Array.isArray(result?.envs) ? result.envs : [];
@@ -207,12 +257,16 @@ async function vercelStatus() {
   console.log(
     `  project "${String(project.name)}", framework ${String(project.framework)}, node ${String(project.nodeVersion)}`,
   );
-  const domains = await vercel(`/v9/projects/${vercelProject}/domains`);
-  for (const domain of domains?.domains ?? []) {
-    console.log(
-      `  address ${String(domain.name)}${domain.verified === false ? " (not verified)" : ""}`,
-    );
+  const addresses = await projectDomains();
+  for (const domain of addresses) {
+    console.log(`  address ${await addressSaid(domain)}`);
   }
+  const own = hostsOwnAddress(addresses);
+  console.log(
+    own === null
+      ? "  ✗ the host's own address is missing or sends people elsewhere. Stripe and the clock call it."
+      : `  Stripe and the clock call ${own}`,
+  );
   console.log(
     `  follows ${String(project.link?.type ?? "no git link")} ${String(project.link?.org ?? "")}/${String(project.link?.repo ?? "")}, production branch ${String(project.link?.productionBranch ?? "?")}`,
   );
@@ -243,6 +297,9 @@ async function vercelStatus() {
   );
   console.log(
     `  BACKSTAGE_SETUP_CODE in production: ${hasInProduction(names, "BACKSTAGE_SETUP_CODE") ? "yes" : "NO"}`,
+  );
+  console.log(
+    `  the shop's own address: ${hasInProduction(names, "NEXT_PUBLIC_SITE_URL") ? "held by NEXT_PUBLIC_SITE_URL" : "whatever the host says (NEXT_PUBLIC_SITE_URL is not set)"}`,
   );
   // What sending email needs (lib/mail). Names only, as everywhere here.
   const mailMissing = ["MAIL_PROVIDER", "RESEND_API_KEY", "MAIL_FROM"].filter(
@@ -704,6 +761,251 @@ async function redeployIfChanged() {
   );
 }
 
+// --- The shop's own domain ----------------------------------------------------
+
+/** Holds the address the shop calls itself by. A new deployment picks it up. */
+function holdAddress(host, why) {
+  return vercel(`/v10/projects/${vercelProject}/env?upsert=true`, {
+    method: "POST",
+    body: {
+      key: "NEXT_PUBLIC_SITE_URL",
+      value: `https://${host}`,
+      type: "plain",
+      target: ["production"],
+      comment: `The address the shop calls itself by: in its links, its emails and where Stripe sends a buyer back. ${why} Set by the infra workflow.`,
+    },
+  });
+}
+
+/** The name the request gave, or a stop with the reason. */
+function domainAsked() {
+  const read = readDomainName(askedDomain);
+  if (read.name === undefined) return fail(read.why);
+  return read.name;
+}
+
+/**
+ * Puts one name on the project, or finds it there, and has the host look
+ * again at one it has not accepted yet.
+ */
+async function nameOnProject(name, existing, extra = {}) {
+  const there = existing.find((domain) => domain.name === name);
+  if (there !== undefined) {
+    if (there.verified !== false) {
+      console.log(`  ${name} is already on the project. Left alone.`);
+      return there;
+    }
+    try {
+      const looked = await vercel(
+        `/v9/projects/${vercelProject}/domains/${encodeURIComponent(name)}/verify`,
+        { method: "POST" },
+      );
+      console.log(
+        `  ${name} was on the project and not proven. The host looked again.`,
+      );
+      return looked ?? there;
+    } catch {
+      return there;
+    }
+  }
+  try {
+    const made = await vercel(`/v10/projects/${vercelProject}/domains`, {
+      method: "POST",
+      body: { name, ...extra },
+    });
+    console.log(`  ${name} is on the project.`);
+    return made ?? { name };
+  } catch (error) {
+    if (error?.status === 409) {
+      return fail(
+        `The host says ${name} is in use by another project or account, or is not allowed. It was not added.`,
+      );
+    }
+    throw error;
+  }
+}
+
+/** Says what a person has to add where the domain's DNS is kept. */
+async function sayRecords(entries, apex) {
+  console.log("");
+  console.log(
+    "  Records to add where the domain's DNS is kept (its registrar, unless",
+  );
+  console.log("  the name servers were pointed somewhere else):");
+  console.log("");
+  console.log("    TYPE   HOST   VALUE");
+  for (const entry of entries) {
+    const name = String(entry.name);
+    for (const proof of Array.isArray(entry.verification)
+      ? entry.verification
+      : []) {
+      if (entry.verified !== false) break;
+      const at = String(proof.domain ?? "").endsWith(`.${apex}`)
+        ? String(proof.domain).slice(0, -apex.length - 1)
+        : String(proof.domain ?? "");
+      console.log(
+        `    ${String(proof.type ?? "TXT").padEnd(6)} ${at.padEnd(6)} ${String(proof.value ?? "")}   (proves ${name} is ours)`,
+      );
+    }
+    const config = await domainConfig(name);
+    const record = recordFor(name, apex, config);
+    const state = STATE_SAID[stateOf(entry, config)];
+    console.log(
+      record === null
+        ? `    ${name}: the host recommended nothing this can read. The project's Domains page on the host shows the record.`
+        : `    ${record.type.padEnd(6)} ${record.at.padEnd(6)} ${record.value}   (${name}: ${state})`,
+    );
+  }
+  console.log("");
+  console.log(
+    "  A record already at the same host (a parking page's, say) has to go, or",
+  );
+  console.log(
+    '  the two fight. DNS takes from minutes to a day to spread. Then "status"',
+  );
+  console.log('  says "answering", and "use-domain" can be asked for.');
+}
+
+/**
+ * Puts a domain on the project, and says which DNS records point it here.
+ *
+ * It changes nothing a visitor can see. The site goes on answering at the
+ * host's own address and goes on calling itself by it: that is held in place
+ * FIRST, because the host would otherwise start naming the new domain as the
+ * site's address at the next deployment, before a single record points at it,
+ * and every link in an email and every return from Stripe would lead to a
+ * registrar's parking page. "www." is added beside the name and sends people
+ * on to it. Safe to ask for twice.
+ */
+async function addDomain() {
+  if (!confirmed) fail('This changes settings. Ask again with confirm "yes".');
+  const name = domainAsked();
+  const existing = await projectDomains();
+  const own = hostsOwnAddress(existing);
+  if (own === null) {
+    fail(
+      "The host's own address is missing or sends people elsewhere. Stopping before anything is changed.",
+    );
+  }
+
+  const names = await vercelEnvNames();
+  if (hasInProduction(names, "NEXT_PUBLIC_SITE_URL")) {
+    console.log(
+      "  the shop's own address is already held in place. Left alone.",
+    );
+  } else {
+    await holdAddress(
+      own,
+      'Held at the host\'s own address until "use-domain" moves it.',
+    );
+    console.log(
+      `  the shop goes on calling itself ${own}, held in place until "use-domain".`,
+    );
+    changedSettings = true;
+  }
+
+  const added = await nameOnProject(name, existing);
+  const apex = typeof added.apexName === "string" ? added.apexName : name;
+  const entries = [added];
+  if (apex === name) {
+    entries.push(
+      await nameOnProject(`www.${name}`, existing, {
+        redirect: name,
+        redirectStatusCode: 308,
+      }),
+    );
+  }
+  await sayRecords(entries, apex);
+}
+
+/**
+ * Makes a domain the address the shop calls itself by.
+ *
+ * Only once the domain is really answering: the host has to say its DNS is
+ * right, and the shop has to answer there when asked, as a visitor would
+ * ask. Until both are true nothing is changed. Follow it with "redeploy",
+ * because the address is built into the site.
+ *
+ * Two things follow from a new address and are meant: everybody's Claude
+ * connection ends (a key is good for one address) and they connect again;
+ * and printed QR codes made before now still lead to the host's own address,
+ * which goes on working. Stripe and the clock are not moved.
+ */
+async function useDomain() {
+  if (!confirmed) fail('This changes settings. Ask again with confirm "yes".');
+  const name = domainAsked();
+  const existing = await projectDomains();
+  const entry = existing.find((domain) => domain.name === name);
+  if (entry === undefined) {
+    fail(`${name} is not on the project. Ask for "add-domain" first.`);
+  }
+  if (entry.verified === false) {
+    fail(`${name} has not been proven to be ours yet. Nothing was changed.`);
+  }
+  if (entry.redirect) {
+    fail(
+      `${name} sends people on to ${String(entry.redirect)}, so it cannot be the shop's address. Nothing was changed.`,
+    );
+  }
+  const config = await domainConfig(name);
+  if (config?.misconfigured !== false) {
+    fail(
+      `${name} is not pointing at the site yet: the host cannot see its DNS records. Nothing was changed.`,
+    );
+  }
+  let answered = "no answer";
+  try {
+    const response = await fetch(`https://${name}/`, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(20000),
+    });
+    const page = response.status === 200 ? await response.text() : "";
+    answered =
+      response.status === 200 && page.includes("Quick Pickle")
+        ? "the shop"
+        : `status ${String(response.status)}`;
+  } catch {
+    answered = "no answer";
+  }
+  if (answered !== "the shop") {
+    fail(
+      `Asked https://${name}/ for the shop and got ${answered}. Nothing was changed. DNS can take a day to spread: ask again later.`,
+    );
+  }
+  await holdAddress(name, "The shop's own domain.");
+  console.log(
+    `  the shop will call itself ${name} once it has been built again ("redeploy").`,
+  );
+  console.log(
+    "  Everybody's Claude connection ends with the old address: they connect again.",
+  );
+  console.log(
+    `  Stripe and the clock go on calling ${String(hostsOwnAddress(existing))}, on purpose.`,
+  );
+  changedSettings = true;
+}
+
+/**
+ * The way back: the shop calls itself by the host's own address again.
+ *
+ * For the day a domain stops working (its registration ran out, its DNS was
+ * changed by mistake). The site itself never stopped answering at the host's
+ * own address; this stops its links and emails pointing at the broken one.
+ * The domain stays on the project. Follow it with "redeploy".
+ */
+async function leaveDomain() {
+  if (!confirmed) fail('This changes settings. Ask again with confirm "yes".');
+  const own = hostsOwnAddress(await projectDomains());
+  if (own === null) {
+    fail("The host's own address is missing or sends people elsewhere.");
+  }
+  await holdAddress(own, "Back at the host's own address.");
+  console.log(
+    `  the shop will call itself ${own} again once it has been built again ("redeploy").`,
+  );
+  changedSettings = true;
+}
+
 // --- Stripe ------------------------------------------------------------------
 
 /**
@@ -891,12 +1193,19 @@ async function stripeCheck() {
   stripeChecked = true;
 }
 
-/** The address the public reaches the site at. */
+/**
+ * The address machines reach the site at: Stripe with its news of a payment,
+ * the database with the clock.
+ *
+ * It is the host's own address, on purpose, and stays that whatever domain
+ * the shop is given (scripts/infra/domain.mjs says why). Before there was a
+ * domain it was the only address, so nothing moved when this was written.
+ */
 async function productionHost() {
-  const domains = await vercel(`/v9/projects/${vercelProject}/domains`);
-  const host = (domains?.domains ?? []).find(
-    (domain) => domain.verified !== false,
-  )?.name;
+  const list = await projectDomains();
+  const host =
+    hostsOwnAddress(list) ??
+    list.find((domain) => domain.verified !== false)?.name;
   if (typeof host !== "string" || !/^[a-z0-9.-]+$/.test(host)) {
     fail("Could not find the site's address.");
   }
@@ -1246,6 +1555,9 @@ const ACTIONS = {
   "disconnect-clock": disconnectClock,
   "limits-off": limitsOff,
   "limits-on": limitsOn,
+  "add-domain": addDomain,
+  "use-domain": useDomain,
+  "leave-domain": leaveDomain,
   redeploy: redeployIfChanged,
 };
 
