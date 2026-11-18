@@ -103,10 +103,12 @@ them to Claude and ask it to change the lines. It is one small change, and the
 workflow's `status` run then says whether it can see the project. Until it is made, that
 run fails on every push to `main`. It looks worse than it is: the site is not affected.
 
-Two things about the plan. Vercel's free plan is not for a business that takes money: at
-launch it is Vercel's paid plan, or another host. And the site was built so that moving
-host stays cheap: the clock that runs things on a timer lives in the database, not at
-Vercel.
+Two things about the plan. Vercel's terms keep its free plan to "personal or
+non-commercial use", and say a project on it can be switched off without notice (read 18
+November 2026). So before the shop opens to the public it is Vercel's paid plan (US$20 a
+month), or another host: `TODO.md` sets the two side by side. And the site was built to
+keep a move of host as small as it can be: the clock that runs things on a timer lives in
+the database, not at Vercel.
 
 ### 4. Payments (Stripe)
 

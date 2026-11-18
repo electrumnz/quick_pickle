@@ -171,8 +171,25 @@ stays up throughout.
       has not been told and writes to them. Today shows it until it is done. Move the date
       and they are owed the new one. Until email is connected, it is still by hand: the
       panel lists whose orders they are.
-- [ ] **Vercel's free plan is not for a business taking money.** At launch: Vercel Pro
-      (US$20 a month), or move hosting to Cloudflare. Decide then.
+- [ ] **Move the hosting off Vercel's free plan before the shop opens.** Vercel's terms
+      keep the free plan to "personal or non-commercial use" and say a project on it can
+      be switched off "with or without notice" (section 4, read 18 November 2026). The
+      line is not the first sale: a shop open to the public is a business's site, and so
+      is one taking pre-orders. Until then it stays where it was built. Decide before
+      launch, and not in the week of it. Two ways to go, at that day's prices, with US$15
+      a month between them:
+  - **Vercel Pro, US$20 a month.** One seat that deploys and US$20 of usage come with
+    it. It is a change in Vercel's Billing settings, and nothing else moves.
+  - **Cloudflare, US$5 a month**, on its paid plan. Its free plan is not enough: it
+    allows a request 10 milliseconds of processor time, Cloudflare's own limits page
+    says pages drawn on the server and sign-ins usually take 10 to 20, and the sign-in
+    here is slow on purpose. The move is real work. The site is built again for
+    Cloudflare's runtime (the tool its guide recommends was marked beta that day), the
+    infra script is written again for another host's API, previews and the demo database
+    are made to work there, and everything that touches money and sign-in is tried
+    again. The domain's DNS would be kept at Cloudflare as well (a Worker's own domain
+    needs "an active Cloudflare zone"), and the registrar's email hosting only works on
+    the registrar's own name servers, so a mailbox there would have to move.
 - [ ] **Point the domain at the shop.** `quickpickle.co.nz` is Ash's, registered at 1st
       Domains. `add-domain` ran on 18 November 2026 and the name is on the site, waiting
       for its DNS. What is left, in order: Ash adds the two DNS records
