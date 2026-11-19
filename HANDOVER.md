@@ -243,7 +243,11 @@ what it may do.
   there the order is marked shipped here and the customer gets their tracking. Nobody
   could try it against a real Starshipit account from here, so the first order is the
   test. Until then, the courier screen's file works as before.
-- **There is no direct line to Xero.** The back end makes a file of what moved each day.
+- **Xero is built in, and switched off until you connect it.** Once you have made the
+  shop an app in Xero and connected your organisation (Settings, Xero), each sale goes
+  to Xero as a paid invoice and each refund as a credit note, a few minutes after it
+  happens. No customer's details go. Nobody could try it against a real Xero from
+  here, so the first connection is the test.
 - **The nutrition panel** is not on the site.
 - **The hero has no video.** One film, The Face, plays further down the page. The brand
   pack's own notes mark its motion files as superseded, waiting on a rebuild, so nothing

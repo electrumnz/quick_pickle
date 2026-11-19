@@ -428,6 +428,9 @@ end (Marketing, Reviews). `lib/backstage/marketing/reviews.ts` is the operations
     page of the back end or nothing, and never with a sentence in it. An independent
     review found a sentence riding in that way (15 November 2026). **Add a form that
     redirects to an address it was handed, and send it through `safeNext`.**
+    (Connecting Xero sends the owner to Xero's own sign-in, an address put together
+    from fixed parts, and Xero's answer comes back to a route that only ever says the
+    back end's own sentences, never anything from its address.)
   - This is not the lock either. It decides what a notice box may say, never who comes in.
   - Both browser-test servers are given a secret, so every form the tests press goes
     through the seal.
@@ -780,7 +783,35 @@ go-live list shows when it last ran and what is stuck.
   on the New Zealand day it was paid for, a refund on the day it was given. Numbers nets
   a refund against the order's own day, because it asks how the shop did; a ledger asks
   what moved when. Over a stretch that holds both, the two agree. Nothing here is in
-  Xero's own layout and nothing says it is: that waits on a Xero account to try it with.
+  Xero's own layout and nothing says it is: the direct line below is how Xero hears.
+- **Xero, connected** (`lib/backstage/books/xero.ts`; the calls are `lib/xero/client.ts`,
+  from Xero's OpenID description and its OpenAPI file, read 19 November 2026). The
+  same story as For the books, one movement at a time: a sale is an invoice dated the
+  New Zealand day it was paid, numbered with the order's number, paid in full into the
+  bank account the owner chose with the processor's reference on it; a refund is a
+  credit note (`QP-7K2M9X-R1`) paid out of the same account, only once its sale is in.
+  - **No customer's details go to Xero.** Every sale is made out to one contact the
+    owner names. Test orders never go, nor anything paid before the first day chosen.
+  - The lines add up to exactly what was charged (packs, a discount line, delivery), or
+    nothing is sent and a person is told. GST goes as "Inclusive" with the tax type the
+    owner picked from Xero's own list when the business is registered, "NoTax" when it
+    is not, and nothing starts while that is unknown.
+  - **Nothing is sent twice.** Each step looks in Xero first (the invoice by its number,
+    what is left to pay on it) and every call carries an `Idempotency-Key`.
+  - The owner connects it (Settings, Xero) through Xero's own sign-in: the app's two
+    values are on the host (`XERO_CLIENT_ID`, `XERO_CLIENT_SECRET`, put there by
+    `connect-xero`), and the keys Xero hands over are kept sealed with a key made from
+    the app's secret (`lib/xero/seal.ts`). Xero renews its key each time it is used;
+    the new pair is only kept if nobody renewed in between.
+  - The clock sends ten sales and ten refunds a round, and asks Xero nothing while
+    nothing is waiting. A refusal is written on the screen with what Xero said, and
+    Today counts them. Xero turning the key down asks the owner to connect again.
+  - A refund that went and later came back is not undone in Xero (it would rewrite the
+    day it left): the screen lists it for a person and the accountant. Stripe's fees
+    are not sent: they come in on Stripe's own feed in Xero.
+  - Nobody could try this against a real organisation from here. The first connection
+    is the test, and the scopes are a guess at Xero's granular names
+    (`XERO_SCOPES`): if Xero refuses one, the screen says so.
 - `lib/shop/store` is where the shop hands an order over. The default is `db`: the back
   end's own `orders.record` operation, so an order is on the Orders screen as it is placed.
 - The "order's in" page reads a short-lived httpOnly receipt cookie. It is display only.

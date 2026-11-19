@@ -8,7 +8,9 @@
 //   QP_STRIPE_SECRET_KEY       Stripe
 //
 // and, only for "connect-starshipit", the two keys Starshipit makes under
-// Settings, API: QP_STARSHIPIT_API_KEY and QP_STARSHIPIT_SUBSCRIPTION_KEY.
+// Settings, API: QP_STARSHIPIT_API_KEY and QP_STARSHIPIT_SUBSCRIPTION_KEY;
+// and, only for "connect-xero", the shop's Xero app: QP_XERO_CLIENT_ID and
+// QP_XERO_CLIENT_SECRET.
 //
 // What it does is decided one of two ways (see the workflow):
 //
@@ -322,6 +324,9 @@ async function vercelStatus() {
   // The courier's booking system (lib/courier). Off is normal.
   const starshipitMissing = STARSHIPIT_SETTINGS.filter(
     (key) => !hasInProduction(names, key),
+  );
+  console.log(
+    `  the Xero app in production: ${XERO_SETTINGS.every((key) => hasInProduction(names, key)) ? "set up: an owner can connect Xero from Settings, Xero" : "not set up (connect-xero puts it there)"}`,
   );
   console.log(
     `  Starshipit in production: ${starshipitMissing.length === 0 ? "connected: packed orders go there, and labels come back as shipped orders" : starshipitMissing.length === STARSHIPIT_SETTINGS.length ? "not connected (the courier screen's file is the way out)" : `half set up. Missing: ${starshipitMissing.join(", ")}`}`,
@@ -1468,6 +1473,42 @@ async function disconnectStarshipit() {
   if (removed > 0) changedSettings = true;
 }
 
+// --- Xero -----------------------------------------------------------------------
+
+/** The app's names for the Xero app's two values (lib/xero/index.ts). */
+const XERO_SETTINGS = ["XERO_CLIENT_ID", "XERO_CLIENT_SECRET"];
+
+/**
+ * Puts the shop's Xero app on the host, from the repository's secrets.
+ * Nothing can check them with Xero until an owner signs in, so the first
+ * "Connect Xero" in Settings, Xero is the test. Follow it with "redeploy".
+ * Giving the app a new secret means connecting Xero again: the keys kept in
+ * the database are sealed with it (lib/xero/seal.ts).
+ */
+async function connectXero() {
+  if (!confirmed) fail('This changes settings. Ask again with confirm "yes".');
+  const clientId = required("QP_XERO_CLIENT_ID");
+  const clientSecret = required("QP_XERO_CLIENT_SECRET");
+  mask(clientSecret);
+  if (!/^[A-Za-z0-9]{16,64}$/.test(clientId)) {
+    fail(
+      "QP_XERO_CLIENT_ID does not look like a Xero client id. Nothing was changed.",
+    );
+  }
+  const save = (name, value) =>
+    vercel(`/v10/projects/${vercelProject}/env?upsert=true`, {
+      method: "POST",
+      body: { key: name, value, type: "sensitive", target: ["production"] },
+    });
+  await save("XERO_CLIENT_ID", clientId);
+  await save("XERO_CLIENT_SECRET", clientSecret);
+  console.log("  the Xero app is on the host.");
+  console.log(
+    "  its redirect address in Xero must be the shop's own address followed by /backstage/xero/callback (Settings, Xero shows it in full).",
+  );
+  changedSettings = true;
+}
+
 // --- The checkout's limit ------------------------------------------------------
 
 /**
@@ -1681,6 +1722,7 @@ const ACTIONS = {
   "limits-on": limitsOn,
   "connect-starshipit": connectStarshipit,
   "disconnect-starshipit": disconnectStarshipit,
+  "connect-xero": connectXero,
   "add-domain": addDomain,
   "use-domain": useDomain,
   "leave-domain": leaveDomain,

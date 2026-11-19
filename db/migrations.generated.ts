@@ -384,5 +384,17 @@ export const MIGRATIONS: readonly Migration[] = [
       "ALTER TABLE \"courier_handoffs\" ADD CONSTRAINT \"courier_handoffs_order_id_orders_id_fk\" FOREIGN KEY (\"order_id\") REFERENCES \"public\".\"orders\"(\"id\") ON DELETE cascade ON UPDATE no action;",
       "CREATE INDEX \"courier_handoffs_state_idx\" ON \"courier_handoffs\" USING btree (\"state\");"
     ]
+  },
+  {
+    "tag": "0017_xero",
+    "hash": "4f3a4cb1cae2c98a",
+    "statements": [
+      "CREATE TABLE \"xero_link\" (\n\t\"id\" text PRIMARY KEY NOT NULL,\n\t\"tenant_id\" text,\n\t\"tenant_name\" text,\n\t\"tenants\" text DEFAULT '[]' NOT NULL,\n\t\"access_token\" text NOT NULL,\n\t\"refresh_token\" text NOT NULL,\n\t\"access_expires_at\" timestamp with time zone NOT NULL,\n\t\"connected_by_name\" text NOT NULL,\n\t\"connected_at\" timestamp with time zone NOT NULL,\n\t\"lost_at\" timestamp with time zone,\n\t\"lost_reason\" text,\n\t\"sales_account\" text,\n\t\"delivery_account\" text,\n\t\"bank_account_id\" text,\n\t\"bank_account_name\" text,\n\t\"tax_type\" text,\n\t\"contact_name\" text,\n\t\"start_day\" text,\n\t\"last_round_at\" timestamp with time zone,\n\t\"last_round_said\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"xero_link\" ENABLE ROW LEVEL SECURITY;",
+      "CREATE TABLE \"xero_postings\" (\n\t\"key\" text PRIMARY KEY NOT NULL,\n\t\"kind\" text NOT NULL,\n\t\"order_id\" text NOT NULL,\n\t\"refund_id\" text,\n\t\"state\" text NOT NULL,\n\t\"xero_id\" text,\n\t\"payment_id\" text,\n\t\"trouble\" text,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"xero_postings\" ENABLE ROW LEVEL SECURITY;",
+      "ALTER TABLE \"xero_postings\" ADD CONSTRAINT \"xero_postings_order_id_orders_id_fk\" FOREIGN KEY (\"order_id\") REFERENCES \"public\".\"orders\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "ALTER TABLE \"xero_postings\" ADD CONSTRAINT \"xero_postings_refund_id_refunds_id_fk\" FOREIGN KEY (\"refund_id\") REFERENCES \"public\".\"refunds\"(\"id\") ON DELETE cascade ON UPDATE no action;"
+    ]
   }
 ];

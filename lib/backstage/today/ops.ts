@@ -25,6 +25,7 @@ import { mailNeeds } from "../mail/needs";
 import { marketingNeedsYou } from "../marketing/overview";
 import { disputeNeeds } from "../orders/disputes";
 import { courierNeeds } from "../orders/starshipit";
+import { xeroNeeds } from "../books/xero";
 import { shipDateNeeds } from "../orders/ship-date";
 import { shopNeeds } from "../shop/needs";
 import { plansNeeds } from "../plans/needs";
@@ -214,6 +215,9 @@ export async function needsNow(ctx: OpContext): Promise<Need[]> {
   // An order Starshipit would not take, one it never answered about, or one
   // it holds that should not go. Each is a box that may not reach somebody.
   for (const item of await courierNeeds(db, now)) needs.push(item);
+
+  // The books: Xero needs connecting again, or would not take something.
+  for (const item of await xeroNeeds(db)) needs.push(item);
 
   // The shop's own settings: shut, or a pre-order whose ship date has
   // gone by. Somebody chose each of those and could forget they did.

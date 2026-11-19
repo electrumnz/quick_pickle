@@ -19,6 +19,8 @@
  *   - while Starshipit holds orders waiting for a label, it is asked which
  *     it has printed, and each of those is shipped here with its tracking
  *     (lib/backstage/orders/starshipit.ts).
+ *   - once Xero is connected and set up, the next few sales and refunds
+ *     are sent to it (lib/backstage/books/xero.ts).
  *   - a campaign that was given a time is queued when it comes, and the
  *     next few dozen emails of any campaign on its way are sent
  *     (lib/backstage/marketing/deliver.ts). That comes last and is given
@@ -216,6 +218,21 @@ export async function tick(options: TickOptions = {}): Promise<TickSummary> {
     console.error(
       JSON.stringify({
         event: "clock.starshipit_failed",
+        message: error instanceof Error ? error.message : "unknown",
+      }),
+    );
+  });
+
+  // The books: the next few sales and refunds go to Xero, once it is
+  // connected and set up. Nothing is asked of Xero while nothing is
+  // waiting, and a failure is left for the next round.
+  await (async () => {
+    const { sendToXero } = await import("../books/xero");
+    await sendToXero(db, now);
+  })().catch((error: unknown) => {
+    console.error(
+      JSON.stringify({
+        event: "clock.xero_failed",
         message: error instanceof Error ? error.message : "unknown",
       }),
     );

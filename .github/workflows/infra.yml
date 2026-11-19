@@ -103,6 +103,9 @@ jobs:
           # Only read by connect-starshipit. Unset until the owner adds them.
           QP_STARSHIPIT_API_KEY: ${{ secrets.QP_STARSHIPIT_API_KEY }}
           QP_STARSHIPIT_SUBSCRIPTION_KEY: ${{ secrets.QP_STARSHIPIT_SUBSCRIPTION_KEY }}
+          # Only read by connect-xero. Unset until the owner adds them.
+          QP_XERO_CLIENT_ID: ${{ secrets.QP_XERO_CLIENT_ID }}
+          QP_XERO_CLIENT_SECRET: ${{ secrets.QP_XERO_CLIENT_SECRET }}
           INFRA_EVENT: ${{ github.event_name }}
           INFRA_ACTION: ${{ inputs.action }}
           INFRA_CONFIRM: ${{ inputs.confirm }}
