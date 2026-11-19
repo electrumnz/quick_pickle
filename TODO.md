@@ -67,6 +67,11 @@ stays up throughout.
       stand-ins, and so is "anywhere in New Zealand". The three rates are set in Settings,
       The shop (free delivery can be switched off altogether, or made free for everybody),
       then confirmed on the go-live list.
+- [ ] **Connect Starshipit and Xero**, if you want them. Both are built in and switched
+      off. Each is a new account of yours (for Xero, an app for the shop in its developer
+      site), two keys in the repository's secrets, and one infra request. Your AI can do
+      the rest with you: the steps and the first-use checks are in [LAUNCH.md](LAUNCH.md),
+      section 3. Until then the courier screen's file and For the books still work.
 - [ ] **Read the fine print and agree to it.** The delivery, returns, terms and privacy pages
       make promises on the business's behalf: a replacement or refund if an order arrives
       damaged, and a full refund on a pre-order cancelled before it ships. They are sensible

@@ -144,22 +144,44 @@ confirmed.
       1st Domains mailbox and the shop's inbox cannot both take the same address. The
       steps are in [TODO.md](TODO.md), under "Connect the inbox". **Who:** Ash, with the
       AI. **Done when:** Inbox settings says Hearing from Resend: On.
-- [ ] **Connect Starshipit** (optional: the courier screen's file works without it). A
-      Starshipit account with your courier enabled, then its two keys from Settings, API
-      in the repository's secrets as `QP_STARSHIPIT_API_KEY` and
-      `QP_STARSHIPIT_SUBSCRIPTION_KEY`, then an infra request for `connect-starshipit`
-      and `redeploy`. Leave Starshipit's own tracking emails to customers off: the shop
-      sends its own. **Who:** Ash, then AI. **Done when:** the "Infra" run's `status` says
-      Starshipit is connected, and the first packed test order shows on its page as in
-      Starshipit (send it from the order's page: a test order only goes when asked).
-- [ ] **Connect Xero** (optional: For the books still makes a file of each day). In
-      Xero's developer site, make an app of the "Web app" kind for the shop, with the
-      redirect address Settings, Xero shows. Put its client id and secret in the
-      repository's secrets as `QP_XERO_CLIENT_ID` and `QP_XERO_CLIENT_SECRET`, then an
-      infra request for `connect-xero` and `redeploy`. Then, in Settings, Xero: connect,
-      and say which accounts sales, delivery and money go to, and from which day. Ask
-      your accountant which accounts. **Who:** Ash, then AI, then Ash. **Done when:**
-      Settings, Xero says On, and the first real sale shows in Xero as a paid invoice.
+- [ ] **Connect Starshipit** (optional: the courier screen's file works without it).
+      **Who:** Ash, with her AI. **Done when:** the "Infra" run's `status` says
+      Starshipit is connected, and the two checks in step 5 both worked.
+  1. Ash makes a Starshipit account, turns on her courier in it, and makes its two
+     keys under Settings, API.
+  2. Ash puts them in the repository's secrets as `QP_STARSHIPIT_API_KEY` and
+     `QP_STARSHIPIT_SUBSCRIPTION_KEY`. Never in the chat.
+  3. The AI makes an infra request for `connect-starshipit` and `redeploy`, and reads
+     the run's log: it says whether Starshipit took the keys.
+  4. Ash turns off Starshipit's own tracking emails to customers. The shop sends its
+     own, so leaving them on means two.
+  5. Try it with a test order, before printing anything:
+     - Pack the test order, then press "Send to Starshipit" on its page (a test order
+       only goes when asked). It should show in Starshipit within a minute, and the
+       order's page should say Starshipit has it.
+     - Unpack it in the back end. It should disappear from Starshipit within a minute.
+       This is the one call whose shape had to be guessed from Starshipit's
+       documentation. If it stays, the order's page says what Starshipit answered:
+       the AI changes `deleteOrder` in `lib/courier/starshipit.ts` to match, and Ash
+       deletes that order in Starshipit by hand.
+- [ ] **Connect Xero** (optional: For the books still makes a file of each day).
+      **Who:** Ash, with her AI. **Done when:** Settings, Xero says On, the first real
+      sale shows in Xero as a paid invoice, and the first refund as a credit note.
+  1. Ash makes an app of the "Web app" kind for the shop in Xero's developer site, with
+     the redirect address Settings, Xero shows. Xero's free Starter plan for apps is
+     enough: it allows 1,000 calls a day, about 300 sales.
+  2. Ash puts its client id and secret in the repository's secrets as
+     `QP_XERO_CLIENT_ID` and `QP_XERO_CLIENT_SECRET`. Never in the chat.
+  3. The AI makes an infra request for `connect-xero` and `redeploy`.
+  4. Ash opens Settings, Xero, presses Connect, signs in to Xero and lets the shop in.
+     Then she picks which accounts sales, delivery and money go to, the tax rate if the
+     business is registered for GST, and the first day to send from. Her accountant
+     should say which accounts.
+  5. Check the first sale and the first refund in Xero. If Xero refuses one, Settings,
+     Xero says what Xero said. If it says the connection "may not do that", the scope
+     names are wrong: Xero renamed them in 2026, and which one covers credit notes could
+     not be confirmed. The AI changes `XERO_SCOPES` in `lib/xero/client.ts` to the names
+     Xero's own scopes page gives, and Ash connects again.
 - [ ] **Finish Stripe's sign-up:** the business's details and a bank account. **Who:**
       Ash
 - [ ] **Roll Stripe's test keys**, because Sam has seen them. Put the new ones in the
