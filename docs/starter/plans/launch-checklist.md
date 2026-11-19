@@ -4,24 +4,24 @@
 
 > Every step from here to the first real order at a customer's door, in order.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/launch-checklist), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/launch-checklist), and may have been changed there since. This file does not follow those changes.
 
-**What this is:** every step between today and the first real order arriving at a customer's door, in an order that makes sense. Print it and tick it, or work down it on your phone. The [go-live list](https://quickpickle.vercel.app/backstage/settings/go-live) is the live version of the facts the site itself is waiting on.
+**What this is:** every step between today and the first real order arriving at a customer's door, in an order that makes sense. Print it and tick it, or work down it on your phone. The [go-live list](https://quickpickle.co.nz/backstage/settings/go-live) is the live version of the facts the site itself is waiting on.
 
 _Starter draft. The order is a suggestion. Delete the steps you have already done._
 
 ## 1. Decide
 
-1. [ ] Answer the [questions holding up launch](https://quickpickle.vercel.app/backstage/plans/questions). Start with who makes it and where: most of the other answers hang off that.
+1. [ ] Answer the [questions holding up launch](https://quickpickle.co.nz/backstage/plans/questions). Start with who makes it and where: most of the other answers hang off that.
 2. [ ] Decide whether the first sale is a pre-order or stock on the shelf.
 3. [ ] Decide who does what: who makes, who packs, who answers customers, who does the books.
 
 ## 2. Check the rules
 
-_A short list to work through with the bodies named on the [compliance checklist](https://quickpickle.vercel.app/backstage/plans/compliance). None of it is legal advice._
+_A short list to work through with the bodies named on the [compliance checklist](https://quickpickle.co.nz/backstage/plans/compliance). None of it is legal advice._
 
 4. [ ] Find out which food plan applies in New Zealand and register. Ask MPI or your council.
-5. [ ] Settle the legal entity and get its New Zealand Business Number. Put both in [The label and the company](https://quickpickle.vercel.app/backstage/settings/label).
+5. [ ] Settle the legal entity and get its New Zealand Business Number. Put both in [The label and the company](https://quickpickle.co.nz/backstage/settings/label).
 6. [ ] Decide about GST with an accountant. Do not assume either way.
 7. [ ] Check the name is free to use.
 8. [ ] Read the site's delivery, returns, terms and privacy pages. Agree to what they promise, or have them changed.
@@ -30,13 +30,13 @@ _A short list to work through with the bodies named on the [compliance checklist
 
 9. [ ] Get quotes for juice, bottles, caps, labels and cartons.
 10. [ ] Get a courier quote for each pack size, to a town address and a rural one.
-11. [ ] Put every quote into the [Budget](https://quickpickle.vercel.app/backstage/plans/budget) and mark it confirmed.
-12. [ ] Set the pack prices and the delivery charges from what the Budget shows, on [The shop](https://quickpickle.vercel.app/backstage/settings/shop). The screen reads each change back before it is made.
+11. [ ] Put every quote into the [Budget](https://quickpickle.co.nz/backstage/plans/budget) and mark it confirmed.
+12. [ ] Set the pack prices and the delivery charges from what the Budget shows, on [The shop](https://quickpickle.co.nz/backstage/settings/shop). The screen reads each change back before it is made.
 13. [ ] Look at the break-even. Is it a number of packs you believe you can sell?
 
 ## 4. Get the product ready
 
-14. [ ] The final recipe, ingredients list and nutrition panel, from whoever makes it. With the printed label in your hand, type its lines into [The label and the company](https://quickpickle.vercel.app/backstage/settings/label).
+14. [ ] The final recipe, ingredients list and nutrition panel, from whoever makes it. With the printed label in your hand, type its lines into [The label and the company](https://quickpickle.co.nz/backstage/settings/label).
 15. [ ] The shelf life, the date mark and the storage line.
 16. [ ] Label artwork checked against The label on the compliance checklist, then printed.
 17. [ ] One straight-on photo of the finished bottle on plain card, for the site.
@@ -51,8 +51,8 @@ _What to sign up for. Each is in the business's name, not a person's._
 21. [ ] A bank account in the business's name.
 22. [ ] Finish Stripe's own sign-up. The shop has a Stripe account and takes practice payments today. Stripe wants the business's details and that bank account before it will take real ones. Then the live keys go in: ask whoever looks after the site.
 23. [ ] The domain name.
-24. [ ] An account with an email service for the shop's own email (the site is built for one called Resend), and the domain's records pointed at it. Until then no order email is sent, and the [go-live list](https://quickpickle.vercel.app/backstage/settings/go-live) says so.
-25. [ ] The address customers write to. Set it on [The shop](https://quickpickle.vercel.app/backstage/settings/shop).
+24. [ ] An account with an email service for the shop's own email (the site is built for one called Resend), and the domain's records pointed at it. Until then no order email is sent, and the [go-live list](https://quickpickle.co.nz/backstage/settings/go-live) says so.
+25. [ ] The address customers write to. Set it on [The shop](https://quickpickle.co.nz/backstage/settings/shop).
 26. [ ] A courier account, for real rates and pick-ups.
 27. [ ] Xero set up, and an accountant who knows it is coming.
 28. [ ] Insurance: ask a broker. It is not required by law, but some events and stockists ask for it.
@@ -66,7 +66,7 @@ _What to sign up for. Each is in the business's name, not a person's._
 
 ## 7. Open quietly
 
-33. [ ] Every line on the [go-live list](https://quickpickle.vercel.app/backstage/settings/go-live) is settled. The site then opens itself to search.
+33. [ ] Every line on the [go-live list](https://quickpickle.co.nz/backstage/settings/go-live) is settled. The site then opens itself to search.
 34. [ ] Place one real order yourself, with a real card, to a real address. Refund it afterwards.
 35. [ ] Tell the Pickle Crew list first. Then people you know.
 36. [ ] Pack and send every order from the packing sheet.

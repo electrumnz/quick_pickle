@@ -4,7 +4,7 @@
 
 > Who it is for (to test), what we are allowed to say, the first channels, a 12-week calendar and the rules.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/marketing-plan), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/marketing-plan), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** how we plan to find the first customers, what we are allowed to say, and a 12-week launch calendar. Every "who" in it is a guess until it has been tested.
 
@@ -24,7 +24,7 @@ All three are assumptions to test, not findings. Nobody has been asked yet.
 - Take a tray to one club night. Watch who picks one up, who pulls the face, and who asks where to buy.
 - Ask every early customer how they heard about us and who it was for.
 
-Free samples are food too. Look at Samples and events on the [compliance checklist](https://quickpickle.vercel.app/backstage/plans/compliance) before handing any out.
+Free samples are food too. Look at Samples and events on the [compliance checklist](https://quickpickle.co.nz/backstage/plans/compliance) before handing any out.
 
 ## The message we are allowed to use, and why
 
@@ -39,7 +39,7 @@ Quick Pickle is a food. In New Zealand a food cannot be advertised on what it do
 
 Say **when** people have one. Never say **why**, or what happens next.
 
-The full voice, the lines that are yours and the lines that are never used are in the [brand guide](https://quickpickle.vercel.app/backstage/brand).
+The full voice, the lines that are yours and the lines that are never used are in the [brand guide](https://quickpickle.co.nz/backstage/brand).
 
 ## Channels worth trying first
 
@@ -79,7 +79,7 @@ Only what you will act on.
 - **Orders, and where they came from.** Ask in the follow-up email until there is tracking you trust.
 - **Second orders.** The share of customers who come back. This is the number that says whether there is a business.
 - **Pickle Crew sign-ups,** and how many of them buy.
-- **What it costs to get a customer.** What you spent on a channel, divided by the new customers it brought. Compare it with what a pack leaves on the [Budget](https://quickpickle.vercel.app/backstage/plans/budget).
+- **What it costs to get a customer.** What you spent on a channel, divided by the new customers it brought. Compare it with what a pack leaves on the [Budget](https://quickpickle.co.nz/backstage/plans/budget).
 - **What people say about the taste,** in their own words. Keep a list.
 
 ## The rules

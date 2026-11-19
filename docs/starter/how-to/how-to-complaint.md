@@ -4,7 +4,7 @@
 
 > A customer is unhappy with the product itself: how it tasted, looked or smelled, or they felt unwell.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/how-to-complaint), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/how-to-complaint), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** what to do when a customer is unhappy with the product itself: how it tasted, smelled or looked, something in the bottle, or feeling unwell afterwards. Delivery problems have their own sheet: [damaged or missing orders](../how-to/how-to-damaged-or-missing-order.md).
 

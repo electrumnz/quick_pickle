@@ -4,9 +4,9 @@
 
 > Writing a campaign, reading it, sending it, and what to do when somebody wants off the list or an email comes back.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/how-to-email-the-pickle-crew), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/how-to-email-the-pickle-crew), and may have been changed there since. This file does not follow those changes.
 
-**What this is:** how to send an email to everyone who asked to hear from us. It all lives under Marketing, in [Campaigns](https://quickpickle.vercel.app/backstage/marketing/campaigns).
+**What this is:** how to send an email to everyone who asked to hear from us. It all lives under Marketing, in [Campaigns](https://quickpickle.co.nz/backstage/marketing/campaigns).
 
 _Starter draft. The steps are how the screens work today. The blanks (\____) are yours to fill in._
 
@@ -16,7 +16,7 @@ Only people who put their own address into the Pickle Crew form and are still on
 
 ## Write it
 
-1. [ ] Open [Campaigns](https://quickpickle.vercel.app/backstage/marketing/campaigns) and press **New campaign**.
+1. [ ] Open [Campaigns](https://quickpickle.co.nz/backstage/marketing/campaigns) and press **New campaign**.
 2. [ ] Give it a working title (only you see it), choose who it goes to, and write the subject, the preview line and what it says.
 3. [ ] Press **Save the draft**. The copy check reads it as you save. Wording that is not allowed has to change before it can go. This is where health claims are caught. Write about the taste, the bottle and Lucky, and nothing about a body.
 4. [ ] Read **How it will read**. That is the email as it arrives, with the line saying who we are and the unsubscribe link under it. You do not write those. They are added to every one.
@@ -36,15 +36,15 @@ Only people who put their own address into the Pickle Crew form and are still on
 
 ## If it says it cannot send
 
-The campaign's page and [Today](https://quickpickle.vercel.app/backstage) say why in a sentence. Nobody is marked as missed: the emails wait, and go by themselves a few minutes after it is put right. Most often email is not connected, or the mail company wants something from us. The [go-live list](https://quickpickle.vercel.app/backstage/settings/go-live) says what is missing.
+The campaign's page and [Today](https://quickpickle.co.nz/backstage) say why in a sentence. Nobody is marked as missed: the emails wait, and go by themselves a few minutes after it is put right. Most often email is not connected, or the mail company wants something from us. The [go-live list](https://quickpickle.co.nz/backstage/settings/go-live) says what is missing.
 
 If the campaign has **stopped itself**, too many emails bounced or were marked as spam. Do not start it again the same day. Find out why first: an old list, or an email people did not expect. Who to ask: ____.
 
 ## When somebody wants off the list
 
 - **They press the link in the email.** One press and they are off. Nothing for you to do.
-- **They write in, or tell you.** Open [Campaigns](https://quickpickle.vercel.app/backstage/marketing/campaigns), open **Somebody asked to come off the list** at the bottom, type their address and press **Take them off the list**. Do it the same day. Then answer them to say it is done.
-- **They never want any email from us at all**, not even about an order: that is the [do-not-email list](https://quickpickle.vercel.app/backstage/inbox/settings#do-not-email). Think twice. They will not get a receipt either.
+- **They write in, or tell you.** Open [Campaigns](https://quickpickle.co.nz/backstage/marketing/campaigns), open **Somebody asked to come off the list** at the bottom, type their address and press **Take them off the list**. Do it the same day. Then answer them to say it is done.
+- **They never want any email from us at all**, not even about an order: that is the [do-not-email list](https://quickpickle.co.nz/backstage/inbox/settings#do-not-email). Think twice. They will not get a receipt either.
 
 Emails about an order (the receipt, on the courier) are not marketing. They still go to somebody who has left the list.
 

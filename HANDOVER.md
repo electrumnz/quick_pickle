@@ -10,7 +10,7 @@ Two things, kept in one place: a repository on GitHub, which is the folder that 
 the code and these pages.
 
 1. **The shop.** A one-page site that sells Quick Pickle in packs, with its own jar and
-   checkout. It is live at [quickpickle.vercel.app](https://quickpickle.vercel.app).
+   checkout. It is live at [quickpickle.co.nz](https://quickpickle.co.nz).
 2. **The back end.** Everything for running the business, behind a sign-in: orders,
    customers, stock and batches, the inbox, marketing, plans and budget, numbers, and
    the settings that change the shop. It does not do the accounts. That is Xero's job.

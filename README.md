@@ -4,7 +4,7 @@ Pickle juice shots, sold direct, in New Zealand. This repository is the whole bu
 online: the shop, and the back end that runs it.
 
 - **The shop** is one page with its own jar and checkout:
-  [quickpickle.vercel.app](https://quickpickle.vercel.app).
+  [quickpickle.co.nz](https://quickpickle.co.nz).
 - **The back end** is at `/backstage`, behind a sign-in: orders, customers, stock and
   batches, the inbox, marketing, plans and budget, numbers, and the settings that change
   the shop. Accounting is the one thing it leaves to Xero.

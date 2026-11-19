@@ -4,7 +4,7 @@
 
 > Connecting your own Claude to the back end, what it may do by itself, and how you say yes to the rest.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/how-to-work-with-claude), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/how-to-work-with-claude), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** how to let Claude help run the shop. Connected, it can look things up and do the day-to-day when you ask it in plain words. It is switched off until an owner switches it on.
 
@@ -12,7 +12,7 @@ _Starter draft. The steps are how the screens work today. The blanks (\____) are
 
 ## Switch it on and connect yours
 
-1. [ ] An owner opens [Claude](https://quickpickle.vercel.app/backstage/settings/claude), under Settings, and presses **Let Claude be connected**.
+1. [ ] An owner opens [Claude](https://quickpickle.co.nz/backstage/settings/claude), under Settings, and presses **Let Claude be connected**.
 2. [ ] In Claude, add a custom connector and give it the address that screen shows.
 3. [ ] Claude sends you to a page here to say yes. You have to be signed in. Choose what it may do: **Look**, or **Look and make changes**.
 4. [ ] Start with **Look** if you are not sure. You can connect again later and let it do more.
@@ -27,7 +27,7 @@ _Starter draft. The steps are how the screens work today. The blanks (\____) are
 
 Anything that reaches a customer or cannot be undone: sending an email, a refund, a price, a promo code, where an order is sent, the words under your replies, putting a batch on sale, sending a campaign you have approved, deleting something. Claude cannot do these. It can only ask.
 
-5. [ ] When it asks, it gives you a link. [Today](https://quickpickle.vercel.app/backstage) shows it too, and so does [Waiting for a yes](https://quickpickle.vercel.app/backstage/approvals).
+5. [ ] When it asks, it gives you a link. [Today](https://quickpickle.co.nz/backstage) shows it too, and so does [Waiting for a yes](https://quickpickle.co.nz/backstage/approvals).
 6. [ ] Open it and read it. It says what would happen in plain words, and shows exactly what Claude handed over, word for word. That is all that will be done.
 7. [ ] Press **Yes, do it** or **No**. Yes does it there and then. Nothing you type to Claude in the chat counts as a yes.
 8. [ ] If you leave it for a week it lapses, and nothing is done.
@@ -43,7 +43,7 @@ Anything that reaches a customer or cannot be undone: sending an email, a refund
 
 ## Cut it off
 
-9. [ ] On [Claude](https://quickpickle.vercel.app/backstage/settings/claude), press **Cut off** beside the connection. It stops working at once.
+9. [ ] On [Claude](https://quickpickle.co.nz/backstage/settings/claude), press **Cut off** beside the connection. It stops working at once.
 10. [ ] An owner can cut off anybody's, or press **Stop Claude connecting** to stop them all.
 11. [ ] When somebody leaves, switch off their staff account. Their Claude goes with it.
 12. [ ] A new password link for somebody cuts their Claude off as well, and so does a new PIN. Whoever had the old password or PIN may have connected a Claude of their own. They connect theirs again once they are back in.

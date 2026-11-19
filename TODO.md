@@ -136,6 +136,12 @@ stays up throughout.
      (`mail.` the domain) and set `MAIL_FROM` to an address on it, or have the other
      mailbox forward to an address on that subdomain, or skip this step and read replies
      in that mailbox. Step 2 is worth doing by itself whichever it is.
+     **As it stands (19 November 2026):** `quickpickle.co.nz` already has a mailbox at
+     1st Domains. Its MX record is `mta.1stdomains.net.nz`, its SPF record includes
+     1st Domains, and Ash reads it at webmail.1stdomains.co.nz. So the shop's inbox
+     takes a subdomain, or that mailbox forwards to one: never a second MX record on
+     the bare name. When Resend is added for sending, its own records sit on a
+     subdomain of their own and leave that SPF record alone.
   2. **A webhook in Resend** (Webhooks, Add endpoint) that calls
      `https://<the site>/api/mail/resend`, for these events: `email.received`,
      `email.sent`, `email.delivered`, `email.bounced`, `email.complained`, `email.failed`
@@ -191,16 +197,14 @@ stays up throughout.
     again. The domain's DNS would be kept at Cloudflare as well (a Worker's own domain
     needs "an active Cloudflare zone"), and the registrar's email hosting only works on
     the registrar's own name servers, so a mailbox there would have to move.
-- [ ] **Point the domain at the shop.** `quickpickle.co.nz` is Ash's, registered at 1st
-      Domains. `add-domain` ran on 18 November 2026 and the name is on the site, waiting
-      for its DNS. What is left, in order: Ash adds the two DNS records
-      ([docs/ACCOUNTS.md](docs/ACCOUNTS.md) has them, and where they go screen by
-      screen, under "The shop's own domain"); once `status` says the name is answering,
-      `use-domain` with `redeploy`; then `LIVE_SITE` in
-      `lib/backstage/plans/starter/export.ts` with `npm run docs:export`; everybody
-      connects their Claude again; and email (above) can be set up, because Resend
-      wants the domain. Nothing else is needed from the registrar for the shop: not its
-      web hosting, its database or its storage.
+- [x] **Point the domain at the shop.** `quickpickle.co.nz` is Ash's, registered at 1st
+      Domains. `add-domain` ran on 18 November 2026; Ash added the two DNS records and
+      `status` said the name was answering on 19 November, when `use-domain` and
+      `redeploy` made it the address the shop calls itself by, and `LIVE_SITE` followed.
+      Stripe's news and the clock still call `quickpickle.vercel.app`, on purpose.
+      Nothing else is needed from the registrar for the shop: not its web hosting, its
+      database or its storage. Email (above) can be set up now, because Resend wants the
+      domain.
 - [ ] **Have the database backed up before it holds real orders.** Supabase's own pages
       say it backs up projects on its paid plans every day, and that a project on the
       free plan is not backed up for you and can be paused when it is quiet. Nothing in
