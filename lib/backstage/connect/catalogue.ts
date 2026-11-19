@@ -39,6 +39,7 @@ import { z } from "zod";
 import type { Op } from "../core/op";
 
 import * as activityOps from "../activity/ops";
+import * as booksXero from "../books/xero";
 import * as clockOps from "../clock/ops";
 import * as connectApprovals from "./approvals";
 import * as connectOauth from "./oauth";
@@ -99,6 +100,7 @@ import * as todayOps from "../today/ops";
 
 const MODULES: readonly Readonly<Record<string, unknown>>[] = [
   activityOps,
+  booksXero,
   clockOps,
   connectApprovals,
   connectOauth,
@@ -210,6 +212,9 @@ export const SYSTEM_ONLY: ReadonlySet<string> = new Set([
   // The courier's booking system: true because Starshipit said so.
   "courier.recordHandoff",
   "courier.shippedFromStarshipit",
+  // The books: true because Xero said so.
+  "xero.recordPosting",
+  "xero.lost",
   // Mail: what arrived, and what became of what was sent.
   "mail.ingest",
   "mail.recordSent",

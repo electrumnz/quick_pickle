@@ -56,6 +56,13 @@ const SECTIONS = [
     ownerOnly: false,
   },
   {
+    href: "/backstage/settings/xero",
+    label: "Xero",
+    blurb:
+      "Each sale and refund sent to your Xero by itself. Off until an owner connects it.",
+    ownerOnly: false,
+  },
+  {
     href: "/backstage/settings/claude",
     label: "Claude",
     blurb:

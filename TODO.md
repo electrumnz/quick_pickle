@@ -387,7 +387,16 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
       `order_id` in the address, as the documentation names the field but shows no
       example). If that is refused, the order's page and Today say to delete it in
       Starshipit by hand, and `lib/courier/starshipit.ts` is the one line to change.
-- [ ] **A direct line to Xero.** Waits on an account to try it with.
+- [x] **A direct line to Xero.** Each sale goes as a paid invoice and each refund as a
+      credit note paid out, a few minutes after it happens, once an owner has connected
+      Xero and said where things go (Settings, Xero). Built from Xero's OpenID
+      description and its OpenAPI file (19 November 2026). Nobody could try it against
+      a real organisation from here. Two things to look at on the first connection:
+      the scopes (`XERO_SCOPES` in `lib/xero/client.ts`) are Xero's granular names from
+      its change of 6 August 2026, and which of them covers credit notes is not written
+      anywhere that could be read from here; and the developer pricing page lists a free
+      tier of 1,000 calls a day, which is about 300 sales a day. If Xero refuses a scope,
+      the screen says so and that list is the one line to change.
 - [ ] **What a packed box weighs.** The courier's file has no weight in it, because nobody
       has weighed one. Once the box is real: a weight for each pack size, and the file
       carries it.

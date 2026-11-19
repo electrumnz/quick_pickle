@@ -152,6 +152,14 @@ confirmed.
       sends its own. **Who:** Ash, then AI. **Done when:** the "Infra" run's `status` says
       Starshipit is connected, and the first packed test order shows on its page as in
       Starshipit (send it from the order's page: a test order only goes when asked).
+- [ ] **Connect Xero** (optional: For the books still makes a file of each day). In
+      Xero's developer site, make an app of the "Web app" kind for the shop, with the
+      redirect address Settings, Xero shows. Put its client id and secret in the
+      repository's secrets as `QP_XERO_CLIENT_ID` and `QP_XERO_CLIENT_SECRET`, then an
+      infra request for `connect-xero` and `redeploy`. Then, in Settings, Xero: connect,
+      and say which accounts sales, delivery and money go to, and from which day. Ask
+      your accountant which accounts. **Who:** Ash, then AI, then Ash. **Done when:**
+      Settings, Xero says On, and the first real sale shows in Xero as a paid invoice.
 - [ ] **Finish Stripe's sign-up:** the business's details and a bank account. **Who:**
       Ash
 - [ ] **Roll Stripe's test keys**, because Sam has seen them. Put the new ones in the

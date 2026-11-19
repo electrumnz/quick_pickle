@@ -130,6 +130,9 @@ describe("the list of every operation", () => {
       // making the first owner with a PIN, a new PIN by the set-up code,
       // and swapping the PIN for an email and a password.
       staff: 9,
+      // Connecting Xero and saying where things go are an owner's, and
+      // what Xero answered is its own word (19 November 2026).
+      xero: 6,
     });
     // And the money ones a bot IS offered all wait for a person's yes.
     for (const name of [

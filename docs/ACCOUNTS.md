@@ -189,13 +189,15 @@ the repository look after its own hosting, database and payments
 | `QP_STRIPE_SECRET_KEY`      | Stripe's secret key. A test key today         | Stripe, Developers      | Rolled, as in step 4                 |
 | `QP_STRIPE_PUBLISHABLE_KEY` | Stripe's other key. A test key today          | Stripe, Developers      | Rolled, as in step 4                 |
 
-Two more, once Ash has a Starshipit account. The workflow only reads them for
-`connect-starshipit`:
+More once Ash has the accounts. The workflow only reads each pair for its own
+action, `connect-starshipit` or `connect-xero`:
 
 | Name                             | What it is                    | Whose account makes it    |
 | :------------------------------- | :---------------------------- | :------------------------ |
 | `QP_STARSHIPIT_API_KEY`          | Starshipit's API key          | Starshipit, Settings, API |
 | `QP_STARSHIPIT_SUBSCRIPTION_KEY` | Starshipit's subscription key | Starshipit, Settings, API |
+| `QP_XERO_CLIENT_ID`              | The shop's Xero app's id      | Xero's developer site     |
+| `QP_XERO_CLIENT_SECRET`          | That app's secret             | Xero's developer site     |
 
 A token made in somebody's Vercel or Supabase account can reach every project that
 person can. That is why the workflow is pinned to Quick Pickle's own project by id and
