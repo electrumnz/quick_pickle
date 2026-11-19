@@ -6,7 +6,7 @@
 >
 > **It is not legal advice.** It was written by an AI assistant on 12 November 2026 and has not been read by a lawyer. It does not say what applies in this business's exact case: that is for the owner to find out from the bodies named. Every line starts as something to check for that reason.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans, Compliance](https://quickpickle.vercel.app/backstage/plans/compliance), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans, Compliance](https://quickpickle.co.nz/backstage/plans/compliance), and may have been changed there since. This file does not follow those changes.
 
 ## Making food
 

@@ -1,7 +1,7 @@
 {
-  "actions": ["add-domain", "redeploy", "status"],
+  "actions": ["use-domain", "redeploy", "status"],
   "domain": "quickpickle.co.nz",
   "confirm": "yes",
-  "asked": "2026-11-18T02:18Z",
-  "why": "Ash has bought quickpickle.co.nz at 1st Domains. Put it on the site, with www beside it, and say which DNS records point it here. The shop goes on calling itself by the host's own address, held in place, until use-domain."
+  "asked": "2026-11-19T02:05Z",
+  "why": "Ash added the two DNS records at 1st Domains, and the status run on 19 November says quickpickle.co.nz is answering and www sends people on to it. Make the name the address the shop calls itself by, so its links, emails and Stripe's way back use it. Stripe's news and the clock go on calling quickpickle.vercel.app."
 }

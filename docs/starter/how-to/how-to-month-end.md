@@ -4,7 +4,7 @@
 
 > The month-end routine: what to pull out of the back end and what goes to Xero and your accountant.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/how-to-month-end), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/how-to-month-end), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** the month-end routine: what to pull out of the back end, and what to hand to Xero and your accountant. The back end does not do accounting, and is not meant to.
 
@@ -12,7 +12,7 @@ _Assumptions: the business uses Xero and has an accountant or bookkeeper, and pa
 
 ## In the first week of each month
 
-1. [ ] **Sales.** Open [For the books](https://quickpickle.vercel.app/backstage/numbers/books) and press **Last month**. It shows what customers were charged and what was given back, day by day, with test orders and unpaid ones left out. Download both files: by day, and by order. How your accountant wants sales entered in Xero: ____.
+1. [ ] **Sales.** Open [For the books](https://quickpickle.co.nz/backstage/numbers/books) and press **Last month**. It shows what customers were charged and what was given back, day by day, with test orders and unpaid ones left out. Download both files: by day, and by order. How your accountant wants sales entered in Xero: ____.
 2. [ ] **Money received.** From Stripe, download last month's payouts and fees. A payout is usually several sales in one lump, less Stripe's fees. How your accountant wants it entered: ____.
 3. [ ] **Match them.** Paid orders, less refunds, less Stripe's fees, should come to what Stripe paid out, allowing for payouts that straddle the end of the month. If it does not, find out why before going on.
 4. [ ] **Refunds.** The same screen shows what was given back on each day, and the by-order file shows it against each order. A refund made in Stripe's own dashboard is in there too. Check each one against Stripe's list.
@@ -22,7 +22,7 @@ _Assumptions: the business uses Xero and has an accountant or bookkeeper, and pa
 8. [ ] **Stock count.** Count the shots on hand by batch, and the bottles, caps, labels and cartons. Write down the count and the date. Whether your accountant wants this monthly or only at year end: ____.
 9. [ ] **Stock written off.** List what was given away as samples and what was thrown away, with the reason.
 10. [ ] **GST.** If the business is registered for GST in New Zealand, the return is filed when Inland Revenue says it is due. If it is not registered, look at the last 12 months of sales with your accountant, who will say when registering becomes compulsory. Not sure which applies: ask them.
-11. [ ] **Update the [Budget](https://quickpickle.vercel.app/backstage/plans/budget)** with any cost that changed: a new courier rate, a new price for bottles. Mark it confirmed if it came from an invoice.
+11. [ ] **Update the [Budget](https://quickpickle.co.nz/backstage/plans/budget)** with any cost that changed: a new courier rate, a new price for bottles. Mark it confirmed if it came from an invoice.
 12. [ ] **Look at the month.** Orders, second orders, what a pack really left after costs. Write three lines in the business plan about what you learned.
 
 ## At year end

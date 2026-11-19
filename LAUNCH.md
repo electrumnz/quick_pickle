@@ -115,15 +115,16 @@ confirmed.
 
 ## 3. Set up what the shop runs on
 
-- [ ] **Point the domain at the shop.** Ash adds two records at 1st Domains:
+- [x] **Point the domain at the shop.** Ash adds two records at 1st Domains:
       [docs/ACCOUNTS.md](docs/ACCOUNTS.md), under "The shop's own domain", has them and
-      the screens. **Who:** Ash
-- [ ] **Switch the shop over to the domain.** Once the "Infra" run's `status` says
+      the screens. **Who:** Ash. Done 19 November 2026: the "Infra" run's `status` says
+      both names are answering.
+- [x] **Switch the shop over to the domain.** Once the "Infra" run's `status` says
       `quickpickle.co.nz` is answering: an infra request for `use-domain` and `redeploy`
       with `"domain": "quickpickle.co.nz"`, then `LIVE_SITE` in
       `lib/backstage/plans/starter/export.ts` and `npm run docs:export`. **Who:** AI.
       **Done when:** https://quickpickle.co.nz shows the shop, and its links and emails
-      use that address.
+      use that address. Done 19 November 2026.
 - [ ] **A hosting plan meant for a business.** Vercel's free plan is for personal
       projects. Before the shop opens to the public, move the project to Vercel Pro
       (about US$20 a month) in Vercel's Billing settings. Moving to Cloudflare is the

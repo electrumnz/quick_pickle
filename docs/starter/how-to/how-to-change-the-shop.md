@@ -4,20 +4,20 @@
 
 > What a pack costs, what delivery costs, when a pre-order ships, and the switch that stops orders. All changed in one place, with nobody else needed.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/how-to-change-the-shop), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/how-to-change-the-shop), and may have been changed there since. This file does not follow those changes.
 
-**What this is:** how to change what the shop sells for, without waiting on anybody. It all lives on one screen: [The shop](https://quickpickle.vercel.app/backstage/settings/shop), under Settings.
+**What this is:** how to change what the shop sells for, without waiting on anybody. It all lives on one screen: [The shop](https://quickpickle.co.nz/backstage/settings/shop), under Settings.
 
 _Starter draft. The steps are how the screen works today. The blanks (\____) are yours to fill in._
 
 ## Before you change anything
 
 1. [ ] Know the new figure. A price is what a customer pays for the whole pack. Delivery is for one order.
-2. [ ] If it is a price, look at the [budget](https://quickpickle.vercel.app/backstage/plans/budget) first. It shows what is left of each pack at the price you have in mind.
+2. [ ] If it is a price, look at the [budget](https://quickpickle.co.nz/backstage/plans/budget) first. It shows what is left of each pack at the price you have in mind.
 
 ## Change it
 
-3. [ ] Open [The shop](https://quickpickle.vercel.app/backstage/settings/shop) and type the new figure in its box. Leave everything else alone.
+3. [ ] Open [The shop](https://quickpickle.co.nz/backstage/settings/shop) and type the new figure in its box. Leave everything else alone.
 4. [ ] Press **See what changes**. Nothing is saved yet. The screen reads the change back in plain words, like "The Trial from $27 to $30".
 5. [ ] Read it. If a digit slipped, this is where you catch it. Fix the box and press **Check again**.
 6. [ ] Press **Change the shop**. It is live for every customer from that moment, and the site shows it within a minute.
@@ -40,24 +40,24 @@ Nobody is charged a price they were not shown. If a customer is part-way through
 
 ## Stop taking orders
 
-8. [ ] On [The shop](https://quickpickle.vercel.app/backstage/settings/shop), choose **No, stop for now**, then check and change as above. Use it when a batch has sold out, or you are away and cannot send anything.
+8. [ ] On [The shop](https://quickpickle.co.nz/backstage/settings/shop), choose **No, stop for now**, then check and change as above. Use it when a batch has sold out, or you are away and cannot send anything.
 9. [ ] The page says the shop is not taking orders and points people to the Pickle Crew. The checkout takes nothing.
-10. [ ] [Today](https://quickpickle.vercel.app/backstage) carries a line for as long as it is off, so it is not forgotten.
+10. [ ] [Today](https://quickpickle.co.nz/backstage) carries a line for as long as it is off, so it is not forgotten.
 11. [ ] To start again, choose **Yes, taking orders**. Then tell the Pickle Crew: they were promised first dibs.
 
 ## When a pre-order's ship date changes
 
-12. [ ] Set the new date on [The shop](https://quickpickle.vercel.app/backstage/settings/shop).
-13. [ ] Tell everybody with a pre-order that has not shipped. The site promises they will hear from you. Under the form on [The shop](https://quickpickle.vercel.app/backstage/settings/shop) a panel says how many have not been told the new date. Press **Email them** and each gets one email with it. [Today](https://quickpickle.vercel.app/backstage) shows it until it is done.
+12. [ ] Set the new date on [The shop](https://quickpickle.co.nz/backstage/settings/shop).
+13. [ ] Tell everybody with a pre-order that has not shipped. The site promises they will hear from you. Under the form on [The shop](https://quickpickle.co.nz/backstage/settings/shop) a panel says how many have not been told the new date. Press **Email them** and each gets one email with it. [Today](https://quickpickle.co.nz/backstage) shows it until it is done.
 14. [ ] If order emails are not connected yet, the panel lists whose orders they are. Write to each yourself. Who does it: ____.
 
 ## Saying a figure is right
 
-Changing a figure does not confirm it. While any fact about the shop is still a stand-in, the site stays out of search engines. When the prices, the delivery rates, the ship date and the contact address are the real ones, an owner says so on the [go-live list](https://quickpickle.vercel.app/backstage/settings/go-live), one at a time. Their name goes beside each.
+Changing a figure does not confirm it. While any fact about the shop is still a stand-in, the site stays out of search engines. When the prices, the delivery rates, the ship date and the contact address are the real ones, an owner says so on the [go-live list](https://quickpickle.co.nz/backstage/settings/go-live), one at a time. Their name goes beside each.
 
 ## What is on the label, and who the company is
 
-These are on their own screen: [The label and the company](https://quickpickle.vercel.app/backstage/settings/label), under Settings. It works the same way, with the same two presses.
+These are on their own screen: [The label and the company](https://quickpickle.co.nz/backstage/settings/label), under Settings. It works the same way, with the same two presses.
 
 15. [ ] Have the printed label in your hand. Nothing about what is in the bottle is typed from memory.
 16. [ ] Type the ingredients list word for word, then the allergen line and the storage line if the label has them. Leave a box empty and the site says nothing for it. With no allergen line the site says nothing about allergens either way.
@@ -65,15 +65,15 @@ These are on their own screen: [The label and the company](https://quickpickle.v
 18. [ ] If the screen asks you to check a word against the printed label, it is one the food rules put on labels themselves (the name for a kind of additive, say) and that would read as a claim anywhere else. Look at the label. If it says exactly that, tick the box and check again. Only a person can tick it, and your name goes beside it.
 19. [ ] Press **Change the site**. The list shows on the shop under "What's in it?" within a minute.
 20. [ ] For the company: the legal name (the company's registered name, or your own if you trade as yourself), the NZBN if there is one, the address, and whether it is registered for GST. With a GST number in, a receipt says how much of the total is GST. The two numbers are checked as you save them, so a slipped digit is caught.
-21. [ ] When both are right, an owner says so on the [go-live list](https://quickpickle.vercel.app/backstage/settings/go-live).
+21. [ ] When both are right, an owner says so on the [go-live list](https://quickpickle.co.nz/backstage/settings/go-live).
 
 If the label changes (a new recipe, a new supplier), change it here the same day. Who checks the site against each new label: ____.
 
 ## The line of words across the top
 
-The line that runs across the very top of the shop has its own screen: [The line across the top](https://quickpickle.vercel.app/backstage/marketing/pages/top-line), under Marketing, Landing pages. You do not have to change it. The shop comes with one.
+The line that runs across the very top of the shop has its own screen: [The line across the top](https://quickpickle.co.nz/backstage/marketing/pages/top-line), under Marketing, Landing pages. You do not have to change it. The shop comes with one.
 
-22. [ ] Type the lines, one to a row. Up to 8, each up to 60 letters. Keep them to things that stay true: a date or a price belongs on [The shop](https://quickpickle.vercel.app/backstage/settings/shop), and a special says itself in the line by itself while it is switched on.
+22. [ ] Type the lines, one to a row. Up to 8, each up to 60 letters. Keep them to things that stay true: a date or a price belongs on [The shop](https://quickpickle.co.nz/backstage/settings/shop), and a special says itself in the line by itself while it is switched on.
 23. [ ] Press **Save the draft**. Nothing a customer sees has changed. The preview beside it shows the shop with your words across the top.
 24. [ ] Read what the copy check says. Wording about what the drink does to a body cannot be published, here or anywhere.
 25. [ ] Press **Publish this line**. The shop shows it within a minute.

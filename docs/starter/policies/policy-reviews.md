@@ -4,7 +4,7 @@
 
 > Every review is read by a person first. Taste, the bottle and Lucky go up. Anything about a body does not.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/policy-reviews), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/policy-reviews), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** the rule for customer reviews, and for anything else a customer says about us that we might repeat: on the site, in an email, in a post, on a sticker.
 

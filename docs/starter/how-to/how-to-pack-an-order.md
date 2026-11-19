@@ -4,7 +4,7 @@
 
 > From the packing queue to the courier, one order at a time.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/how-to-pack-an-order), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/how-to-pack-an-order), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** the steps for packing one order, from the queue to the courier. Follow it top to bottom. Where a step is wrong for how you really work, change the sheet.
 
@@ -14,7 +14,7 @@ Before you start: clean, dry hands and a clear bench.
 
 ## Before you pack
 
-1. [ ] Open [Orders](https://quickpickle.vercel.app/backstage/orders) and look at **To pack**. Start with the oldest.
+1. [ ] Open [Orders](https://quickpickle.co.nz/backstage/orders) and look at **To pack**. Start with the oldest.
 2. [ ] Open the order. Check it says **To pack**. If it says **Awaiting payment** or **Test**, do not pack it.
 3. [ ] Open its **Packing slip**. Print it, or keep it open on your phone.
 4. [ ] Read the address once. If it looks wrong or half finished, stop and ask the customer before packing.
@@ -33,7 +33,7 @@ Before you start: clean, dry hands and a clear bench.
 ## Send it
 
 13. [ ] On the order, press **Mark as packed**.
-14. [ ] When the courier has it, pick the courier from the list, type the tracking number off the label and press **Mark as shipped**. The link the customer follows is worked out for you. This cannot be undone, so check you are on the right order. With more than a couple of orders, use the [Courier](https://quickpickle.vercel.app/backstage/orders/courier) screen: it gives the courier's website every packed order as one file, and takes the tracking numbers back in one go.
+14. [ ] When the courier has it, pick the courier from the list, type the tracking number off the label and press **Mark as shipped**. The link the customer follows is worked out for you. This cannot be undone, so check you are on the right order. With more than a couple of orders, use the [Courier](https://quickpickle.co.nz/backstage/orders/courier) screen: it gives the courier's website every packed order as one file, and takes the tracking numbers back in one go.
 15. [ ] Put the slip in the box, or file it: ____.
 
 ## If something is not right

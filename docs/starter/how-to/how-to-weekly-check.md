@@ -4,7 +4,7 @@
 
 > A once-a-week run through orders, stock, customers, money and the plan, from your phone.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/how-to-weekly-check), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/how-to-weekly-check), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** a once-a-week run through the whole business, from your phone. Pick a day and keep to it. When nothing is wrong it is short, which is the point.
 
@@ -12,7 +12,7 @@ _Starter draft. Cross out what does not apply yet and add what you find yourself
 
 ## Orders
 
-1. [ ] Open [Orders](https://quickpickle.vercel.app/backstage/orders). Is anything waiting to be packed that is more than a day old?
+1. [ ] Open [Orders](https://quickpickle.co.nz/backstage/orders). Is anything waiting to be packed that is more than a day old?
 2. [ ] Anything packed but not yet with the courier?
 3. [ ] Anything shipped more than a week ago and not marked as delivered? Check its tracking.
 4. [ ] Any damaged, missing or complaint notes from the week still open? Finish them.
@@ -31,11 +31,11 @@ _Starter draft. Cross out what does not apply yet and add what you find yourself
 
 ## Money
 
-11. [ ] Did any cost change this week: a new quote, a courier price rise? Update the [Budget](https://quickpickle.vercel.app/backstage/plans/budget).
+11. [ ] Did any cost change this week: a new quote, a courier price rise? Update the [Budget](https://quickpickle.co.nz/backstage/plans/budget).
 12. [ ] Any refund recorded but not yet sent back by hand? Send it.
 
 ## The plan
 
-13. [ ] Open [Tasks](https://quickpickle.vercel.app/backstage/plans/tasks). Do what is overdue, or move its date honestly.
-14. [ ] Open [Questions](https://quickpickle.vercel.app/backstage/plans/questions). Can you answer one today?
+13. [ ] Open [Tasks](https://quickpickle.co.nz/backstage/plans/tasks). Do what is overdue, or move its date honestly.
+14. [ ] Open [Questions](https://quickpickle.co.nz/backstage/plans/questions). Can you answer one today?
 15. [ ] Write one line in the [business plan](../plans/business-plan.md) about what you learned this week.

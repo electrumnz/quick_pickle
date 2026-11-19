@@ -4,7 +4,7 @@
 
 > Nobody is named, quoted, tagged or pictured without written permission on file.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/policy-naming-people), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/policy-naming-people), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** the rule for when we may name, quote, tag or picture a person, a club, a team, an event or a stockist.
 

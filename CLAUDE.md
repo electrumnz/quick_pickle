@@ -1372,7 +1372,8 @@ for whom.
 - **A domain's name is only ever taken from a commit.** The form that starts the
   workflow by hand has no box for one, and `tests/infra/domain.test.ts` holds it there,
   with the order above.
-- The domain is `quickpickle.co.nz`, Ash's, at 1st Domains. Only the name is needed
+- The domain is `quickpickle.co.nz`, Ash's, at 1st Domains. It has been the address the
+  shop calls itself by since 19 November 2026 (`use-domain`). Only the name is needed
   from a registrar. Its web hosting (PHP, WordPress) cannot run this site, its database
   is not the kind the site is written for, and the site keeps its files in its own
   database. A mailbox there is the owner's choice: the shop sends and reads its own mail

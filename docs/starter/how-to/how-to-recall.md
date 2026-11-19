@@ -4,7 +4,7 @@
 
 > Who to tell, in what order, and what to keep, when a batch has to come back.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/how-to-recall), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/how-to-recall), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** the order of work when a batch has to come back: who to tell, in what order, and what to keep. Read it now, while nothing is wrong.
 

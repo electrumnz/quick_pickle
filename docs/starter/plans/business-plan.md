@@ -4,7 +4,7 @@
 
 > What we sell and to whom, what has to be true for it to work, the first 90 days and the risks.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/business-plan), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/business-plan), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** the working plan for Quick Pickle on a few pages. It is a draft to argue with, not a finished document. Anything marked _Assumption_ has not been checked yet.
 
@@ -45,9 +45,9 @@ Nobody has tested either of these with real people yet. The [marketing plan](../
 
 A plan is a list of bets. These are ours. Each one stays an assumption until there is a number or an answer beside it.
 
-1. **People like it enough to buy it twice.** A first order can be curiosity. A second order is the business. _How we will know:_ the [Customers](https://quickpickle.vercel.app/backstage/customers) screen shows how many orders each customer has placed.
-2. **A pack leaves money after everything.** After the juice, bottle, cap, label, carton, courier and card fee, there is enough left on each pack to pay the monthly costs and to find the next customer. _How we will know:_ the [Budget](https://quickpickle.vercel.app/backstage/plans/budget), once real costs are in it. Today every cost there is a blank.
-3. **We can make it safely, and the same every time.** A registered food plan, a label that has been checked, and a batch record for every production day. _How we will know:_ nothing under Making food or The label on the [compliance checklist](https://quickpickle.vercel.app/backstage/plans/compliance) is still waiting.
+1. **People like it enough to buy it twice.** A first order can be curiosity. A second order is the business. _How we will know:_ the [Customers](https://quickpickle.co.nz/backstage/customers) screen shows how many orders each customer has placed.
+2. **A pack leaves money after everything.** After the juice, bottle, cap, label, carton, courier and card fee, there is enough left on each pack to pay the monthly costs and to find the next customer. _How we will know:_ the [Budget](https://quickpickle.co.nz/backstage/plans/budget), once real costs are in it. Today every cost there is a blank.
+3. **We can make it safely, and the same every time.** A registered food plan, a label that has been checked, and a batch record for every production day. _How we will know:_ nothing under Making food or The label on the [compliance checklist](https://quickpickle.co.nz/backstage/plans/compliance) is still waiting.
 4. **We can sell it without saying what it does to a body.** _How we will know:_ people buy from a page that only talks about the taste, the bottle, the ritual and Lucky.
 5. **We can reach buyers cheaply.** Clubs, teams, events, the Pickle Crew list and word of mouth, without paying for every sale with advertising. _How we will know:_ where each order came from, and what it cost to get.
 6. **It arrives in one piece.** A plastic bottle of liquid has to survive a courier. _How we will know:_ send test parcels to yourself and to a rural address before the first real order, then count how many real orders arrive damaged.
@@ -60,7 +60,7 @@ The step-by-step version is the [launch checklist](../plans/launch-checklist.md)
 
 **Days 1 to 30: real answers and real numbers.**
 
-- Answer the [questions that hold up launch](https://quickpickle.vercel.app/backstage/plans/questions).
+- Answer the [questions that hold up launch](https://quickpickle.co.nz/backstage/plans/questions).
 - Find out which food plan applies, and register.
 - Settle the recipe, the label wording and the date mark with whoever makes it.
 - Get real quotes for juice, bottles, caps, labels, cartons and the courier. Put each one in the Budget.
@@ -113,4 +113,4 @@ The others, in the order they are likely to bite:
 
 ## What is not decided yet
 
-The open questions are on the [Questions](https://quickpickle.vercel.app/backstage/plans/questions) screen. The ones marked as holding up launch have to be answered before the site can take money. The big groups are the product facts (recipe, label, shelf life, where it is made), the offer (packs, prices, delivery), the business itself (legal entity, GST, bank, Stripe) and the claim lines from the concept deck.
+The open questions are on the [Questions](https://quickpickle.co.nz/backstage/plans/questions) screen. The ones marked as holding up launch have to be answered before the site can take money. The big groups are the product facts (recipe, label, shelf life, where it is made), the offer (packs, prices, delivery), the business itself (legal entity, GST, bank, Stripe) and the claim lines from the concept deck.

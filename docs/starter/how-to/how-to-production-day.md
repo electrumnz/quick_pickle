@@ -4,7 +4,7 @@
 
 > What to prepare and what to write in the batch record. The food-safety steps are blanks to fill from your food plan.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/how-to-production-day), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/how-to-production-day), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** the order of a production day and what to write down. It is a frame. The food-safety steps are blanks on purpose: they come from your registered food plan, word for word, and not from this sheet.
 

@@ -6,7 +6,7 @@
 >
 > Nothing here is an answer. Each says why it matters, who to ask and where the question came from.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans, Questions](https://quickpickle.vercel.app/backstage/plans/questions), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans, Questions](https://quickpickle.co.nz/backstage/plans/questions), and may have been changed there since. This file does not follow those changes.
 
 ## Product facts
 

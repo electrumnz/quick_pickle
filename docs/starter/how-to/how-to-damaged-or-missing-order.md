@@ -4,7 +4,7 @@
 
 > A customer says their order arrived damaged, leaking, wrong, or not at all.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/how-to-damaged-or-missing-order), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/how-to-damaged-or-missing-order), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** the steps when a customer says their order arrived damaged, leaking, wrong, or not at all. Problems with the juice itself have their own sheet: [How to handle a complaint](../how-to/how-to-complaint.md).
 
@@ -13,7 +13,7 @@ _Assumption: the promise on the site's Returns page stands as drafted. It says t
 ## Straight away
 
 1. [ ] Reply the same day, even if only to say you are on to it. Say sorry once, plainly.
-2. [ ] Find the order. Search [Orders](https://quickpickle.vercel.app/backstage/orders) by name, email or order number.
+2. [ ] Find the order. Search [Orders](https://quickpickle.co.nz/backstage/orders) by name, email or order number.
 3. [ ] Ask only for what you need:
    - Damaged or leaking: a photo of the parcel and the bottles, and the batch code on a bottle if they can read it.
    - Wrong items: what arrived.
@@ -49,7 +49,7 @@ Plain and short. No jokes and no Lucky in this one. Change the details and keep 
 
 ## If a refund comes back
 
-Now and then a refund leaves and the customer's bank cannot put it on the card, because the card has been closed. It can take a couple of weeks to find out. [Today](https://quickpickle.vercel.app/backstage) says "A refund came back", and the order shows it as left and come back.
+Now and then a refund leaves and the customer's bank cannot put it on the card, because the card has been closed. It can take a couple of weeks to find out. [Today](https://quickpickle.co.nz/backstage) says "A refund came back", and the order shows it as left and come back.
 
 - The customer was told it was on its way, so write to them first.
 - Send the money another way. Ask them for a bank account. Sending it to the same card again would only come back again.

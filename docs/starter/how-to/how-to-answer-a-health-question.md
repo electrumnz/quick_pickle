@@ -4,7 +4,7 @@
 
 > The one safe reply when someone asks what it does for their body, or tells us what it did.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/how-to-answer-a-health-question), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/how-to-answer-a-health-question), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** the reply to give when someone asks what Quick Pickle does for their body, or tells us what it did. It is the same reply every time, wherever they ask: an email, a comment, a message, or face to face at a table.
 

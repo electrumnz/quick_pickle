@@ -41,7 +41,7 @@ import type { StarterDocument } from "./types";
  * in a file on GitHub has to say the whole address. Change it here when the
  * shop has its own domain, and run `npm run docs:export`.
  */
-export const LIVE_SITE = "https://quickpickle.vercel.app";
+export const LIVE_SITE = "https://quickpickle.co.nz";
 
 /** The folder the files are written to, from the top of the repository. */
 export const STARTER_DOCS_DIR = "docs/starter";

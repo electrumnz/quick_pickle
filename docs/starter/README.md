@@ -4,7 +4,7 @@
 
 The back end opens with a set of drafts in **Plans**, so the area does not start empty. These are the same drafts, as files, so they can be read here.
 
-Once the back end has been used, [Plans](https://quickpickle.vercel.app/backstage/plans) is where the working copy lives. A sheet that has been changed there, or a question that has been answered there, is not changed here.
+Once the back end has been used, [Plans](https://quickpickle.co.nz/backstage/plans) is where the working copy lives. A sheet that has been changed there, or a question that has been answered there, is not changed here.
 
 Everything was written for a New Zealand business selling a packaged food online. Only what was known on 12 November 2026 is stated as fact. The rest is a question to answer, a blank to fill in (`____`), or an assumption marked as one.
 

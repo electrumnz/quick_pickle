@@ -4,7 +4,7 @@
 
 > A customer's bank has taken a payment back and given the shop a date to answer by.
 >
-> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.vercel.app/backstage/plans/docs/how-to-card-dispute), and may have been changed there since. This file does not follow those changes.
+> This is the starting draft that ships with the back end, as it was written. The copy people work from is in the back end, under [Plans](https://quickpickle.co.nz/backstage/plans/docs/how-to-card-dispute), and may have been changed there since. This file does not follow those changes.
 
 **What this is:** the steps when a customer's bank disputes a card payment, sometimes called a chargeback. It is rare. It has a date on it, and missing the date loses the money, so it comes first on the day it arrives.
 
@@ -16,7 +16,7 @@ A cardholder has told their bank they should not have been charged: they do not 
 
 ## The day it arrives
 
-1. [ ] [Today](https://quickpickle.vercel.app/backstage) shows it at the top: which order, how much, the bank's reason and the date to answer by. Open the order. The same is across the top of the order's own page, and under **Money** there.
+1. [ ] [Today](https://quickpickle.co.nz/backstage) shows it at the top: which order, how much, the bank's reason and the date to answer by. Open the order. The same is across the top of the order's own page, and under **Money** there.
 2. [ ] Read the order's history. Was it packed and sent? Is there a tracking number? Has the customer been in touch?
 3. [ ] Do not refund the order while it is disputed. The bank has already taken the money back, and a refund on top could pay it twice.
 4. [ ] If it looks like a mix-up and you can reach the customer, write to them. A customer can tell their bank to drop a dispute. Still answer in Stripe by the date: do not wait on them.
@@ -35,6 +35,6 @@ A cardholder has told their bank they should not have been charged: they do not 
 ## Afterwards
 
 9. [ ] Once it is answered, Today stops calling it urgent and says it is with the bank. How long the bank usually takes: ____.
-10. [ ] When the bank decides, the order's history says how it ended. Won: the money stays and nothing else changes. Lost: the amount is written on the order as given back, so the order and [For the books](https://quickpickle.vercel.app/backstage/numbers/books) are right. There is nothing more to do on the order.
+10. [ ] When the bank decides, the order's history says how it ended. Won: the money stays and nothing else changes. Lost: the amount is written on the order as given back, so the order and [For the books](https://quickpickle.co.nz/backstage/numbers/books) are right. There is nothing more to do on the order.
 11. [ ] Add a note on the order: what you sent and what you learned.
 12. [ ] Two disputes close together for the same reason are worth a hard look. "Never arrived" twice points at the courier or the address form. "Do not recognise it" twice may mean the name on card statements is not one customers know: ask Stripe what it shows.
