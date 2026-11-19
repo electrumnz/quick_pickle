@@ -7,6 +7,9 @@
 //   QP_SUPABASE_ACCESS_TOKEN   Supabase, the Quick Pickle project only
 //   QP_STRIPE_SECRET_KEY       Stripe
 //
+// and, only for "connect-starshipit", the two keys Starshipit makes under
+// Settings, API: QP_STARSHIPIT_API_KEY and QP_STARSHIPIT_SUBSCRIPTION_KEY.
+//
 // What it does is decided one of two ways (see the workflow):
 //
 //   started by hand   the action and the yes come from the form
@@ -315,6 +318,13 @@ async function vercelStatus() {
   );
   console.log(
     `  reply addresses of their own: ${hasInProduction(names, "MAIL_TOKEN_SECRET") ? "MAIL_TOKEN_SECRET is there" : "off (MAIL_TOKEN_SECRET is not set), so replies come to MAIL_FROM"}`,
+  );
+  // The courier's booking system (lib/courier). Off is normal.
+  const starshipitMissing = STARSHIPIT_SETTINGS.filter(
+    (key) => !hasInProduction(names, key),
+  );
+  console.log(
+    `  Starshipit in production: ${starshipitMissing.length === 0 ? "connected: packed orders go there, and labels come back as shipped orders" : starshipitMissing.length === STARSHIPIT_SETTINGS.length ? "not connected (the courier screen's file is the way out)" : `half set up. Missing: ${starshipitMissing.join(", ")}`}`,
   );
 }
 
@@ -1381,6 +1391,83 @@ async function disconnectStripe() {
   changedSettings = true;
 }
 
+// --- Starshipit ----------------------------------------------------------------
+
+/** The app's names for the two keys (lib/courier/index.ts). */
+const STARSHIPIT_SETTINGS = [
+  "STARSHIPIT_API_KEY",
+  "STARSHIPIT_SUBSCRIPTION_KEY",
+];
+
+/**
+ * Puts Starshipit's two keys on the host, from the repository's secrets,
+ * after asking Starshipit whether they work: one read of the orders waiting
+ * there, which changes nothing. Follow it with "redeploy". From then on a
+ * packed order goes to Starshipit by itself (lib/backstage/orders/starshipit.ts).
+ */
+async function connectStarshipit() {
+  if (!confirmed) fail('This changes settings. Ask again with confirm "yes".');
+  const apiKey = required("QP_STARSHIPIT_API_KEY");
+  const subscriptionKey = required("QP_STARSHIPIT_SUBSCRIPTION_KEY");
+  mask(apiKey);
+  mask(subscriptionKey);
+  let response;
+  try {
+    response = await fetch(
+      "https://api.starshipit.com/api/orders/unshipped?limit=1",
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "StarShipIT-Api-Key": apiKey,
+          "Ocp-Apim-Subscription-Key": subscriptionKey,
+        },
+        signal: AbortSignal.timeout(20_000),
+      },
+    );
+  } catch {
+    fail("Starshipit did not answer. Nothing was changed.");
+  }
+  if (!response.ok) {
+    fail(
+      `Starshipit turned the keys down (${String(response.status)}). Check both were copied from Settings, API in Starshipit. Nothing was changed.`,
+    );
+  }
+  console.log("  Starshipit took both keys.");
+  const save = (name, value) =>
+    vercel(`/v10/projects/${vercelProject}/env?upsert=true`, {
+      method: "POST",
+      body: { key: name, value, type: "sensitive", target: ["production"] },
+    });
+  await save("STARSHIPIT_API_KEY", apiKey);
+  await save("STARSHIPIT_SUBSCRIPTION_KEY", subscriptionKey);
+  console.log(
+    "  production will send packed orders to Starshipit once it is redeployed.",
+  );
+  changedSettings = true;
+}
+
+/** Takes Starshipit's keys off the host. Follow it with "redeploy". */
+async function disconnectStarshipit() {
+  if (!confirmed) fail('This changes settings. Ask again with confirm "yes".');
+  const result = await vercel(`/v10/projects/${vercelProject}/env`);
+  const list = Array.isArray(result?.envs) ? result.envs : [];
+  let removed = 0;
+  for (const item of list) {
+    if (STARSHIPIT_SETTINGS.includes(String(item.key)) && item.id) {
+      await vercel(`/v9/projects/${vercelProject}/env/${item.id}`, {
+        method: "DELETE",
+      });
+      removed += 1;
+    }
+  }
+  console.log(
+    removed === 0
+      ? "  Starshipit was not connected. Nothing to take off."
+      : "  Starshipit's keys are off the host. Orders already there stay there.",
+  );
+  if (removed > 0) changedSettings = true;
+}
+
 // --- The checkout's limit ------------------------------------------------------
 
 /**
@@ -1592,6 +1679,8 @@ const ACTIONS = {
   "disconnect-clock": disconnectClock,
   "limits-off": limitsOff,
   "limits-on": limitsOn,
+  "connect-starshipit": connectStarshipit,
+  "disconnect-starshipit": disconnectStarshipit,
   "add-domain": addDomain,
   "use-domain": useDomain,
   "leave-domain": leaveDomain,

@@ -100,6 +100,9 @@ jobs:
           QP_VERCEL_TOKEN: ${{ secrets.QP_VERCEL_TOKEN }}
           QP_STRIPE_SECRET_KEY: ${{ secrets.QP_STRIPE_SECRET_KEY }}
           QP_STRIPE_PUBLISHABLE_KEY: ${{ secrets.QP_STRIPE_PUBLISHABLE_KEY }}
+          # Only read by connect-starshipit. Unset until the owner adds them.
+          QP_STARSHIPIT_API_KEY: ${{ secrets.QP_STARSHIPIT_API_KEY }}
+          QP_STARSHIPIT_SUBSCRIPTION_KEY: ${{ secrets.QP_STARSHIPIT_SUBSCRIPTION_KEY }}
           INFRA_EVENT: ${{ github.event_name }}
           INFRA_ACTION: ${{ inputs.action }}
           INFRA_CONFIRM: ${{ inputs.confirm }}

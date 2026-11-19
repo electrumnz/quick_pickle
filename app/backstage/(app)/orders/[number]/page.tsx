@@ -39,7 +39,9 @@ import {
 } from "@/lib/backstage/orders/disputes";
 import { getOrder, type OrderDetail } from "@/lib/backstage/orders/ops";
 import { refundsThroughStripe } from "@/lib/backstage/orders/refunds";
+import { handoffFor } from "@/lib/backstage/orders/starshipit";
 import { orderStock, type OrderStock } from "@/lib/backstage/stock/ops";
+import { courierConnection } from "@/lib/courier";
 import { mailConnection } from "@/lib/mail";
 import { formatNzd, formatNzdExact } from "@/lib/shop/money";
 import { NZ_REGIONS } from "@/lib/shop/order";
@@ -62,6 +64,7 @@ import {
   retryEmailAction,
   shipAction,
 } from "../actions";
+import { StarshipitPanel } from "./starshipit-panel";
 
 type Params = { number: string };
 
@@ -427,6 +430,10 @@ export default async function OrderPage({
     { number: order.number },
     caller,
   );
+  // Starshipit: shown while it is connected, or once this order has been
+  // there, so its story stays on the page after the keys go.
+  const handoff = await execute(handoffFor, { number: order.number }, caller);
+  const courierKeys = courierConnection().missing.length === 0;
   // What people have written about this order, whatever address it came
   // from. The order's own emails are listed separately, so a conversation
   // that is nothing but those is left out.
@@ -716,6 +723,18 @@ export default async function OrderPage({
               lastCourier={lastCourier}
             />
           </Panel>
+
+          {handoff !== null ||
+          (courierKeys && ["paid", "packed"].includes(order.status)) ? (
+            <StarshipitPanel
+              number={order.number}
+              status={order.status}
+              isTest={order.isTest}
+              handoff={handoff}
+              connected={courierKeys}
+              canWrite={canWrite}
+            />
+          ) : null}
 
           <Panel title="Who and where">
             <dl className="bk-kv">

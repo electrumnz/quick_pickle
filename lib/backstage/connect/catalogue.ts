@@ -71,6 +71,7 @@ import * as ordersOutsideRefunds from "../orders/outside-refunds";
 import * as ordersPayments from "../orders/payments";
 import * as ordersRefunds from "../orders/refunds";
 import * as ordersShipDate from "../orders/ship-date";
+import * as ordersStarshipit from "../orders/starshipit";
 import * as pagesOps from "../pages/ops";
 import * as pagesRoutingOps from "../pages/routing-ops";
 import * as plansCompliance from "../plans/compliance";
@@ -130,6 +131,7 @@ const MODULES: readonly Readonly<Record<string, unknown>>[] = [
   ordersPayments,
   ordersRefunds,
   ordersShipDate,
+  ordersStarshipit,
   pagesOps,
   pagesRoutingOps,
   plansCompliance,
@@ -205,6 +207,9 @@ export const SYSTEM_ONLY: ReadonlySet<string> = new Set([
   "orders.refundSettled",
   "orders.refundsSeen",
   "orders.disputeSeen",
+  // The courier's booking system: true because Starshipit said so.
+  "courier.recordHandoff",
+  "courier.shippedFromStarshipit",
   // Mail: what arrived, and what became of what was sent.
   "mail.ingest",
   "mail.recordSent",

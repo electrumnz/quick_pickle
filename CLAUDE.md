@@ -726,7 +726,8 @@ go-live list shows when it last ran and what is stuck.
     proxy in front of this one, `callerOf` is the line to change. Believe the wrong header
     and either anybody picks their own address or every buyer shares the proxy's.
 - **The courier is a file out and a list back** (`lib/backstage/orders/courier.ts`, the
-  screen at `/backstage/orders/courier`). No courier's system is linked to.
+  screen at `/backstage/orders/courier`), or, once it is connected, Starshipit (below).
+  The file keeps working either way.
   - Out: `orders.courierFile` makes one row an order under the field names Starshipit
     lists for a file of orders. It changes no order, and is written in the activity log
     because customers' addresses leave the back end in it. There is no weight in it:
@@ -752,6 +753,29 @@ go-live list shows when it last ran and what is stuck.
   - Every cell a customer typed is made safe for a spreadsheet (`csvCell` in
     `lib/backstage/orders/csv.ts`): one that starts a sum gets a leading apostrophe. Any
     new file that leaves the back end is written with `toCsv`.
+- **Starshipit, connected** (`lib/backstage/orders/starshipit.ts`; the calls are
+  `lib/courier/starshipit.ts`, read off Starshipit's API documentation on 19 November
+  2026). On when both keys are on the host (`STARSHIPIT_API_KEY`,
+  `STARSHIPIT_SUBSCRIPTION_KEY`, put there by the infra workflow's `connect-starshipit`),
+  and only ever from production with a real database, like email (`courierConnection`).
+  - Out: `order.packed` hands the order over, field for field what the courier file
+    carries, still with no weight. Packing is the moment because packing names the
+    batch. A test order goes only when a person asks (`courier.toStarshipit`), because a
+    label costs money.
+  - Back: the clock asks Starshipit which orders it has printed labels for, from the
+    oldest one still waiting there, and ships each through `courier.shippedFromStarshipit`,
+    which runs `orders.markShipped`'s own code inside its transaction, so the hand-over
+    and the shipping are one change. **Starshipit's list is the record**: told twice or
+    late ships nothing twice. A label for an order that is not packed here ships nothing
+    and is put in front of a person.
+  - Undo: unpacked, cancelled or shipped another way, the order is taken back out of
+    Starshipit while it has no label. If Starshipit will not let it go, Today says so.
+  - **One order is one box.** A hand-over that got no clear answer is looked up by its
+    number before it is tried again.
+  - Starshipit keeps its own copy of the address. Changing it here on an order already
+    there asks a person to change it there too, on the order and on Today.
+  - Nobody could try any of this against a real account from here. The first real
+    hand-over is the test, and the order's page says exactly what Starshipit answered.
 - **For the books is what moved on each day** (`lib/backstage/numbers/books.ts`): a sale
   on the New Zealand day it was paid for, a refund on the day it was given. Numbers nets
   a refund against the order's own day, because it asks how the shop did; a ledger asks

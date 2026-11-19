@@ -178,15 +178,16 @@ in order, with links to each provider's own instructions.
 
 In short:
 
-| What                | What happens                                              |
-| :------------------ | :-------------------------------------------------------- |
-| The database        | Sam makes you an owner, then leaves                       |
-| The code, on GitHub | Sam transfers the repository to you                       |
-| The hosting, Vercel | Sam transfers the project to you                          |
-| Payments, Stripe    | Sam transfers ownership, then you finish Stripe's sign-up |
-| The domain          | Yours already, at 1st Domains                             |
-| Email               | Not made yet. You make it, in the business's name         |
-| Xero and a courier  | Yours to set up. The back end makes files for both        |
+| What                | What happens                                               |
+| :------------------ | :--------------------------------------------------------- |
+| The database        | Sam makes you an owner, then leaves                        |
+| The code, on GitHub | Sam transfers the repository to you                        |
+| The hosting, Vercel | Sam transfers the project to you                           |
+| Payments, Stripe    | Sam transfers ownership, then you finish Stripe's sign-up  |
+| The domain          | Yours already, at 1st Domains                              |
+| Email               | Not made yet. You make it, in the business's name          |
+| Starshipit          | Yours to make. Its two keys go in the repository's secrets |
+| Xero                | Yours to set up. The back end makes a file for it          |
 
 Then a few things change so that only you know them: who can sign in to the back end,
 the set-up code, and the keys the repository uses. That page says which and how.
@@ -237,8 +238,12 @@ what it may do.
   is tested. Paying on it has to be done by a person.
 - **Nobody has connected a real Claude to the back end.** It is tested with the same
   parts a real one uses. [TODO.md](TODO.md) says what to look at if the first try fails.
-- **There is no direct line to Xero or to a courier.** The back end makes a file for
-  each. A direct line waits on having an account to try it with.
+- **Starshipit is built in, and switched off until its keys are on the host.** Once
+  they are, a packed order goes to Starshipit by itself, and when you print its label
+  there the order is marked shipped here and the customer gets their tracking. Nobody
+  could try it against a real Starshipit account from here, so the first order is the
+  test. Until then, the courier screen's file works as before.
+- **There is no direct line to Xero.** The back end makes a file of what moved each day.
 - **The nutrition panel** is not on the site.
 - **The hero has no video.** One film, The Face, plays further down the page. The brand
   pack's own notes mark its motion files as superseded, waiting on a rebuild, so nothing

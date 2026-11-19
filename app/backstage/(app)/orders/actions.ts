@@ -13,6 +13,10 @@ import { retrySend } from "@/lib/backstage/mail/outbound";
 import { packedFromForm } from "@/lib/backstage/stock/pack-form";
 import { shipWith } from "@/lib/backstage/orders/couriers";
 import {
+  handoffDealtWith,
+  toStarshipit,
+} from "@/lib/backstage/orders/starshipit";
+import {
   formCents,
   formText,
   sayAndGo,
@@ -139,5 +143,41 @@ export async function addressAction(form: FormData): Promise<void> {
       deliveryNotes: formText(form, "deliveryNotes") || undefined,
     },
     { back: page(form), done: "Address updated." },
+  );
+}
+
+/** Hand one packed order to Starshipit now. */
+export async function starshipitAction(form: FormData): Promise<void> {
+  await submit(
+    toStarshipit,
+    { numbers: [formText(form, "number")] },
+    {
+      back: page(form),
+      done: "On its way to Starshipit. Its answer shows here in a minute or so.",
+    },
+  );
+}
+
+/** What Starshipit holds for an order has been put right by hand. */
+export async function starshipitDealtAction(form: FormData): Promise<void> {
+  await submit(
+    handoffDealtWith,
+    { number: formText(form, "number") },
+    { back: page(form), done: "Cleared." },
+  );
+}
+
+/** The courier screen: every real packed order Starshipit does not have. */
+export async function starshipitPackedAction(form: FormData): Promise<void> {
+  const numbers = form
+    .getAll("number")
+    .filter((value): value is string => typeof value === "string");
+  await submit(
+    toStarshipit,
+    { numbers },
+    {
+      back: "/backstage/orders/courier",
+      done: `${String(numbers.length)} on ${numbers.length === 1 ? "its" : "their"} way to Starshipit.`,
+    },
   );
 }

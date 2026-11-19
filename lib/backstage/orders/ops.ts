@@ -22,6 +22,7 @@ import {
 import { z } from "zod";
 
 import {
+  courierHandoffs,
   customers,
   disputes,
   orderLines,
@@ -729,13 +730,13 @@ export const markPacked = defineOp({
         : `Packed ${order.number}${stock.words === "" ? "" : `: ${stock.words}`}`,
       ...(stock.moves.length === 0 ? {} : { data: { stock: stock.moves } }),
     });
-    if (!input.undo) {
-      await ctx.emit({
-        type: "order.packed",
-        entity,
-        payload: { number: order.number },
-      });
-    }
+    // Packed or not, the courier's booking system hears of it
+    // (lib/backstage/orders/starshipit.ts).
+    await ctx.emit({
+      type: input.undo ? "order.unpacked" : "order.packed",
+      entity,
+      payload: { number: order.number },
+    });
     return { status: to };
   },
 });
@@ -974,6 +975,22 @@ export const updateDelivery = defineOp({
         updatedAt: ctx.now,
       })
       .where(eq(orders.id, order.id));
+    // Starshipit keeps its own copy of the address it was handed. Nothing
+    // here rewrites it there, so a person is asked to, on the order and on
+    // Today, until they say it is done (lib/backstage/orders/starshipit.ts).
+    await ctx.db
+      .update(courierHandoffs)
+      .set({
+        trouble:
+          "The address was changed here after the order went to Starshipit. Change it in Starshipit too, before the label is printed.",
+        updatedAt: ctx.now,
+      })
+      .where(
+        and(
+          eq(courierHandoffs.orderId, order.id),
+          inArray(courierHandoffs.state, ["sent", "trying"]),
+        ),
+      );
     await ctx.audit({
       entity: { type: "order", id: order.id },
       summary: `Changed the delivery address on ${order.number} to ${input.line1}, ${input.city}`,

@@ -16,6 +16,9 @@
  *     has switched it on.
  *   - a request for a person's yes that has waited a week lapses, and what
  *     is left over from connecting Claude is cleared away.
+ *   - while Starshipit holds orders waiting for a label, it is asked which
+ *     it has printed, and each of those is shipped here with its tracking
+ *     (lib/backstage/orders/starshipit.ts).
  *   - a campaign that was given a time is queued when it comes, and the
  *     next few dozen emails of any campaign on its way are sent
  *     (lib/backstage/marketing/deliver.ts). That comes last and is given
@@ -201,6 +204,22 @@ export async function tick(options: TickOptions = {}): Promise<TickSummary> {
     await expireApprovals(db, now);
     await tidyConnections(db, now);
   })().catch(() => null);
+
+  // Labels printed in Starshipit: each of those orders is shipped here. It
+  // asks nothing while nothing is waiting there, and a failure is left for
+  // the next round. (Asked for here, not at the top: it ships through the
+  // orders area's operations, which are loaded with Today.)
+  await (async () => {
+    const { followStarshipit } = await import("../orders/starshipit");
+    await followStarshipit(db, now);
+  })().catch((error: unknown) => {
+    console.error(
+      JSON.stringify({
+        event: "clock.starshipit_failed",
+        message: error instanceof Error ? error.message : "unknown",
+      }),
+    );
+  });
 
   const pulse: TickSummary = {
     at: now.toISOString(),

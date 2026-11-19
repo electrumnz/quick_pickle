@@ -144,6 +144,14 @@ confirmed.
       1st Domains mailbox and the shop's inbox cannot both take the same address. The
       steps are in [TODO.md](TODO.md), under "Connect the inbox". **Who:** Ash, with the
       AI. **Done when:** Inbox settings says Hearing from Resend: On.
+- [ ] **Connect Starshipit** (optional: the courier screen's file works without it). A
+      Starshipit account with your courier enabled, then its two keys from Settings, API
+      in the repository's secrets as `QP_STARSHIPIT_API_KEY` and
+      `QP_STARSHIPIT_SUBSCRIPTION_KEY`, then an infra request for `connect-starshipit`
+      and `redeploy`. Leave Starshipit's own tracking emails to customers off: the shop
+      sends its own. **Who:** Ash, then AI. **Done when:** the "Infra" run's `status` says
+      Starshipit is connected, and the first packed test order shows on its page as in
+      Starshipit (send it from the order's page: a test order only goes when asked).
 - [ ] **Finish Stripe's sign-up:** the business's details and a bank account. **Who:**
       Ash
 - [ ] **Roll Stripe's test keys**, because Sam has seen them. Put the new ones in the

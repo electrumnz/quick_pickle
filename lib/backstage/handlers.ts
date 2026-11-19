@@ -21,6 +21,7 @@ import {
 import { emailAboutOrder } from "./orders/emails";
 import { closePaymentPage } from "./orders/listeners";
 import { sendRefund } from "./orders/refunds";
+import { handToStarshipit, takeBackFromStarshipit } from "./orders/starshipit";
 import { refreshPublicPage } from "./pages/listeners";
 import { showShopChange } from "./shop/listeners";
 
@@ -53,6 +54,24 @@ export function registerHandlers(): void {
     emailAboutOrder("refunded"),
   );
   on("mail.queued", "send the email", sendQueuedMail());
+
+  // The courier's booking system, when one is connected. A packed order is
+  // handed over; one that stops being packed is taken back while it has no
+  // label (lib/backstage/orders/starshipit.ts). Each does nothing while
+  // Starshipit is not connected.
+  on("order.packed", "hand it to Starshipit", handToStarshipit(false));
+  on("courier.send_requested", "hand it to Starshipit", handToStarshipit(true));
+  on(
+    "order.unpacked",
+    "take it back from Starshipit",
+    takeBackFromStarshipit(),
+  );
+  on(
+    "order.cancelled",
+    "take it back from Starshipit",
+    takeBackFromStarshipit(),
+  );
+  on("order.shipped", "take it back from Starshipit", takeBackFromStarshipit());
   // A campaign's first few emails go as send is pressed. The clock sends
   // the rest, a few dozen a round (lib/backstage/marketing/deliver.ts).
   on("campaign.send_requested", "start sending it", startCampaign());
