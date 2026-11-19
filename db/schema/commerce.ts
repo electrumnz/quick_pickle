@@ -247,6 +247,42 @@ export const disputes = pgTable(
 ).enableRLS();
 
 /**
+ * Where an order stands with the courier's booking system (Starshipit), when
+ * one is connected. One row an order, made when it is first handed over.
+ *
+ *   trying     handed over and no clear answer back yet
+ *   sent       Starshipit has it, waiting for a label
+ *   failed     Starshipit would not take it (`trouble` says why)
+ *   shipped    a label was printed there and the order is shipped here
+ *   withdrawn  taken back out (unpacked, cancelled, shipped another way)
+ *   stranded   it is there and should not be, and could not be taken back
+ */
+export type HandoffState =
+  "trying" | "sent" | "failed" | "shipped" | "withdrawn" | "stranded";
+
+export const courierHandoffs = pgTable(
+  "courier_handoffs",
+  {
+    orderId: text()
+      .primaryKey()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    /** Whose system: "starshipit". */
+    provider: text().notNull(),
+    state: text().$type<HandoffState>().notNull(),
+    /** The provider's own id for the order, once it has given one. */
+    reference: text(),
+    /** Hand-overs that got no clear answer. Looked up before the next. */
+    tries: integer().notNull().default(0),
+    /** A sentence for a person, while one is needed. */
+    trouble: text(),
+    sentAt: instant("sent_at"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("courier_handoffs_state_idx").on(t.state)],
+).enableRLS();
+
+/**
  * The Pickle Crew: people who asked for our emails.
  *
  * The Unsolicited Electronic Messages Act 2007 puts the burden on the sender

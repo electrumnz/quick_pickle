@@ -107,6 +107,9 @@ describe("the list of every operation", () => {
       campaigns: 6,
       clock: 1,
       connect: 11,
+      // Starshipit's own word, written down: what became of a hand-over,
+      // and a label it printed (19 November 2026).
+      courier: 2,
       crew: 2,
       limits: 2,
       links: 2,

@@ -12,6 +12,11 @@ import {
 } from "@/lib/backstage/orders/courier";
 import { KNOWN_COURIERS } from "@/lib/backstage/orders/couriers";
 import { countOrders } from "@/lib/backstage/orders/ops";
+import { waitingForStarshipit } from "@/lib/backstage/orders/starshipit";
+import { SubmitButton } from "@/components/backstage/SubmitButton";
+import { courierConnection } from "@/lib/courier";
+
+import { starshipitPackedAction } from "../actions";
 
 import { TrackingBackForm } from "./forms";
 
@@ -38,10 +43,16 @@ export default async function CourierPage({
   const which = params.which === "open" ? "open" : "packed";
   const includeTests = params.tests === "yes";
 
-  const [waiting, counts, last] = await Promise.all([
+  // Starshipit, when both its keys are on the host: packed orders go there
+  // by themselves, and the file below is the way round when they cannot.
+  const starshipit = courierConnection().missing.length === 0;
+  const [waiting, counts, last, notThere] = await Promise.all([
     execute(ordersForCourier, { which, includeTests }, caller),
     execute(countOrders, {}, caller),
     execute(lastCourierUsed, {}, caller),
+    starshipit
+      ? execute(waitingForStarshipit, {}, caller)
+      : Promise.resolve([] as string[]),
   ]);
   const said =
     waiting.length === 0
@@ -67,6 +78,53 @@ export default async function CourierPage({
       ) : null}
 
       <div className="flex flex-col gap-6">
+        {starshipit ? (
+          <Panel title="Starshipit">
+            <div
+              className="flex flex-col gap-3"
+              data-testid="starshipit-courier"
+            >
+              <p className="leading-snug">
+                Starshipit is connected. Packed orders go there by themselves.
+                Print the labels in Starshipit, and each order is marked shipped
+                here within a few minutes, with its tracking, and the customer
+                is told. The file below is still here if you need it.
+              </p>
+              {notThere.length === 0 ? (
+                <p className="bk-muted leading-snug">
+                  Every packed order is in Starshipit.
+                </p>
+              ) : (
+                <form
+                  action={starshipitPackedAction}
+                  className="flex flex-col gap-3"
+                >
+                  <p className="leading-snug">
+                    {notThere.length === 1
+                      ? `${notThere[0] ?? ""} is packed and not in Starshipit.`
+                      : `${String(notThere.length)} packed orders are not in Starshipit: ${notThere.join(", ")}.`}
+                  </p>
+                  {notThere.map((number) => (
+                    <input
+                      key={number}
+                      type="hidden"
+                      name="number"
+                      value={number}
+                    />
+                  ))}
+                  <SubmitButton
+                    pending="Sending"
+                    className="bk-btn bk-btn-quiet"
+                  >
+                    {notThere.length === 1
+                      ? "Send it to Starshipit"
+                      : "Send them to Starshipit"}
+                  </SubmitButton>
+                </form>
+              )}
+            </div>
+          </Panel>
+        ) : null}
         <Panel title="1. Out: the file for the courier">
           <p
             className="text-[1.0625rem] font-semibold"

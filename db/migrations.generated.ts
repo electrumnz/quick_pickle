@@ -374,5 +374,15 @@ export const MIGRATIONS: readonly Migration[] = [
     "statements": [
       "ALTER TABLE \"batches\" ADD COLUMN \"flavour\" text DEFAULT 'original' NOT NULL;"
     ]
+  },
+  {
+    "tag": "0016_courier_handoffs",
+    "hash": "d88b5d7150929a55",
+    "statements": [
+      "CREATE TABLE \"courier_handoffs\" (\n\t\"order_id\" text PRIMARY KEY NOT NULL,\n\t\"provider\" text NOT NULL,\n\t\"state\" text NOT NULL,\n\t\"reference\" text,\n\t\"tries\" integer DEFAULT 0 NOT NULL,\n\t\"trouble\" text,\n\t\"sent_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "ALTER TABLE \"courier_handoffs\" ENABLE ROW LEVEL SECURITY;",
+      "ALTER TABLE \"courier_handoffs\" ADD CONSTRAINT \"courier_handoffs_order_id_orders_id_fk\" FOREIGN KEY (\"order_id\") REFERENCES \"public\".\"orders\"(\"id\") ON DELETE cascade ON UPDATE no action;",
+      "CREATE INDEX \"courier_handoffs_state_idx\" ON \"courier_handoffs\" USING btree (\"state\");"
+    ]
   }
 ];

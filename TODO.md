@@ -376,10 +376,18 @@ Everything Ashleigh needs to run the business, except accounting (Xero). In buil
 - [x] **For the books.** What was charged and what was given back, by day, for any
       stretch of days, with a file by day and a file by order for whoever keeps the
       accounts.
-- [ ] **A direct line to Xero and to a courier.** Both wait on an account to try them
-      against. Xero's own file import could not be checked from here (its help pages
-      would not load), so nothing claims to be in its layout yet. For a courier: which
-      one, then labels and tracking without the file in between.
+- [x] **A direct line to a courier: Starshipit.** Packed orders go to Starshipit by
+      themselves once its two keys are on the host (`connect-starshipit`), and come back
+      shipped, with their tracking, when the label is printed there. Unpacked, cancelled
+      or shipped another way, an order is taken back out while it has no label. Built
+      from Starshipit's API documentation (19 November 2026). Nobody could try it
+      against a real account from here, so the first hand-over is the test: if
+      Starshipit refuses it, the order's page says exactly what it answered. One call
+      was a guess at its shape: taking an order back (`DELETE /api/orders/delete`, with
+      `order_id` in the address, as the documentation names the field but shows no
+      example). If that is refused, the order's page and Today say to delete it in
+      Starshipit by hand, and `lib/courier/starshipit.ts` is the one line to change.
+- [ ] **A direct line to Xero.** Waits on an account to try it with.
 - [ ] **What a packed box weighs.** The courier's file has no weight in it, because nobody
       has weighed one. Once the box is real: a weight for each pack size, and the file
       carries it.

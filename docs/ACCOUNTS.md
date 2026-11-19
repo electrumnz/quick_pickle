@@ -10,17 +10,18 @@ provider's own instructions. Read theirs before pressing anything.
 
 ## At a glance
 
-| What                            | What it does here                    | Who holds it today                                        | At handover                                         |
-| :------------------------------ | :----------------------------------- | :-------------------------------------------------------- | :-------------------------------------------------- |
-| GitHub repository               | The code, the tests, these documents | Sam (`electrumnz/quick_pickle`)                           | Transfer the repository to Ash                      |
-| Vercel project `quick_pickle`   | Hosts the site, on the free plan     | Sam's Vercel account (`electrumnz-9333s-projects`)        | Transfer the project to Ash                         |
-| Supabase project                | The database                         | Sam, in an organisation that holds only Quick Pickle      | Make Ash an owner of the organisation               |
-| Stripe account                  | Payments. Test keys only so far      | Sam. Stripe's own sign-up is not finished                 | Transfer ownership, then Ash finishes the sign-up   |
-| Resend                          | Sends and receives the shop's email  | Nobody. Not made yet                                      | Ash makes it, in the business's name                |
-| The domain `quickpickle.co.nz`  | The shop's own address               | Ash, at 1st Domains                                       | Hers already. Nothing to transfer                   |
-| Xero, and a courier account     | The books, and sending parcels       | Not linked, on purpose. The back end makes files for both | Ash's own. Nothing to transfer                      |
-| The brand pack, on Google Drive | Print masters, logos, Lucky, video   | Whoever owns the shared folder                            | Stays where it is. See the note below               |
-| Claude                          | Wrote the code and looks after it    | Sam's Claude account                                      | Ash uses her own. See [HANDOVER.md](../HANDOVER.md) |
+| What                            | What it does here                    | Who holds it today                                   | At handover                                         |
+| :------------------------------ | :----------------------------------- | :--------------------------------------------------- | :-------------------------------------------------- |
+| GitHub repository               | The code, the tests, these documents | Sam (`electrumnz/quick_pickle`)                      | Transfer the repository to Ash                      |
+| Vercel project `quick_pickle`   | Hosts the site, on the free plan     | Sam's Vercel account (`electrumnz-9333s-projects`)   | Transfer the project to Ash                         |
+| Supabase project                | The database                         | Sam, in an organisation that holds only Quick Pickle | Make Ash an owner of the organisation               |
+| Stripe account                  | Payments. Test keys only so far      | Sam. Stripe's own sign-up is not finished            | Transfer ownership, then Ash finishes the sign-up   |
+| Resend                          | Sends and receives the shop's email  | Nobody. Not made yet                                 | Ash makes it, in the business's name                |
+| The domain `quickpickle.co.nz`  | The shop's own address               | Ash, at 1st Domains                                  | Hers already. Nothing to transfer                   |
+| Starshipit                      | Books the courier and prints labels  | Nobody. Not made yet. Built in, switched off         | Ash makes it. Its two keys go in the secrets below  |
+| Xero                            | The books                            | Not linked. The back end makes a file of each day    | Ash's own. Nothing to transfer                      |
+| The brand pack, on Google Drive | Print masters, logos, Lucky, video   | Whoever owns the shared folder                       | Stays where it is. See the note below               |
+| Claude                          | Wrote the code and looks after it    | Sam's Claude account                                 | Ash uses her own. See [HANDOVER.md](../HANDOVER.md) |
 
 There is a second Vercel project to know about. An old one called `half-sour`, in the
 Keece account, is still joined to this repository and builds a preview on every push. It
@@ -188,6 +189,14 @@ the repository look after its own hosting, database and payments
 | `QP_STRIPE_SECRET_KEY`      | Stripe's secret key. A test key today         | Stripe, Developers      | Rolled, as in step 4                 |
 | `QP_STRIPE_PUBLISHABLE_KEY` | Stripe's other key. A test key today          | Stripe, Developers      | Rolled, as in step 4                 |
 
+Two more, once Ash has a Starshipit account. The workflow only reads them for
+`connect-starshipit`:
+
+| Name                             | What it is                    | Whose account makes it    |
+| :------------------------------- | :---------------------------- | :------------------------ |
+| `QP_STARSHIPIT_API_KEY`          | Starshipit's API key          | Starshipit, Settings, API |
+| `QP_STARSHIPIT_SUBSCRIPTION_KEY` | Starshipit's subscription key | Starshipit, Settings, API |
+
 A token made in somebody's Vercel or Supabase account can reach every project that
 person can. That is why the workflow is pinned to Quick Pickle's own project by id and
 refuses to list or touch any other.
@@ -211,14 +220,16 @@ Set today:
 Not set yet. Each switches something on, and the go-live list in the back end says which
 are missing:
 
-| Name                    | Switches on                                                    |
-| :---------------------- | :------------------------------------------------------------- |
-| `MAIL_PROVIDER`         | Sending email at all. `resend`                                 |
-| `RESEND_API_KEY`        | Resend's key                                                   |
-| `MAIL_FROM`             | The address email is sent from, on a domain Resend has checked |
-| `RESEND_WEBHOOK_SECRET` | Mail arriving in the inbox, and hearing about bounces          |
-| `MAIL_TOKEN_SECRET`     | A reply address of its own for each conversation               |
-| `NEXT_PUBLIC_SITE_URL`  | The address the shop calls itself by. Made by `add-domain`     |
+| Name                          | Switches on                                                    |
+| :---------------------------- | :------------------------------------------------------------- |
+| `MAIL_PROVIDER`               | Sending email at all. `resend`                                 |
+| `RESEND_API_KEY`              | Resend's key                                                   |
+| `MAIL_FROM`                   | The address email is sent from, on a domain Resend has checked |
+| `RESEND_WEBHOOK_SECRET`       | Mail arriving in the inbox, and hearing about bounces          |
+| `MAIL_TOKEN_SECRET`           | A reply address of its own for each conversation               |
+| `NEXT_PUBLIC_SITE_URL`        | The address the shop calls itself by. Made by `add-domain`     |
+| `STARSHIPIT_API_KEY`          | Starshipit, with the next one. Made by `connect-starshipit`    |
+| `STARSHIPIT_SUBSCRIPTION_KEY` | Starshipit's other key                                         |
 
 `TODO.md` has the steps for email and the inbox, in order.
 
@@ -228,23 +239,25 @@ are missing:
 never a value. It runs `status` on every push to `main`, and anything that changes a
 setting needs a written yes.
 
-| Action              | What it does                                                                          |
-| :------------------ | :------------------------------------------------------------------------------------ |
-| `status`            | Reads everything and changes nothing: the host, the database, orders by state, Stripe |
-| `ensure-setup-code` | Makes the set-up code if there is none                                                |
-| `connect-database`  | Makes the site its own database login and saves the connection                        |
-| `connect-clock`     | Has the database ring the site every five minutes                                     |
-| `stripe-check`      | Tries the checkout's own code against Stripe's test mode. No money can move           |
-| `connect-stripe`    | Switches the checkout to Stripe and sets up Stripe's news                             |
-| `stripe-events`     | Updates which kinds of news Stripe sends                                              |
-| `disconnect-stripe` | Back to the practice checkout                                                         |
-| `disconnect-clock`  | Stops the clock                                                                       |
-| `limits-off`        | Switches off the checkout's limit on asks from one address                            |
-| `limits-on`         | Switches it back on                                                                   |
-| `add-domain`        | Puts a domain on the site and says which DNS records to add at the registrar          |
-| `use-domain`        | Makes that domain the address the shop calls itself by, once it is answering          |
-| `leave-domain`      | The way back: the shop calls itself by the host's own address again                   |
-| `redeploy`          | Builds the live site again so a changed setting takes effect                          |
+| Action                  | What it does                                                                          |
+| :---------------------- | :------------------------------------------------------------------------------------ |
+| `status`                | Reads everything and changes nothing: the host, the database, orders by state, Stripe |
+| `ensure-setup-code`     | Makes the set-up code if there is none                                                |
+| `connect-database`      | Makes the site its own database login and saves the connection                        |
+| `connect-clock`         | Has the database ring the site every five minutes                                     |
+| `stripe-check`          | Tries the checkout's own code against Stripe's test mode. No money can move           |
+| `connect-stripe`        | Switches the checkout to Stripe and sets up Stripe's news                             |
+| `stripe-events`         | Updates which kinds of news Stripe sends                                              |
+| `disconnect-stripe`     | Back to the practice checkout                                                         |
+| `disconnect-clock`      | Stops the clock                                                                       |
+| `limits-off`            | Switches off the checkout's limit on asks from one address                            |
+| `limits-on`             | Switches it back on                                                                   |
+| `add-domain`            | Puts a domain on the site and says which DNS records to add at the registrar          |
+| `use-domain`            | Makes that domain the address the shop calls itself by, once it is answering          |
+| `leave-domain`          | The way back: the shop calls itself by the host's own address again                   |
+| `connect-starshipit`    | Checks Starshipit's two keys with Starshipit, then puts them on the host              |
+| `disconnect-starshipit` | Takes them off again. Orders already in Starshipit stay there                         |
+| `redeploy`              | Builds the live site again so a changed setting takes effect                          |
 
 Some can be started by hand from GitHub's Actions tab. All of them can be asked for in a
 commit, by changing `.github/infra-request.json`, which is how Claude does it: the
